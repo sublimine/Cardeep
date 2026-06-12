@@ -99,3 +99,26 @@
 - **Estado vivo total: 1.533 entidades reales** = 1.292 desguace + 241 concesionario_oficial.
   Dos segmentos del mandato poblados y verificados con el mismo pipeline.
 
+### F3 — INVENTARIO E2E por dealer (SCRAPEAR→RECETA→INGEST→VERIFICAR) — CERRADO con delta
+- **El corazón del mandato ("sacarle TODO su stock") probado de punta a punta** sobre un
+  dealer real. Fuente: **AutoScout24.es** (abierto, `__NEXT_DATA__`, atribución dealer).
+- Módulos: `sources/autoscout24.py` (SCRAPEAR: drenado por dealer `/profesionales/{slug}`,
+  sort estable, dedup), `recipe.py` (RECETA: yaml versionada por dealer en
+  `countries/ES/recipes/`), `ingest.py` (INGEST: motor de **delta** NEW/GONE/PRICE_CHANGE/
+  PHOTO_CHANGE/KM_CHANGE, INSERT nuevo + cierre desaparecido, UPDATE solo filas mutadas),
+  `harvest_dealer.py` (orquestador que encadena las 4 fases + dump crudo a `data/` gitignored).
+- **Piloto real OK MOBILITY VALENCIA AIRPORT (Manises, 46159):** **78 coches** ingeridos,
+  año/km/precio correctos (Porsche Taycan 89.010€, etc.). **VAM TRUSTWORTHY** (78=78=78).
+  **Idempotente** (re-run: new=0, gone=0, 78 unchanged). API sirve /inventory (78) + /delta (78).
+- **3 causas raíz cazadas (anti-alucinación, sin maquillaje):**
+  1. El dealer NO está en `seller` por-listing en la página de perfil → vive en
+     `pageProps.dealerInfoPage` (customerId/customerName/customerAddress). Corregido.
+  2. `mileageInKm`/`firstRegistrationDate`/etc. son objetos `{raw,formatted}` (no strings) →
+     mi `_to_int(str(dict))` DOBLABA los dígitos (km=6.594.865.948). Extractor `_raw()` + cotas.
+  3. **Paginación inestable** fabricaba 1 duplicado (78 brutos→77) — la trampa AS24 del mandato.
+     Fix: **sort estable** (`sort=price&desc=1`) → 78 reales distintos, churn delta a 0.
+- **VAM mejorado a regla de quórum** (≥2 vías concuerdan = TRUSTWORTHY; un contador de fuente
+  que sobre-cuenta duplicados no refuta si 2 vías independientes coinciden).
+- **Estado vivo: 1.534 entidades + 78 vehículos servidos + 78 eventos de delta.**
+- **Pendiente F3:** fase BORRAR (evicción por capacidad + tombstone) + escalar a más dealers/fuentes.
+

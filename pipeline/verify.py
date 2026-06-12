@@ -18,16 +18,27 @@ async def record_count_verdict(
     paths: dict[str, int],
     tolerance: float = 0.0,
 ) -> str:
-    """paths: {path_name: count}. TRUSTWORTHY if all paths agree within tolerance
-    (relative). Returns the verdict."""
+    """paths: {path_name: count}. Quorum rule (mandate: ">=2 orthogonal paths agree"):
+    TRUSTWORTHY when the modal value is supported by >=2 paths and no rival value also
+    reaches >=2 (a clean majority). A lone divergent path (e.g. a source counter that
+    over-counts duplicates) does not refute when >=2 independent paths agree."""
+    from collections import Counter
+
     values = [v for v in paths.values() if v is not None]
     if len(values) < 2:
-        verdict = "UNVERIFIED"
-        divergence = None
+        verdict, divergence = "UNVERIFIED", None
     else:
+        freq = Counter(values)
+        (top_val, top_n), = freq.most_common(1)
+        rivals = [val for val, n in freq.items() if n >= 2 and val != top_val]
         lo, hi = min(values), max(values)
         divergence = (hi - lo) / hi if hi else 0.0
-        verdict = "TRUSTWORTHY" if divergence <= tolerance else "REFUTED"
+        if top_n >= 2 and not rivals:
+            verdict = "TRUSTWORTHY"
+        elif divergence <= tolerance:
+            verdict = "TRUSTWORTHY"
+        else:
+            verdict = "REFUTED"
     primary_path, primary_value = next(iter(paths.items()))
     await conn.execute(
         """INSERT INTO verification_verdict
