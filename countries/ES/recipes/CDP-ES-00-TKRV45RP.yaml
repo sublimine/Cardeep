@@ -14,6 +14,7 @@ request:
 enumeration: pagination.page=1..N, size=100; meta.totalResults/totalPages drive the full drain
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE
 dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+particulares: private sellers caged, NOT skipped: source anonymises privates (contractId='1' sentinel, first-name only) -> per-province 'particular' bucket (canonical_key 'particular:cochesnet:{province}', '00' fallback); kind=particular, sells_cars=TRUE, mirrors dealer rows (is_tier1=FALSE, source_group/role NULL, kind_source=platform_label); car+edge+delta caged
 field_map:
   deep_link: item.url (prefixed with https://www.coches.net)
   listing_ref: item.id (coches.net native ad id)

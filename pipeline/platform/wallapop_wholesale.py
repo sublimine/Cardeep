@@ -21,14 +21,17 @@ and adapts it to wallapop's three realities:
      item id across the whole run. Each keyword is paged by the opaque `next_page` JWT
      (meta.next_page), replayed as &next_page=<jwt>, ~40 items/page, until the chain ends.
 
-  2. PRO-dealer attribution is a SECOND fetch per seller. Each item carries a `user_id`;
+  2. SELLER attribution is a SECOND fetch per seller. Each item carries a `user_id`;
      GET /api/v3/users/{id} returns type ("professional"|"normal") + web_slug + micro_name
-     + the seller's own location (zip -> INE province). ONLY professional sellers become
-     `compraventa` entities (the SELLING DEALER). Private sellers (type 'normal') are
-     recorded as a listing under a single synthetic 'particular' bucket entity per
-     province so the car + edge + delta are still caged WITHOUT minting a junk dealer per
-     individual (documented design choice; see PARTICULAR_* below). User lookups are
-     CACHED for the whole run (one HTTP per distinct seller, not per listing).
+     + the seller's own location (zip -> INE province). Professional sellers become
+     `compraventa` entities (the SELLING DEALER). PRIVATE sellers (type 'normal') become
+     PER-SELLER `particular` entities: wallapop exposes a STABLE user_id per seller, so one
+     real human = one entity, and a private with N cars is a single multi-car seller
+     (cdp_code via particular_platform='wallapop' + particular_seller_id=user_id; see
+     PARTICULAR_* below). User lookups are CACHED for the whole run (one HTTP per distinct
+     seller, not per listing). Both seller types own their cars + carry the platform_listing
+     edge + emit the NEW delta event identically — a buyer never rejects a car for being
+     sold by a private, so private inventory is served exactly like a dealer's.
 
   3. GEO often lacks a clean province on the item. We derive it, in order: the seller's
      own user.location.zip (CP[:2] = INE province, like autocasion), then the item
@@ -39,11 +42,11 @@ Dual membership (identical to coches.net/autocasion):
 
   wallapop (the marketplace) -> entity, kind='plataforma'  (+ platform_meta, app_api)
   each PRO SELLING DEALER     -> entity, kind='compraventa' (geo-resolved)
-  each PRIVATE seller's car   -> owned by the per-province 'particular' bucket entity
-  each CAR                    -> vehicle, OWNED BY its dealer/bucket (entity_ulid=owner)
+  each PRIVATE seller         -> entity, kind='particular'  (per-seller, geo-resolved)
+  each CAR                    -> vehicle, OWNED BY its dealer/particular (entity_ulid=owner)
   the car ON the platform     -> platform_listing edge (platform_entity <-> vehicle)
 
-Ownership is singular (the dealer/bucket); platform membership is plural (this edge). The
+Ownership is singular (the dealer/particular); platform membership is plural (this edge). The
 same physical car can carry a wallapop edge AND a coches.net edge without ever changing
 its owning dealer.
 
@@ -136,14 +139,22 @@ _KEYWORDS = [
 # lives only inside the cdp_code string (free text, no FK).
 PLATFORM_PROVINCE_SENTINEL = "00"
 
-# PRIVATE-seller bucket. wallapop is C2C-heavy: minting one compraventa entity per private
-# individual would flood the graph with junk single-listing "dealers". Instead every private
-# seller's car is owned by ONE synthetic 'particular' bucket entity PER PROVINCE (kind=
-# 'garaje' — a non-dealer holder; sells_cars=FALSE). The car, the platform_listing edge and
-# the NEW delta event are all still caged (the listing is real); only dealer-identity minting
-# is suppressed. PRO sellers (type 'professional') always become real compraventa entities.
-PARTICULAR_NAME_PREFIX = "Particulares wallapop"
-PARTICULAR_BUCKET_KIND = "garaje"
+# PRIVATE sellers -> PER-SELLER 'particular' entities. wallapop exposes a STABLE user_id per
+# seller (GET /users/{id}), so a private is a REAL identifiable human, not an anonymous bucket:
+# one entity per user_id, a private with N cars is one multi-car seller. cdp_code is minted via
+# the canonical particular_platform/particular_seller_id path -> 'particular:wallapop:{user_id}'
+# -> CDP-ES-{prov}-{hash}. kind='particular', sells_cars=TRUE (the car IS for sale), province
+# geo-resolved, kind_source MIRRORS the dealer rows (PARTICULAR_KIND_SOURCE), role left NULL.
+# The car, the platform_listing edge and the NEW delta event are caged IDENTICALLY to a dealer's.
+PARTICULAR_PLATFORM = "wallapop"          # particular_platform tag for cdp_code (matches user_id source)
+PARTICULAR_KIND = "particular"            # entity_kind (migration 0017)
+PARTICULAR_KIND_SOURCE = "platform_label" # SAME value the connector uses for its dealer rows
+PARTICULAR_DEFAULT_NAME = "Particular"    # trade_name fallback when micro_name/handle is absent
+# Legacy: the prior design folded privates into one per-province 'garaje' bucket named
+# "Particulares wallapop {prov}". Those 50 obsolete bucket entities are CLEANED UP (PG
+# DELETE+INSERT doctrine) after re-harvesting privates per-seller — see cleanup_legacy_buckets.
+LEGACY_BUCKET_NAME_PREFIX = "Particulares wallapop"
+LEGACY_BUCKET_KIND = "garaje"
 
 DEFAULT_TARGET = 8000          # distinct cars to cage this run (~5k-15k mandated chunk).
 PAGE_ITEMS = 40                # the section API serves ~40 items/page (recipe verified).
@@ -186,9 +197,9 @@ class SellerRef:
     """A seller resolved from GET /api/v3/users/{id} (cached per run).
 
     type 'professional' -> a real selling DEALER (compraventa entity). type 'normal' ->
-    a private individual (folded into the per-province 'particular' bucket). The seller's
-    OWN location.zip is the strongest geo anchor (CP[:2] = INE province, like autocasion);
-    web_slug is the stable public handle used for cross-source dedup + source_ref."""
+    a private individual minted as a PER-SELLER 'particular' entity (stable user_id identity).
+    The seller's OWN location.zip is the strongest geo anchor (CP[:2] = INE province, like
+    autocasion); web_slug is the stable public handle used for cross-source dedup + source_ref."""
     user_id: str
     is_professional: bool
     web_slug: str | None
@@ -410,9 +421,10 @@ WP_PLATFORM_RECIPE = {
                         "is_tier1=TRUE, defense_tier=t1_soft, source_group=marketplace_generalist, "
                         "role=platform, data_surface=app_api"),
     "attribution": ("per-item user_id -> GET /users/{id} (cached per run): type "
-                    "'professional' -> compraventa DEALER; type 'normal' -> per-province "
-                    "'particular' bucket (car+edge+delta still caged, no junk dealer minted)"),
-    "dual_membership": "vehicle.entity_ulid=SELLING DEALER/bucket; platform_listing edge=platform<->vehicle",
+                    "'professional' -> compraventa DEALER; type 'normal' -> PER-SELLER "
+                    "'particular' entity (cdp particular:wallapop:{user_id}; one human=one "
+                    "entity, sells_cars=TRUE; car+edge+delta caged identically to a dealer)"),
+    "dual_membership": "vehicle.entity_ulid=SELLING DEALER/particular; platform_listing edge=platform<->vehicle",
     "geo": ("dealer province from user.location.zip[:2] (INE) -> item region2/city via "
             "GeoResolver -> item lat/long via ProvinceGeocoder (first hit wins)"),
     "field_map": {
@@ -472,12 +484,16 @@ async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     return eulid
 
 
-def _particular_cdp(province_code: str) -> str:
-    """The per-province private-seller 'particular' bucket cdp_code. Deterministic over
-    (name, province) so re-runs are idempotent and PRO dealers never collide with it."""
+def _particular_cdp(province_code: str, user_id: str) -> str:
+    """A PER-SELLER private 'particular' cdp_code via the canonical generator.
+
+    Identity is the platform's OWN stable seller id (canonical_key
+    'particular:wallapop:{user_id}' -> CDP-ES-{prov}-{hash}). One entity per real human, so
+    a private with N cars is a single multi-car seller. Deterministic -> re-runs idempotent,
+    and a particular never collides with a PRO dealer (distinct canonical_key namespace)."""
     return cdp_code(province_code=province_code,
-                    name=f"{PARTICULAR_NAME_PREFIX} {province_code}",
-                    address="wallapop_particular_bucket")
+                    particular_platform=PARTICULAR_PLATFORM,
+                    particular_seller_id=user_id)
 
 
 def cdp_code_dealer(s: SellerRef, province_code: str, muni: str | None) -> str:
@@ -569,14 +585,14 @@ class _CageRow:
     """One fully-resolved car ready for the bulk cage — owner already attributed + geo-anchored,
     before any SQL. Carries everything the batched upserts need so the DB phase touches no
     per-item Python logic, only set-based statements."""
-    owner_cdp: str             # dealer cdp OR particular-bucket cdp (the entity_ulid owner)
-    owner_kind: str            # 'compraventa' (PRO) | 'garaje' (private bucket)
+    owner_cdp: str             # dealer cdp OR per-seller particular cdp (the entity_ulid owner)
+    owner_kind: str            # 'compraventa' (PRO) | 'particular' (private per-seller)
     owner_name: str | None
     owner_province: str
     owner_muni: str | None
     owner_sells_cars: bool
-    owner_role: str
-    source_ref: str            # web_slug (PRO) | 'particular:<prov>' (bucket) for entity_source
+    owner_role: str | None     # 'standalone_pos' (PRO) | None (particular, per mandate)
+    source_ref: str            # web_slug (PRO) | user_id (particular) for entity_source
     is_professional: bool
     featured: bool
     vehicle: Vehicle
@@ -686,14 +702,18 @@ async def _build_cage(items: list, fetcher: WallapopFetcher, governed_fetch, geo
                 is_professional=True, featured=seller.featured, vehicle=v)
         else:
             stats["private_items"] += 1
-            # private -> per-province 'particular' bucket (deterministic synthetic identity).
-            owner_cdp = _particular_cdp(prov)
+            # private -> PER-SELLER 'particular' entity (stable user_id identity). One real
+            # human = one entity; a private with N cars is one multi-car seller. The car IS
+            # for sale -> sells_cars=TRUE. role left NULL (per mandate); kind_source mirrors
+            # the dealer rows. trade_name = the seller's micro_name/handle, else "Particular".
+            owner_cdp = _particular_cdp(prov, seller.user_id)
+            owner_name = seller.name or seller.web_slug or PARTICULAR_DEFAULT_NAME
             cage = _CageRow(
-                owner_cdp=owner_cdp, owner_kind=PARTICULAR_BUCKET_KIND,
-                owner_name=f"{PARTICULAR_NAME_PREFIX} {prov}",
-                owner_province=prov, owner_muni=None, owner_sells_cars=False,
-                owner_role="standalone_pos", source_ref=f"particular:{prov}",
-                is_professional=False, featured=False, vehicle=v)
+                owner_cdp=owner_cdp, owner_kind=PARTICULAR_KIND,
+                owner_name=owner_name,
+                owner_province=prov, owner_muni=muni, owner_sells_cars=True,
+                owner_role=None, source_ref=seller.user_id,
+                is_professional=False, featured=seller.featured, vehicle=v)
 
         state.harvested_cageable.add((owner_cdp, v.deep_link))
         rows.append(cage)
@@ -840,6 +860,94 @@ async def _ingest_window(conn: asyncpg.Connection, platform_ulid: str, cage: lis
 
 
 # ---------------------------------------------------------------------------
+# Legacy cleanup: retire the obsolete per-province 'garaje' buckets (PG DELETE+INSERT
+# doctrine). A car under a bucket is SUPERSEDED once the SAME listing (deep_link) is now
+# owned by a per-seller kind='particular' entity. We VAM-VERIFY the re-point FIRST, then
+# delete ONLY the superseded bucket cars + their now-redundant platform_listing edges +
+# any bucket entity left with zero cars. A bucket car NOT yet re-pointed (this bounded run
+# didn't re-harvest its listing) is LEFT UNTOUCHED — never orphaned, never a car-count drop;
+# a later full drain re-points it and a later cleanup retires it. Idempotent + reversible.
+# ---------------------------------------------------------------------------
+
+async def cleanup_legacy_buckets(conn: asyncpg.Connection, platform_ulid: str,
+                                 stats: dict) -> None:
+    """Retire superseded legacy 'garaje' buckets after the per-seller re-harvest.
+
+    SAFETY (mandate): (1) re-point VERIFY — only a bucket car whose deep_link is now owned by
+    a kind='particular' entity is deletable; (2) NO professional/compraventa car is ever
+    touched (the filter is strictly kind='garaje' + the legacy name prefix); (3) total
+    wallapop cars MUST NOT drop — every deleted bucket car has a live per-seller twin, so the
+    distinct-listing count is preserved. All within ONE transaction.
+
+    Records bucket_* stats: how many buckets existed, how many cars were superseded (deletable),
+    how many were NOT yet re-pointed (left intact this run), and the final bucket count."""
+    # Bucket inventory BEFORE (truth snapshot).
+    buckets_before = await conn.fetchval(
+        "SELECT count(*) FROM entity WHERE kind=$1 AND trade_name LIKE $2",
+        LEGACY_BUCKET_KIND, LEGACY_BUCKET_NAME_PREFIX + "%")
+    bucket_cars_before = await conn.fetchval(
+        """SELECT count(*) FROM vehicle v JOIN entity e ON e.entity_ulid=v.entity_ulid
+           WHERE e.kind=$1 AND e.trade_name LIKE $2""",
+        LEGACY_BUCKET_KIND, LEGACY_BUCKET_NAME_PREFIX + "%")
+    stats["bucket_entities_before"] = buckets_before
+    stats["bucket_cars_before"] = bucket_cars_before
+    if not buckets_before:
+        stats["bucket_entities_after"] = 0
+        stats["bucket_cars_superseded"] = 0
+        stats["bucket_cars_not_repointed"] = 0
+        stats["bucket_entities_deleted"] = 0
+        return
+
+    async with conn.transaction():
+        # SUPERSEDED = bucket cars whose deep_link is now owned by a kind='particular' entity
+        # (the per-seller re-point). This is the re-point VERIFY: a bucket car only qualifies
+        # for deletion if its real listing demonstrably survives under a particular owner.
+        superseded = await conn.fetch(
+            """SELECT bv.vehicle_ulid
+                 FROM vehicle bv
+                 JOIN entity be ON be.entity_ulid = bv.entity_ulid
+                WHERE be.kind = $1 AND be.trade_name LIKE $2
+                  AND EXISTS (
+                    SELECT 1 FROM vehicle pv
+                      JOIN entity pe ON pe.entity_ulid = pv.entity_ulid
+                     WHERE pe.kind = 'particular'
+                       AND pv.deep_link = bv.deep_link)""",
+            LEGACY_BUCKET_KIND, LEGACY_BUCKET_NAME_PREFIX + "%")
+        superseded_ulids = [r["vehicle_ulid"] for r in superseded]
+        stats["bucket_cars_superseded"] = len(superseded_ulids)
+        stats["bucket_cars_not_repointed"] = bucket_cars_before - len(superseded_ulids)
+
+        if superseded_ulids:
+            # DELETE the superseded bucket VEHICLES. platform_listing + vehicle_event rows on
+            # those vehicles CASCADE away (FK ON DELETE CASCADE, verified). Only the superseded
+            # bucket car (its own vehicle_ulid) is removed — the per-seller twin is a DISTINCT
+            # vehicle_ulid with its own live edge, so the distinct-listing total holds (no drop).
+            await conn.execute(
+                "DELETE FROM vehicle WHERE vehicle_ulid = ANY($1::text[])",
+                superseded_ulids)
+
+        # DELETE bucket entities now holding ZERO cars (fully superseded). A bucket that still
+        # owns un-repointed cars is KEPT so its remaining real listings stay served. The
+        # entity delete CASCADES to entity_source/platform_meta/entity_alias (verified FKs).
+        deleted_entities = await conn.fetch(
+            """DELETE FROM entity e
+                WHERE e.kind = $1 AND e.trade_name LIKE $2
+                  AND NOT EXISTS (SELECT 1 FROM vehicle v WHERE v.entity_ulid = e.entity_ulid)
+                RETURNING e.entity_ulid""",
+            LEGACY_BUCKET_KIND, LEGACY_BUCKET_NAME_PREFIX + "%")
+        stats["bucket_entities_deleted"] = len(deleted_entities)
+
+    stats["bucket_entities_after"] = await conn.fetchval(
+        "SELECT count(*) FROM entity WHERE kind=$1 AND trade_name LIKE $2",
+        LEGACY_BUCKET_KIND, LEGACY_BUCKET_NAME_PREFIX + "%")
+    print(f"[wallapop_wholesale] legacy cleanup: buckets {buckets_before}->"
+          f"{stats['bucket_entities_after']}; superseded bucket cars deleted="
+          f"{stats['bucket_cars_superseded']}; left intact (not yet re-pointed)="
+          f"{stats['bucket_cars_not_repointed']}; bucket entities removed="
+          f"{stats['bucket_entities_deleted']}.")
+
+
+# ---------------------------------------------------------------------------
 # Orchestration: keyword sweep x geo grid, JWT-chained, concurrent seller-resolve windows.
 # ---------------------------------------------------------------------------
 
@@ -922,6 +1030,11 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
 
         owners_before = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
+        # Whole-platform car-count snapshot BEFORE the run: the final guard proves the cleanup
+        # never dropped a single distinct wallapop listing (re-point, not orphan).
+        cars_before = await conn.fetchval(
+            "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1", platform_ulid)
+        stats["wallapop_cars_before"] = cars_before
 
         target_reached = False
         for kw in _KEYWORDS:
@@ -953,6 +1066,17 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
                JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                JOIN entity d ON d.entity_ulid = v.entity_ulid
                WHERE pl.platform_entity_ulid = $1 AND d.kind='compraventa'""", platform_ulid)
+        stats["particulars_distinct"] = await conn.fetchval(
+            """SELECT count(DISTINCT v.entity_ulid) FROM platform_listing pl
+               JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
+               JOIN entity d ON d.entity_ulid = v.entity_ulid
+               WHERE pl.platform_entity_ulid = $1 AND d.kind='particular'""", platform_ulid)
+
+        # LEGACY CLEANUP (PG DELETE+INSERT doctrine): retire the obsolete per-province 'garaje'
+        # buckets now that privates are caged PER-SELLER. Re-point is VAM-verified inside; only
+        # superseded bucket cars (whose listing survives under a particular) are removed — total
+        # wallapop cars never drop, no professional car is touched. Idempotent across re-runs.
+        await cleanup_legacy_buckets(conn, platform_ulid, stats)
 
         recipe_path = write_recipe(platform_code, WP_PLATFORM_RECIPE)
         print(f"[wallapop_wholesale] recipe written: {recipe_path}")
@@ -986,6 +1110,18 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
         stats["platform_code"] = platform_code
         stats["platform_ulid"] = platform_ulid
         stats["recipe_path"] = str(recipe_path)
+
+        # NO-DROP GUARD: total wallapop distinct listings (= edges, post-cleanup) MUST be >=
+        # the pre-run count. The cleanup only removed bucket cars that have a live per-seller
+        # twin, so the distinct-listing total can only GROW (new harvest) — never shrink.
+        stats["wallapop_cars_after"] = db_edges
+        stats["cars_did_not_drop"] = db_edges >= stats.get("wallapop_cars_before", 0)
+        if not stats["cars_did_not_drop"]:
+            # A real regression: refuse to call the run OK so the breaker/repair records it.
+            verdict = "REFUTED"
+            stats["verdict"] = verdict
+            print(f"[wallapop_wholesale] FATAL no-drop guard: cars dropped "
+                  f"{stats.get('wallapop_cars_before')} -> {db_edges}.")
 
         # S-HEALTH heartbeat: record THIS run's outcome so the watchdog tracks wallapop,
         # trips the breaker on a ban, and auto-repairs. OK when >=1 page fetched, no fetch
@@ -1022,15 +1158,24 @@ def _print_report(stats: dict) -> None:
     print(f"  distinct sellers      : {stats.get('distinct_sellers')} "
           f"({stats['seller_lookups']} lookups, {stats['seller_lookup_errors']} errors)")
     print(f"  PRO items             : {stats['pro_items']}")
-    print(f"  private items         : {stats['private_items']} (-> per-province particular bucket)")
+    print(f"  private items         : {stats['private_items']} (-> per-seller particular entities)")
     print(f"  dup ids collapsed     : {stats.get('dup_ids_collapsed')} (cross-query)")
     print(f"  geo/attr skipped      : {stats['geo_skipped']}")
     print(f"  PRO dealers attributed: {stats['dealers_distinct']} distinct "
           f"({stats['new_dealers']} new this run)")
+    print(f"  particulars attributed: {stats.get('particulars_distinct')} distinct (per-seller)")
     print(f"  cars caged            : {stats['cars_caged']} ({stats['new_cars']} new)")
     print(f"  platform_listing edges: {stats['edges_created']} created "
           f"(db total for wallapop = {stats.get('db_edges')})")
     print(f"  NEW delta events      : {stats['new_events']}")
+    print("  --- legacy garaje bucket cleanup (PG DELETE+INSERT) ---")
+    print(f"  buckets before/after  : {stats.get('bucket_entities_before')} -> {stats.get('bucket_entities_after')}"
+          f" ({stats.get('bucket_entities_deleted')} removed)")
+    print(f"  bucket cars superseded: {stats.get('bucket_cars_superseded')} deleted "
+          f"(re-pointed to per-seller); {stats.get('bucket_cars_not_repointed')} left intact")
+    print(f"  wallapop cars before  : {stats.get('wallapop_cars_before')}")
+    print(f"  wallapop cars after   : {stats.get('wallapop_cars_after')} "
+          f"(no-drop guard: {'OK' if stats.get('cars_did_not_drop') else 'FAILED'})")
     print("  --- VAM count quorum (like-with-like, this slice) ---")
     print(f"  harvested_cageable    : {stats.get('harvested_cageable')}")
     print(f"  db_edges              : {stats.get('db_edges')}")

@@ -301,6 +301,18 @@ def governor() -> RateGovernor:
         # JS challenge). It is an HTML surface, NOT a JSON gateway, so it stays in the STEALTH
         # family: paced conservatively below an unmeasured ceiling (like coches.com), human-shaped.
         g.configure_host("www.dasweltauto.es", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
+        # autocasion SSR/PDP host (www.autocasion.com) — HTML surface behind a Cloudflare
+        # that is MEASURED permissive to a chrome131 fingerprint: the tier1 recipe probe
+        # (autocasion_datalayer.md) hit it at scale — national counter, 184 make-facet
+        # <title>s, MB x 52 provinces, multi-page drains — from ONE residential IP with
+        # ZERO 429/403 and no JS challenge (cf-cache-status: DYNAMIC). So unlike the
+        # unmeasured-ceiling stealth hosts above, autocasion has EVIDENCE it serves well
+        # past a 0.7 req/s crawl. Paced to a still-conservative, human-shaped 2 req/s
+        # (min-spacing 0.5 s + jitter) — an order of magnitude below what a permissive CF
+        # edge serves, but enough that the PDP-attribution path (the make-partition drain's
+        # bottleneck, two www GETs per car) is not strangled. STILL well below any ban
+        # rate; the breaker + first-CF-tripwire escalation (recipe) remain the safety net.
+        g.configure_host("www.autocasion.com", rate_per_sec=2.0, burst=4.0, min_spacing_s=0.5)
 
         # --- JSON_API class (fast, built-for-traffic first-party gateways) -----------
         # Apply the JSON-API rate class to every host registered in _HOST_RATE_CLASSES.

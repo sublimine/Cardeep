@@ -64,3 +64,92 @@ Implemented wholesale recipes live under `pipeline/platform/`:
 ---
 
 *Source of truth: live DB `cardeep-pg` + `pipeline/platform/*_wholesale.py`. Generated 2026-06-12.*
+
+---
+
+## Rollup — new-API wiring (live DB, 2026-06-12)
+
+Latest connector pass added **spoticar** (5,884 cars / 135 dealers, 0 private, VAM
+TRUSTWORTHY) and **milanuncios** (55,113 cars / 2,727 dealers, 35,791 private skipped,
+VAM TRUSTWORTHY). All figures below are `[VERIFIED]` against the live DB
+(`postgres://...@localhost:5433/cardeep`).
+
+### Grand totals
+
+| Metric | Count | Query |
+|---|--:|---|
+| Vehicles (`vehicle`) | **349,876** | `SELECT count(*) FROM vehicle` |
+| Entities (`entity`) | **26,833** | `SELECT count(*) FROM entity` |
+| Platform listings (`platform_listing`) | **310,643** | `SELECT count(*) FROM platform_listing` |
+
+### Platform + OEM VO portal entities (`kind IN ('plataforma','oem_vo_portal')`)
+
+10 entities, car counts = `count(DISTINCT pl.vehicle_ulid)` per `platform_entity_ulid`.
+
+| Entity | kind | cdp_code | Cars |
+|---|---|---|--:|
+| coches.net | plataforma | CDP-ES-00-TKRV45RP | 154,997 |
+| wallapop | plataforma | CDP-ES-00-EMRH0TWQ | 60,012 |
+| milanuncios | plataforma | CDP-ES-00-E382JYEH | 55,113 |
+| coches.com | plataforma | CDP-ES-00-XM91J1NZ | 20,135 |
+| motor.es | plataforma | CDP-ES-00-HSV4XZ2H | 6,819 |
+| Autocasion | plataforma | CDP-ES-00-QY06GW0B | 5,972 |
+| spoticar | oem_vo_portal | CDP-ES-00-D6X2282Y | 5,884 |
+| renew | oem_vo_portal | CDP-ES-00-DT59NK3D | 918 |
+| Das WeltAuto | oem_vo_portal | CDP-ES-00-XWX9RHG7 | 552 |
+| AutoScout24 | plataforma | CDP-ES-00-VMCZWW5N | 268 |
+
+Distinct vehicles across the 10 platform/OEM entities: **310,702**.
+
+*Rollup generated 2026-06-12 from live DB query.*
+
+---
+
+## Rollup — dealer-giant upgrade pass (live DB, 2026-06-12)
+
+This pass deep-drained the three ES dealer giants (autocasion, coches.com,
+motor.es), lifting all three caged tallies. All figures below are `[VERIFIED]`
+against the live DB (`cardeep-pg`, db `cardeep`, `postgres://...@localhost:5433/cardeep`).
+
+### Grand totals
+
+| Metric | Count | Query |
+|---|--:|---|
+| Vehicles (`vehicle`) | **364,181** | `SELECT count(*) FROM vehicle` |
+| Entities (`entity`) | **28,831** | `SELECT count(*) FROM entity` |
+| Platform listings (`platform_listing`) | **324,957** | `SELECT count(*) FROM platform_listing` |
+
+### Platform + OEM VO portal entities (`kind IN ('plataforma','oem_vo_portal')`)
+
+10 entities; cars = `count(DISTINCT pl.vehicle_ulid)` per `platform_entity_ulid`,
+listings = `count(pl.*)` per entity.
+
+| Entity | kind | cdp_code | Cars | Listings |
+|---|---|---|--:|--:|
+| coches.net | plataforma | CDP-ES-00-TKRV45RP | 165,707 | 165,707 |
+| wallapop | plataforma | CDP-ES-00-EMRH0TWQ | 60,094 | 60,094 |
+| milanuncios | plataforma | CDP-ES-00-E382JYEH | 55,484 | 55,484 |
+| coches.com | plataforma | CDP-ES-00-XM91J1NZ | 21,533 | 21,533 |
+| Autocasion | plataforma | CDP-ES-00-QY06GW0B | 7,764 | 7,764 |
+| motor.es | plataforma | CDP-ES-00-HSV4XZ2H | 6,819 | 6,819 |
+| spoticar | oem_vo_portal | CDP-ES-00-D6X2282Y | 5,884 | 5,884 |
+| renew | oem_vo_portal | CDP-ES-00-DT59NK3D | 918 | 918 |
+| Das WeltAuto | oem_vo_portal | CDP-ES-00-XWX9RHG7 | 552 | 552 |
+| AutoScout24 | plataforma | CDP-ES-00-VMCZWW5N | 268 | 268 |
+
+Distinct vehicles across the 10 platform/OEM entities: **325,061**.
+
+### Dealer giants — caged-now vs declared-full + full-drain CLI
+
+| Giant | Caged now (live DB) | Declared-full (this run) | VAM | Full-drain CLI |
+|---|--:|--:|---|---|
+| **autocasion** | **7,764** | 7,700 | TRUSTWORTHY | `python -m pipeline.platform.autocasion_facet --makes all` |
+| **coches.com** | **21,533** | 19,794 | TRUSTWORTHY | `python -m pipeline.platform.coches_com_wholesale --all` |
+| **motor.es** | **6,819** | 6,513 | PASS (like-with-like quorum; `record_count_verdict` per run) | `python -m pipeline.platform.motor_es_wholesale --full` |
+
+Caged-now (live DB `count(DISTINCT pl.vehicle_ulid)`) meets or exceeds each giant's
+declared-full target — the deltas (autocasion +64, coches.com +1,739, motor.es +306)
+reflect listings retained from prior runs on top of this pass's harvest. All three
+giants are TRUSTWORTHY/PASS.
+
+*Rollup generated 2026-06-12 from live DB query.*

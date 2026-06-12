@@ -15,12 +15,21 @@ SECOND platform flows through one architecture, not a fork of it:
 
   coches.net (the marketplace)  -> entity, kind='plataforma'  (+ platform_meta)
   each SELLING DEALER           -> entity, kind='compraventa' (geo-resolved)
-  each CAR                      -> vehicle, OWNED BY its dealer (entity_ulid=dealer)
+  each PRIVATE seller's car     -> owned by the per-province 'particular' bucket entity
+  each CAR                      -> vehicle, OWNED BY its dealer/bucket (entity_ulid=owner)
   the car ON the platform       -> platform_listing edge (platform_entity <-> vehicle)
 
-Ownership is singular (the dealer); platform membership is plural (this edge). The
-same physical car can carry BOTH an AS24 edge and a coches.net edge without ever
-changing its owning dealer.
+Ownership is singular (the dealer/bucket); platform membership is plural (this edge). The
+same physical car can carry BOTH an AS24 edge and a coches.net edge without ever changing
+its owning dealer.
+
+PRIVATE sellers are NOT skipped — a private individual's car is real inventory a buyer can
+purchase, so it must be served. coches.net ANONYMISES privates (seller.contractId is the
+shared sentinel "1" across all of them; seller.name is a non-unique first name), so there
+is NO stable per-seller id. We therefore cage every private car under ONE synthetic
+'particular' bucket entity PER PROVINCE (location.mainProvinceId; '00' fallback when
+missing). The car, the edge and the NEW delta event are all caged exactly like a dealer's
+car — only per-human identity the source withholds is bucketed, never fabricated.
 
 PROOF SLICE, NOT THE FULL HARVEST. coches.net declares ~272k results
 (meta.totalResults). Draining all of it (~2,728 requests at size=100) needs the
@@ -92,6 +101,24 @@ PLATFORM_PROVINCE_SENTINEL = "00"
 # = the full governed run, ~2,728 requests at size=100).
 DEFAULT_MAX_PAGES = 5
 PAGE_SIZE = 100  # the API honors size up to 100 (recipe verified).
+
+# PRIVATE-seller bucket. coches.net ANONYMISES privates: seller.contractId is the SHARED
+# sentinel "1" across ALL privates and seller.name is a non-unique first name (verified
+# live 2026-06-12: page 1500 is ~89% private, every one carries contractId="1"). There is
+# NO stable per-seller id, so we DO NOT fabricate per-human identity the source withholds.
+# Instead every private car is owned by ONE synthetic 'particular' bucket entity PER
+# PROVINCE (canonical_key 'particular:cochesnet:{province}'). The car, the platform_listing
+# edge and the NEW delta event are all caged exactly like a dealer's car; only per-seller
+# identity is bucketed. The bucket entity MIRRORS the platform's dealer rows
+# (is_tier1=FALSE, source_group/role NULL, kind_source='platform_label') and differs only
+# in kind='particular' + sells_cars=TRUE.
+PARTICULAR_KIND = "particular"
+PARTICULAR_NAME_PREFIX = "Particulares coches.net"
+# Fallback province sentinel when location.mainProvinceId is missing/invalid: bucket the
+# car under '00' so no real car is ever dropped for want of a clean province. '00' is NOT a
+# geo_province FK, so the bucket entity stores province_code=NULL for the '00' bucket (the
+# '00' still anchors the cdp_code string); a real 1..52 province stores its code normally.
+PARTICULAR_PROVINCE_FALLBACK = "00"
 
 # transmissionTypeId -> human label (coches.net codes; verified live: only 1/2 seen).
 _TRANSMISSION = {1: "Manual", 2: "Automático"}
@@ -178,11 +205,13 @@ def _first_image(resources) -> str | None:
 
 
 def parse_item_dealer(item: dict) -> DealerRef | None:
-    """Parse the SELLING DEALER from an item's `seller` + `location`.
+    """Parse the SELLING DEALER from an item's `seller` + `location`, or None if the item
+    is a PRIVATE seller (the caller then cages it into the per-province 'particular' bucket).
 
-    Only professional sellers (isProfessional) with a contractId become entities;
-    private sellers are skipped. Geo comes from the item's location, not the seller
-    (the seller has no address on this surface)."""
+    Only professional sellers (isProfessional) with a contractId become compraventa entities;
+    a private seller returns None here BUT is NOT dropped — the caller routes it to the
+    'particular' bucket. Geo comes from the item's location, not the seller (the seller has
+    no address on this surface)."""
     seller = item.get("seller") or {}
     if not seller.get("isProfessional"):
         return None
@@ -351,6 +380,11 @@ COCHES_PLATFORM_RECIPE = {
     "enumeration": "pagination.page=1..N, size=100; meta.totalResults/totalPages drive the full drain",
     "platform_entity": "kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE",
     "dual_membership": "vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle",
+    "particulares": ("private sellers caged, NOT skipped: source anonymises privates "
+                     "(contractId='1' sentinel, first-name only) -> per-province 'particular' "
+                     "bucket (canonical_key 'particular:cochesnet:{province}', '00' fallback); "
+                     "kind=particular, sells_cars=TRUE, mirrors dealer rows (is_tier1=FALSE, "
+                     "source_group/role NULL, kind_source=platform_label); car+edge+delta caged"),
     "field_map": {
         "deep_link": "item.url (prefixed with https://www.coches.net)",
         "listing_ref": "item.id (coches.net native ad id)",
@@ -410,6 +444,18 @@ def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:
     that happen to share a name in one municipality never collapse to one entity)."""
     return cdp_code(province_code=d.province_code, domain=None, name=d.name,
                     municipality_code=muni, address=f"contract:{d.contract_id}")
+
+
+def cdp_code_particular(province_code: str) -> str:
+    """Mint the per-province private-seller 'particular' bucket cdp_code via the canonical
+    generator's particular path (canonical_key 'particular:cochesnet:{province}').
+
+    coches.net anonymises privates -> the province code IS the seller id (the source
+    withholds per-human identity). Deterministic over (platform, province) so re-runs are
+    idempotent and a PRO dealer can never collide with the bucket. The cdp_code's province
+    segment uses the SAME province (or '00' for the no-province fallback bucket)."""
+    return cdp_code(province_code=province_code, particular_platform=COCHES_DOMAIN,
+                    particular_seller_id=province_code)
 
 
 async def upsert_dealer(conn: asyncpg.Connection, geo: GeoResolver, d: DealerRef) -> str | None:
@@ -506,12 +552,20 @@ DEFAULT_CONCURRENCY = 15
 class _CageRow:
     """One fully-parsed, geo-anchored car ready for the bulk cage — the in-memory result
     of the parse+resolve phase, before any SQL. Carries everything the batched upserts need
-    so the DB phase touches no per-item Python logic, only set-based statements."""
-    contract_id: str
-    dealer_cdp: str
-    dealer_name: str | None
-    dealer_province: str
-    dealer_muni: str | None
+    so the DB phase touches no per-item Python logic, only set-based statements.
+
+    ONE row shape serves both owner kinds. A PROFESSIONAL seller -> owner_kind='compraventa'
+    (sells_cars=TRUE, province+muni geo-resolved, source_ref=contractId). A PRIVATE seller ->
+    owner_kind='particular' (the per-province bucket: sells_cars=TRUE, province=the INE code
+    or NULL for the '00' fallback, no muni, source_ref='particular:{prov}'). Both mirror the
+    platform's dealer rows (is_tier1=FALSE, source_group/role NULL, kind_source set by the
+    bulk statement); only kind differs."""
+    owner_cdp: str
+    owner_kind: str               # 'compraventa' (dealer) | 'particular' (private bucket)
+    owner_name: str | None
+    owner_province: str | None    # INE code; NULL only for the '00' particular fallback bucket
+    owner_muni: str | None        # dealers may have a muni; particular buckets never do
+    source_ref: str               # dealer contractId | 'particular:{prov}' for the bucket
     vehicle: Vehicle
 
 
@@ -520,20 +574,20 @@ class _CageRow:
 # The ON CONFLICT clauses are byte-for-byte the same idempotency the per-row path used, so
 # a re-run of an already-harvested window adds 0 rows and 0 events.
 
-_BULK_UPSERT_DEALERS = """
+_BULK_UPSERT_OWNERS = """
 INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
         province_code, municipality_code, is_tier1, status, kind_source,
         sells_cars, first_discovered_source, last_seen)
-SELECT u.entity_ulid, u.cdp_code, 'compraventa', u.name, u.name,
+SELECT u.entity_ulid, u.cdp_code, u.kind::entity_kind, u.name, u.name,
        u.province_code, u.municipality_code, FALSE, 'active', 'platform_label',
-       TRUE, $7, now()
+       TRUE, $8, now()
   FROM unnest($1::text[], $2::text[], $3::text[], $4::char(2)[], $5::char(5)[],
-              $6::text[]) AS u(entity_ulid, cdp_code, name, province_code,
-                               municipality_code, source_ref)
+              $6::text[], $7::text[]) AS u(entity_ulid, cdp_code, name, province_code,
+                               municipality_code, source_ref, kind)
 ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
 """
 
-_BULK_UPSERT_DEALER_SOURCES = """
+_BULK_UPSERT_OWNER_SOURCES = """
 INSERT INTO entity_source (entity_ulid, source_key, source_ref)
 SELECT e.entity_ulid, $3, u.source_ref
   FROM unnest($1::text[], $2::text[]) AS u(cdp_code, source_ref)
@@ -583,14 +637,33 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::js
 """
 
 
+def _province_name(prov: str | None, prov_names: dict[str, str]) -> str:
+    """The human province label for a particular bucket's trade_name. Falls back to a stable
+    'ES' label for the '00' no-province bucket so the entity name is never empty."""
+    if not prov:
+        return "ES"
+    return prov_names.get(prov, prov)
+
+
 def _parse_window(items_by_page: list[tuple[int, list]], geo: GeoResolver,
-                  seen_ids: set, harvested_cageable: set, stats: dict) -> list[_CageRow]:
+                  prov_names: dict[str, str], seen_ids: set, harvested_cageable: set,
+                  stats: dict) -> list[_CageRow]:
     """Parse + geo-resolve every item across the window IN PAGE ORDER — pure CPU, no SQL.
 
-    This is the EXACT per-item gate the row-by-row path applied (cross-page dedup, private
-    skip, geo skip, cageable truth), lifted out of the DB loop so the SQL phase is purely
-    set-based. `seen_ids`/`harvested_cageable`/`stats` are mutated here with the same
-    deterministic page-order semantics, so the VAM truth is byte-identical to before."""
+    This is the per-item gate (cross-page dedup, geo gate, cageable truth), lifted out of the
+    DB loop so the SQL phase is purely set-based. Both owner kinds are produced here as one
+    uniform _CageRow stream:
+
+      * PROFESSIONAL seller -> kind='compraventa' (geo-resolved dealer; a bad province is
+        skipped so a dealer is never minted without a real INE anchor — the dealer's identity
+        IS its location, so an unanchored dealer is junk).
+      * PRIVATE seller -> kind='particular' (the per-province bucket). coches.net anonymises
+        privates, so we NEVER drop the car: a missing/invalid province buckets the car under
+        the '00' fallback (province_code NULL on the entity, '00' in the cdp_code) rather than
+        skipping it. A private car is real inventory a buyer can purchase — it must be served.
+
+    `seen_ids`/`harvested_cageable`/`stats` are mutated with deterministic page-order
+    semantics, so the VAM truth (distinct (owner_cdp, deep_link) pairs) stays exact."""
     rows: list[_CageRow] = []
     for _page, items in items_by_page:
         for item in items:
@@ -602,36 +675,52 @@ def _parse_window(items_by_page: list[tuple[int, list]], geo: GeoResolver,
             if item_id:
                 seen_ids.add(item_id)
 
-            d = parse_item_dealer(item)
-            if d is None:
-                stats["private_skipped"] += 1
-                continue
-            stats["dealer_items"] += 1
-
-            # Geo gate — the exact same province-range guard upsert_dealer applied, done in
-            # memory so a bad province is skipped without ever touching the DB (no FK risk).
-            if not d.province_code:
-                stats["geo_skipped"] += 1
-                continue
-            if not (d.province_code.isdigit() and "01" <= d.province_code <= "52"):
-                stats["geo_skipped"] += 1
-                continue
-            muni = geo.municipality_code(d.province_code, d.city)
-            dealer_cdp = cdp_code_dealer(d, muni)
-
             v = parse_item_vehicle(item)
             if not v.deep_link:
                 continue
-            harvested_cageable.add((d.contract_id, v.deep_link))
             if v.price_drop:
                 stats["price_drops_captured"] += 1
-            rows.append(_CageRow(
-                contract_id=d.contract_id, dealer_cdp=dealer_cdp, dealer_name=d.name,
-                dealer_province=d.province_code, dealer_muni=muni, vehicle=v))
+
+            d = parse_item_dealer(item)
+            if d is not None:
+                # ---- PROFESSIONAL: a real selling dealer. Geo gate (same range guard
+                # upsert_dealer applied) — a bad province skips the dealer without touching DB.
+                stats["dealer_items"] += 1
+                if not d.province_code:
+                    stats["geo_skipped"] += 1
+                    continue
+                if not (d.province_code.isdigit() and "01" <= d.province_code <= "52"):
+                    stats["geo_skipped"] += 1
+                    continue
+                muni = geo.municipality_code(d.province_code, d.city)
+                owner_cdp = cdp_code_dealer(d, muni)
+                harvested_cageable.add((owner_cdp, v.deep_link))
+                rows.append(_CageRow(
+                    owner_cdp=owner_cdp, owner_kind="compraventa", owner_name=d.name,
+                    owner_province=d.province_code, owner_muni=muni,
+                    source_ref=d.contract_id, vehicle=v))
+            else:
+                # ---- PRIVATE: cage into the per-province 'particular' bucket. Never dropped.
+                stats["private_caged"] += 1
+                loc = item.get("location") or {}
+                prov = _prov2(loc.get("mainProvinceId"))  # None -> fallback bucket '00'
+                bucket_prov = prov or PARTICULAR_PROVINCE_FALLBACK
+                owner_cdp = cdp_code_particular(bucket_prov)
+                pname = _province_name(prov, prov_names)
+                harvested_cageable.add((owner_cdp, v.deep_link))
+                rows.append(_CageRow(
+                    owner_cdp=owner_cdp, owner_kind=PARTICULAR_KIND,
+                    owner_name=f"{PARTICULAR_NAME_PREFIX} {pname}",
+                    # entity.province_code is a geo_province FK -> NULL for the '00' bucket
+                    # (the '00' lives only in the cdp_code string, same as the platform entity).
+                    owner_province=prov,
+                    owner_muni=None,
+                    source_ref=f"particular:{bucket_prov}", vehicle=v))
     return rows
 
 
-async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid: str,
+async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver,
+                         prov_names: dict[str, str], platform_ulid: str,
                          items_by_page: list[tuple[int, list]], seen_ids: set,
                          harvested_cageable: set, stats: dict) -> None:
     """BULK-ingest a whole concurrent page-window in ONE transaction with set-based SQL.
@@ -650,24 +739,26 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ul
       4) bulk-upsert platform_listing edges (RETURNING counts the genuinely new edges)
       5) bulk-insert NEW delta events for the genuinely new vehicles only
     """
-    cage = _parse_window(items_by_page, geo, seen_ids, harvested_cageable, stats)
+    cage = _parse_window(items_by_page, geo, prov_names, seen_ids, harvested_cageable, stats)
     if not cage:
         return
 
     async with conn.transaction():
-        # ---- (2) DEALERS: dedup by cdp_code within the window, bulk-upsert, resolve ulids.
-        dealers: dict[str, _CageRow] = {}
+        # ---- (2) OWNERS (dealers + particular buckets): dedup by cdp_code within the window,
+        # bulk-upsert (kind-aware), resolve ulids. Both kinds flow through ONE upsert.
+        owners: dict[str, _CageRow] = {}
         for r in cage:
-            dealers.setdefault(r.dealer_cdp, r)  # first occurrence wins (deterministic)
-        d_ulids = [ulid() for _ in dealers]
-        d_cdps = list(dealers.keys())
-        d_names = [dealers[c].dealer_name for c in d_cdps]
-        d_provs = [dealers[c].dealer_province for c in d_cdps]
-        d_munis = [dealers[c].dealer_muni for c in d_cdps]
-        d_refs = [dealers[c].contract_id for c in d_cdps]
-        await conn.execute(_BULK_UPSERT_DEALERS, d_ulids, d_cdps, d_names, d_provs,
-                           d_munis, d_refs, COCHES_SOURCE_KEY)
-        await conn.execute(_BULK_UPSERT_DEALER_SOURCES, d_cdps, d_refs, COCHES_SOURCE_KEY)
+            owners.setdefault(r.owner_cdp, r)  # first occurrence wins (deterministic)
+        d_ulids = [ulid() for _ in owners]
+        d_cdps = list(owners.keys())
+        d_names = [owners[c].owner_name for c in d_cdps]
+        d_provs = [owners[c].owner_province for c in d_cdps]
+        d_munis = [owners[c].owner_muni for c in d_cdps]
+        d_refs = [owners[c].source_ref for c in d_cdps]
+        d_kinds = [owners[c].owner_kind for c in d_cdps]
+        await conn.execute(_BULK_UPSERT_OWNERS, d_ulids, d_cdps, d_names, d_provs,
+                           d_munis, d_refs, d_kinds, COCHES_SOURCE_KEY)
+        await conn.execute(_BULK_UPSERT_OWNER_SOURCES, d_cdps, d_refs, COCHES_SOURCE_KEY)
         cdp_to_ulid: dict[str, str] = {
             row["cdp_code"]: row["entity_ulid"]
             for row in await conn.fetch(
@@ -675,18 +766,16 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ul
                 "WHERE cdp_code = ANY($1::text[])", d_cdps)
         }
 
-        # ---- attach the resolved dealer_ulid to each cage row; dedup cars within the window
-        # by (dealer_ulid, deep_link) so the same ad seen twice in one window is one car.
+        # ---- attach the resolved owner_ulid to each cage row; dedup cars within the window
+        # by (owner_ulid, deep_link) so the same ad seen twice in one window is one car.
         cars: dict[tuple[str, str], _CageRow] = {}
-        car_dealer_ulid: dict[tuple[str, str], str] = {}
         for r in cage:
-            du = cdp_to_ulid.get(r.dealer_cdp)
+            du = cdp_to_ulid.get(r.owner_cdp)
             if du is None:
-                continue  # dealer upsert race-impossible here, but stay defensive
+                continue  # owner upsert race-impossible here, but stay defensive
             key = (du, r.vehicle.deep_link)
             if key not in cars:
                 cars[key] = r
-                car_dealer_ulid[key] = du
 
         # ---- (3) VEHICLES: one SELECT splits existing vs new (idempotency truth). Existing
         # -> bulk touch (last_seen/status). New -> Python-minted ulid + bulk insert.
@@ -796,10 +885,10 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
     fetcher = CochesFetcher(pool_size=concurrency)
     stats = {
         "pages_fetched": 0, "items_seen": 0, "dealer_items": 0,
-        "private_skipped": 0, "geo_skipped": 0, "new_dealers": 0, "cars_caged": 0,
+        "private_caged": 0, "geo_skipped": 0, "new_dealers": 0, "cars_caged": 0,
         "new_cars": 0, "edges_created": 0, "new_events": 0, "price_drops_captured": 0,
         "declared_full": None, "dup_ids_collapsed": 0, "dealers_distinct": 0,
-        "concurrency": concurrency,
+        "particular_buckets": 0, "new_particular_buckets": 0, "concurrency": concurrency,
     }
     # Harvest-side truth for the VAM: distinct CAGEABLE cars = distinct
     # (contract_id, deep_link) pairs that survived dealer-parse + geo-resolution.
@@ -825,6 +914,10 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
     last_http: int | None = None
     try:
         geo = await GeoResolver.load(conn)
+        # code -> human province label, for the particular bucket trade_name (e.g.
+        # '28' -> 'Madrid'). Loaded once per run; the '00' fallback bucket uses 'ES'.
+        prov_names = {r["code"]: r["name"]
+                      for r in await conn.fetch("SELECT code, name FROM geo_province")}
         platform_ulid = await ensure_platform_entity(conn)
         platform_code = coches_platform_cdp_code()
         print(f"[coches_net_wholesale] platform entity ready: {platform_code} (ulid={platform_ulid})")
@@ -834,7 +927,15 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
 
         seen_ids: set[str] = set()
         dealers_before = {r["cdp_code"] for r in await conn.fetch(
-            "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
+            "SELECT cdp_code FROM entity WHERE kind='compraventa' "
+            "AND first_discovered_source=$1", COCHES_SOURCE_KEY)}
+        # Scope the bucket-delta to THIS connector's own particulares. Other connectors
+        # (wallapop, milanuncios) write their own kind='particular' rows concurrently, so a
+        # global count would attribute their buckets to this run. first_discovered_source
+        # pins the count to coches.net's contribution only.
+        particulars_before = {r["cdp_code"] for r in await conn.fetch(
+            "SELECT cdp_code FROM entity WHERE kind='particular' "
+            "AND first_discovered_source=$1", COCHES_SOURCE_KEY)}
 
         # CONCURRENT sliding-window drain. Each window fetches up to `concurrency` pages
         # in parallel through the governor (the host bucket paces the aggregate), then the
@@ -880,8 +981,8 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
             if window_pages:
                 # ONE transaction, set-based SQL: ~6 statements for the whole window instead
                 # of ~400 per page. Idempotency/delta/VAM semantics are byte-identical.
-                await _ingest_window(conn, geo, platform_ulid, window_pages, seen_ids,
-                                     harvested_cageable, stats)
+                await _ingest_window(conn, geo, prov_names, platform_ulid, window_pages,
+                                     seen_ids, harvested_cageable, stats)
                 stats["pages_fetched"] += len(window_pages)
                 first_p, last_p = window_pages[0][0], window_pages[-1][0]
                 print(f"[coches_net_wholesale] window pages {first_p}-{last_p}: "
@@ -890,8 +991,20 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
                       f"edges={stats['edges_created']}")
 
         dealers_after = {r["cdp_code"] for r in await conn.fetch(
-            "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
+            "SELECT cdp_code FROM entity WHERE kind='compraventa' "
+            "AND first_discovered_source=$1", COCHES_SOURCE_KEY)}
         stats["new_dealers"] = len(dealers_after - dealers_before)
+        particulars_after = {r["cdp_code"] for r in await conn.fetch(
+            "SELECT cdp_code FROM entity WHERE kind='particular' "
+            "AND first_discovered_source=$1", COCHES_SOURCE_KEY)}
+        stats["new_particular_buckets"] = len(particulars_after - particulars_before)
+        # distinct particular buckets that actually OWN a coches.net-listed car this run.
+        stats["particular_buckets"] = await conn.fetchval(
+            """SELECT count(DISTINCT v.entity_ulid) FROM platform_listing pl
+               JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
+               JOIN entity e ON e.entity_ulid = v.entity_ulid
+               WHERE pl.platform_entity_ulid = $1 AND e.kind='particular'""", platform_ulid)
+        # distinct OWNERS (dealers + particular buckets) reachable via the edge join.
         stats["dealers_distinct"] = await conn.fetchval(
             """SELECT count(DISTINCT v.entity_ulid) FROM platform_listing pl
                JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
@@ -904,9 +1017,10 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
         # all measure "distinct cageable cars in this slice":
         #   db_edges           = platform_listing rows for coches.net (DB write truth)
         #   db_join_vehicles   = distinct vehicles via the edge join     (DB read truth)
-        #   harvested_cageable = distinct (contract, deep_link) pulled   (harvest truth)
+        #   harvested_cageable = distinct (owner_cdp, deep_link) pulled  (harvest truth)
+        #                        — owner = dealer cdp OR particular-bucket cdp.
         # The declared full count (272k) is reported for honesty but is NOT a quorum
-        # path (it measures the WHOLE platform, not this 5-page slice).
+        # path (it measures the WHOLE platform, not this slice).
         db_edges = await conn.fetchval(
             "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1", platform_ulid)
         db_join_vehicles = await conn.fetchval(
@@ -962,11 +1076,13 @@ def _print_report(stats: dict) -> None:
     print(f"  pages fetched         : {stats['pages_fetched']}")
     print(f"  items seen            : {stats['items_seen']}")
     print(f"  dealer items          : {stats['dealer_items']}")
-    print(f"  private skipped       : {stats['private_skipped']}")
+    print(f"  private caged         : {stats['private_caged']} (-> per-province particular bucket)")
     print(f"  dup ids collapsed     : {stats.get('dup_ids_collapsed')} (cross-page)")
-    print(f"  geo skipped (bad prov): {stats['geo_skipped']}")
-    print(f"  dealers attributed    : {stats['dealers_distinct']} distinct "
-          f"({stats['new_dealers']} new this run)")
+    print(f"  geo skipped (bad prov): {stats['geo_skipped']} (dealers only; privates never dropped)")
+    print(f"  owners attributed     : {stats['dealers_distinct']} distinct "
+          f"({stats['new_dealers']} new dealers this run)")
+    print(f"  particular buckets    : {stats.get('particular_buckets')} distinct "
+          f"({stats.get('new_particular_buckets')} new this run)")
     print(f"  cars caged            : {stats['cars_caged']} ({stats['new_cars']} new)")
     print(f"  platform_listing edges: {stats['edges_created']} created "
           f"(db total for coches.net = {stats.get('db_edges')})")

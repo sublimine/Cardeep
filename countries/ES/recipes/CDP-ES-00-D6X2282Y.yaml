@@ -1,0 +1,37 @@
+# Cardeep extraction recipe — CDP-ES-00-D6X2282Y
+# Reusable; re-scrape without raw crude.
+version: 1
+source: spoticar (www.spoticar.es)
+scope: platform-wholesale (Stellantis ES certified-used; Drupal SPA + Elasticsearch JSON API)
+engine: curl_cffi+chrome131_impersonate+internal_es_json_api(GET)
+access: OPEN-via-fingerprint (AkamaiGHost 403 to plain curl; chrome131 TLS/JA3 passes cleanly). No proxy, no browser, no cookie warm-up, no auth, €0. Public site behind Akamai -> is_tier1=TRUE; the JSON API serves to curl_cffi -> defense_tier=t1_soft.
+data_surface: internal_api
+surface_intent: internal_es_json_api
+endpoint: GET https://www.spoticar.es/api/vehicleoffers/paginate/search?page=N
+request:
+  headers: Accept */*, X-Requested-With XMLHttpRequest, Accept-Language es-ES, Referer /comprar-coches-de-ocasion
+  params: page=N only (NO sort/orderby — a sort param triggers AkamaiGHost 503 on deep pages)
+enumeration: page=1..~528 (12 cars/page; page 528 = 11 trailing hits, 529+ = 0). count.value (6334) + first-empty-page bound the run; dedup on field_vo_carnum. lastPage=576 is a METADATA artefact, NOT the data boundary.
+denominator: count.value (6334) == list/search countNumber == Σbrand-facets == Σdealer-facets == /api/count-published-vo
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=stellantis_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: _source.url (prefixed with https://www.spoticar.es)
+  listing_ref: _source.field_vo_carnum (ES_<pdv>_<refbase>; stable id + dedup key)
+  vin: _source.field_vo_vin (REAL per-car VIN — gold for cross-source dedup)
+  make: _source.marque_no_accent (fallback marque)
+  model: _source.model
+  version: _source.version
+  year: _source.field_vo_annee_modele (fallback field_vo_dpi)
+  km: _source.field_vo_km
+  price: _source.field_vo_prix_base (field_vo_pb_devise=eur)
+  fuel: _source.type_carburant (fallback fuel_type)
+  transmission: _source.boite_vitesse (gearbox; NOT _source.transmission which is drivetrain)
+  dealer: _source.field_pdv_* {field_pdv_geo_id, field_pdv_title, field_pdv_city, field_pdv_geolocation}
+  location: field_pdv_geolocation='lat,lng' -> province via ProvinceGeocoder (nearest labeled point); field_pdv_city -> municipality (INE-resolved, best-effort)
+caveats:
+  page_size: fixed 12 cars/page (not a request param).
+  encoding: brand/dealer/city text is latin-1 mojibake over the wire (autom�tico, alcorc�n); repair with s.encode('latin-1').decode('utf-8'). Numeric fields clean.
+  no_sort: adding sort/orderby triggers AkamaiGHost 503 on deep pages — harvest plain ?page=N only.
+  geo: no postal code on this surface; province is geocoded from field_pdv_geolocation lat/lng.
+  no_private_sellers: OEM certified-used portal — every car belongs to a Stellantis dealer.

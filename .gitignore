@@ -20,3 +20,4 @@ node_modules/
 scratch/
 scripts/_*.py
 scratch_*.py
+.runlogs/

@@ -1,0 +1,31 @@
+# Cardeep extraction recipe — CDP-ES-00-E382JYEH
+# Reusable; re-scrape without raw crude.
+version: 1
+source: milanuncios.com
+scope: platform-wholesale (searchapi.gw.milanuncios.com/v4/classifieds JSON API; province + price-band FACET partition for full coverage)
+engine: curl_cffi+chrome131_impersonate+json_api(GET)+facet_partition
+access: FREE: the SPA's own JSON data layer answers a Chrome TLS fingerprint cold (no proxy, no browser, no reese84, no auth, no cookie warm-up). is_tier1=TRUE (giant Tier-1 brand) but defense_tier=t1_soft (search gateway unwalled to curl_cffi). The public site/sitemap are GeeTest/S3-walled; the search API is not.
+data_surface: internal_api
+surface_intent: json_api
+endpoint: GET https://searchapi.gw.milanuncios.com/v4/classifieds
+request:
+  headers: accept json, accept-language es-ES, origin/referer www.milanuncios.com, sec-ch-ua-platform Windows
+  params: category=13 (coches), transaction=supply, limit=100 (101+ -> 30-ad fallback), offset=N (hard cap 10000), sort=newest, province=<INE 1..52 SINGULAR>, priceFrom/priceTo=<band> (provinceIds/regions/make SILENTLY ignored)
+enumeration: FACET partition: province 1..52; read pagination.totalHits.relation — 'eq' -> exact count <10k, drain by offset+=100; 'gte'(10000) -> >10k, sub-shard by priceFrom/priceTo bands until every band is 'eq', then drain
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=marketplace_generalist, role=platform, data_surface=internal_api, platform_meta.family=adevinta
+seller_policy: per-item ad.type discriminator, BOTH caged as sellable inventory: 'professional' -> compraventa DEALER (authorId/authorName); 'private' -> PER-SELLER particular (canonical_key particular:milanuncios:{authorId}, so one human's N cars collapse to ONE entity). Particular mirrors the dealer rows (is_tier1=FALSE, source_group=NULL, kind_source=platform_label, sells_cars=TRUE) and leaves role NULL. Only an ad with no authorId on either path is unattributed_skipped (cannot key an owner).
+dual_membership: vehicle.entity_ulid=OWNER (compraventa DEALER or particular HUMAN); platform_listing edge=platform<->vehicle (identical for both kinds)
+encoding: human strings are latin-1 mojibake -> s.encode('latin-1').decode('utf-8')
+field_map:
+  listing_ref: ad.id (milanuncios native ad id)
+  deep_link: ad.url (prefixed https://www.milanuncios.com)
+  title: ad.title (demojibake'd)
+  price: ad.price.cash.value (EUR int; label is mojibake)
+  previous_price: ad.previousPrice (price-drop signal)
+  year: attributes[year].value.raw
+  km: attributes[kilometers].value.raw
+  fuel: attributes[fuel].value.raw (slug -> ES label)
+  transmission: attributes[transmission].value.raw (AUTOMATIC/MANUAL -> ES label)
+  photo_url: photos[adId].imageUrls[0] (prefixed https://)
+  dealer: ad {type, authorId, authorName}
+  location: ad.location {province.id(=INE code), city.name}

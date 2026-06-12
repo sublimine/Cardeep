@@ -579,6 +579,89 @@ async def capture_price_drop(conn: asyncpg.Connection, platform_ulid: str, vulid
 
 
 # ---------------------------------------------------------------------------
+# Per-ref hydrate -> dealer -> cage. ONE car, end to end, fully guarded. This is the
+# proven cage path extracted verbatim so BOTH the flat wholesale drain and the
+# make-partition facet drain (pipeline.platform.autocasion_facet) share it byte-for-byte
+# — same GraphQL ad() hydrate, same PDP JSON-LD dealer, same per-car transaction, same
+# delta NEW / PRICE_CHANGE rules, same ON CONFLICT idempotency. `seen_ids` and
+# `harvested_cageable` are passed in so a caller can keep ONE global dedup set across
+# pages AND partitions (the live-set-shift + cross-slice-overlap guard).
+# ---------------------------------------------------------------------------
+
+
+async def process_ref(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid: str,
+                      governed_fetch, pdp_url: str, ad_id: str,
+                      seen_ids: set[str], harvested_cageable: set[tuple[str, str]],
+                      stats: dict) -> int | None:
+    """Hydrate + attribute + cage ONE ad. Returns fetcher.last_status on a fetch error
+    (so the caller can feed the breaker), else None. Updates stats and the global sets
+    in place. A single bad ad/PDP NEVER aborts the drain (resilience doctrine)."""
+    stats["refs_seen"] += 1
+    if ad_id in seen_ids:
+        stats["dup_ids_collapsed"] += 1
+        return None   # id-dedup across pages AND partitions (live-set-shift guard)
+    seen_ids.add(ad_id)
+
+    # Step 2 — hydrate the car (GraphQL ad()).
+    try:
+        ad_raw = await governed_fetch(
+            GQL_ENDPOINT, method="POST", gql={"query": _AD_QUERY % int(ad_id)})
+        ad = ((json.loads(ad_raw).get("data") or {}).get("ad")) or None
+    except Exception:  # noqa: BLE001 — one ad failing is not fatal.
+        stats["fetch_errors"] += 1
+        return "fetch"
+    if not ad:
+        stats["fetch_errors"] += 1
+        return None
+    stats["ads_hydrated"] += 1
+    v = parse_ad(ad, pdp_url)
+    if not v.deep_link:
+        return None
+
+    # Step 3 — dealer attribution (PDP JSON-LD).
+    try:
+        pdp_html = await governed_fetch(_PDP_BASE + pdp_url)
+    except Exception:  # noqa: BLE001
+        stats["fetch_errors"] += 1
+        return "fetch"
+    stats["pdp_fetched"] += 1
+    try:
+        ld = parse_pdp_ldjson(pdp_html)
+        if ld is None:
+            stats["private_skipped"] += 1
+            return None
+        d = parse_pdp_dealer(ld, geo)
+        if d is None:
+            stats["private_skipped"] += 1   # private seller / no AutoDealer
+            return None
+        if v.photo_url is None:
+            v.photo_url = pdp_photo(ld)
+
+        async with conn.transaction():
+            dealer_ulid = await upsert_dealer(conn, geo, d)
+            if dealer_ulid is None:
+                stats["geo_skipped"] += 1
+                return None
+            harvested_cageable.add((d.slug, v.deep_link))
+            vulid, veh_new = await upsert_vehicle(conn, dealer_ulid, v)
+            stats["cars_caged"] += 1
+            if not veh_new:
+                if await capture_price_drop(conn, platform_ulid, vulid, dealer_ulid, v):
+                    stats["price_changes_captured"] += 1
+            if veh_new:
+                stats["new_cars"] += 1
+                await emit_new_event(conn, vulid, dealer_ulid, v)
+                stats["new_events"] += 1
+            edge_new = await link_platform(conn, platform_ulid, vulid, v)
+            if edge_new:
+                stats["edges_created"] += 1
+    except Exception as e:  # noqa: BLE001 — one bad car never sinks the drain.
+        stats["parse_errors"] += 1
+        print(f"[autocasion] car {ad_id} parse/cage failed ({e!r}); skipping.")
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 
@@ -657,79 +740,13 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES, limit: int | None = None) 
             for pdp_url, ad_id in refs:
                 if limit is not None and stats["cars_caged"] >= limit:
                     break  # hard cap reached mid-page; stop hydrating further ads.
-                stats["refs_seen"] += 1
-                if ad_id in seen_ids:
-                    stats["dup_ids_collapsed"] += 1
-                    continue   # id-dedup across pages (the live-set-shift hazard guard)
-                seen_ids.add(ad_id)
-                new_on_page += 1
-
-                # Step 2 — hydrate the car (GraphQL ad()).
-                try:
-                    ad_raw = await governed_fetch(
-                        GQL_ENDPOINT, method="POST",
-                        gql={"query": _AD_QUERY % int(ad_id)})
-                    ad = ((json.loads(ad_raw).get("data") or {}).get("ad")) or None
-                except Exception as e:  # noqa: BLE001 — one ad failing is not fatal.
-                    stats["fetch_errors"] += 1
+                if ad_id not in seen_ids:
+                    new_on_page += 1
+                # Hydrate + attribute + cage ONE ad through the shared, proven cage path.
+                err = await process_ref(conn, geo, platform_ulid, governed_fetch,
+                                         pdp_url, ad_id, seen_ids, harvested_cageable, stats)
+                if err == "fetch":
                     last_http = fetcher.last_status
-                    continue
-                if not ad:
-                    stats["fetch_errors"] += 1
-                    continue
-                stats["ads_hydrated"] += 1
-                v = parse_ad(ad, pdp_url)
-                if not v.deep_link:
-                    continue
-
-                # Step 3 — dealer attribution (PDP JSON-LD).
-                try:
-                    pdp_html = await governed_fetch(_PDP_BASE + pdp_url)
-                except Exception as e:  # noqa: BLE001
-                    stats["fetch_errors"] += 1
-                    last_http = fetcher.last_status
-                    continue
-                stats["pdp_fetched"] += 1
-                # Per-car parse + cage, fully guarded: a single malformed PDP (e.g. an
-                # unexpected JSON-LD shape) must NEVER abort the whole drain — it is
-                # counted and skipped, the harvest continues (resilience doctrine).
-                try:
-                    ld = parse_pdp_ldjson(pdp_html)
-                    if ld is None:
-                        stats["private_skipped"] += 1
-                        continue
-                    d = parse_pdp_dealer(ld, geo)
-                    if d is None:
-                        stats["private_skipped"] += 1   # private seller / no AutoDealer
-                        continue
-                    if v.photo_url is None:
-                        v.photo_url = pdp_photo(ld)
-
-                    async with conn.transaction():
-                        dealer_ulid = await upsert_dealer(conn, geo, d)
-                        if dealer_ulid is None:
-                            stats["geo_skipped"] += 1
-                            continue
-                        harvested_cageable.add((d.slug, v.deep_link))
-                        vulid, veh_new = await upsert_vehicle(conn, dealer_ulid, v)
-                        stats["cars_caged"] += 1
-                        # Price-drop history: if this car was already caged and its price
-                        # on the platform changed, record a PRICE_CHANGE delta (needs the
-                        # vehicle_ulid, checked BEFORE the edge upsert overwrites the price).
-                        if not veh_new:
-                            if await capture_price_drop(conn, platform_ulid, vulid, dealer_ulid, v):
-                                stats["price_changes_captured"] += 1
-                        if veh_new:
-                            stats["new_cars"] += 1
-                            await emit_new_event(conn, vulid, dealer_ulid, v)
-                            stats["new_events"] += 1
-                        edge_new = await link_platform(conn, platform_ulid, vulid, v)
-                        if edge_new:
-                            stats["edges_created"] += 1
-                except Exception as e:  # noqa: BLE001 — one bad car never sinks the drain.
-                    stats["parse_errors"] += 1
-                    print(f"[autocasion_wholesale] car {ad_id} parse/cage failed ({e!r}); skipping.")
-                    continue
 
             print(f"[autocasion_wholesale] page {page}: refs={len(refs)} new={new_on_page} "
                   f"caged_total={stats['cars_caged']} edges={stats['edges_created']}")
