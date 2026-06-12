@@ -13,4 +13,8 @@
   directorios, desguaces, arsenal OSS) + verificación viva de toda fuente high.
   Al cerrar: consolidación a `docs/research/SOURCES_ES.md` con re-verificación
   por mano propia (la salida de agentes es sospechosa por doctrina).
-- Pendiente inmediato F0: remoto GitHub privado + push (huella).
+- Remoto conectado y pusheado: `github.com/sublimine/Cardeep` (repo creado por el
+  owner hoy 10:03 UTC, vacío, **PÚBLICO** — visibilidad decidida por el owner).
+  `main` → `origin/main` @ 9a97807. **GATE F0 = VERDE** (verificado: push exitoso
+  + `git log origin/main` muestra el commit).
+
