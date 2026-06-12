@@ -1,0 +1,33 @@
+# Cardeep extraction recipe — CDP-ES-00-FYECEGD5
+# Reusable; re-scrape without raw crude.
+version: 1
+source: flexicar.es
+group: chain
+scope: vo_chains wholesale (Flexicar OPEN JSON REST API, per-page paginated)
+engine: curl_cffi+chrome131_impersonate+json_api(GET)
+access: OPEN first-party REST/JSON API (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). services.flexicar.es/api/v1 is unwalled -> defense_tier t0_open.
+data_surface: internal_api
+surface_intent: json_api
+endpoint: GET https://services.flexicar.es/api/v1/vehicles?page=N&size=24
+enumeration: page=1..pages, size=24 (HARD cap; size>24 -> HTTP 400). Response {total, pages, hasNext, results[]} drives the full drain (total=23874 live).
+platform_entity: kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=chain, role=chain, family=flexicar
+ownership: PER-BRANCH: each car attributes to its REAL selling branch (one of 186 physical compraventa, carDealershipSlug). vehicle.entity_ulid=branch; platform_listing edge=chain<->vehicle. Branch geo from __NEXT_DATA__.dealerships (zipCode INE prov + location municipality + lat/lon).
+field_map:
+  deep_link: https://www.flexicar.es/coches-segunda-mano/{result.slug}
+  listing_ref: result.id (Flexicar native stock id)
+  make: result.brand
+  model: result.model
+  version: result.version
+  year: result.year
+  km: result.km
+  price: result.price
+  prev_price: result.previousPrice (price-drop delta)
+  fuel: result.fuel (clean ES label)
+  transmission: result.transmission
+  photo_url: result.image (else result.images[0])
+  branch: result.carDealershipSlug -> __NEXT_DATA__.pageProps.dealerships[value=slug]
+  branch_geo: dealership {zipCode(=INE prov), location(municipality), province, latitude}
+caveats:
+  page_size: size is hard-capped at 24; size>24 returns HTTP 400 'size must not be greater than 24'.
+  branch_dir: the 186-branch directory is in the SSR __NEXT_DATA__ of the listing page, NOT the API; load it once at run start to geo-resolve every carDealershipSlug.
+  members: group 'chain' also includes Clicars (services widget + storage data.json facets — stock API needs a deeper XHR probe), OcasionPlus (this connector's member 2), Carplus/Aurgi/GpsAutos/Crandon as further members under this same architecture.

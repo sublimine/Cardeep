@@ -1,0 +1,41 @@
+# Cardeep extraction recipe — CDP-ES-00-ZB6C77HC
+# Reusable; re-scrape without raw crude.
+version: 1
+source: ford (Ford Selección — secure.ford.es/compra/explora/vehiculos-de-ocasion)
+scope: platform-wholesale (Ford ES certified-used; AngularJS GUXFOE SPA + eUsed JSON API)
+engine: curl_cffi+chrome131_impersonate+internal_eused_json_api(POST)
+access: OPEN-via-fingerprint+soft-gate. The eUsed API 401s plain curl (Akamai source check + consumer gate). Two computed headers unlock it: x-eusl-consumer='b-gux_approved_used-prod', x-eusl-k=base64('{millis}:{nonce}') (16-byte hex nonce), regenerated per request, plus Referer https://secure.ford.es/. No proxy, no browser, no cookie, no auth, €0. Public API behind Akamai -> is_tier1=TRUE; the soft reproducible gate (no JS challenge) -> defense_tier=t1_soft.
+data_surface: internal_api
+surface_intent: internal_eused_json_api
+endpoint: POST https://www.servicescache.ford.com/api/eUsed/v1/searchVehicles
+request:
+  headers: Accept application/json, Content-Type application/json, Referer https://secure.ford.es/, Origin https://secure.ford.es, x-eusl-consumer b-gux_approved_used-prod, x-eusl-k base64('{epoch_millis}:{16B-hex-nonce}')
+  eusl_algo: reverse-engineered from guxfoeApprovedUsed.js v5.35.0 generateToken: consumer='b-'+applicationName+'-'+env (applicationName='gux_approved_used' is the SPA bslHeaderValue; env='prod' from host); k=base64(Date.now()+':'+nonce), nonce=16 random bytes hex.
+  body: JSON: locale=es_ES, vehicleCategory='10' (Personal/turismos), distance (km), longLatCoordinates='{lng},{lat}', price/enginePower/ageOfVehicle/mileage ranges, resultOrder={orderBy,sortOrder}, pagination={maxRecords,startingRecord}
+enumeration: SINGLE national geo-radius query: longLatCoordinates='-3.70,40.0' + distance=2500 km (swallows peninsula + Canaries; 482 cars at <=1500 km, 543 at >=2000 km). pagination.maxRecords=20000 returns ALL 543 in ONE response (FLAT, no depth wall). startingRecord is a ROW cursor for safety; totalMatches + empty VehicleInventoryItem bound the run; dedup on Vehicle.Identity.ID.
+denominator: data.VehicleInventoryList.totalMatches (543) == distinct Vehicle.Identity.ID == Σ dealer attribution
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=ford_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: secure.ford.es/.../results#vehicleDetails/{Vehicle.Identity.ID}/{VendorCode}
+  listing_ref: Vehicle.Identity.ID (stable car id + dedup key)
+  vin: NONE on this surface (only Vehicle.Identity.RegistrationNumber matrícula) -> vin_ref NULL
+  make: Vehicle.Brand.ShortDescription (FORD)
+  model: Vehicle.Model.ShortDescription
+  variant: Vehicle.Variant.ShortDescription
+  year: Vehicle.History.YearOfProduction (fallback DateOfRegistration year)
+  km: Vehicle.CurrentCondition.CurrentOdometerReading.value
+  price: VendorInformation.Price.value (currency EUR; VATIncIndicator notes VAT inclusion)
+  fuel: Vehicle.Configuration.FuelType.ShortDescription
+  transmission: Vehicle.Configuration.TransmissionType.ShortDescription
+  photo: Vehicle.Configuration.Appearance.ImageRef[0].value
+  dealer: VendorInformation {VendorCode, VendorName, ContactInformation.Address.*}
+  location: Address.PostCode.Identifier[0].value[:2] = INE province (authoritative); Address.LocationByCoordinates.Lat/Lon -> ProvinceGeocoder fallback; Address.Locality.NameElement[0].value -> municipality (INE-resolved)
+caveats:
+  page_size: pagination.maxRecords is honoured well past the SPA's 144; 20000 returns all 543 FLAT.
+  radius_not_capped: distance is NOT capped — distance>=2500 km enumerates the whole country.
+  lnglat_order: longLatCoordinates is 'lng,lat' (NOT lat,lng) — wrong order yields 0 matches.
+  encoding: clean UTF-8 over the wire (NOT latin-1 mojibake like spoticar); no _fix() applied.
+  no_vin: no per-car VIN; only the matrícula (RegistrationNumber). vin_ref stays NULL.
+  eusl_freshness: x-eusl-k must be regenerated per request (timestamp+nonce); replay is rejected.
+  no_private_sellers: OEM certified-used portal — every car belongs to a Ford official dealer.

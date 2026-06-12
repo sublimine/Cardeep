@@ -1,0 +1,39 @@
+# Cardeep extraction recipe — CDP-ES-00-NP3AWN4X
+# Reusable; re-scrape without raw crude.
+version: 1
+source: audi (Audi Selection :plus, www.audi.es/es/buscador-de-stock-de-ocasion)
+scope: platform-wholesale (Audi ES certified-used; OneAudi/NEMO SPA + global SCS JSON API)
+engine: curl_cffi+chrome131_impersonate+scs_json_api(GET)
+access: FULLY OPEN. scs.audi.de answers HTTP 200 to plain python-urllib (no TLS impersonation), no WAF (no server/cf-ray header), no proxy, no browser, no cookie warm-up, €0. The ONLY gate is a PUBLIC STATIC `token` header (FJ54W6H, the page's envConfig scs.apiKey) — without it the API returns 401. Not a credential. defense_tier=t0_open, website_waf=none, is_tier1=FALSE.
+data_surface: internal_api
+surface_intent: scs_stock_car_search_json_api
+endpoint: GET https://scs.audi.de/api/v2/search/filter/esuc/es?from=N&size=96&sort=prices.retail:asc
+request:
+  headers: Accept application/json, token FJ54W6H (public SCS api key), Referer https://www.audi.es/, Origin https://www.audi.es
+  params: from=offset, size<=100 (we use 96), sort=prices.retail:asc
+  market_lang: market=esuc (ES Used Cars), language=es
+enumeration: from=0,96,192,... (size=96; the last page is the trailing tail). totalCount (3798) + the HTTP-400 returned once from>=totalCount bound the run. FLAT — no relevance cap, no depth wall. Dedup on carId.
+denominator: totalCount (3798) == SCS header echo == sum of carline-facet counts (groups.carline)
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_vo_portal, role=platform, family=audi_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: vehicleBasic.weblink (absolute entry.audi.com PDP URL)
+  listing_ref: vehicleBasic.carId (e.g. ESP05346128322740; stable id + dedup key)
+  vin: NOT exposed on the listing surface -> NULL
+  make: constant 'Audi' (brand.code='aa'; single-brand portal)
+  model: vehicleBasic.symbolicCarline.description (leading 'Audi ' stripped; fallback model.description)
+  version: vehicleBasic.trimline.description
+  year: vehicleBasic.modelYear
+  km: vehicleBasic.used.mileage
+  price: vehicleBasic.typedPrices[type=retail].amount (fallback type=regular); EUR
+  fuel: vehicleBasic.fuel.description
+  transmission: vehicleBasic.gearType.description (Manual/Automático; NOT gearBox which is gear ratios)
+  dealer: vehicleBasic.dealer {id (stable Audi dealer no.), name, city, street, zipCode, geoLocation}
+  location: dealer.zipCode[:2] = INE province code (authoritative); dealer.geoLocation lat/lon -> province via ProvinceGeocoder as fallback; dealer.city -> municipality
+caveats:
+  page_size: size honored up to 100; we use 96. from>=totalCount returns HTTP 400 (clean boundary).
+  token: the `token` header is REQUIRED (401 without it); it is a public static api key, not a secret.
+  encoding: some human-text fields are latin-1 mojibake over the wire ('Aut�nomos'); repair with s.encode('latin-1').decode('utf-8'). Numeric/code fields are clean.
+  geo: dealer.zipCode[:2] is authoritative; geoLocation lat/lon is the fallback anchor.
+  no_private_sellers: OEM certified-used portal — every car belongs to an official Audi dealer.
+  vw_group_note: Audi is VW-Group, but THIS is Audi's OWN single-brand 'Selection :plus' portal — a SEPARATE surface from the multi-brand Das WeltAuto (family vw_group).

@@ -1,0 +1,40 @@
+# Cardeep extraction recipe — CDP-ES-00-C2SVJWB5
+# Reusable; re-scrape without raw crude.
+version: 1
+source: hyundai (www.hyundai.es/seminuevos)
+scope: platform-wholesale (Hyundai Promise / Ocasión ES certified-used; OpenCart + internal JSON API)
+engine: curl_cffi+chrome131_impersonate+internal_opencart_json_api(GET)
+access: OPEN-via-fingerprint (a WAF 403s a stripped fetch; chrome131 TLS/JA3 passes cleanly). No proxy, no browser, no cookie warm-up, no auth, €0. Public site behind a WAF -> is_tier1=TRUE; the JSON API serves to curl_cffi -> defense_tier=t1_soft.
+data_surface: internal_api
+surface_intent: internal_opencart_json_api
+endpoint: GET https://www.hyundai.es/seminuevos/index.php?route=product/vehiculo/listado
+dealer_geo_endpoint: GET https://www.hyundai.es/concesionarios/index.php?route=api/installation/seminuevos
+request:
+  headers: Accept application/json, X-Requested-With XMLHttpRequest, Referer /seminuevos/
+  params: none (the listado returns the WHOLE national stock flat in one response)
+enumeration: SINGLE flat GET -> {vehiculos:[...]} (2036 cars live; no pagination, no offset cursor, no relevance cap, no depth wall). dedup on the VIN (bastidor) — the vehiculo_id token ROTATES every fetch and must NOT be the dedup key. The dealer-geo GET is fetched ONCE and joined per car.
+denominator: len(vehiculos) (the listado list length == the portal's declared full stock)
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=hyundai_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: VIN-anchored canonical .../seminuevos/#vin={bastidor} (STABLE; the PDP token rotates)
+  listing_ref: vehiculos[].bastidor (the VIN — the STABLE per-car id + dedup key)
+  vin: vehiculos[].bastidor (REAL per-car VIN — gold for cross-source dedup; 100% present)
+  make: constant 'Hyundai' (brand-pure portal; busqueda.marcas==['91'])
+  model: vehiculos[].modelo ('OTROS' -> NULL, the portal catch-all bucket)
+  version: vehiculos[].version
+  year: vehiculos[].matriculacion (DD-MM-YYYY -> YYYY)
+  km: vehiculos[].kilometraje ('15.000km' -> 15000)
+  price: vehiculos[].importe_financiar (numeric) or importe ('19.900' -> 19900)
+  fuel: vehiculos[].combustible (latin-1 repaired)
+  transmission: vehiculos[].transmision (latin-1 repaired)
+  dealer: vehiculos[].concesionario (NAME) + telefono (PHONE) -> joined to installations API
+  dealer_geo: installations API: {concesionario_id, name, phone, zipcode, zone, city, lat, lon}. Join car->installation by PHONE (exact) then NAME (normalized + token-subset). Province = zipcode[:2] (INE, authoritative); lat/lon fallback.
+caveats:
+  token_rotation: the detail-page vehiculo_id token ROTATES on every listado fetch (0/2036 stable across consecutive fetches) — it is ephemeral, NOT a car id. The VIN (bastidor) is the stable dedup key + deep_link anchor.
+  single_flat_response: the listado returns the WHOLE national stock in one GET — no pagination.
+  split_dealer_geo: the listado has NO dealer location; geo comes from a SECOND JSON API (installations) joined by phone/name. Cars that match no installation are geo-skipped (no FK risk).
+  latlon_swap: installations carry a correct lat/lon AND a SWAPPED latitud/longitud; read lat/lon (Spain lat 36..44, lon -9..4). The site's own JS compensates.
+  encoding: car/dealer/fuel text is latin-1 mojibake (Corriente el�ctrica, autom�tico, L�Aldea); repair with s.encode('latin-1').decode('utf-8'). vehiculo_id/VIN/numeric clean.
+  model_otros: modelo=='OTROS' is a catch-all bucket, not a real model -> stored as NULL.
+  no_private_sellers: OEM certified-used portal — every car belongs to an official dealer.

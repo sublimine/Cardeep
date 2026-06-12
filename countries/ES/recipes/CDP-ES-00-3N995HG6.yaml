@@ -1,0 +1,41 @@
+# Cardeep extraction recipe — CDP-ES-00-3N995HG6
+# Reusable; re-scrape without raw crude.
+version: 1
+source: seat_cupra (CUPRA Approved — cupra.com)
+scope: platform-wholesale (CUPRA ES certified-used 'CUPRA Approved'; Web-Components SPA + VTP JSON API)
+engine: curl_cffi+chrome131_impersonate+vtp_internal_json_api(GET, header-paginated)
+access: OPEN-via-fingerprint (plain urllib earns 403 Forbidden at a Traefik-fronted edge gate; chrome131 TLS/JA3 passes cleanly with 200 application/json). No proxy, no browser, no cookie warm-up, no auth, €0. Public API behind an edge gate -> is_tier1=TRUE; the JSON serves to curl_cffi -> defense_tier=t1_soft.
+data_surface: internal_api
+surface_intent: vtp_internal_json_api
+endpoint: GET https://vtpapi.seat.com/restapi/v1/cuesgwb/search/car (pagination in headers)
+request:
+  headers: Accept application/json, Accept-Language es-ES, Referer/Origin cupra.com, x-pattern cuprawebfe, x-sort DATE_OFFER, x-sort-direction DESC, x-page=N, x-page-items=96 (page size; API honours >=96)
+  params: NONE (everything rides in headers; no query string needed for the full used set)
+enumeration: page=1..ceil(total/96) (x-page-items=96; last page = trailing remainder, next page = empty/no 'cars' key). x-result-number (RESPONSE header) + first-empty-page bound the run; dedup on carid.
+denominator: x-result-number (response header) == Σ criteria.search.criterias[t_drive].possibleItems.number
+tenant: cuesgwb = CUPRA-ES used; serves 100% manuf=CUPRA (SEAT is NOT here — SEAT lives in Das WeltAuto)
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=seat_cupra_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: constructed https://www.cupra.com/es-es/localizador-stock/coche/{carid} (no url in payload)
+  listing_ref: results.result.cars[].car.carid (stable id + dedup key)
+  vin: NOT PRESENT on the search surface -> NULL (would need a PDP fetch; not worth it)
+  make: car.items[key='manuf'].value (always 'CUPRA')
+  model: car.items[key='model'].value
+  title: car.items[key='localCarTitle'].value (fallback cartitle)
+  year: car.items[key='modelyear'].value (fallback initialreg[:4])
+  km: car.items[key='mileage'].value ('38.621' -> strip thousands dots -> 38621)
+  price: car.items[key='prices'].values[key='sale'].raw_value (EUR; clean float)
+  fuel: hypermediatechdata..data[key='fuel'].techData.values[0].key -> Spanish label (fixed map)
+  transmission: car.items[key='gear'].value ('Cambio automático DSG' / 'Cambio manual')
+  photo: car.images[].imageGroup.images[].image.href (first absolute http(s))
+  dealer: car.hypermediadealer.dealer {key, items{city,name,phone,zip,street,position{lat,lng}}}
+  location: dealer zip[:2] = INE province (authoritative); dealer position lat/lng -> ProvinceGeocoder fallback; dealer city -> municipality (INE-resolved, best-effort)
+caveats:
+  page_size: default 12; API HONOURS x-page-items=96 (verified) -> use 96 for fewer round-trips.
+  pagination: in REQUEST HEADERS (x-page / x-page-items), NOT query params.
+  count_header: the total is in the RESPONSE header x-result-number, not the JSON body.
+  encoding: CLEAN UTF-8 — no mojibake on this surface (unlike spoticar/toyota_lexus). _fix() is a defensive no-op guard only; the wire already decodes correctly.
+  no_vin: the search payload carries no VIN (vin_ref stays NULL).
+  no_private_sellers: OEM certified-used portal — every car belongs to an official CUPRA dealer.
+  seat_split: the 'seat_cupra' brand front splits: SEAT certified-used redirects into Das WeltAuto (already covered by dasweltauto_wholesale); CUPRA is THIS portal.

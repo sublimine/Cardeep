@@ -1,0 +1,55 @@
+# Cardeep extraction recipe — CDP-ES-00-T0G18J3M
+# Reusable; re-scrape without raw crude.
+version: 1
+source: volvo_jlr_suzuki (selekt.volvocars.es + approved.es.landrover.com + approved.es.jaguar.com)
+scope: platform-wholesale (Volvo Selekt + Jaguar/Land Rover Approved ES certified-used; TWO vendor platforms — Codeweavers REST + NetDirector AVL GraphQL — one connector)
+engine: curl_cffi+chrome131_impersonate+two_internal_json_apis(POST)
+access: OPEN-via-fingerprint+token. Volvo Selekt: Codeweavers storefront; guest customer token minted from the store ApiKey, sent as x-cw-customertoken; no bot WAF. JLR: NetDirector AVL search-api; static Authorization client token + uuid; no bot WAF. No proxy, no browser, no cookie warm-up, €0. Public sites front behind tier-1 CDNs/WAFs -> is_tier1=TRUE; the JSON APIs serve to curl_cffi -> defense_tier=t1_soft.
+data_surface: internal_api
+surface_intent: two_internal_json_apis
+endpoint: VOLVO: POST https://services.codeweavers.net/api/vehicles/search-with-facets ; JLR: POST https://production-api.search-api.netdirector.auto/api/vehicle-search?uuid=..
+request:
+  volvo: guest token via POST /api/guest/initialise/proposal {ApiKey, OrganisationIdentifier{CodeweaversReference 55388}}; then search body {Filters:{Vehicle:{}}, ResultsPerPage:100, Page:N}; headers x-cw-customertoken + x-cw-digitalretailstorereference + x-cw-applicationname Storefront
+  jlr: GraphQL {query: getCount(SP) getAll(SP, pagination{currentPage,pageSize}, sortParams) FIELDS}; SP={companyHash:[<hash>], manufacturer:<brand>, condition:"used"}; header Authorization: <static client token>. LR hash 1c0df9..a2 / Jaguar hash c2b477..ab
+enumeration: PER SURFACE: Volvo Page=1..14 @100 (TotalPages/TotalResults bound it); Land Rover/Jaguar currentPage=1.. @100 (getCount bounds it). dedup on the stable car id (Volvo Vehicle.Reference / AVL id). Stop on empty page.
+denominator: Volvo: count.TotalResults (==search.TotalResults) ; JLR: data.getCount (per brand). Front total = Σ surfaces (~1745).
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=volvo_jlr_suzuki_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  volvo:
+    listing_ref: Results[].Vehicle.Reference (UUID; stable id + dedup key)
+    vin: Results[].Vehicle.Physical.Vin
+    make: Vehicle.Specification.Manufacturer
+    model: Vehicle.Specification.Model
+    version: Vehicle.Specification.Variant
+    year: Vehicle.Specification.ModelYear
+    km: Vehicle.Physical.Mileage
+    price: Vehicle.Physical.OnTheRoadPrice (EUR)
+    fuel: Vehicle.Marketing.Features[Label=Fuel].DisplayValue (Spanish; fallback Specification.FuelType)
+    transmission: Vehicle.Marketing.Features[Label=Transmission].DisplayValue (Spanish)
+    photo: Vehicle.Images[0].Url
+    dealer: Results[].Retailer {Reference, Name, Address{Postcode, TownCity, Location{Latitude,Longitude}}}
+    location: Retailer.Address.Postcode[:2]=INE province; Location lat/lng = geocode fallback; TownCity=municipality
+    deep_link: constructed selekt.volvocars.es/es-ES/store/used-cars/<slug>/<Reference>
+  jlr:
+    listing_ref: data.getAll[].id (== identifiers.stockId; stable id + dedup key)
+    vin: data.getAll[].vin (== registration.number)
+    make: getAll[].manufacturer
+    model: getAll[].model
+    version: getAll[].variant
+    year: getAll[].productionYear (fallback registration.year)
+    km: getAll[].odometer.value (unit km)
+    price: getAll[].price.current (EUR; fallback .base)
+    fuel: getAll[].fuel.type (Spanish)
+    transmission: getAll[].transmission.type (Spanish)
+    photo: getAll[].mainImage (protocol-relative -> https)
+    dealer: getAll[].location {hash, name, details.address{postcode, city, county, line1}}
+    location: location.details.address.postcode[:2]=INE province (no lat/lng on this surface); city=municipality
+    deep_link: constructed approved.es.<brand>.com/used/<id>
+caveats:
+  two_platforms: ONE connector, TWO vendor APIs (Codeweavers REST + NetDirector AVL GraphQL).
+  page_keys: Volvo uses Page+ResultsPerPage (NOT PageSize); AVL uses pagination{currentPage,pageSize}.
+  encoding: BOTH surfaces serve human text as latin-1 mojibake (autom�tica, Di�sel, Informaci�n); repair with s.encode('latin-1').decode('utf-8'). ids/vin/numeric clean.
+  geo: BOTH carry an authoritative postcode (province = first 2 digits). Volvo also has lat/lng (geocode fallback); AVL has postcode only.
+  no_private_sellers: OEM certified-used portals — every car belongs to an official dealer.
+  suzuki_deferred: auto.suzuki.es is a directory of 30 redsuzuki.es dealer subsites with per-dealer server-rendered HTML — NOT a clean uncapped surface; DEFERRED.

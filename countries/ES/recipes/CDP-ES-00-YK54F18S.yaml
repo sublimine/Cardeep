@@ -1,0 +1,40 @@
+# Cardeep extraction recipe — CDP-ES-00-YK54F18S
+# Reusable; re-scrape without raw crude.
+version: 1
+source: kia (www.kia.com/es Kia Seminuevos Certificados; vendor kiaokasion.net)
+scope: platform-wholesale (Kia ES certified-used; kia.com SPA -> kiaokasion.net ASP.NET servlet)
+engine: curl_cffi+chrome131_impersonate+vendor_async_servlet(POST)
+access: OPEN-via-fingerprint (Microsoft-IIS request-filtering 403s plain curl on bare paths; the metodos.aspx POST serves 200 application/json to curl_cffi chrome131 with a kia.com Referer). No proxy, no browser, no cookie warm-up, no auth, €0. No tier-1 CDN WAF -> is_tier1=FALSE; soft WAF, no JS challenge -> defense_tier=t1_soft.
+data_surface: internal_api
+surface_intent: vendor_async_servlet
+endpoint: POST https://kiaokasion.net/kia/async/metodos.aspx (accion-keyed)
+request:
+  headers: Content-Type x-www-form-urlencoded, X-Requested-With XMLHttpRequest, Origin/Referer kia.com
+  body: accion=actualizarCoches (cars) | actualizarTodoBuscador (facets); idconcesionario=<cluster>, pagina=N, km=nacional, orden=1, all filters wide-open '-'/''
+enumeration: PARTITIONED BY CLUSTER. idconcesionario (kia.com inline __kiaClienteId) is a dealer-GROUP cluster id; only a SPARSE set is live (55 clusters in 331..1810, swept over 1..2000; 0 above 2000). km=nacional does NOT aggregate across clusters. FULL stock = UNION over all live clusters; per cluster walk pagina=1..top_paginacion (10 cars/page). dedup on car `id`.
+denominator: sum of cluster total_vehiculos (== sum of top_paginacion*PAGE_SIZE bound, == distinct car ids)
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=kia_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa, per-car not per-cluster); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: constructed kia.com buscador URL ?idcli=<cluster>&idcoche=<id> (vendor ficha is SPA-only)
+  listing_ref: car.id (vendor stable car id + dedup key)
+  vin: NONE in list (car.matricula = plate, only in ficha) -> null
+  make: car.marca (KIA)
+  model: car.modelo
+  version: car.version
+  year: car.any (fallback car.matriculacion[-4:])
+  km: car.kilometros (Spanish-formatted: thousands '.')
+  price: car.precio (€, Spanish-formatted; precio_alcontado = cash price)
+  fuel: car.combustible
+  transmission: car.transmision (Manual/Automático)
+  photo: car.imagen (absolute https kiaokasion.net/.../idcli_<cluster>/<id>/...)
+  dealer: car.concesionario (name) + car.poblacion (city); cluster id = catalog partition
+  location: car.poblacion (city) -> GeoResolver.resolve_city_global -> (province, municipality). NO postal code/lat-lng in list; ficha carries cp but city resolves 100% in the live probe so no ficha fetch.
+caveats:
+  page_size: fixed 10 cars/page; top_paginacion governs the page count per cluster.
+  cluster_partition: idconcesionario is a dealer-GROUP cluster; a cluster spans several sites/cities (e.g. 926 = QUADIS across Tarragona + Sant Boi) — attribute the dealer PER CAR (concesionario+poblacion), not per cluster.
+  no_national_aggregate: idconcesionario=0 -> 0; km=nacional relaxes radius WITHIN a cluster only.
+  encoding: dealer/city/version text is latin-1 mojibake (Automoci�n, M�laga); repair with s.encode('latin-1').decode('utf-8'). id/numeric clean.
+  es_numbers: km/price/dims are Spanish-formatted ('13.373' = 13373); strip thousands '.'.
+  no_pdp_url: vendor ficha is SPA-only (iralaficha->loadPageSPA('vdp')); deep_link constructed.
+  no_private_sellers: OEM certified-used portal — every car belongs to an official Kia dealer.

@@ -1,0 +1,35 @@
+# Cardeep extraction recipe — CDP-ES-00-ZXZD056M
+# Reusable; re-scrape without raw crude.
+version: 1
+source: bmw_premium_selection (https://www.bmwpremiumselection.es)
+scope: platform-wholesale (BMW ES certified-used; Motorflash dealer-stock backend)
+engine: curl_cffi+chrome131_impersonate+motorflash_dealer_listing(GET html cards)
+access: OPEN-via-fingerprint (a CDN/WAF 403s plain bot egress; chrome131 TLS/JA3 passes cleanly). No proxy, no browser, no cookie warm-up, no auth, €0. Public site behind a WAF/CDN -> is_tier1=TRUE; serves to curl_cffi -> defense_tier=t1_soft.
+data_surface: json_ld
+surface_intent: server_rendered_listing_cards (hidden-input projection; PDPs carry schema.org JSON-LD Car)
+endpoint: GET https://www.bmwpremiumselection.es/concesionarios/{prov}/{dealer}/?pagina=N
+enumeration: dealer roster from /sitemap.xml; per dealer walk ?pagina=1..ceil(total/12) (12 cards/page, FLAT). id_total_resultados bounds each dealer; dedup on anuncio_id. Over-pagination CLAMPS+repeats (phantom) — never trust emptiness. Σ id_total_resultados over roster = full brand ES stock.
+denominator: Σ dealer id_total_resultados (roster) == distinct anuncio_id harvested; cross-check https://www.bmwpremiumselection.es/sitemap-ofertas.xml ({N} PDP URLs)
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=bmw_group_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa, concesionario oficial); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: card gtm_url_<id> (prefixed with origin)
+  listing_ref: card anuncio_id (stable id + dedup key)
+  vin: card bastidorVehiculo (REAL per-car VIN — gold for cross-source dedup)
+  make: card marcaVehiculo
+  model: card modeloVehiculo (+ tracy_productName for the version)
+  year: card tracy_yearOfRegistration (fallback fechamatriculacion DD / MM / YYYY)
+  km: card kilometros
+  price: card precio (EUR)
+  fuel: card tracy_fuelType / gtm_category last segment -> clean vocabulary
+  transmission: card tracy_gearing ('Cambio automático'/'Cambio manual')
+  photo_url: card img_<id>
+  dealer: URL path /concesionarios/{province-slug}/{dealer-slug}; name=concesionario_<id> (MINI) else de-slugified dealer-slug (BMW)
+  location: province-slug -> ProvinceCode via GeoResolver.province_code (slug fix map first)
+caveats:
+  page_size: fixed 12 cards/page.
+  trailing_slash: BMW dealer pages REQUIRE a trailing slash; MINI 404s on one — brand-specific.
+  over_pagination: pages beyond the last CLAMP and REPEAT cards (phantom) — bound by id_total_resultados + dedup on anuncio_id.
+  encoding: title/dealer/fuel text is latin-1 mojibake (a�o, H�brido, autom�tico); repair with s.encode('latin-1').decode('utf-8'). Fuel/gearbox additionally carry U+FFFD at source -> normalized via a clean accent-stripped vocabulary.
+  mini_sitemap_ofertas: mininext.es/sitemap-ofertas.xml mirrors BMW PDPs (misconfig) — NOT a MINI surface.
+  no_private_sellers: OEM certified-used portal — every car belongs to an official dealer.

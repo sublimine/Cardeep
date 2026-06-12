@@ -1,0 +1,39 @@
+# Cardeep extraction recipe — CDP-ES-00-A57R0YK8
+# Reusable; re-scrape without raw crude.
+version: 1
+source: mercedes_benz (ocasion.mercedes-benz.es)
+scope: platform-wholesale (Mercedes-Benz Certified ES certified-used; server-rendered listing + internal AJAX list endpoint)
+engine: curl_cffi+chrome131_impersonate+internal_ajax_list_endpoint(POST)
+access: OPEN (t0_open; NO WAF — plain urllib AND plain curl_cffi both get HTTP 200; no JS challenge). chrome131 used only for fleet coherence. No proxy, no browser, no auth, €0. is_tier1=FALSE; defense_tier=t0_open.
+data_surface: internal_api
+surface_intent: internal_ajax_list_endpoint
+endpoint: POST https://ocasion.mercedes-benz.es/ajxvl  (FormData type=vehiclelist, q, page=N, area=1)
+request:
+  headers: Accept application/json, X-Requested-With XMLHttpRequest, Origin/Referer the listing page, Accept-Language es-ES
+  body: type=vehiclelist & q=referrer=vehiclesearch&language=es-ES & page=N & area=1
+  cookie: warm the listing page once per session for the UCSSID cookie (served cold too).
+response: JSON (UTF-8 BOM -> decode utf-8-sig) {success, data:{count,page,onlyOnePage}, html:<rendered cards>}
+enumeration: page=1..401 (12 cars/page; page 401 = 4 trailing cars, 402+ = 0 cards). data.count (4804) + first-empty-page bound the run; dedup on the per-car vehicle id (data-vehicle / &vehicle=).
+denominator: data.count (4804) == the listing 'Encontrar N vehículos' headline.
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_vo_portal, role=platform, family=mercedes_benz_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: card href 'vehicle?<ident>+<make>+<model>&vehicle=<vid>&referrer=vehicles' (prefixed with the base)
+  listing_ref: the '<dealerCode>-<carCode>' identifier ('Identificador del vehículo') — stable id + dedup key
+  vehicle_id: data-vehicle / &vehicle= (per-car numeric id; secondary dedup key)
+  make: span.manufacturer
+  model: the title line after </span><br> (model + version)
+  year: registration-date spec row 'dd.mm.yyyy' -> trailing year
+  km: the km spec row ('84.574 km')
+  price: div.vehicle_price_headline ('49.900 €')
+  fuel: the fuel spec row (Diesel/Gasolina/Eléctrico/'Híbrido enchufable - Gasolina')
+  transmission: NOT on the list card (PDP-only; left NULL — never invented)
+  vin: NOT on the list card (PDP-only; left NULL — never invented)
+  dealer: result-box-location-item {name span, '<postalCode> <city>' span} + dealerCode (ident prefix)
+  location: postalCode[:2] = INE province code; city -> municipality (INE-resolved, best-effort)
+caveats:
+  page_size: fixed 12 cars/page (not a request param).
+  encoding: ajxvl body is UTF-8 with a BOM (decode utf-8-sig); card text is then CLEAN UTF-8 (0 U+FFFD) — only HTML-entity unescape needed, NO latin-1 re-encode.
+  pagination: the page is server-rendered; pagination is the AJAX POST /ajxvl (a GET ?page=N on /vehicles does NOT page).
+  no_vin_on_list: VIN and gearbox are PDP-only — left NULL on the cage (never fetched, never invented).
+  no_private_sellers: OEM certified-used portal — every car belongs to a Mercedes-Benz dealer.

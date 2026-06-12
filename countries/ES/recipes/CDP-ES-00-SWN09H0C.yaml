@@ -1,0 +1,30 @@
+# Cardeep extraction recipe — CDP-ES-00-SWN09H0C
+# Reusable; re-scrape without raw crude.
+version: 1
+source: ocasionplus.com
+group: chain
+scope: vo_chains wholesale (OcasionPlus Next.js SSR JSON-LD ItemList, per-page paginated)
+engine: curl_cffi+chrome131_impersonate+ssr_jsonld_itemlist(GET)
+access: OPEN server-rendered HTML carrying schema.org JSON-LD (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). x-powered-by Next.js, no WAF -> t0_open.
+data_surface: json_ld
+surface_intent: ssr_jsonld_itemlist
+endpoint: GET https://www.ocasionplus.com/coches-segunda-mano?page=N
+enumeration: ?page=1..N; the JSON-LD ItemList holds 20 Vehicle objects/page; the page-level Product.offers.offerCount declares the full stock (14052 live).
+platform_entity: kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=chain, role=chain, family=ocasionplus
+ownership: CHAIN-AS-OWNER: the per-car branch ('centro') is NOT on the SRP data-layer, so the chain is the singular selling point and OWNS every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle. owner entity == platform entity. Per-branch attribution is a future detail-page pass (the PDP carries centro/provincia).
+field_map:
+  deep_link: ItemList.itemListElement[].offers.url (per-car PDP)
+  listing_ref: deep-link tail after last '-' (stable native id, e.g. 'togx7qan')
+  make: Vehicle.brand.name
+  model: Vehicle.model
+  title: Vehicle.model/name
+  year: Vehicle.productionDate (ISO -> YYYY)
+  km: Vehicle.mileageFromOdometer.value
+  price: Vehicle.offers.price (EUR)
+  fuel: Vehicle.fuelType
+  transmission: Vehicle.vehicleTransmission (AUTO/MANUAL)
+  photo_url: Vehicle.image
+caveats:
+  pagination: ?page=N paginates server-side (verified distinct car sets per page); ?pagina=N is ignored.
+  no_per_branch_geo: the SRP ItemList does not attribute a car to a 'centro'; the chain owns the car and is anchored national (province NULL). The PDP carries centro/provincia for a later per-branch pass — never fabricated here.
+  members: see Flexicar recipe; both are members of source_group='chain'.

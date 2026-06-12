@@ -1,0 +1,20 @@
+# Cardeep extraction recipe — family_unreachable
+# Reusable; re-scrape without raw crude.
+version: 1
+source: family_unreachable
+family: 'Unreachable' (Tier-1 browser-only own-site) dealer family
+scope: long-tail dealer OWN-SITE inventory that is UNREACHABLE at Tier-0 (curl_cffi GET); recovered with a Tier-1 real-browser render
+engine: playwright_chromium_headless(real browser, JS executed)
+access: Tier-1: a real headless Chromium executes the page's challenge/JS. No proxy/residential egress used here — the recovered members serve a full body that a plain Chromium renders; the residential-egress anti-detect path (camoufox/BotBrowser) remains the documented next rung for the still-walled majority (Cloudflare/DataDome/dead DNS).
+data_surface: dealer_site_html_rendered
+acceptance_gate: STATUS-BLIND body-content gate: a page is accepted iff its rendered body >= 5000 bytes, REGARDLESS of HTTP status — a family member serves a full used-car listing under an HTTP 403 honeypot status. The status is a lie; the body is the truth. This is what the original Tier-0 probe, which gave up on the status code, could not see.
+fingerprint: FAMILY = 'unreachable at Tier-0'. Membership is the negative fingerprint (Tier-0 GET returns dead DNS / HTTP 403/202/503 / timeout) PLUS a Tier-1 render that clears the body-gate. The 91 -dealer cohort is overwhelmingly, genuinely walled (re-verified 2026-06-13: Cloudflare blocks, Robot Challenge screens, dead DNS, cert/connection errors); recovered members are curated here.
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
+multiplier: ONE Tier-1 fetch technique (real-browser render + status-blind body-gate) unlocks EVERY family member a browser can render — no per-dealer engine, no per-dealer escalation. The connector spine (cage/governor/health/VAM/delta) is shared with the Tier-0 families, so the hardest long-tail flows through ONE architecture.
+members:
+  hrmotor.com:
+    listing_path: /coches-segunda-mano/
+    pagination: /page/N/ until a page yields no new cards
+    parser: parse_hrmotor
+    prior_tier0_error: HTTP 403 (home honeypot)
+    notes: Tier-0 probe saw HTTP 403 on '/' and quit. Tier-1 browser renders '/coches-segunda-mano/' at HTTP 200, 772 KB, ~3,796 vehicles; the home 403 is a honeypot status over a full body. Pagination /page/N/.

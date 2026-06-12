@@ -1,0 +1,38 @@
+# Cardeep extraction recipe — CDP-ES-00-TDWVVTAF
+# Reusable; re-scrape without raw crude.
+version: 1
+source: Nissan Intelligent Choice (www.ocasion.nissan.es)
+scope: platform-wholesale (Nissan ES certified-used; Next.js SSR + AWS AppSync GraphQL API)
+engine: curl_cffi+chrome131_impersonate+aws_appsync_graphql(POST)+public_cognito_token
+access: OPEN-via-fingerprint. A public, unauthenticated token endpoint mints a fresh Cognito idToken; the AppSync GraphQL authorizes on that JWT (the bare x-api-key alone returns Unauthorized). No proxy, no browser, no login, €0. No WAF fronting the API -> is_tier1=FALSE, defense_tier=t0_open.
+data_surface: internal_api
+surface_intent: aws_appsync_graphql_api
+token_endpoint: GET https://apigateway-eu-prod.nissanpace.com/euw1nisprod/public-access-token?brand=NISSAN&dataSourceType=live&market=ES&client=euecomm
+endpoint: POST https://gq-eu-prod.nissanpace.com/graphql (Authorization: <idToken>)
+operation: GetUsedCarsInventoryData(marketConfig, usedCarsInventoryInputData{pageNumber, queryFilters:[make=Nissan]})
+dealer_locator: getDealersData(marketConfig, locationDataInput{lat:40.4,long:-3.7,radius:2000,unit:K}) -> 180 concesionarios each with postCode + city + location{gpsLatitude,gpsLongitude}; fetched ONCE; maps inventory dealerId -> geo
+enumeration: usedCarsInventoryInputData.pageNumber=1..104 (15 cars/page; page 104 = 1 trailing car, 105+ = 0). metaData.totalCount (1546) + first-empty-page bound the run; dedup on vehiclesku.
+denominator: metaData.totalCount (1546)
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_vo_portal, role=platform, family=nissan_intelligent_choice
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: _PDP_BASE + vehicles[].vehiclesku
+  listing_ref: vehicles[].vehiclesku (es_NISSAN_<vin>; stable id + dedup key)
+  vin: vehicles[].vin (REAL per-car VIN — gold for cross-source dedup)
+  make: vehicles[].make (NISSAN)
+  model: vehicles[].modelName
+  version: vehicles[].version
+  year: vehicles[].registrationYear (fallback modelYear)
+  km: vehicles[].mileage ('91587.0' -> float -> int)
+  price: vehicles[].discountedPrice (fallback rrpPrice)
+  fuel: vehicles[].fuelType (normalized vocabulary)
+  transmission: vehicles[].transmission (gearbox: manual/automatico -> Manual/Automático)
+  dealer: vehicles[].dealer {dealerId, dealerName}; geo from the getDealersData roster by dealerId
+  location: roster postCode (first 2 digits = INE province, primary) -> ProvinceGeocoder lat/lng fallback; roster city -> municipality (INE-resolved)
+caveats:
+  page_size: fixed 15 cars/page (server-side; not a request param).
+  encoding: dealer/city text is latin-1 mojibake over the wire (LLANS�, BARBER�); repair with s.encode('latin-1').decode('utf-8'). VIN/dealerId/numeric clean.
+  auth: AppSync needs the Cognito idToken in Authorization; the x-api-key alone is Unauthorized. Mint a fresh idToken per run from the public token endpoint.
+  dealer_id_not_province: the inventory dealerId is a Nissan internal code, NOT an INE prefix (41020014 sits in 08210/Barcelona); geo comes from the locator roster's postCode/lat-lng, never the id.
+  no_private_sellers: OEM certified-used portal — every car belongs to a Nissan concesionario.
+  siblings_walled: Mazda mazdaselected.es TLS-times-out to curl_cffi; Honda vehiculosdeocasion.honda.es has no JSON data-layer (HTML buscador). Nissan is the only clean data surface of the three.
