@@ -144,3 +144,17 @@
   falta de provincia — POIs sin postcode, pendiente geocoding lat/lon→provincia). VAM REFUTED honesto.
 - **ESTADO VIVO: 5.771 entidades** (garaje 2.291 · concesionario_oficial 1.394 · desguace 1.292 ·
   compraventa 794) · **9.872 vehículos servibles** · 52/52 provincias · 10 fuentes. Todo VAM por fuente.
+
+## 2026-06-12 — INVENTARIO A ESCALA (workers paralelos) + geocoder long-tail
+- **Crítica del owner aceptada y corregida:** el ratio "2 coches/entidad" era engañoso —
+  inventario cosechado solo en 32 dealers. Lanzados **4 workers de cosecha paralelos**
+  (`as24_harvest_batch`, sin límite de API) sobre 334 dealers AS24 descubiertos.
+- **Geocoder lat/lon→provincia** (`pipeline/geocode.py`, vecino más cercano sobre puntos
+  etiquetados, numpy): recuperó el long-tail OSM **3.085 → 9.953** (0 perdidos por provincia).
+- **RESULTADO VERIFICADO por mi mano:**
+  - **12.814 entidades** (garaje 7.200 · compraventa 2.753 · concesionario_oficial 1.569 · desguace 1.292)
+  - **22.300 vehículos servibles** (de 78 al inicio del escalado) · **212 dealers con inventario** (de 1)
+  - **24.329 eventos de delta** · **media 105 coches/dealer cosechado** (no 2) · 52/52 provincias
+- **Honesto:** 138 dealers cayeron por throttling de AS24 bajo carga 4× (retry+backoff recuperó
+  parte). Recuperación pendiente con menor concurrencia. La cosecha es el cuello (rate-limit de
+  fuente), no el sistema — escala por nº de fuentes en paralelo + recetas Tier-1.
