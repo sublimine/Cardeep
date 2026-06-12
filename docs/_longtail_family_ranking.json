@@ -1,0 +1,190 @@
+{
+  "total_domains": 369,
+  "total_entities": 413,
+  "reachable": 283,
+  "unreachable": 86,
+  "families": [
+    {
+      "family": "cms",
+      "domains": 157,
+      "entities_served": 179
+    },
+    {
+      "family": "unreachable",
+      "domains": 86,
+      "entities_served": 91
+    },
+    {
+      "family": "generic",
+      "domains": 73,
+      "entities_served": 83
+    },
+    {
+      "family": "dms",
+      "domains": 28,
+      "entities_served": 33
+    },
+    {
+      "family": "framework",
+      "domains": 17,
+      "entities_served": 18
+    },
+    {
+      "family": "builder",
+      "domains": 8,
+      "entities_served": 9
+    }
+  ],
+  "subfamilies": [
+    {
+      "subfamily": "cms/wordpress",
+      "domains": 143,
+      "entities_served": 164
+    },
+    {
+      "subfamily": "unreachable/(none)",
+      "domains": 86,
+      "entities_served": 91
+    },
+    {
+      "subfamily": "generic/custom",
+      "domains": 66,
+      "entities_served": 76
+    },
+    {
+      "subfamily": "dms/inventario_pro",
+      "domains": 15,
+      "entities_served": 19
+    },
+    {
+      "subfamily": "dms/motorflash",
+      "domains": 11,
+      "entities_served": 12
+    },
+    {
+      "subfamily": "framework/nextjs",
+      "domains": 9,
+      "entities_served": 9
+    },
+    {
+      "subfamily": "framework/astro",
+      "domains": 5,
+      "entities_served": 5
+    },
+    {
+      "subfamily": "cms/wordpress+motors_plugin+wp_auto_listing",
+      "domains": 4,
+      "entities_served": 4
+    },
+    {
+      "subfamily": "builder/basekit",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "cms/prestashop",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "generic/iridio",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "cms/wordpress+car_dealer_wp",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "cms/drupal",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "dms/automanager",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "framework/angular",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "builder/ueni",
+      "domains": 2,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "builder/google_sites",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "cms/wordpress+motors_plugin+car_dealer_wp+wp_auto_listing",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "framework/nuxt",
+      "domains": 1,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "generic/zoho",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "generic/joomla!",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "generic/modix",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "cms/wordpress+motors_plugin+car_dealer_wp",
+      "domains": 1,
+      "entities_served": 2
+    },
+    {
+      "subfamily": "cms/joomla",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "builder/wix",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "generic/typo3",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "builder/duda",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "generic/webfactor",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "cms/wordpress+wp_auto_listing",
+      "domains": 1,
+      "entities_served": 1
+    },
+    {
+      "subfamily": "builder/squarespace",
+      "domains": 1,
+      "entities_served": 2
+    }
+  ]
+}

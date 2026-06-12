@@ -1,0 +1,227 @@
+[
+ {
+  "domain": "waycar.es",
+  "status": 503,
+  "bytes": 390,
+  "title": "503 Service Temporarily Unavailable",
+  "inv": false,
+  "url": "https://waycar.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "alcauto.es",
+  "error": "Error: Page.goto: net::ERR_SSL_PROTOCOL_ERROR at https://alcauto.es",
+  "url": "https://alcauto.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "peugeoteslauto.com",
+  "error": "Error: Page.goto: net::ERR_CONNECTION_REFUSED at https://peugeotesl",
+  "url": "https://peugeoteslauto.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "varadequart.com",
+  "error": "Error: Page.goto: net::ERR_CONNECTION_REFUSED at https://varadequar",
+  "url": "https://varadequart.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "sheltergarage.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://sheltergarage.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "chelsea1979.com",
+  "status": 202,
+  "bytes": 11816,
+  "title": "Robot Challenge Screen",
+  "inv": false,
+  "url": "https://www.chelsea1979.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "arrojoaudi.com",
+  "status": 202,
+  "bytes": 80671,
+  "title": "403 - Forbidden",
+  "inv": false,
+  "url": "https://www.arrojoaudi.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "avolo.net",
+  "status": 500,
+  "bytes": 39102,
+  "title": "The URL you requested has been blocked",
+  "inv": true,
+  "url": "https://www.avolo.net/",
+  "recoverable": true
+ },
+ {
+  "domain": "accarvip.com",
+  "status": 402,
+  "bytes": 1653,
+  "title": "Deployment Paused",
+  "inv": false,
+  "url": "https://accarvip.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "cochesinternet.net",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://cochesinternet.net/",
+  "recoverable": false
+ },
+ {
+  "domain": "maralmotor.es",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://maralmotor.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "bydmadrid.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://bydmadrid.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "byd-canarias.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://byd-canarias.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "nicolas-sa.es",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://nicolas-sa.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "sagamovil.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://sagamovil.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "astararetail.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://astararetail.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "omodacanarias.com",
+  "error": "Error: Page.goto: net::ERR_CERT_COMMON_NAME_INVALID at https://omod",
+  "url": "https://omodacanarias.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "soyelectrico.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false,
+  "url": "https://soyelectrico.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "automotorcanarias.com",
+  "status": 202,
+  "bytes": 11820,
+  "title": "Robot Challenge Screen",
+  "inv": false,
+  "url": "https://www.automotorcanarias.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "hatusa.com",
+  "status": 202,
+  "bytes": 80671,
+  "title": "403 - Forbidden",
+  "inv": false,
+  "url": "https://hatusa.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "autopicanya.com",
+  "error": "Error: Page.goto: net::ERR_CONNECTION_REFUSED at https://autopicany",
+  "url": "https://autopicanya.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "renaultleioa.es",
+  "status": 403,
+  "bytes": 80671,
+  "title": "403 - Forbidden",
+  "inv": false,
+  "url": "https://www.renaultleioa.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "hondarubio.com",
+  "status": 202,
+  "bytes": 11815,
+  "title": "Robot Challenge Screen",
+  "inv": false,
+  "url": "https://www.hondarubio.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "avnautos.com",
+  "status": 202,
+  "bytes": 80671,
+  "title": "403 - Forbidden",
+  "inv": false,
+  "url": "https://www.avnautos.com/",
+  "recoverable": false
+ },
+ {
+  "domain": "bmwmadridfilial.es",
+  "error": "Error: Page.goto: net::ERR_CONNECTION_TIMED_OUT at https://bmwmadri",
+  "url": "https://bmwmadridfilial.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "autofernandez.es",
+  "error": "Error: Page.goto: net::ERR_CONNECTION_TIMED_OUT at https://autofern",
+  "url": "https://autofernandez.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "santogal.es",
+  "error": "Error: Page.goto: net::ERR_CONNECTION_TIMED_OUT at https://santogal",
+  "url": "https://santogal.es/",
+  "recoverable": false
+ },
+ {
+  "domain": "rahn.es",
+  "error": "Error: Page.goto: net::ERR_CONNECTION_TIMED_OUT at https://rahn.es/",
+  "url": "https://rahn.es/",
+  "recoverable": false
+ }
+]

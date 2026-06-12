@@ -1,0 +1,83 @@
+[
+ {
+  "domain": "hrmotor.com",
+  "status": 403,
+  "bytes": 172004,
+  "title": "Compra tu Coche de Segunda Mano como NUEVO - HR Motor",
+  "inv": true
+ },
+ {
+  "domain": "norauto.es",
+  "status": 403,
+  "bytes": 1466,
+  "title": "norauto.es",
+  "inv": false
+ },
+ {
+  "domain": "tayre.es",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false
+ },
+ {
+  "domain": "mosancar.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false
+ },
+ {
+  "domain": "renaultros.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false
+ },
+ {
+  "domain": "autopistasur.es",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false
+ },
+ {
+  "domain": "gracicar.com",
+  "status": 200,
+  "bytes": 39,
+  "title": "",
+  "inv": false
+ },
+ {
+  "domain": "automovilesgalapagar.es",
+  "status": 200,
+  "bytes": 39,
+  "title": "",
+  "inv": false
+ },
+ {
+  "domain": "hersamotor.es",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false
+ },
+ {
+  "domain": "icicarauto.com",
+  "status": 403,
+  "bytes": 4295,
+  "title": "Attention Required! | Cloudflare",
+  "inv": false
+ },
+ {
+  "domain": "nuvimotor.com",
+  "error": "Error: Page.goto: net::ERR_CERT_COMMON_NAME_INVALID at https://www.nuvimotor."
+ },
+ {
+  "domain": "mgvalladolid.com",
+  "status": 403,
+  "bytes": 107,
+  "title": "",
+  "inv": false
+ }
+]

@@ -8550,5 +8550,53 @@
   "error": "Timeout",
   "family": "unreachable",
   "subfamily": null
+ },
+ {
+  "domain": "arales.ueniweb.com",
+  "name": "Esyre Autos",
+  "website": "https://arales.ueniweb.com/",
+  "family": "builder",
+  "subfamily": "ueni",
+  "reachable": true,
+  "signals": [
+   "builder:ueni"
+  ],
+  "inventory_paths": [],
+  "wp_plugins": [],
+  "note": "classified by builder host suffix",
+  "final_url": "https://arales.ueniweb.com/",
+  "html_len": 1689041
+ },
+ {
+  "domain": "automoviles-miguel.negocio.site",
+  "name": "AUTOMOVILES MIGUEL",
+  "website": "https://automoviles-miguel.negocio.site/",
+  "family": "builder",
+  "subfamily": "google_sites",
+  "reachable": true,
+  "signals": [
+   "builder:google_sites"
+  ],
+  "inventory_paths": [],
+  "wp_plugins": [],
+  "note": "classified by builder host suffix",
+  "final_url": "https://automoviles-miguel.negocio.site/",
+  "html_len": 1557
+ },
+ {
+  "domain": "automovilesvhr.wixsite.com",
+  "name": "Hyundai Pilas",
+  "website": "http://automovilesvhr.wixsite.com",
+  "family": "builder",
+  "subfamily": "wix",
+  "reachable": true,
+  "signals": [
+   "builder:wix"
+  ],
+  "inventory_paths": [],
+  "wp_plugins": [],
+  "note": "classified by builder host suffix",
+  "final_url": "https://automovilesvhr.wixsite.com:443/",
+  "html_len": 2505
  }
 ]

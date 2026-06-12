@@ -1,0 +1,242 @@
+[
+ {
+  "domain": "waycar.es",
+  "website": "http://www.waycar.es/",
+  "name": "waycar.es",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": "hrmotor.com",
+  "website": "https://www.hrmotor.com/concesionario-ocasion-madrid",
+  "name": "HR Motor Madrid",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "alcauto.es",
+  "website": "http://www.alcauto.es",
+  "name": "ALCAUTO",
+  "prior_error": "HTTP 405"
+ },
+ {
+  "domain": "mgvalladolid.com",
+  "website": "https://www.mgvalladolid.com/es/",
+  "name": "MG LevMotor Valladolid y Palencia",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "peugeoteslauto.com",
+  "website": "https://www.peugeoteslauto.com/es",
+  "name": "Eslauto",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": "varadequart.com",
+  "website": "https://www.varadequart.com/",
+  "name": "Opel Vara de Quart",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": "sheltergarage.com",
+  "website": "http://www.sheltergarage.com/",
+  "name": "SHELTER GARAGE",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "chelsea1979.com",
+  "website": "https://chelsea1979.com/",
+  "name": "McLaren Barcelona - Chelsea 1979",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "arrojoaudi.com",
+  "website": "https://arrojoaudi.com/",
+  "name": "Audi",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "avolo.net",
+  "website": "https://avolo.net/seat",
+  "name": "Seat Savoy Jaén",
+  "prior_error": "ConnectionError"
+ },
+ {
+  "domain": "accarvip.com",
+  "website": "http://www.ACCARVIP.com",
+  "name": "AC GROUP",
+  "prior_error": "HTTP 402"
+ },
+ {
+  "domain": "cochesinternet.net",
+  "website": "https://cochesinternet.net/",
+  "name": "Nacar Centre Automoció SL",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "nuvimotor.com",
+  "website": "http://www.nuvimotor.com/",
+  "name": "Nuvimotor",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "maralmotor.es",
+  "website": "https://www.maralmotor.es/",
+  "name": "BYD Santiago",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "tayre.es",
+  "website": "http://www.tayre.es",
+  "name": "TAYRE AUTOMOCION- Concesionario Oficial",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "norauto.es",
+  "website": "http://www.norauto.es/",
+  "name": "Norauto",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "bydmadrid.com",
+  "website": "http://bydmadrid.com",
+  "name": "BYD Concha Espina",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "byd-canarias.com",
+  "website": "http://www.byd-canarias.com",
+  "name": "BYD Gran Canaria",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "icicarauto.com",
+  "website": "https://icicarauto.com/",
+  "name": "Icicar Automoción",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "gracicar.com",
+  "website": "https://www.gracicar.com/",
+  "name": "Automóviles Gracicar",
+  "prior_error": "HTTP 200"
+ },
+ {
+  "domain": "nicolas-sa.es",
+  "website": "https://www.nicolas-sa.es/",
+  "name": "Ford Nicolás",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "sagamovil.com",
+  "website": "https://www.sagamovil.com/orkoien/default.aspx",
+  "name": "Volkswagen Sagamóvil",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "astararetail.com",
+  "website": "https://byd.astararetail.com/instalacion-detalle-concesionario-alcala",
+  "name": "BYD Astara Alcalá de Henares",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "hersamotor.es",
+  "website": "https://www.hersamotor.es",
+  "name": "Hersamotor",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "omodacanarias.com",
+  "website": "https://omodacanarias.com/",
+  "name": "Omoda Canarias",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "renaultros.com",
+  "website": "https://www.renaultros.com/",
+  "name": "Renault",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "soyelectrico.com",
+  "website": "http://www.soyelectrico.com",
+  "name": "Carrera ocasión",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "automotorcanarias.com",
+  "website": "https://www.automotorcanarias.com/",
+  "name": "Automotor GC",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "hatusa.com",
+  "website": "https://www.hatusa.com/",
+  "name": "HATUSA",
+  "prior_error": "ConnectionError"
+ },
+ {
+  "domain": "automovilesgalapagar.es",
+  "website": "https://www.automovilesgalapagar.es/",
+  "name": "Automóviles Galapagar",
+  "prior_error": "HTTP 200"
+ },
+ {
+  "domain": "autopicanya.com",
+  "website": "https://www.autopicanya.com/es",
+  "name": "Ford",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": "autopistasur.es",
+  "website": "https://www.autopistasur.es/",
+  "name": "Kia Autopista Sur Pista de Silla",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "renaultleioa.es",
+  "website": "https://www.renaultleioa.es/",
+  "name": "Leioa Berri Auto",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "hondarubio.com",
+  "website": "https://www.hondarubio.com/",
+  "name": "Honda Rubio",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "avnautos.com",
+  "website": "https://avnautos.com/",
+  "name": "AVN Autos",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "mosancar.com",
+  "website": "https://www.mosancar.com/",
+  "name": "Citroën Mosancar",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "bmwmadridfilial.es",
+  "website": "https://www.bmwmadridfilial.es/concesionarios-bmw-madrid",
+  "name": "BMW Madrid - Alcalá",
+  "prior_error": "Timeout"
+ },
+ {
+  "domain": "autofernandez.es",
+  "website": "https://www.autofernandez.es/",
+  "name": "AUTO FERNANDEZ",
+  "prior_error": "Timeout"
+ },
+ {
+  "domain": "santogal.es",
+  "website": "https://www.santogal.es/",
+  "name": "Concesionario Peugeot",
+  "prior_error": "Timeout"
+ },
+ {
+  "domain": "rahn.es",
+  "website": "https://www.rahn.es/",
+  "name": "Rahn",
+  "prior_error": "Timeout"
+ }
+]

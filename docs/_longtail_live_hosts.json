@@ -1,0 +1,3912 @@
+{
+ "nortauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "NORTAUTO OROTAVA",
+    "website": "http://www.nortauto.com/"
+   }
+  ]
+ },
+ "avisa.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AVISA.",
+    "website": "http://www.avisa.es"
+   }
+  ]
+ },
+ "aguileraautopremium.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AGUILERA AUTOCENTROS SL",
+    "website": "https://aguileraautopremium.com/"
+   }
+  ]
+ },
+ "helpmycar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "HELP MY CAR",
+    "website": "http://helpmycar.es/"
+   }
+  ]
+ },
+ "magiamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "MAGIA MOTOR SPORT, S.L.",
+    "website": "http://www.magiamotor.com"
+   }
+  ]
+ },
+ "fsautomoviles.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "FS AUTOMOVILES",
+    "website": "http://www.fsautomoviles.es"
+   }
+  ]
+ },
+ "autofernandez.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTO FERNANDEZ",
+    "website": "https://www.autofernandez.es/"
+   }
+  ]
+ },
+ "inmocoches.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "INMOCOCHES",
+    "website": "http://www.inmocoches.com"
+   }
+  ]
+ },
+ "xn--autoocasionespaa-lub.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "autoocasionespaña.es",
+    "website": "http://www.xn--autoocasionespaa-lub.es/"
+   }
+  ]
+ },
+ "sheltergarage.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "SHELTER GARAGE",
+    "website": "http://www.sheltergarage.com/"
+   }
+  ]
+ },
+ "cochesseminuevosmarbella.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "CSM MARBELLA PREMIUM CARS",
+    "website": "https://cochesseminuevosmarbella.com/"
+   }
+  ]
+ },
+ "chelsea1979.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "McLaren Barcelona - Chelsea 1979",
+    "website": "https://chelsea1979.com/"
+   }
+  ]
+ },
+ "autoesport.com.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTO ESPORT",
+    "website": "http://www.autoesport.com.es/"
+   }
+  ]
+ },
+ "autos-dominguez.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOS DOMINGUEZ",
+    "website": "http://www.autos-dominguez.com"
+   }
+  ]
+ },
+ "automoviles-miguel.negocio.site": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOMOVILES MIGUEL",
+    "website": "https://automoviles-miguel.negocio.site/"
+   }
+  ]
+ },
+ "elitemotoraxarquia.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "ELITE MOTOR AXARQUIA, S.L.",
+    "website": "http://www.elitemotoraxarquia.com"
+   }
+  ]
+ },
+ "porsche-marbella.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "CENTRO PORSCHE MARBELLA",
+    "website": "http://WWW.PORSCHE-MARBELLA.COM"
+   }
+  ]
+ },
+ "mavenehijos.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "MAVEN E HIJOS, concesionario oficial Ford",
+    "website": "http://www.mavenehijos.com"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Maven e Hijos Ford Cáceres",
+    "website": "https://www.mavenehijos.com/"
+   }
+  ]
+ },
+ "apou.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "APOU",
+    "website": "http://www.apou.com"
+   }
+  ]
+ },
+ "canaauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Canaauto",
+    "website": "https://www.canaauto.es/"
+   }
+  ]
+ },
+ "autofesa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autofesa",
+    "website": "https://www.autofesa.com/"
+   }
+  ]
+ },
+ "automotordursan.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automotor Dursan",
+    "website": "https://www.automotordursan.com/"
+   }
+  ]
+ },
+ "cunildco.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "CUNILD & CO",
+    "website": "http://www.cunildco.com"
+   }
+  ]
+ },
+ "autotrade.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOTRADE SELECTION",
+    "website": "http://www.autotrade.es"
+   }
+  ]
+ },
+ "archiauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Archiauto S.A.",
+    "website": "https://www.archiauto.com/"
+   }
+  ]
+ },
+ "autochristian.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "AutoChristian",
+    "website": "https://www.autochristian.com/"
+   }
+  ]
+ },
+ "autodeniamotors.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auto Dénia Motors",
+    "website": "https://www.autodeniamotors.com/es"
+   }
+  ]
+ },
+ "caetanotec.es": {
+  "entities": 4,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Algeciras",
+    "website": "https://www.caetanotec.es/"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Sevilla",
+    "website": "https://www.caetanotec.es/"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Málaga",
+    "website": "http://www.caetanotec.es"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Córdoba",
+    "website": "https://www.caetanotec.es/"
+   }
+  ]
+ },
+ "quadisdream.es": {
+  "entities": 6,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Reus",
+    "website": "https://www.quadisdream.es/"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Cabrera",
+    "website": "https://www.quadisdream.es/"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Valencia",
+    "website": "https://www.quadisdream.es"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Mallorca",
+    "website": "https://www.quadisdream.es"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Alicante",
+    "website": "https://www.quadisdream.es/"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Girona",
+    "website": "https://www.quadisdream.es/"
+   }
+  ]
+ },
+ "grupogamboa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Atocha",
+    "website": "https://www.grupogamboa.com/byd"
+   }
+  ]
+ },
+ "bydjaen.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Jaén",
+    "website": "https://bydjaen.es/"
+   }
+  ]
+ },
+ "marcosautomocion.es": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Cartagena",
+    "website": "https://www.marcosautomocion.es/byd/"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Murcia",
+    "website": "https://www.marcosautomocion.es/byd/"
+   }
+  ]
+ },
+ "byd-canarias.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Gran Canaria",
+    "website": "http://www.byd-canarias.com"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Tenerife Sur",
+    "website": "www.byd-canarias.com"
+   }
+  ]
+ },
+ "blendio.es": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Santander",
+    "website": "https://www.blendio.es/byd"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Bilbao",
+    "website": "https://www.blendio.es/byd"
+   }
+  ]
+ },
+ "vianautomobile.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BYD Las Rozas de Madrid",
+    "website": "https://www.vianautomobile.es/byd/"
+   }
+  ]
+ },
+ "mavensa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mavensa Volvo Cáceres",
+    "website": "https://www.mavensa.com/"
+   }
+  ]
+ },
+ "icicarauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Icicar Automoción",
+    "website": "https://icicarauto.com/"
+   }
+  ]
+ },
+ "gracicar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Gracicar",
+    "website": "https://www.gracicar.com/"
+   }
+  ]
+ },
+ "polestar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Polestar",
+    "website": "https://www.polestar.com/es/"
+   }
+  ]
+ },
+ "autoscalvino.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autos Calviño",
+    "website": "http://www.autoscalvino.com"
+   }
+  ]
+ },
+ "fordegea.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford Hermanos Egea S.L.",
+    "website": "http://www.fordegea.com/index1.htm"
+   }
+  ]
+ },
+ "autosgarena.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autos Garena",
+    "website": "http://www.autosgarena.es"
+   }
+  ]
+ },
+ "vterry.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroën",
+    "website": "https://www.vterry.es/"
+   }
+  ]
+ },
+ "autocastro.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auto Castro",
+    "website": "https://www.autocastro.es/"
+   }
+  ]
+ },
+ "autorallye.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Peugeot Auto Rallye Torrejón",
+    "website": "https://www.autorallye.es/"
+   }
+  ]
+ },
+ "porsche-tenerife.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Porsche",
+    "website": "https://porsche-tenerife.com/"
+   }
+  ]
+ },
+ "toyota-canarias.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Toyota Nivaria",
+    "website": "https://www.toyota-canarias.es/"
+   }
+  ]
+ },
+ "zaragozacar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford Zaragoza Car",
+    "website": "https://www.zaragozacar.com/"
+   }
+  ]
+ },
+ "teneauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Teneauto",
+    "website": "http://www.teneauto.es/"
+   }
+  ]
+ },
+ "rahn.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Rahn",
+    "website": "https://www.rahn.es/"
+   }
+  ]
+ },
+ "imdicasa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Imdicasa",
+    "website": "http://imdicasa.com/"
+   }
+  ]
+ },
+ "grupo-ari.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Arimotor Canarias",
+    "website": "https://www.grupo-ari.com/"
+   }
+  ]
+ },
+ "autosraul.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autos Raúl",
+    "website": "https://www.autosraul.com/"
+   }
+  ]
+ },
+ "hercosparayas.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Hercos Parayas",
+    "website": "https://www.hercosparayas.com"
+   }
+  ]
+ },
+ "megamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Megamotor",
+    "website": "http://www.megamotor.com"
+   }
+  ]
+ },
+ "mundolexus.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Megapremium",
+    "website": "http://www.mundolexus.com"
+   }
+  ]
+ },
+ "soyelectrico.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Carrera ocasión",
+    "website": "http://www.soyelectrico.com"
+   }
+  ]
+ },
+ "talleresjoseluislopez.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Talleres José Luis López",
+    "website": "https://talleresjoseluislopez.com"
+   }
+  ]
+ },
+ "forjan.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autos e Guindastres Forján",
+    "website": "https://forjan.es/"
+   }
+  ]
+ },
+ "gabellamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Dacia Renault Gabella Motor",
+    "website": "http://www.gabellamotor.com/"
+   }
+  ]
+ },
+ "carsandbikes.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Cars and Bikes",
+    "website": "https://www.carsandbikes.es/"
+   }
+  ]
+ },
+ "daservicio.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Domingo Alonso Servicio",
+    "website": "http://www.daservicio.com/"
+   }
+  ]
+ },
+ "cuatromocion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Cuatromoción",
+    "website": "http://www.cuatromocion.com/"
+   }
+  ]
+ },
+ "hatusa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "HATUSA",
+    "website": "https://www.hatusa.com/"
+   }
+  ]
+ },
+ "cilindrauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Cilindrauto",
+    "website": "https://www.cilindrauto.com/"
+   }
+  ]
+ },
+ "mitsubishiautomotor.com": {
+  "entities": 3,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mitsubishi Fuengirola Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.mitsubishiautomotor.com/concesionarios-mitsubishi/fuengirola-mijas/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mitsubishi Málaga Concesionario Oficial",
+    "website": "https://www.mitsubishiautomotor.com/concesionarios-mitsubishi/malaga/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mitsubishi Marbella Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.mitsubishiautomotor.com/concesionarios-mitsubishi/marbella/"
+   }
+  ]
+ },
+ "autosbellamar.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "SEAT Fuengirola Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.autosbellamar.com/concesionarios-seat/malaga/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "SEAT Marbella Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.autosbellamar.com/concesionarios-seat/marbella/"
+   }
+  ]
+ },
+ "ibericarmovilsur.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ibercar Málaga",
+    "website": "https://www.ibericarmovilsur.es"
+   }
+  ]
+ },
+ "madridmotor.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Madrid Motor",
+    "website": "https://www.madridmotor.net"
+   }
+  ]
+ },
+ "carpemotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Carpemotor",
+    "website": "http://www.carpemotor.com/"
+   }
+  ]
+ },
+ "autodeluxegarage.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auto Deluxe Garage",
+    "website": "https://www.autodeluxegarage.es/"
+   }
+  ]
+ },
+ "josemontalvo.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "José Montalvo",
+    "website": "http://www.josemontalvo.es/es/"
+   }
+  ]
+ },
+ "conceptcars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Conceptcars",
+    "website": "https://www.Conceptcars.es"
+   }
+  ]
+ },
+ "gestiauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Gestiauto",
+    "website": "https://www.gestiauto.es/"
+   }
+  ]
+ },
+ "hondarubio.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Honda Rubio",
+    "website": "https://www.hondarubio.com/"
+   }
+  ]
+ },
+ "automovilespros.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automòbils Pros",
+    "website": "http://www.automovilespros.net"
+   }
+  ]
+ },
+ "szmotor.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "SZ Motor",
+    "website": "https://szmotor.net/"
+   }
+  ]
+ },
+ "automociontorrejon.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroën Automoción Torrejón",
+    "website": "https://automociontorrejon.com"
+   }
+  ]
+ },
+ "autostorrevieja.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Coches Torrevieja",
+    "website": "https://autostorrevieja.net/"
+   }
+  ]
+ },
+ "valhondoautomocion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Valhondo Automoción",
+    "website": "https://valhondoautomocion.com/"
+   }
+  ]
+ },
+ "volvocarssalamanca.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Volvo Merenauto Salamanca",
+    "website": "https://volvocarssalamanca.com"
+   }
+  ]
+ },
+ "automovilesvhr.wixsite.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Hyundai Pilas",
+    "website": "http://automovilesvhr.wixsite.com"
+   }
+  ]
+ },
+ "autoelia.es": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Volvo Auto Elia Arturo Soria",
+    "website": "https://www.autoelia.es"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTO ELIA, Volvo (SEDE PRINCIPAL)",
+    "website": "http://autoelia.es/autoelia/index.php"
+   }
+  ]
+ },
+ "trocauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Trocauto",
+    "website": "https://trocauto.es/"
+   }
+  ]
+ },
+ "centroquiros.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auvol - VW",
+    "website": "http://www.centroquiros.com/"
+   }
+  ]
+ },
+ "citroen-ausol.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroen AUSOL",
+    "website": "https://citroen-ausol.com/"
+   }
+  ]
+ },
+ "grupo-iberica.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "British Car",
+    "website": "https://www.grupo-iberica.com/Concesiones/Concesionario.aspx?id=19"
+   },
+   {
+    "kind": "compraventa",
+    "name": "British Car",
+    "website": "https://www.grupo-iberica.com/Concesiones/Concesionario.aspx?id=6"
+   }
+  ]
+ },
+ "automovilesrobe.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "KIA Automoviles Robe",
+    "website": "http://www.automovilesrobe.com"
+   }
+  ]
+ },
+ "autopai.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autopai",
+    "website": "http://www.autopai.es/"
+   }
+  ]
+ },
+ "framacar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Framacar",
+    "website": "https://www.framacar.es/"
+   }
+  ]
+ },
+ "granacars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Granacars Automoción S.L.",
+    "website": "https://www.granacars.es/"
+   }
+  ]
+ },
+ "belabiamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Belabia Motor - Volswagen",
+    "website": "https://belabiamotor.com/"
+   }
+  ]
+ },
+ "ginestar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Renault Ginestar",
+    "website": "https://www.ginestar.com/centros/alzira/"
+   }
+  ]
+ },
+ "pirenauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Opel Pirenauto",
+    "website": "https://www.pirenauto.es/"
+   }
+  ]
+ },
+ "autosbenchijigua.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autos Benchijigua",
+    "website": "http://www.autosbenchijigua.com/"
+   }
+  ]
+ },
+ "masmotorcantabria.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mas Motor Cantabria",
+    "website": "http://www.masmotorcantabria.net"
+   }
+  ]
+ },
+ "accar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ac Car Concessionari multimarca",
+    "website": "http://accar.es/"
+   }
+  ]
+ },
+ "ocasion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "La Palma Auto Ocasión",
+    "website": "http://ocasion.com"
+   }
+  ]
+ },
+ "marcelipuigpiquer.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Marcel·lí Puigpiquer SL Venda i reparació de maquinària",
+    "website": "http://marcelipuigpiquer.com/"
+   }
+  ]
+ },
+ "concesionariobmw.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Lurauto",
+    "website": "http://concesionariobmw.es"
+   }
+  ]
+ },
+ "bacalladomotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Bacallado Motor",
+    "website": "https://www.bacalladomotor.com/"
+   }
+  ]
+ },
+ "crestanevada.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Crestanevada",
+    "website": "https://www.crestanevada.es"
+   }
+  ]
+ },
+ "hrmotor.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "HR Motor Madrid",
+    "website": "https://www.hrmotor.com/concesionario-ocasion-madrid"
+   },
+   {
+    "kind": "compraventa",
+    "name": "HR Motor",
+    "website": "https://www.hrmotor.com/concesionario-ocasion-lleida/"
+   }
+  ]
+ },
+ "ssangcarmotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ssang Car Motor",
+    "website": "https://www.ssangcarmotor.com/es"
+   }
+  ]
+ },
+ "varadequart.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Opel Vara de Quart",
+    "website": "https://www.varadequart.com/"
+   }
+  ]
+ },
+ "bmwmadridfilial.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "BMW Madrid - Alcalá",
+    "website": "https://www.bmwmadridfilial.es/concesionarios-bmw-madrid"
+   }
+  ]
+ },
+ "gupicarauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "GupicarAuto",
+    "website": "https://www.gupicarauto.es"
+   }
+  ]
+ },
+ "abicars.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Abicars",
+    "website": "https://abicars.net/"
+   }
+  ]
+ },
+ "vpcars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "VPCars",
+    "website": "https://vpcars.es/"
+   }
+  ]
+ },
+ "autoisiegas.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Isiegas",
+    "website": "https://autoisiegas.com/"
+   }
+  ]
+ },
+ "servicioporsche-malaga.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Centro Porsche Málaga Concesionario Oficial",
+    "website": "https://www.servicioporsche-malaga.com/"
+   }
+  ]
+ },
+ "dmautosvalencia.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Dm Autos",
+    "website": "https://dmautosvalencia.es/"
+   }
+  ]
+ },
+ "kfjmotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "KFJ Motor",
+    "website": "https://www.kfjmotor.com/"
+   }
+  ]
+ },
+ "arguelles-automoviles.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Arguelles Automoviles",
+    "website": "https://arguelles-automoviles.com"
+   }
+  ]
+ },
+ "citroenvalencia.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroën PSA Retail Valencia",
+    "website": "https://www.citroenvalencia.com/es"
+   }
+  ]
+ },
+ "nietomarcelo.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Concesionario Oficial Massey Ferguson y Fendt - Nieto Marcelo, S.L.",
+    "website": "https://www.nietomarcelo.com/"
+   }
+  ]
+ },
+ "renaultretailgroup.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Renault Maquinista",
+    "website": "https://www.renaultretailgroup.es/concesionario/maquinista"
+   }
+  ]
+ },
+ "movento.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Renault",
+    "website": "https://www.movento.es/es/talleres/taller-auser-renault-pineda"
+   }
+  ]
+ },
+ "carroceriasgranada.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Carrocerías Granada",
+    "website": "https://www.carroceriasgranada.com"
+   }
+  ]
+ },
+ "carocarretillas.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Caro Carretillas",
+    "website": "https://carocarretillas.com"
+   }
+  ]
+ },
+ "mobilitycentro.com": {
+  "entities": 5,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mobility-Centro",
+    "website": "https://www.mobilitycentro.com"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mobility-Centro",
+    "website": "https://www.mobilitycentro.com"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mobility-Centro",
+    "website": "https://www.mobilitycentro.com/servicios"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mobility-Centro",
+    "website": "https://www.mobilitycentro.com"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mobility-Centro",
+    "website": "https://www.mobilitycentro.com"
+   }
+  ]
+ },
+ "ftome.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "F Tomé",
+    "website": "https://ftome.com/"
+   }
+  ]
+ },
+ "automovilespalma.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Palma Ocarsion",
+    "website": "http://www.automovilespalma.es"
+   }
+  ]
+ },
+ "villenaautomocion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Opel Villena Automoción",
+    "website": "https://www.villenaautomocion.com/"
+   }
+  ]
+ },
+ "automovilescapi.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Capi",
+    "website": "https://automovilescapi.es"
+   }
+  ]
+ },
+ "avolo.net": {
+  "entities": 4,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Seat Savoy Jaén",
+    "website": "https://avolo.net/seat"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Nissan Nipón Motor",
+    "website": "https://avolo.net/nissan"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Skoda Olivauto",
+    "website": "https://avolo.net/skoda/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "La Ciudad del Automóvil",
+    "website": "https://avolo.net/"
+   }
+  ]
+ },
+ "auracarcitroen.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auracar",
+    "website": "https://auracarcitroen.es/"
+   }
+  ]
+ },
+ "ibertecno.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Honda Ibertecno",
+    "website": "https://www.ibertecno.es/"
+   }
+  ]
+ },
+ "cochesinternet.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Nacar Centre Automoció SL",
+    "website": "https://cochesinternet.net/"
+   }
+  ]
+ },
+ "marinamultimarca.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Marina Multimarca",
+    "website": "https://www.marinamultimarca.com/"
+   }
+  ]
+ },
+ "nissanalmenar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Nissan",
+    "website": "https://www.nissanalmenar.com"
+   }
+  ]
+ },
+ "paisautomocion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Pais Automoción - Coches de segunda mano",
+    "website": "https://paisautomocion.com/"
+   }
+  ]
+ },
+ "samautomoviles.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "SAM Automóviles",
+    "website": "https://www.samautomoviles.com/"
+   }
+  ]
+ },
+ "nuvimotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Nuvimotor",
+    "website": "http://www.nuvimotor.com/"
+   }
+  ]
+ },
+ "villamisarauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Villamisar Auto",
+    "website": "https://www.villamisarauto.com/"
+   }
+  ]
+ },
+ "niant-uniquecars.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Niant Unique Cars",
+    "website": "http://www.niant-uniquecars.com/"
+   }
+  ]
+ },
+ "romadridcar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford",
+    "website": "https://www.romadridcar.com/"
+   }
+  ]
+ },
+ "santogal.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Concesionario Peugeot",
+    "website": "https://www.santogal.es/"
+   }
+  ]
+ },
+ "skodaautoffam.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auto Ffam Palencia",
+    "website": "https://www.skodaautoffam.com/es"
+   }
+  ]
+ },
+ "grupoautonieto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autonieto",
+    "website": "https://www.grupoautonieto.es/"
+   }
+  ]
+ },
+ "macvial.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Macvial",
+    "website": "https://macvial.com/"
+   }
+  ]
+ },
+ "easomotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford Easo Motor",
+    "website": "https://www.easomotor.com/"
+   }
+  ]
+ },
+ "idealcar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ideal Car",
+    "website": "https://www.idealcar.es"
+   }
+  ]
+ },
+ "artabraautos.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ártabra Autos",
+    "website": "https://artabraautos.com/"
+   }
+  ]
+ },
+ "multicentresauret.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Multicentre Sauret",
+    "website": "https://www.multicentresauret.com"
+   }
+  ]
+ },
+ "autoser.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autoser Honda",
+    "website": "https://autoser.es"
+   }
+  ]
+ },
+ "spautomocion.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "SP Automoción",
+    "website": "https://www.spautomocion.es"
+   }
+  ]
+ },
+ "grupogil.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Opel agrogil",
+    "website": "https://www.grupogil.es/"
+   }
+  ]
+ },
+ "estellerimport.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Esteller Import",
+    "website": "https://www.estellerimport.com/"
+   }
+  ]
+ },
+ "nicolas-sa.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford Nicolás",
+    "website": "https://www.nicolas-sa.es/"
+   }
+  ]
+ },
+ "buggyparadise.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Buggy Paradise",
+    "website": "http://www.buggyparadise.net/"
+   }
+  ]
+ },
+ "acautomocion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Multimarcas - AC Automoción",
+    "website": "https://www.acautomocion.com"
+   }
+  ]
+ },
+ "multiautobalaguer.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Multiauto Balaguer, SL",
+    "website": "http://www.multiautobalaguer.com/"
+   }
+  ]
+ },
+ "cotri.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Cotri",
+    "website": "https://www.cotri.es/"
+   }
+  ]
+ },
+ "talleresygruasazor.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Jeep",
+    "website": "https://www.talleresygruasazor.es/"
+   }
+  ]
+ },
+ "autogaraje89.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "AutoGaraje 89",
+    "website": "https://autogaraje89.es/"
+   }
+  ]
+ },
+ "autopicanya.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford",
+    "website": "https://www.autopicanya.com/es"
+   }
+  ]
+ },
+ "servisimo.cat": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Servisimó",
+    "website": "https://www.servisimo.cat/"
+   }
+  ]
+ },
+ "gruponucesa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Škoda",
+    "website": "https://www.gruponucesa.com"
+   }
+  ]
+ },
+ "autosocasionalminares.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autos Ocasión Alminares",
+    "website": "https://www.autosocasionalminares.com"
+   }
+  ]
+ },
+ "omodacanarias.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Omoda Canarias",
+    "website": "https://omodacanarias.com/"
+   }
+  ]
+ },
+ "stylecarcanarias.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Style Car Exclusive",
+    "website": "https://stylecarcanarias.com/"
+   }
+  ]
+ },
+ "danaramotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Danara Motor",
+    "website": "https://www.danaramotor.com/"
+   }
+  ]
+ },
+ "orvecame.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Orvecame",
+    "website": "https://www.orvecame.com/"
+   }
+  ]
+ },
+ "automotorcanarias.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automotor GC",
+    "website": "https://www.automotorcanarias.com/"
+   }
+  ]
+ },
+ "gruporafaelafonso.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Grupo Rafael Afonso",
+    "website": "https://www.gruporafaelafonso.com/"
+   }
+  ]
+ },
+ "vertizmobility.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Vertiz Mobility",
+    "website": "https://www.vertizmobility.com/"
+   }
+  ]
+ },
+ "gougo.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Gougo",
+    "website": "https://gougo.es/"
+   }
+  ]
+ },
+ "automovilesroel.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Roel",
+    "website": "https://www.automovilesroel.es/"
+   }
+  ]
+ },
+ "autosvelasco.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroën Autos Velasco",
+    "website": "https://www.autosvelasco.com/"
+   }
+  ]
+ },
+ "romacarabs.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Romacar ABS",
+    "website": "https://www.romacarabs.com/"
+   }
+  ]
+ },
+ "romakurumasuzuki.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Romakuruma Sant Boi",
+    "website": "https://www.romakurumasuzuki.com"
+   }
+  ]
+ },
+ "tuokasion.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "TuOkasion.es Zamora Pragamovil",
+    "website": "https://www.tuokasion.es/"
+   }
+  ]
+ },
+ "priorauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Priorauto Citroën",
+    "website": "https://www.priorauto.com/citroen"
+   }
+  ]
+ },
+ "autopistasur.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Kia Autopista Sur Pista de Silla",
+    "website": "https://www.autopistasur.es/"
+   }
+  ]
+ },
+ "autoxandri.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autoxandri Valls",
+    "website": "https://www.autoxandri.com/concesionarios/valls/"
+   }
+  ]
+ },
+ "julia911.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Julià 911",
+    "website": "https://www.julia911.com"
+   }
+  ]
+ },
+ "lowcosttorres.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Vehículos Low Cost Torres",
+    "website": "https://lowcosttorres.es"
+   }
+  ]
+ },
+ "autoaulet.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auto Aulet",
+    "website": "https://www.autoaulet.net/"
+   }
+  ]
+ },
+ "hondasevilla.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Honda Carinsa",
+    "website": "https://hondasevilla.net"
+   }
+  ]
+ },
+ "bmwautomotor.com": {
+  "entities": 6,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "BMW Automotor Fuengirola Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.bmwautomotor.com/concesionarios-bmw/fuengirola/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "BMW Automotor Málaga Viso Concesionario Oficial",
+    "website": "https://www.bmwautomotor.com/concesionarios-bmw/malaga-el-viso/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "BMW Automotor Málaga Velázquez Concesionario Oficial",
+    "website": "https://www.bmwautomotor.com/concesionarios-bmw/malaga-velazquez/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "BMW Automotor Marbella Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.bmwautomotor.com/concesionarios-bmw/marbella/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "BMW Automotor Almería (Huércal) Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.bmwautomotor.com/concesionarios-bmw/almeria/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "BMW Automotor Almería (Ejido) Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.bmwautomotor.com/concesionarios-bmw/el-ejido/"
+   }
+  ]
+ },
+ "dificar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Dificar",
+    "website": "https://www.dificar.com/"
+   }
+  ]
+ },
+ "tomellosomotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Tomelloso Motor",
+    "website": "https://tomellosomotor.com/"
+   }
+  ]
+ },
+ "ciudauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Vehículos Multimarca Ciudauto",
+    "website": "https://www.ciudauto.com/concesionarios/ciudauto-multimarca-tomelloso/"
+   }
+  ]
+ },
+ "agritrasa.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Agritrasa Motor",
+    "website": "https://www.agritrasa.es/"
+   }
+  ]
+ },
+ "wowcarsexperience.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Wow Cars Experience",
+    "website": "https://www.wowcarsexperience.es/"
+   }
+  ]
+ },
+ "automovileslacanal.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles La Canal",
+    "website": "https://automovileslacanal.com"
+   }
+  ]
+ },
+ "automovilesjfz.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles JFZ",
+    "website": "https://www.automovilesjfz.com/"
+   }
+  ]
+ },
+ "automovilesrodriguez.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford Rodríguez",
+    "website": "https://www.automovilesrodriguez.com/"
+   }
+  ]
+ },
+ "avnautos.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "AVN Autos",
+    "website": "https://avnautos.com/"
+   }
+  ]
+ },
+ "grancity.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Loyalty Cars",
+    "website": "https://grancity.es/negocio/loyalty-cars/"
+   }
+  ]
+ },
+ "quadisrecambios.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Quadis Recambios",
+    "website": "https://www.quadisrecambios.es/"
+   }
+  ]
+ },
+ "carespagne.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "CARESPAGNE",
+    "website": "https://carespagne.com/"
+   }
+  ]
+ },
+ "battinver.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Volvo Battinver",
+    "website": "https://www.battinver.es/battinver-las-rozas/"
+   }
+  ]
+ },
+ "linktr.ee": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Fubermotor",
+    "website": "https://linktr.ee/fubermotor"
+   }
+  ]
+ },
+ "servicioporsche-granada.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Porsche",
+    "website": "https://www.servicioporsche-granada.com/"
+   }
+  ]
+ },
+ "automovilesgamonal.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Gamonal",
+    "website": "https://automovilesgamonal.es/"
+   }
+  ]
+ },
+ "premiumcarsiberia.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Premium Cars Iberia",
+    "website": "https://premiumcarsiberia.es/"
+   }
+  ]
+ },
+ "auto3000.cat": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ebro Auto3000",
+    "website": "https://www.auto3000.cat/ebro/"
+   }
+  ]
+ },
+ "majumamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Majuma Motor",
+    "website": "https://majumamotor.com/"
+   }
+  ]
+ },
+ "tallereslitoral.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Peugeot Talleres Mecánicos del Litoral",
+    "website": "https://www.tallereslitoral.com/"
+   }
+  ]
+ },
+ "fabianarenas.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Renault y Dacia Fabián Arenas Motril",
+    "website": "https://www.fabianarenas.es/"
+   }
+  ]
+ },
+ "diamondsportauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Diamond Sport Auto",
+    "website": "https://www.diamondsportauto.com"
+   }
+  ]
+ },
+ "homologacionesyreformas.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Remolques Álvarez",
+    "website": "https://homologacionesyreformas.com/remolquesalvarez/"
+   }
+  ]
+ },
+ "nissanpamplona.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Nissan Pamplona",
+    "website": "https://www.nissanpamplona.com"
+   }
+  ]
+ },
+ "grupmibec.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mibec Ocasió",
+    "website": "https://www.grupmibec.com"
+   }
+  ]
+ },
+ "talleresmartinez.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford",
+    "website": "https://www.talleresmartinez.es/"
+   }
+  ]
+ },
+ "albacoches.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Albacoches",
+    "website": "https://www.albacoches.com"
+   }
+  ]
+ },
+ "holamotor.com": {
+  "entities": 3,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Holamotor Viso",
+    "website": "https://holamotor.com/concesionarios-segunda-mano/malaga/poligono-el-viso/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Holamotor | Coches segunda mano Córdoba - Vehículos de ocasión",
+    "website": "https://holamotor.com/concesionarios-segunda-mano/cordoba/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Holamotor | Coches segunda mano Almería - Vehículos de ocasión",
+    "website": "https://holamotor.com/concesionarios-segunda-mano/almeria/"
+   }
+  ]
+ },
+ "arales.ueniweb.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Esyre Autos",
+    "website": "https://arales.ueniweb.com/"
+   }
+  ]
+ },
+ "eveauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "EVEAUTO",
+    "website": "https://eveauto.es"
+   }
+  ]
+ },
+ "safafusion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Suzuki Málaga Concesionario Oficial",
+    "website": "https://www.safafusion.com/concesionario-suzuki-malaga/"
+   }
+  ]
+ },
+ "miniautomotor.com": {
+  "entities": 5,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "MINI Automotor Málaga Viso Concesionario Oficial",
+    "website": "https://www.miniautomotor.com/concesionarios-mini/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "MINI Automotor Málaga Velázquez Concesionario Oficial",
+    "website": "https://www.miniautomotor.com/concesionarios-mini/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "MINI Automotor Marbella Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.miniautomotor.com/concesionarios-mini/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "MINI Automotor Almería (Huércal) Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.miniautomotor.com/concesionarios-mini/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "MINI Automotor Fuengirola Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.miniautomotor.com/concesionarios-mini/"
+   }
+  ]
+ },
+ "gruposafamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Maserati Málaga Concesionario Oficial",
+    "website": "https://www.gruposafamotor.com/maserati/"
+   }
+  ]
+ },
+ "safamar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Skoda Marbella Concesionario Oficial – Grupo Safamotor",
+    "website": "https://www.safamar.com/concesionarios-skoda/san-pedro-alcantara/"
+   }
+  ]
+ },
+ "premiumalmeria.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Premium Almería",
+    "website": "http://www.premiumalmeria.com"
+   }
+  ]
+ },
+ "automovilesmoratalaz.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automoviles Moratalaz",
+    "website": "https://www.automovilesmoratalaz.com/"
+   }
+  ]
+ },
+ "integralmotion.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Integral motion",
+    "website": "https://www.integralmotion.es/sobre-nosotros/lugo"
+   }
+  ]
+ },
+ "furgogandia.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Furgogandia",
+    "website": "https://www.furgogandia.com"
+   }
+  ]
+ },
+ "eslauto.es": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Eslauto",
+    "website": "https://www.eslauto.es/citroen/"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "JEEP ESLAUTO",
+    "website": "http://www.eslauto.es"
+   }
+  ]
+ },
+ "bmwmomentummotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Movilnorte",
+    "website": "https://bmwmomentummotor.com/"
+   }
+  ]
+ },
+ "garummotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Garum Motor",
+    "website": "https://www.garummotor.com"
+   }
+  ]
+ },
+ "autonautica.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford Autonáutica, S.A.",
+    "website": "http://www.autonautica.com"
+   }
+  ]
+ },
+ "telenauto.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Telenauto",
+    "website": "https://telenauto.com/vw/inicio.html"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Telenauto Audi",
+    "website": "https://telenauto.com/audi/index.html"
+   }
+  ]
+ },
+ "talleresfernandezlucio.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Grupo Fernández Lucio",
+    "website": "https://talleresfernandezlucio.com"
+   }
+  ]
+ },
+ "yanez.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Gándara Motor",
+    "website": "https://www.yanez.es/"
+   }
+  ]
+ },
+ "talleresgandoy.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Talleres Gandoy",
+    "website": "http://talleresgandoy.com/"
+   }
+  ]
+ },
+ "mabesoa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mabesoa",
+    "website": "https://www.mabesoa.com/"
+   }
+  ]
+ },
+ "nauticajavierberga.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autoalmenar",
+    "website": "https://nauticajavierberga.com"
+   }
+  ]
+ },
+ "grupojosejorro.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "José Jorro",
+    "website": "https://www.grupojosejorro.com/concesionarios/seat-denia-jose-jorro/"
+   }
+  ]
+ },
+ "covesaford.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Covesa",
+    "website": "http://www.covesaford.com/"
+   }
+  ]
+ },
+ "galcar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Concesionario Galcar",
+    "website": "https://www.galcar.com/coches-segunda-mano-a-coruna/"
+   }
+  ]
+ },
+ "caravanaslorca.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Caravanas Lorca",
+    "website": "http://www.caravanaslorca.es/"
+   }
+  ]
+ },
+ "arrojoaudi.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Audi",
+    "website": "https://arrojoaudi.com/"
+   }
+  ]
+ },
+ "ibericarcadi.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ibercar Cadí BMW",
+    "website": "http://www.ibericarcadi.es"
+   }
+  ]
+ },
+ "autocentroigara.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autocentro Igara",
+    "website": "https://www.autocentroigara.com/"
+   }
+  ]
+ },
+ "garciautodelvalles.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Garciauto",
+    "website": "https://www.garciautodelvalles.com/"
+   }
+  ]
+ },
+ "automocionaragonesa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automoción Aragonesa Volkswagen",
+    "website": "https://www.automocionaragonesa.com/"
+   }
+  ]
+ },
+ "gasp.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automòbils Pruna S.A.U",
+    "website": "http://www.gasp.es/"
+   }
+  ]
+ },
+ "automobils-bertran.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Opel",
+    "website": "http://www.automobils-bertran.com/"
+   }
+  ]
+ },
+ "tallerespiñeiro.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Talleres Piñeiro",
+    "website": "http://www.tallerespiñeiro.com/"
+   }
+  ]
+ },
+ "louzao.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mercedes-Benz",
+    "website": "https://louzao.com/"
+   }
+  ]
+ },
+ "autoliveras.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "AUTOLIVERAS, S.L.",
+    "website": "https://www.autoliveras.com/"
+   }
+  ]
+ },
+ "grupolmotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Grupo L-Motor",
+    "website": "http://www.grupolmotor.com/"
+   }
+  ]
+ },
+ "carroceriasrekalde.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Carrocerías Rekalde",
+    "website": "https://www.carroceriasrekalde.com/"
+   }
+  ]
+ },
+ "mercedes-benz-goikoauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Goiko Auto",
+    "website": "https://www.mercedes-benz-goikoauto.es/"
+   }
+  ]
+ },
+ "herreroylopez.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Herrero y López",
+    "website": "https://www.herreroylopez.com/"
+   }
+  ]
+ },
+ "norauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Norauto",
+    "website": "http://www.norauto.es/"
+   }
+  ]
+ },
+ "autosalamanca.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Renault Auto Salamanca",
+    "website": "http://www.autosalamanca.es/"
+   }
+  ]
+ },
+ "jorpamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Kia - Jorpa Motor",
+    "website": "https://jorpamotor.com/"
+   }
+  ]
+ },
+ "pamplonacar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ford Pamplona Car",
+    "website": "http://www.pamplonacar.com/"
+   }
+  ]
+ },
+ "lendizmotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Lendiz Motor - SEAT",
+    "website": "https://lendizmotor.com/"
+   }
+  ]
+ },
+ "bmwpremiumselection.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Motor Gorbea - BMW",
+    "website": "https://www.bmwpremiumselection.es/motorgorbea"
+   }
+  ]
+ },
+ "videinsa.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Videinsa - Opel",
+    "website": "http://www.videinsa.net/es"
+   }
+  ]
+ },
+ "alavalascaray.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "DS Store Vitoria Citroën - Álava Lascaray",
+    "website": "https://alavalascaray.es/"
+   }
+  ]
+ },
+ "autogomas.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auto Gomas S.A.",
+    "website": "http://www.autogomas.es"
+   }
+  ]
+ },
+ "talleresmercedesautosur.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autosur, C.B.",
+    "website": "https://www.talleresmercedesautosur.es/"
+   }
+  ]
+ },
+ "mercedes-benz-aguinaga.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mercedes-Benz Aguinaga",
+    "website": "https://www.mercedes-benz-aguinaga.es/"
+   }
+  ]
+ },
+ "csvmotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "CSV Motor",
+    "website": "https://www.csvmotor.com/"
+   }
+  ]
+ },
+ "colevi.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Colevi Camiones 2",
+    "website": "https://www.colevi.es/"
+   }
+  ]
+ },
+ "gruponani.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Grupo Nani",
+    "website": "https://www.gruponani.com"
+   }
+  ]
+ },
+ "macrisancar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Macrisán Helmántica. Vehículos de ocasión",
+    "website": "http://www.macrisancar.es/"
+   }
+  ]
+ },
+ "helmantica.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Helmántica Audi",
+    "website": "https://www.helmantica.es/"
+   }
+  ]
+ },
+ "motormunich.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Motor Munich Cadí Vic",
+    "website": "https://www.motormunich.com/"
+   }
+  ]
+ },
+ "sagamovil.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Volkswagen Sagamóvil",
+    "website": "https://www.sagamovil.com/orkoien/default.aspx"
+   }
+  ]
+ },
+ "auto10automoviles.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Auto 10",
+    "website": "http://www.auto10automoviles.com"
+   }
+  ]
+ },
+ "vidaldelapena.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Vidal de la Peña",
+    "website": "http://www.vidaldelapena.es"
+   }
+  ]
+ },
+ "grupohercos.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Hercos Parayas",
+    "website": "https://www.grupohercos.com/"
+   }
+  ]
+ },
+ "setienherra.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Setién-Herrá",
+    "website": "http://setienherra.es"
+   }
+  ]
+ },
+ "automovilescabrero.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Cabrero",
+    "website": "https://automovilescabrero.com/"
+   }
+  ]
+ },
+ "autosasua.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Asua, S.A.",
+    "website": "www.autosasua.com"
+   }
+  ]
+ },
+ "carmotors99.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Car Motors 99",
+    "website": "http://www.carmotors99.com"
+   }
+  ]
+ },
+ "renaultros.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Renault",
+    "website": "https://www.renaultros.com/"
+   }
+  ]
+ },
+ "garagerio.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Seat",
+    "website": "http://www.garagerio.es/"
+   }
+  ]
+ },
+ "lampis.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Skoda",
+    "website": "https://www.lampis.es/"
+   }
+  ]
+ },
+ "casvisa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Casvisa",
+    "website": "http://www.casvisa.com"
+   }
+  ]
+ },
+ "fordautoclave.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Talleres Auto-Clave",
+    "website": "https://fordautoclave.com/"
+   }
+  ]
+ },
+ "lexussevilla.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Lexus Sevilla",
+    "website": "http://www.lexussevilla.com"
+   }
+  ]
+ },
+ "codelauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Codelauto",
+    "website": "https://www.codelauto.com/"
+   }
+  ]
+ },
+ "dibercars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Diber Cars",
+    "website": "https://www.dibercars.es/"
+   }
+  ]
+ },
+ "seatgaldakauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Seat Galdakauto",
+    "website": "http://www.seatgaldakauto.com/contacto/"
+   }
+  ]
+ },
+ "echevarriturismos.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Etxebarri Turismos",
+    "website": "https://www.echevarriturismos.net/"
+   }
+  ]
+ },
+ "fiatarme.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Fiat Arme",
+    "website": "https://www.fiatarme.com/"
+   }
+  ]
+ },
+ "automovilesgalapagar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Galapagar",
+    "website": "https://www.automovilesgalapagar.es/"
+   }
+  ]
+ },
+ "elcomercio.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroën Blendio Moviedo",
+    "website": "https://www.elcomercio.es/asturias/siero-centro/propiedad-aguila-negra-confia-comercializar-complejo-completo-20210130002304-ntvo.html"
+   }
+  ]
+ },
+ "volkswagensealcomotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Sealco Motor Volkswagen",
+    "website": "https://volkswagensealcomotor.com/"
+   }
+  ]
+ },
+ "garciapeugeot.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Tallers García (Kefren - Peugeot)",
+    "website": "https://www.garciapeugeot.com"
+   }
+  ]
+ },
+ "coast-classics.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Coast Classics",
+    "website": "https://www.coast-classics.com/"
+   }
+  ]
+ },
+ "hergovisa.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Hergovisa",
+    "website": "https://www.hergovisa.com/"
+   }
+  ]
+ },
+ "ramongonzalezyhermanos.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ramón Gonzalez y Hermanos",
+    "website": "https://www.ramongonzalezyhermanos.com/"
+   }
+  ]
+ },
+ "blaumotors.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "SEAT Blau Motors",
+    "website": "http://www.blaumotors.es/"
+   }
+  ]
+ },
+ "furgokaravaning.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "FurgoKaravaning",
+    "website": "https://furgokaravaning.es"
+   }
+  ]
+ },
+ "renaultleioa.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Leioa Berri Auto",
+    "website": "https://www.renaultleioa.es/"
+   }
+  ]
+ },
+ "autoseber.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automóviles Autoseber",
+    "website": "https://www.autoseber.com/"
+   }
+  ]
+ },
+ "grupoadarsa.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Adarsa Mercedes Benz",
+    "website": "https://www.grupoadarsa.com/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mercesdes-Benz",
+    "website": "https://www.grupoadarsa.com/"
+   }
+  ]
+ },
+ "jzabaletasport.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Joaquín Zabaleta Sport",
+    "website": "http://www.jzabaletasport.com/"
+   }
+  ]
+ },
+ "remolquesyague.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Carrocerías Remolques Yagüe",
+    "website": "https://www.remolquesyague.com/"
+   }
+  ]
+ },
+ "grupochancela.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Grupo Chancela Automoción",
+    "website": "https://grupochancela.es/"
+   }
+  ]
+ },
+ "agredasa.es": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Merceces-Benz Ágreda Automóvil",
+    "website": "https://www.agredasa.es/"
+   },
+   {
+    "kind": "compraventa",
+    "name": "Mercedes-Benz Ágreda Automóvil",
+    "website": "https://www.agredasa.es/taller-oficial-camiones-mercedes-benz-fuso-lleida/"
+   }
+  ]
+ },
+ "marza-volkswagen.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Marzá",
+    "website": "https://www.marza-volkswagen.es/"
+   }
+  ]
+ },
+ "mosancar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroën Mosancar",
+    "website": "https://www.mosancar.com/"
+   }
+  ]
+ },
+ "kiamalaga.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Ruedatur KIA Málaga",
+    "website": "https://kiamalaga.es"
+   }
+  ]
+ },
+ "mazdaalmenar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mazda",
+    "website": "https://mazdaalmenar.com/"
+   }
+  ]
+ },
+ "citroencuenca.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Garaje Las Flores",
+    "website": "https://www.citroencuenca.com/es"
+   }
+  ]
+ },
+ "citroenejido.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Citroën Ejido Motor",
+    "website": "https://www.citroenejido.com/"
+   }
+  ]
+ },
+ "classmotor.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Class Motor",
+    "website": "http://www.classmotor.net/"
+   }
+  ]
+ },
+ "bellamachina.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Bella Machina Automóviles",
+    "website": "https://www.bellamachina.es/"
+   }
+  ]
+ },
+ "automovilesjairo.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Automoviles JAIRO",
+    "website": "https://automovilesjairo.com/"
+   }
+  ]
+ },
+ "barrabinoehijos.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Barrabino E Hijos, S.L.",
+    "website": "https://www.barrabinoehijos.com/"
+   }
+  ]
+ },
+ "copart.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Campa Copart Madrid",
+    "website": "https://www.copart.es/locations/madrid-m-5101/"
+   }
+  ]
+ },
+ "autocaravana-sur.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Autocaravana Sur",
+    "website": "https://autocaravana-sur.es/"
+   }
+  ]
+ },
+ "jbjautos.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "JBJ Autos",
+    "website": "https://www.jbjautos.com/"
+   }
+  ]
+ },
+ "valladolidwagen.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Valladolid Wagen",
+    "website": "https://www.valladolidwagen.es/"
+   }
+  ]
+ },
+ "automocionemilio.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Renault Automoción Emilio",
+    "website": "https://automocionemilio.es/"
+   }
+  ]
+ },
+ "transler.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Transler",
+    "website": "https://www.transler.es/"
+   }
+  ]
+ },
+ "toyotavalladolid.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Toyota",
+    "website": "https://www.toyotavalladolid.com/"
+   }
+  ]
+ },
+ "waycar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "waycar.es",
+    "website": "http://www.waycar.es/"
+   }
+  ]
+ },
+ "talleressarrion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Talleres Sarriòn",
+    "website": "https://talleressarrion.com/"
+   }
+  ]
+ },
+ "agricolanoroeste.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Agrícola Noroeste",
+    "website": "https://agricolanoroeste.com/"
+   }
+  ]
+ },
+ "hnosroyo.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Peugeot - Hnos. Royo",
+    "website": "https://www.hnosroyo.es/"
+   }
+  ]
+ },
+ "atalayamotor.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "AUDI",
+    "website": "https://www.atalayamotor.com/"
+   }
+  ]
+ },
+ "jvilalta.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "J Vilalta i Sala Suzuki",
+    "website": "https://www.jvilalta.com/"
+   }
+  ]
+ },
+ "mundiauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Mundiauto",
+    "website": "https://www.mundiauto.com/"
+   }
+  ]
+ },
+ "peugeoteslauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Eslauto",
+    "website": "https://www.peugeoteslauto.com/es"
+   }
+  ]
+ },
+ "jarmauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Jarmauto Volkswagen - Madrid - Rivas-Vaciamadrid",
+    "website": "https://www.jarmauto.es/"
+   }
+  ]
+ },
+ "talleresmanchegos.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "compraventa",
+    "name": "Talleres Manchegos",
+    "website": "https://www.talleresmanchegos.com/"
+   }
+  ]
+ },
+ "alcauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "ALCAUTO",
+    "website": "http://www.alcauto.es"
+   }
+  ]
+ },
+ "autosniser.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOS NISER S.L.",
+    "website": "http://www.autosniser.es"
+   }
+  ]
+ },
+ "mgvalladolid.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "MG LevMotor Valladolid y Palencia",
+    "website": "https://www.mgvalladolid.com/es/"
+   }
+  ]
+ },
+ "puntomotortenerife.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "PUNTOMOTOR TENERIFE",
+    "website": "http://www.puntomotortenerife.com/"
+   }
+  ]
+ },
+ "iluscar.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "ILUSCAR",
+    "website": "http://www.iluscar.com"
+   }
+  ]
+ },
+ "gtcarscanarias.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "GT CARS PREMIUM LAS PALMAS",
+    "website": "http://www.gtcarscanarias.com"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "GT CARS PREMIUM TENERIFE",
+    "website": "https://www.gtcarscanarias.com/"
+   }
+  ]
+ },
+ "autosjijona.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOS JIJONA",
+    "website": "http://www.autosjijona.com"
+   }
+  ]
+ },
+ "automovilesfenoll.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOMOVILES FENOLL",
+    "website": "http://www.automovilesfenoll.com"
+   }
+  ]
+ },
+ "automovilesjoselopez.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOMOVILES JOSE LOPEZ",
+    "website": "http://WWW.AUTOMOVILESJOSELOPEZ.ES"
+   }
+  ]
+ },
+ "royalqualitycars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "ROYAL QUALITY CARS",
+    "website": "http://www.royalqualitycars.es/"
+   }
+  ]
+ },
+ "alcala534.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "CITROEN ALCALA 534 TORREJON",
+    "website": "http://www.alcala534.com"
+   }
+  ]
+ },
+ "bugasgroup.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "BUGAS AUTOMOCION",
+    "website": "http://www.bugasgroup.com"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "BUGAS Y VIDAL",
+    "website": "http://www.bugasgroup.com"
+   }
+  ]
+ },
+ "porsche-asturias.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "CENTRO PORSCHE ASTURIAS",
+    "website": "http://www.porsche-asturias.com"
+   }
+  ]
+ },
+ "carhay.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "CARHAY ARGANDA",
+    "website": "http://www.carhay.com"
+   }
+  ]
+ },
+ "rgautomocion.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "RG AUTOMOCIÓN INTEGRAL DE DAIMIEL",
+    "website": "http://www.rgautomocion.es"
+   }
+  ]
+ },
+ ".": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "Autosman",
+    "website": "http://."
+   }
+  ]
+ },
+ "ventas@automocionoeste.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOMOCION OESTE",
+    "website": "http://ventas@automocionoeste.com"
+   }
+  ]
+ },
+ "indacar.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "VOLVO INDACAR",
+    "website": "https://www.indacar.es"
+   }
+  ]
+ },
+ "usaautoimport.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "USA AUTO IMPORT..",
+    "website": "http://www.usaautoimport.es"
+   }
+  ]
+ },
+ "robledauto.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "ROBLEDAUTO",
+    "website": "http://www.robledauto.com"
+   }
+  ]
+ },
+ "frworldcars.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "FR WORLD CARS",
+    "website": "http://www.frworldcars.com"
+   }
+  ]
+ },
+ "thecars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "The Cars",
+    "website": "https://thecars.es/"
+   }
+  ]
+ },
+ "gesticanautomoviles.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "GESTICAN AUTOMÓVILES",
+    "website": "http://www.gesticanautomoviles.com"
+   }
+  ]
+ },
+ "domingoalonsogroup.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "DOMINGO ALONSO OCASIÓN",
+    "website": "http://www.domingoalonsogroup.com"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "DOMINGO ALONSO OCASIÓN TENERIFE",
+    "website": "https://www.domingoalonsogroup.com/es/"
+   }
+  ]
+ },
+ "accarvip.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AC GROUP",
+    "website": "http://www.ACCARVIP.com"
+   }
+  ]
+ },
+ "csvmotor.net": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "CSV MOTOR VALENCIA",
+    "website": "http://www.csvmotor.net"
+   }
+  ]
+ },
+ "ivanauto.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "IVANAUTO",
+    "website": "http://www.ivanauto.es"
+   }
+  ]
+ },
+ "lgautomocion.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "LG AUTOMOCIÓN LAS PALMAS",
+    "website": "https://lgautomocion.com/"
+   }
+  ]
+ },
+ "automovilesgabilondo.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "AUTOMOVILES GABILONDO S.L.",
+    "website": "http://www.automovilesgabilondo.com"
+   }
+  ]
+ },
+ "mintegui.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "MINTEGUI SERVICIOS, concesionario oficial Ford",
+    "website": "http://www.mintegui.com"
+   }
+  ]
+ },
+ "reneult.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "RENAULT BLAS SERNA",
+    "website": "http://www.reneult.es/concesion/blasserna"
+   }
+  ]
+ },
+ "magnasupercars.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "MAGNA SUPERCARS",
+    "website": "http://www.magnasupercars.com"
+   }
+  ]
+ },
+ "drivercarsbcn.com": {
+  "entities": 2,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "DRIVER CARS MADRID",
+    "website": "http://www.drivercarsbcn.com"
+   },
+   {
+    "kind": "concesionario_oficial",
+    "name": "DRIVER CARS MÁLAGA",
+    "website": "http://www.drivercarsbcn.com"
+   }
+  ]
+ },
+ "tayre.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "TAYRE AUTOMOCION- Concesionario Oficial",
+    "website": "http://www.tayre.es"
+   }
+  ]
+ },
+ "rossocorsa.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "Car&Car Marbella",
+    "website": "http://www.rossocorsa.es"
+   }
+  ]
+ },
+ "vipcar.international": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "VIPCAR International",
+    "website": "https://vipcar.international/es"
+   }
+  ]
+ },
+ "egocars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "EGOCARS",
+    "website": "http://www.egocars.es"
+   }
+  ]
+ },
+ "p1-cars.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "P1 CARS",
+    "website": "http://www.p1-cars.com/"
+   }
+  ]
+ },
+ "carsgallery.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "Quadis Gallery Barcelona",
+    "website": "http://www.carsgallery.es"
+   }
+  ]
+ },
+ "promosale.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "PROMOSALE SPAIN",
+    "website": "https://promosale.es"
+   }
+  ]
+ },
+ "schmidtpremiumcars.es": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "SCHMIDT PREMIUM CARS, SL",
+    "website": "http://WWW.SCHMIDTPREMIUMCARS.ES"
+   }
+  ]
+ },
+ "cochencars.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "COHEN & CARS",
+    "website": "http://www.cochencars.com"
+   }
+  ]
+ },
+ "vip-marbella.com": {
+  "entities": 1,
+  "rows": [
+   {
+    "kind": "concesionario_oficial",
+    "name": "V.I.P. CARS",
+    "website": "http://www.vip-marbella.com"
+   }
+  ]
+ }
+}
