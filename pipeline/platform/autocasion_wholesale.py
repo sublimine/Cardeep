@@ -662,6 +662,119 @@ async def process_ref(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid:
 
 
 # ---------------------------------------------------------------------------
+# Two-phase split of process_ref for CONCURRENT hydration (the facet drain's bottleneck
+# is the per-car two-GET chain serialized one car at a time, starving the gql bucket). The
+# split keeps the cage path byte-for-byte:
+#   PHASE A  hydrate_ref  — network + parse ONLY (no DB, no shared state). Safe to run
+#            MANY at once under asyncio.gather: every fetch is governed (per-host bucket
+#            still the ceiling), the only mutation is local. Returns a _HydratedRef or a
+#            reason string ("fetch"/"dup"/"skip") so the sequential phase can account it.
+#   PHASE B  cage_hydrated — DB ONLY, run SEQUENTIALLY on the single asyncpg connection
+#            (asyncpg forbids concurrent queries on one conn). Reuses upsert_dealer /
+#            upsert_vehicle / link_platform / emit_new_event / capture_price_drop verbatim,
+#            so ON CONFLICT idempotency + NEW/PRICE_CHANGE deltas + VAM cageable truth are
+#            identical to process_ref. seen_ids is updated in PHASE A's pre-dedup so a ref
+#            seen twice across pages/slices is hydrated at most once (same guard as before).
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _HydratedRef:
+    """A fully network-hydrated ad ready for the sequential DB cage (PHASE A output)."""
+    ad_id: str
+    vehicle: Vehicle
+    dealer: DealerRef
+
+
+def _dedup_ref(ad_id: str, seen_ids: set[str], stats: dict) -> bool:
+    """Mark a ref seen; return True if it is a fresh id to hydrate, False if a duplicate.
+    Centralizes the id-dedup so the serial and concurrent paths share ONE guard."""
+    if ad_id in seen_ids:
+        stats["dup_ids_collapsed"] += 1
+        return False
+    seen_ids.add(ad_id)
+    return True
+
+
+async def hydrate_ref(geo: GeoResolver, governed_fetch, pdp_url: str, ad_id: str,
+                      stats: dict) -> _HydratedRef | str:
+    """PHASE A — network-only hydrate of ONE ad (GraphQL ad() + PDP JSON-LD dealer).
+
+    NO DB, NO shared mutation beyond `stats` counters (plain int increments — benign under
+    asyncio's single-thread cooperative scheduling; no torn writes). Returns a _HydratedRef
+    on success, or a reason string: 'fetch' (a governed fetch raised — the breaker signal),
+    'skip' (no ad / no Product / private seller / no deep link). Many of these run
+    concurrently under asyncio.gather so the gql + www buckets fill instead of 1-in-flight."""
+    # Step 2 — hydrate the car (GraphQL ad()).
+    try:
+        ad_raw = await governed_fetch(
+            GQL_ENDPOINT, method="POST", gql={"query": _AD_QUERY % int(ad_id)})
+        ad = ((json.loads(ad_raw).get("data") or {}).get("ad")) or None
+    except Exception:  # noqa: BLE001 — one ad failing is not fatal.
+        stats["fetch_errors"] += 1
+        return "fetch"
+    if not ad:
+        stats["fetch_errors"] += 1
+        return "skip"
+    stats["ads_hydrated"] += 1
+    v = parse_ad(ad, pdp_url)
+    if not v.deep_link:
+        return "skip"
+
+    # Step 3 — dealer attribution (PDP JSON-LD).
+    try:
+        pdp_html = await governed_fetch(_PDP_BASE + pdp_url)
+    except Exception:  # noqa: BLE001
+        stats["fetch_errors"] += 1
+        return "fetch"
+    stats["pdp_fetched"] += 1
+    ld = parse_pdp_ldjson(pdp_html)
+    if ld is None:
+        stats["private_skipped"] += 1
+        return "skip"
+    d = parse_pdp_dealer(ld, geo)
+    if d is None:
+        stats["private_skipped"] += 1   # private seller / no AutoDealer
+        return "skip"
+    if v.photo_url is None:
+        v.photo_url = pdp_photo(ld)
+    return _HydratedRef(ad_id=ad_id, vehicle=v, dealer=d)
+
+
+async def cage_hydrated(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid: str,
+                        hr: _HydratedRef, harvested_cageable: set[tuple[str, str]],
+                        stats: dict) -> None:
+    """PHASE B — DB-only cage of ONE already-hydrated ad. Run SEQUENTIALLY (single conn).
+
+    Byte-for-byte the DB tail of process_ref: one transaction, upsert dealer -> vehicle ->
+    edge, emit NEW / PRICE_CHANGE deltas, add the cageable (slug, deep_link). A single bad
+    car never sinks the drain."""
+    v, d = hr.vehicle, hr.dealer
+    try:
+        async with conn.transaction():
+            dealer_ulid = await upsert_dealer(conn, geo, d)
+            if dealer_ulid is None:
+                stats["geo_skipped"] += 1
+                return
+            harvested_cageable.add((d.slug, v.deep_link))
+            vulid, veh_new = await upsert_vehicle(conn, dealer_ulid, v)
+            stats["cars_caged"] += 1
+            if not veh_new:
+                if await capture_price_drop(conn, platform_ulid, vulid, dealer_ulid, v):
+                    stats["price_changes_captured"] += 1
+            if veh_new:
+                stats["new_cars"] += 1
+                await emit_new_event(conn, vulid, dealer_ulid, v)
+                stats["new_events"] += 1
+            edge_new = await link_platform(conn, platform_ulid, vulid, v)
+            if edge_new:
+                stats["edges_created"] += 1
+    except Exception as e:  # noqa: BLE001 — one bad car never sinks the drain.
+        stats["parse_errors"] += 1
+        print(f"[autocasion] car {hr.ad_id} parse/cage failed ({e!r}); skipping.")
+
+
+# ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 

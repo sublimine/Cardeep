@@ -93,11 +93,13 @@ from pipeline.platform.autocasion_wholesale import (
     SSR_HOST,
     SSR_ITEMS_PER_PAGE,
     AutocasionFetcher,
+    _dedup_ref,
     _to_int,
     autocasion_platform_cdp_code,
+    cage_hydrated,
     ensure_platform_entity,
+    hydrate_ref,
     parse_ssr_refs,
-    process_ref,
 )
 
 # ---------------------------------------------------------------------------
@@ -112,6 +114,30 @@ SPLIT_THRESHOLD = 10_000
 # A hard page ceiling per slice — a guardrail, never expected to bite (a real slice ends
 # on the first 0-ref page well before this). 10k/26 ≈ 385; this is comfortable headroom.
 MAX_PAGES_PER_SLICE = 600
+
+# Per-PAGE hydration concurrency. A page carries ~26 refs; each ref is a gql POST
+# (gql.autocasion.com, JSON_API bucket 12 req/s) + a PDP GET (www.autocasion.com, STEALTH
+# bucket 2 req/s, 0.5 s min-spacing). Hydrating ONE AT A TIME (the old serial drain) leaves
+# both buckets 1-in-flight — a whole make of ~8k cars drains at ~0.61 s/car (~84 min) with
+# NO log line until the slice ENDS, which reads as a freeze. Running a page's refs through
+# asyncio.gather lets the governor fill the buckets concurrently — it remains the TRUE
+# ceiling (concurrency only keeps the buckets saturated, it can NEVER out-pace a host).
+#
+# MEASURED 2026-06-13 (live audi, serial vs gather=12): IDENTICAL ~0.61 s/car. The binding
+# constraint is the www.autocasion.com PDP-GET bucket (2 req/s + 0.5 s spacing), needed once
+# per car for dealer attribution — so 12-wide gather queues on that floor and matches serial.
+# Concurrency is therefore correct + safe (mandate: "do NOT out-pace gql.autocasion.com" — it
+# CAN'T, by construction) and future-proofs the gql side if the www pace is ever raised on
+# EVIDENCE, but it is NOT today's speed lever. Today's lever the operator owns is the www
+# bucket rate in governor.py (documented MEASURED-permissive), a ban-surface change left to
+# the operator. The real fix this module delivers is VISIBLE INCREMENTAL progress (below),
+# so an 84-min audi drain is a healthy climbing counter, not a silent freeze.
+HYDRATE_CONCURRENCY = 12
+
+# Print a progress line every N pages WITHIN a slice (not only at slice-end), so caged_total
+# climbs visibly during a big make and a stall is detectable in seconds, not hidden for an
+# hour. A page is ~26 cars, so every 5 pages ≈ ~130 cars ≈ a heartbeat every ~30-60 s.
+PROGRESS_EVERY_PAGES = 5
 
 # GraphQL enumeration of the partition keys (OPEN, no auth).
 _BRANDS_QUERY = "{brands(type:CAR){id name slug}}"
@@ -308,40 +334,84 @@ async def plan_partitions(governed_fetch, seg: Segment, makes: list[dict],
 
 async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid: str,
                        fetcher: AutocasionFetcher, governed_fetch, slc: dict,
-                       seen_ids: set, harvested_cageable: set,
-                       stats: dict) -> tuple[bool, str | None, int | None]:
+                       seen_ids: set, harvested_cageable: set, stats: dict,
+                       concurrency: int = HYDRATE_CONCURRENCY,
+                       max_pages: int = MAX_PAGES_PER_SLICE,
+                       ) -> tuple[bool, str | None, int | None]:
     """Drain a single facet slice to exhaustion (first 0-ref page = clean end).
 
     Returns (clean_finish, fetch_error, last_http). clean_finish=True means the slice
     ended on an empty/no-results page (fully drained); False means an SSR fetch error
-    stopped it (the breaker signal). Each ?page=N is enumerated, then every -ref{ID} on it
-    is hydrated + caged through process_ref (the shared, proven path). A GLOBAL seen_ids
-    dedups across BOTH pages and slices (and across segments)."""
+    stopped it (the breaker signal).
+
+    Each ?page=N is enumerated, then the page's fresh -ref{ID}s are hydrated CONCURRENTLY
+    (PHASE A — gql ad() + PDP JSON-LD, up to HYDRATE_CONCURRENCY in flight so the governor
+    fills both host buckets instead of crawling 1-in-flight) and caged SEQUENTIALLY on the
+    single asyncpg connection (PHASE B — the byte-for-byte cage tail). Ingest is INCREMENTAL
+    (committed per car, per page) and a progress line prints every PROGRESS_EVERY_PAGES pages
+    so caged_total climbs visibly and a stall surfaces in seconds, not at slice-end.
+    A GLOBAL seen_ids dedups across BOTH pages and slices (and across segments)."""
     seg = SEGMENTS[slc["segment"]]
     path = _facet_path(seg, slc["make"], slc["province"])
+    label = f"{seg.key}:{slc['make']}" + (f"/{slc['province']}" if slc["province"] else "")
     fetch_error: str | None = None
     last_http: int | None = None
-    for page in range(1, MAX_PAGES_PER_SLICE + 1):
+    sem = asyncio.Semaphore(max(1, concurrency))
+    t_slice = time.monotonic()
+
+    async def _hydrate(pdp_url: str, ad_id: str):
+        async with sem:
+            return await hydrate_ref(geo, governed_fetch, pdp_url, ad_id, stats)
+
+    for page in range(1, max(1, max_pages) + 1):
         # Step 1 — enumerate ad ids from this slice's SSR results page.
         try:
             html = await governed_fetch(f"{path}?page={page}")
         except Exception as e:  # noqa: BLE001
             fetch_error = str(e)
             last_http = fetcher.last_status
-            print(f"[autocasion_facet] [{seg.key}] slice {slc['make']}"
-                  f"{('/' + slc['province']) if slc['province'] else ''} page {page} "
-                  f"SSR failed ({e}); stopping this slice honestly.")
+            print(f"[autocasion_facet] [{seg.key}] slice "
+                  f"{slc['make']}{('/' + slc['province']) if slc['province'] else ''} "
+                  f"page {page} SSR failed ({e}); stopping this slice honestly.")
             break
         stats["pages_fetched"] += 1
         refs = parse_ssr_refs(html)
         if not refs:
             break  # clean end of this slice (0 refs / "no hemos encontrado").
 
+        # Pre-dedup against the GLOBAL seen set BEFORE hydrating: a ref already seen on an
+        # earlier page/slice/segment is accounted (dup_ids_collapsed) and never re-fetched.
+        fresh: list[tuple[str, str]] = []
         for pdp_url, ad_id in refs:
-            err = await process_ref(conn, geo, platform_ulid, governed_fetch,
-                                    pdp_url, ad_id, seen_ids, harvested_cageable, stats)
-            if err == "fetch":
-                last_http = fetcher.last_status
+            stats["refs_seen"] += 1
+            if _dedup_ref(ad_id, seen_ids, stats):
+                fresh.append((pdp_url, ad_id))
+
+        if fresh:
+            # PHASE A — concurrent network hydrate (governed; buckets are the real ceiling).
+            results = await asyncio.gather(
+                *(_hydrate(pdp_url, ad_id) for pdp_url, ad_id in fresh),
+                return_exceptions=True)
+            # PHASE B — sequential DB cage on the single connection (asyncpg-safe).
+            for res in results:
+                if isinstance(res, Exception):
+                    stats["parse_errors"] += 1
+                    continue
+                if res == "fetch":
+                    last_http = fetcher.last_status
+                    continue
+                if isinstance(res, str):
+                    continue  # 'skip' — already accounted in hydrate_ref's stats.
+                await cage_hydrated(conn, geo, platform_ulid, res,
+                                    harvested_cageable, stats)
+
+        # Incremental progress heartbeat — caged_total climbs WITHIN the slice now.
+        if page % PROGRESS_EVERY_PAGES == 0:
+            dt = time.monotonic() - t_slice
+            cpm = stats["cars_caged"] / (dt / 60) if dt > 0 else 0.0
+            print(f"[autocasion_facet] [{seg.key}] {label:<28} page {page:>3} "
+                  f"caged_total={stats['cars_caged']} new={stats['new_cars']} "
+                  f"edges={stats['edges_created']} | {cpm:.0f} cars/min")
 
     clean_finish = fetch_error is None
     return clean_finish, fetch_error, last_http
@@ -356,7 +426,9 @@ async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid
 async def harvest_facet(make_filter: list[str] | None = None,
                         max_makes: int | None = None,
                         segments: list[Segment] | None = None,
-                        nonexistent: list[str] | None = None) -> dict:
+                        nonexistent: list[str] | None = None,
+                        concurrency: int = HYDRATE_CONCURRENCY,
+                        max_pages_per_slice: int | None = None) -> dict:
     """Drain autocasion by make-partition, over one or more SEGMENTS.
 
     make_filter: explicit make slugs to drain (None = all makes with stock).
@@ -367,6 +439,10 @@ async def harvest_facet(make_filter: list[str] | None = None,
                  seen_ids set collapses any cross-segment overlap exactly once.
     nonexistent: segment names requested that do not exist on autocasion (e.g. renting),
                  carried into the report as a declared gap (never a silent skip).
+    concurrency: per-page hydration concurrency (refs hydrated in flight). The governor's
+                 per-host bucket stays the true ceiling; this only keeps it saturated.
+    max_pages_per_slice: hard page cap per slice for a BOUNDED test (None = drain to the
+                 slice's natural 0-ref end). Lets an audi-only test cap cleanly + fast.
     """
     nonexistent = nonexistent or []
     if segments is None:
@@ -386,6 +462,7 @@ async def harvest_facet(make_filter: list[str] | None = None,
         "parse_errors": 0, "dealers_distinct": 0,
         "makes_total": 0, "makes_with_stock": 0, "slices": 0,
         "slices_clean": 0, "slices_errored": 0, "coverage_sum": 0,
+        "concurrency": max(1, concurrency),
         "segments_requested": [s.key for s in segments],
         "segments_nonexistent": list(nonexistent),
         "per_segment": {},  # key -> {label, makes_with_stock, slices, declared, caged}
@@ -477,11 +554,13 @@ async def harvest_facet(make_filter: list[str] | None = None,
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
 
         # ---- DRAIN: every slice to its end through the shared per-ref cage path.
+        slice_page_cap = max_pages_per_slice if max_pages_per_slice else MAX_PAGES_PER_SLICE
         for i, slc in enumerate(slices, 1):
             caged_before = stats["cars_caged"]
             clean, perr, phttp = await _drain_slice(
                 conn, geo, platform_ulid, fetcher, governed_fetch, slc,
-                seen_ids, harvested_cageable, stats)
+                seen_ids, harvested_cageable, stats,
+                concurrency=concurrency, max_pages=slice_page_cap)
             # Attribute this slice's caged delta to its segment (distinct cars; cross-segment
             # dups already collapsed by the global seen_ids, so this is non-double-counting).
             seg_row = stats["per_segment"].get(slc["segment"])
@@ -601,6 +680,7 @@ def _print_report(stats: dict) -> None:
           f"({stats.get('slices_clean')} clean / {stats.get('slices_errored')} errored)")
     print(f"  sum(slice declared)   : {stats.get('coverage_sum')}  (declared full this run, all segments)")
     print("  --- drain ---")
+    print(f"  hydrate concurrency   : {stats.get('concurrency')} refs in flight per page")
     print(f"  SSR pages fetched     : {stats['pages_fetched']}")
     print(f"  refs seen             : {stats['refs_seen']}")
     print(f"  distinct listing ids  : {stats.get('harvested_distinct_ids')}")
@@ -654,6 +734,13 @@ def main() -> None:
     parser.add_argument("--max-makes", type=int, default=None,
                         help="bounded proof: drain only the N LARGEST slices by declared size "
                              "(several complete slices end to end). Omit for the full drain.")
+    parser.add_argument("--concurrency", type=int, default=HYDRATE_CONCURRENCY,
+                        help=(f"per-page hydration concurrency (refs hydrated in flight); "
+                              f"default {HYDRATE_CONCURRENCY}. The governor's per-host bucket "
+                              f"is the real limiter — this only keeps the bucket saturated."))
+    parser.add_argument("--max-pages-per-slice", type=int, default=None,
+                        help="BOUNDED test: hard cap on SSR pages drained PER slice (~26 cars/"
+                             "page). Omit to drain each slice to its natural 0-ref end.")
     args = parser.parse_args()
 
     make_filter: list[str] | None = None
@@ -668,7 +755,9 @@ def main() -> None:
               f"nothing to drain on autocasion.")
     stats = asyncio.run(harvest_facet(
         make_filter=make_filter, max_makes=args.max_makes,
-        segments=segments, nonexistent=nonexistent))
+        segments=segments, nonexistent=nonexistent,
+        concurrency=args.concurrency,
+        max_pages_per_slice=args.max_pages_per_slice))
     _print_report(stats)
 
 
