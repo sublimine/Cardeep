@@ -178,3 +178,22 @@
   TODOS untracked (cero commit a CARDEX). Reubicados a cardeep, repos ajenos limpios. T10 (geocoding)
   cayó por límite de sesión → rehecho con ruta ABSOLUTA pinneada. Lección: rutas absolutas a agentes.
 - **PENDIENTE: revisión y aprobación del owner del plan ANTES de tocar código de producción.**
+
+## 2026-06-12 — BUILD P0: SCHEMA SPINE (ejecución del MASTER_PLAN, verificada)
+- Arranca la construcción siguiendo el DAG del MASTER_PLAN (§3). Backup de seguridad
+  (.backups/cardeep_pre_p0.dump, gitignored) antes de tocar datos vivos.
+- **Migraciones 0005-0009 aplicadas, datos preservados EXACTOS** (entity 12.862 · vehicle
+  39.068 · vehicle_event 41.165 antes==después, verificado por mi mano):
+  - 0005: 8 ENUMs (entity_kind 11 tipos, org_type, waf_kind, vehicle_event_type…) +
+    `cardeep_block_mutation()` (historial inmutable) + extensiones pg_trgm/btree_gin/pgcrypto.
+  - 0006: entity evoluciona in-place — swap kind/status/website_waf TEXT→ENUM (pre-flight
+    limpio), + columnas ontología (sells_cars, kind_source, org_id, attest_count, defense_detail,
+    canonical_key…) + platform_meta + vista `platform` + ULID-shape CHECK.
+  - 0007: tabla `organization` (cadenas/grupos) + entity.org_id FK + entity_source.first_seen
+    + trigger de attest-count.
+  - 0009: arista **`platform_listing`** — fix estructural "mismo coche en plataforma Y dealer"
+    (vehicle.entity_ulid = dealer vendedor; la pertenencia a plataforma es la arista).
+- Diferido (rewrites de tablas pobladas, bloque cuidadoso aparte): 0008 (vehicle partition),
+  0010 (auction), 0011 (vehicle_event partition + immutability wiring), 0012 (rollups), 0099 (PostGIS).
+- Delegado a agente de contexto fresco con rutas absolutas (tras la lección de contaminación);
+  verificado por mi mano. Siguiente en el DAG: P0.5 spike anti-detección → P1 governor+queue.
