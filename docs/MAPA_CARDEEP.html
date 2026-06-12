@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CARDEEP · Mapa del sistema</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#0f1620; --panel2:#131c28; --line:#1f2c3b;
+    --ink:#e8eef6; --dim:#8aa0b8; --faint:#5a6f86;
+    --accent:#36e2a4; --accent2:#4aa3ff; --warn:#ffb454; --tier1:#ff5d7a; --plat:#c08bff;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 700px at 70% -10%,#0e1622 0,var(--bg) 60%);
+       color:var(--ink);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 28px 80px}
+  header .kick{font:600 12px/1 var(--mono);letter-spacing:.32em;color:var(--accent);text-transform:uppercase}
+  h1{font-size:clamp(2.2rem,1rem+5vw,4rem);margin:.3em 0 .1em;letter-spacing:-.02em;font-weight:800}
+  .sub{color:var(--dim);max-width:62ch;font-size:1.05rem}
+  .stamp{margin-top:14px;font:500 12px/1 var(--mono);color:var(--faint)}
+  .stamp b{color:var(--accent)}
+  /* stat band */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:40px 0 8px}
+  .stat{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+        border-radius:14px;padding:18px 18px 16px}
+  .stat .n{font:800 1.9rem/1 var(--sans);letter-spacing:-.02em}
+  .stat .l{margin-top:7px;font:500 11px/1.3 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .stat.accent .n{color:var(--accent)} .stat.blue .n{color:var(--accent2)} .stat.plat .n{color:var(--plat)}
+  /* sections */
+  section{margin-top:56px}
+  h2{font-size:1.15rem;letter-spacing:.02em;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+  h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+  h2 .tag{font:600 10px/1 var(--mono);color:var(--faint);letter-spacing:.18em;text-transform:uppercase;margin-left:auto}
+  .lead{color:var(--dim);margin:0 0 22px;max-width:78ch;font-size:.96rem}
+  /* the stack */
+  .stack{display:flex;flex-direction:column;gap:0}
+  .layer{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+         padding:16px 18px;margin:7px 0}
+  .layer h3{margin:0 0 4px;font-size:.98rem;display:flex;gap:10px;align-items:baseline}
+  .layer h3 .px{font:700 11px/1 var(--mono);color:var(--bg);background:var(--accent);border-radius:6px;padding:4px 7px}
+  .layer h3 .px.todo{background:var(--line);color:var(--dim)}
+  .layer p{margin:0;color:var(--dim);font-size:.88rem}
+  .layer .items{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .chip{font:500 11px/1 var(--mono);color:var(--ink);background:var(--panel2);border:1px solid var(--line);
+        border-radius:999px;padding:6px 11px}
+  .chip.t1{border-color:var(--tier1);color:#ffd2da} .chip.ok{border-color:var(--accent);color:#bff6e2}
+  .flow{text-align:center;color:var(--faint);font-family:var(--mono);font-size:14px;margin:-1px 0}
+  /* two columns */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card h4{margin:0 0 10px;font-size:.92rem;color:var(--ink)}
+  .node{font:500 12px/1.4 var(--mono);color:var(--dim);padding:7px 0;border-bottom:1px dashed var(--line)}
+  .node:last-child{border:0}
+  .node b{color:var(--ink)} .node .e{color:var(--accent)} .node .arr{color:var(--accent2)}
+  /* progress */
+  .dag{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+  .ph{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+  .ph .id{font:700 12px/1 var(--mono);color:var(--accent2)}
+  .ph .ti{font-size:.86rem;margin:6px 0 8px}
+  .ph .st{font:600 10px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em}
+  .ph.done{border-color:var(--accent)} .ph.done .st{color:var(--accent)}
+  .ph.done .id{color:var(--accent)}
+  .ph.next{border-color:var(--accent2)} .ph.next .st{color:var(--accent2)}
+  .ph.todo{opacity:.62} .ph.todo .st{color:var(--faint)}
+  /* docs */
+  .pill{display:inline-flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--line);
+        border-radius:10px;padding:9px 13px;font:500 12px/1 var(--mono);color:var(--dim);margin:5px 5px 0 0}
+  .pill b{color:var(--ink)}
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);color:var(--faint);font-size:.84rem}
+  .resid{color:var(--warn)}
+  a{color:var(--accent2);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kick">Mapa del sistema · estado vivo</div>
+  <h1>CARDEEP</h1>
+  <p class="sub">El mapa vivo y verificado del 100% de los puntos de venta de coches de España —
+     de la plataforma gigante al garaje de montaña. Las recetas lo mantienen, el motor lo late, la API lo sirve.</p>
+  <div class="stamp">Estado verificado por mano propia · <b>2026-06-12</b> · PostgreSQL 16 <b>cardeep-pg :5433</b> ·
+     rama <b>main</b> @ 918475a</div>
+</header>
+
+<!-- LIVE STATE -->
+<div class="stats">
+  <div class="stat accent"><div class="n">12.916</div><div class="l">Entidades</div></div>
+  <div class="stat blue"><div class="n">39.336</div><div class="l">Vehículos</div></div>
+  <div class="stat"><div class="n">41.422</div><div class="l">Eventos delta</div></div>
+  <div class="stat plat"><div class="n">268</div><div class="l">Platform listings</div></div>
+  <div class="stat"><div class="n">52 / 52</div><div class="l">Provincias</div></div>
+  <div class="stat"><div class="n">383</div><div class="l">Veredictos VAM</div></div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="n">7.200</div><div class="l">garaje *</div></div>
+  <div class="stat"><div class="n">2.806</div><div class="l">compraventa</div></div>
+  <div class="stat"><div class="n">1.617</div><div class="l">concesionario_oficial</div></div>
+  <div class="stat"><div class="n">1.292</div><div class="l">desguace</div></div>
+  <div class="stat plat"><div class="n">1</div><div class="l">plataforma (AS24)</div></div>
+  <div class="stat"><div class="n">11</div><div class="l">Fuentes activas</div></div>
+</div>
+<p class="lead" style="margin-top:10px"><span class="resid">* honesto:</span> los 7.200 “garaje” incluyen
+  talleres de reparación sembrados de OSM que <b>no venden coches</b> — pendiente reclasificar con
+  <code>sells_cars=false</code> y sacarlos del universo. El número real de puntos de venta es menor.</p>
+
+<!-- STACK -->
+<section>
+  <h2><span class="dot"></span>El stack, capa a capa <span class="tag">de la fuente a la API</span></h2>
+  <p class="lead">Dos planos sobre un núcleo determinista: lo masivo y barato (descubrir, parsear, dedup, geo)
+     corre en código + LLM local; la inteligencia cara (cazar recetas Tier-1, verificación adversarial) en flotas de agentes.</p>
+  <div class="stack">
+    <div class="layer"><h3><span class="px">VIVO</span> Fuentes</h3>
+      <p>Registros oficiales, asociaciones, APIs OEM, plataformas, directorios, desguaces — 181 catalogadas en el censo F1.</p>
+      <div class="items"><span class="chip ok">DGT CAT 1.292</span><span class="chip ok">OEM JSON ×7 (Kia/MG/BYD/Skoda/Dacia/Hyundai/Mercedes/SEAT)</span><span class="chip ok">OSM 9.953</span><span class="chip ok">AS24 dealers</span><span class="chip t1">Tier-1: wallapop·milanuncios·coches.net·spoticar</span></div></div>
+    <div class="flow">↓</div>
+    <div class="layer"><h3><span class="px">VIVO</span> Motor de fetch · arsenal real</h3>
+      <p><code>pipeline/engine/fetch.py</code> — curl_cffi con impersonación Chrome (JA3/TLS coherente, retry+backoff). Mata el urllib. Hook Tier-1 (camoufox) documentado.</p>
+      <div class="items"><span class="chip">curl_cffi chrome131</span><span class="chip">Tier-0 no-browser</span><span class="chip">Tier-1 camoufox →P1</span></div></div>
+    <div class="flow">↓</div>
+    <div class="layer"><h3><span class="px">VIVO</span> Pipeline determinista</h3>
+      <p><code>pipeline/</code> — 26 módulos: adaptadores de fuente, descubrir, scrapear, receta, ingest (motor de delta), verificar (VAM), geo + geocoder.</p>
+      <div class="items"><span class="chip">discover</span><span class="chip">platform/autoscout24_wholesale</span><span class="chip">ingest · delta NEW/GONE/Δprecio/Δfoto/Δkm</span><span class="chip">verify · VAM quórum</span><span class="chip">geocode lat/lon→provincia</span></div></div>
+    <div class="flow">↓</div>
+    <div class="layer"><h3><span class="px">VIVO</span> Datos · PostgreSQL 16</h3>
+      <p>15 tablas, 8 migraciones. Espina de ontología (11 tipos ENUM), capa org, arista <code>platform_listing</code>, historial inmutable.</p>
+      <div class="items"><span class="chip">geo (52/8.132)</span><span class="chip">entity</span><span class="chip">vehicle</span><span class="chip">vehicle_event (append-only)</span><span class="chip plat" style="border-color:var(--plat)">platform_listing</span><span class="chip">verification_verdict</span></div></div>
+    <div class="flow">↓</div>
+    <div class="layer"><h3><span class="px">VIVO</span> API viva · FastAPI</h3>
+      <p><code>services/api</code> — sirve inventario por entidad, por plataforma, delta y rejilla geo. Envelope {ok,data,error,meta}.</p>
+      <div class="items"><span class="chip">/health</span><span class="chip">/entities/{cdp}/inventory</span><span class="chip">/entities/{cdp}/delta</span><span class="chip plat" style="border-color:var(--plat)">/platforms/{cdp}/inventory</span><span class="chip plat" style="border-color:var(--plat)">/vehicles/{ulid}/platforms</span><span class="chip">/geo/{prov}/entities</span></div></div>
+  </div>
+</section>
+
+<!-- DATA MODEL + PLATFORM MODEL -->
+<section>
+  <h2><span class="dot"></span>Modelo de datos &amp; el fix plataforma-como-entidad <span class="tag">grafo</span></h2>
+  <div class="cols">
+    <div class="card">
+      <h4>Grafo de entidades</h4>
+      <div class="node"><b>geo_province</b> 52 <span class="arr">→</span> <b>geo_municipality</b> 8.132 <span class="arr">→</span> <b>geo_comarca</b></div>
+      <div class="node"><b>organization</b> (cadenas/grupos) <span class="arr">←org_id—</span> <b>entity</b></div>
+      <div class="node"><b>entity</b> <span class="e">·kind ENUM(11)</span> ·cdp_code ·sells_cars ·is_tier1 ·org_id</div>
+      <div class="node"><b>entity_source</b> (provenance multi-fuente, dedup &amp; capture-recapture)</div>
+      <div class="node"><b>vehicle</b> <span class="arr">—entity_ulid→</span> dealer vendedor (propiedad singular)</div>
+      <div class="node"><b>vehicle_event</b> NEW·GONE·PRICE·PHOTO·KM (historial inmutable)</div>
+      <div class="node"><b>platform_listing</b> <span class="e">coche ↔ plataforma</span> (membresía 0..M)</div>
+      <div class="node"><b>verification_verdict</b> TRUSTWORTHY/REFUTED/UNVERIFIED (VAM)</div>
+    </div>
+    <div class="card">
+      <h4>“El mismo coche en plataforma Y dealer” — resuelto, VIVO</h4>
+      <p style="color:var(--dim);font-size:.9rem;margin:0 0 14px">Tu crítica clavada: una plataforma no es solo una fuente de descubrimiento, es una <b>entidad con inventario</b>. Estructura demostrada hoy contra la DB:</p>
+      <div class="node" style="border:0"><span class="e">AutoScout24</span> = entidad <b>plataforma</b> · <code>CDP-ES-00-VMCZWW5N</code> · 279.220 coches (fuente)</div>
+      <div class="node" style="border:0;color:var(--faint)">— coche · VW Golf 2021 · 21.990€ —</div>
+      <div class="node" style="border:0"><span class="arr">propiedad →</span> <b>CAR10 Móstoles</b> (compraventa, prov 28)</div>
+      <div class="node" style="border:0"><span class="arr">listado en →</span> <b>AS24</b> vía <span class="e">platform_listing</span></div>
+      <div class="node" style="border:0;color:var(--accent);margin-top:8px">✓ 268 edges vivos · 68 dealers atribuidos · VAM TRUSTWORTHY · idempotente</div>
+      <div class="node" style="border:0;color:var(--faint)">slice de prueba (12 págs); los 279k completos = governor P1</div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE LIFECYCLE -->
+<section>
+  <h2><span class="dot"></span>Ciclo de vida por entidad <span class="tag">workflows átomo</span></h2>
+  <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:8px">
+    <div class="layer" style="flex:1;min-width:150px;margin:0"><h3>DESCUBRIR</h3><p>fuente → entidad + geo + código único + provenance</p></div>
+    <div class="layer" style="flex:1;min-width:150px;margin:0"><h3>SCRAPEAR</h3><p>drenar inventario por capa de datos (no paginación HTML)</p></div>
+    <div class="layer" style="flex:1;min-width:150px;margin:0"><h3>RECETA</h3><p>destilar + versionar (263 recetas guardadas)</p></div>
+    <div class="layer" style="flex:1;min-width:150px;margin:0"><h3>API/INGEST</h3><p>delta: INSERT nuevo + cierre desaparecido + eventos</p></div>
+    <div class="layer" style="flex:1;min-width:150px;margin:0"><h3>BORRAR</h3><p>evicción por capacidad + tombstone (→ P8)</p></div>
+    <div class="layer" style="flex:1;min-width:150px;margin:0;border-color:var(--accent)"><h3>VERIFICAR</h3><p>VAM transversal: quórum ≥2 vías ortogonales</p></div>
+  </div>
+</section>
+
+<!-- BUILD PROGRESS / DAG -->
+<section>
+  <h2><span class="dot"></span>Progreso de construcción <span class="tag">DAG del MASTER_PLAN</span></h2>
+  <p class="lead">El sistema se construye por bloques con gates binarios. Hoy: arquitectura completa + esquema vivo + el vertical plataforma-mayorista probado E2E.</p>
+  <div class="dag">
+    <div class="ph done"><div class="id">P0</div><div class="ti">Espina de esquema (ENUMs, org, platform_listing)</div><div class="st">✓ Hecho · verificado</div></div>
+    <div class="ph done"><div class="id">P6+P7a</div><div class="ti">Plataforma-como-entidad + cosecha mayorista AS24</div><div class="st">✓ Probado vivo</div></div>
+    <div class="ph next"><div class="id">P0.5</div><div class="ti">Spike anti-detección (re-probar targets €0)</div><div class="st">▶ Siguiente</div></div>
+    <div class="ph next"><div class="id">P1</div><div class="ti">Governor + cola (token-bucket por host)</div><div class="st">▶ Siguiente</div></div>
+    <div class="ph todo"><div class="id">P2-P3</div><div class="ti">Flota de workers + cost-router LLM local</div><div class="st">Planificado</div></div>
+    <div class="ph todo"><div class="id">P4</div><div class="ti">S-HEALTH: alertas origen-exacto + auto-repair</div><div class="st">Planificado</div></div>
+    <div class="ph todo"><div class="id">P5</div><div class="ti">Ledger de verificación profundo (quórum DB)</div><div class="st">Planificado</div></div>
+    <div class="ph todo"><div class="id">P7b-c</div><div class="ti">OEM/cadenas + denominador long-tail</div><div class="st">Planificado</div></div>
+    <div class="ph todo"><div class="id">P10</div><div class="ti">Tier-1 con muro (GASTO, último)</div><div class="st">Gate de gasto</div></div>
+    <div class="ph todo"><div class="id">P11</div><div class="ti">Inquisición + prueba de completitud</div><div class="st">Planificado</div></div>
+    <div class="ph todo"><div class="id">P12</div><div class="ti">Sello 52/52 provincias</div><div class="st">Meta</div></div>
+  </div>
+</section>
+
+<!-- DOCS CORPUS -->
+<section>
+  <h2><span class="dot"></span>Plano institucional <span class="tag">34 docs · 20.199 líneas</span></h2>
+  <p class="lead">Tres flotas de arquitectos en paralelo produjeron el plano completo, reconciliado en <a>docs/MASTER_PLAN.md</a>.</p>
+  <div>
+    <span class="pill"><b>Arquitectura</b> 00-08 + README + MASTER_PLAN</span>
+    <span class="pill"><b>Validador Supremo</b> V1-V6 (capture-recapture · Inquisición · Gestionador)</span>
+    <span class="pill"><b>Tooling BOM</b> T01-T16 (arsenal 2026 verificado)</span>
+  </div>
+</section>
+
+<footer>
+  <b style="color:var(--ink)">Honestidad (sin maquillaje):</b> el producto final —100% del inventario vivo y servido— aún NO existe;
+  hoy hay <b>la arquitectura completa + el esquema vivo + el motor latiendo en un slice probado E2E</b>.
+  Cuello real = rate-limit por fuente (de ahí el governor P1) y, para los Tier-1 duros, IP residencial (gate de gasto).
+  Residuales declarados: garaje sobre-contado, cosecha AS24 acotada al slice, recetas Tier-1 por cazar, auto-repair por codificar.
+  &nbsp;·&nbsp; <span style="color:var(--plat)">CARDEEP nunca vende mentiras.</span>
+</footer>
+
+</div>
+</body>
+</html>
