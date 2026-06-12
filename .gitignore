@@ -18,3 +18,4 @@ node_modules/
 .pytest_cache/
 .backups/
 scratch/
+scripts/_*.py
