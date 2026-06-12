@@ -579,6 +579,17 @@ data/                              [GITIGNORED — entirely]
   **It can never reach `recipe.yaml`/`config.yaml`/`manifest.json`** — those live in
   `countries/` (versioned), a different tree entirely from `data/` (gitignored). The
   physical separation makes "evict crude" structurally incapable of "lose recipe".
+- **Eviction PINS the crude that a live TRUSTWORTHY verdict needs to replay `[adversarial GAP-35]`.**
+  V5 §7 makes fabrication/staleness detection work by **replaying** a verdict's `evidence_uri →
+  data/probe/<blobhash>` artifact — which is exactly what capacity eviction would delete. So
+  `evict.py` **MUST skip any blob referenced by `evidence_uri` of a non-expired TRUSTWORTHY verdict**
+  (a small, bounded pinned set — only the latest live verdict per subject pins). Reproducibility comes
+  in **two distinct flavors that this resolves**: *reproducibility-from-RECIPE* (law #5 — re-run the
+  recipe; survives eviction but CANNOT detect a fabricated COUNT, it re-runs the same path that
+  produced it) and *reproducibility-from-ARTIFACT* (V5 §7 — replay the pinned blob; the only thing
+  that catches a fabricated count). The pinned blob releases the instant its verdict **expires** (then
+  replay correctly falls back to a live re-fetch, the spend already acknowledged at P11). The artifact
+  survives exactly as long as the verdict it proves.
 
 ---
 

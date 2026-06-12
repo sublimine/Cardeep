@@ -484,7 +484,8 @@ CREATE INDEX IF NOT EXISTS idx_gest_subject ON gestionador_item (subject_type, s
 
 ```sql
 -- Rollback (0005):
--- DROP VIEW IF EXISTS v_publishable_inventory, v_publishable_entity, v_latest_verdict;
+-- DROP VIEW IF EXISTS v_publishable_inventory, v_publishable_entity;
+-- DROP MATERIALIZED VIEW IF EXISTS v_latest_verdict;
 -- DROP TABLE IF EXISTS gestionador_item, denominator_estimate;
 -- DROP TRIGGER IF EXISTS trg_verdict_audit_noupd ON verdict_audit;
 -- DROP TRIGGER IF EXISTS trg_verdict_audit_append ON verification_verdict;
@@ -542,8 +543,12 @@ Each subject_type has a freshness SLA → sets `expires_at = created_at + sla`:
 | `entity` (existence) | 90 d | a POS rarely vanishes; re-confirm quarterly |
 | `denominator` | 180 d | census-grade, refreshed per F8 cycle |
 
-When `now() > expires_at`, `v_latest_verdict.is_publishable` flips to false **without any
-write** — the gate self-closes and a `stale` Gestionador item is opened by the sweep job.
+When `now() > expires_at`, the **read-time** `is_publishable` predicate
+(`verdict='TRUSTWORTHY' AND (expires_at IS NULL OR expires_at > now())`, evaluated in
+`v_publishable_*`) flips to false **without any write** — the gate self-closes and a `stale`
+Gestionador item is opened by the sweep job. The `v_latest_verdict` matview holds only the latest
+row per subject (small); the continuous re-verification cadence (MASTER_PLAN C-11) keeps the served
+SET fresh so the publishable set does not collapse wholesale between harvests (G-A33).
 
 ### 4.5 Cap-suspect rule (L2 — silent caps) — the subtle killer
 A count is **cap_suspect** when all paths agree on a value that *looks like a limit*:

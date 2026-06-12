@@ -445,10 +445,17 @@ segments have different closability:
 |---|--:|---|
 | SEG-1 desguace | **1.00** (exact) | legal census = exact denominator, no estimate |
 | SEG-2 official | **0.98** | OEM locators are near-complete; 2% = locator drift |
-| SEG-3/7 platforms | **1.00** (enumerated) | hand-enumerable list, not estimated |
+| SEG-3/7 platforms | **1.00** of the `complete` set only `[adversarial GAP-13]` | hand-enumerable, BUT only the registry rows marked `enumeration_status='complete'`; `open-probe` rows (VGRS, OEM subsites, industriales/furgoneta channels) are a **declared discovery gap**, NOT sealed — claiming 1.00 of a list the registry itself confesses is unfinished is the contradiction this fixes |
 | SEG-4 compraventa | **0.90** | long-tail; 90% of CR estimate is the honest ceiling of free discovery |
 | SEG-5 garaje | **0.85** (of selling subset) | hardest to enumerate; gate is on the `sells_cars` subset, not raw workshops |
 | SEG-6 rentacar/subasta | **1.00** (curated) | curated lists are complete by construction |
+
+> **Platform enumeration is gated on a `complete` flag, not on an open-ended list** `[GAP-13]`. Each
+> platform in `platforms_es.json` carries `enumeration_status ∈ {complete, open-probe}`. SEG-3/7 seals
+> at 1.00 of the `complete` set; the `open-probe` set is an itemized residual on the KPI panel, never
+> counted as covered. Vans/industrial vehicles get an explicit scope decision: the entity keeps
+> `kind=compraventa|concesionario`, the vehicle gets `vehicle_class ∈ {car, van, industrial}`, so the
+> mandate's "cars" headline is reported **filtered to `car`** with the van/industrial count shown apart.
 
 A province is **NUMERATOR-SEALED** when every numerator-relevant entity in it is
 numerator-sealed (§4.1: harvested-stable OR caused-zero OR declared-wall).
@@ -468,7 +475,23 @@ Reported numbers, each with its derivation so none is a vanity metric:
   three honest states), NOT just harvested — a caused-zero counts as sealed.
 - **`harvested_pct`** — fraction actually drained (the *subset* of sealed that has stock).
 - **`declared_gap`** — the residual, *itemized by cause* (no-province-data, spend-wall,
-  empty-segment). **A gap with a cause is honest; a gap without one is a bug.**
+  empty-segment, VN-no-live-feed, open-probe-platform, agente-inherited, ceuta-melilla-direct-census,
+  vehicle-recall-unverified). **A gap with a cause is honest; a gap without one is a bug.**
+- **`N̂ᶠ` is MEMBERSHIP-FILTERED** (MASTER_PLAN C-14 / V6 §4.7): C2C and non-POS are removed from the
+  capture frame BEFORE Chapman, so `coverage = found / N̂ᶠ` draws numerator and denominator from the
+  same predicate. `N̂_raw` (all-listed) is context only, never the seal frame.
+- **`vehicle_recall` = `N_V_held / N̂_V`** (C-15 / V6 §4.8) — numerator completeness as a MEASURED
+  fraction with its own CI, reported APART from entity-recall; the false "entities sealed ⇒ all cars
+  found" closure is forbidden.
+- **`c2c_listed_pct`** `[adversarial GAP-8]` — C2C-attributed listings (Wallapop ~750k + Milanuncios
+  ~667k, dominated by private sellers) as a fraction of all-listed Spanish cars. This line is
+  **MANDATORY** so dealer-segment coverage is NEVER read as market coverage: the single biggest pool
+  of cars-for-sale in the country is C2C, explicitly NOT a point of sale, served-attributed to the
+  platform sentinel — and now *sized*, not merely mentioned in prose. The caused-residual doctrine is
+  violated by omission if this gap is unquantified.
+- **`cross_seller_dup_ci`** `[adversarial GAP-3]` — every served platform/national rollup counter
+  carries its measured cross-seller duplication bound (a counter inflated by an unmeasured amount is
+  forbidden, MASTER_PLAN G-A3/26).
 - **`vam_status`** — the segment-province's `verification_verdict` verdict.
 
 The panel's iron rule (from `PLAN` operating rules + the doctrine): **report the gap, not

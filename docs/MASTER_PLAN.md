@@ -570,8 +570,9 @@ predecessors' gates are green. Phases marked `∥` run concurrently where they t
 
 ```
 P0 SCHEMA SPINE (0005–0012)
-   └─► P1 GOVERNOR + QUEUE (0013) ───────────────────────────────┐
-          └─► P2 WORKER FLEET + HANDLERS                          │
+   └─► P0.5 ANTI-DETECTION VALIDATION SPIKE (re-probe 5+2 targets; confirm/re-sequence €0)
+          └─► P1 GOVERNOR + QUEUE (0013) ──────────────────────────┐
+                 └─► P2 WORKER FLEET + HANDLERS                     │
                  ├─► P3 COST-ROUTER + LOCAL LLM (fixes ingest:52) │
                  ├─► P4 S-HEALTH WATCHDOG ────────────────────────┤  (06: the "never falls" guarantee)
                  └─► P5 DEEP VERIFICATION LEDGER (0014) ──────────┤  (05+V5: DB-enforced quorum)

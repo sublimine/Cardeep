@@ -146,15 +146,26 @@ signal and records the escalation back into the recipe (self-tuning, §9.4).
   near-zero cost and full throughput.
 - **Cost:** €0 (no proxy at Tier-0 unless IP-reputation-gated; then datacenter pool first).
 
-### Tier-1 — Scrapling `StealthyFetcher` / camoufox (JS render + soft challenges)
+### Tier-1 — Scrapling `StealthyFetcher` (JS render + soft challenges)
 
-- **Engine:** Scrapling `StealthyFetcher`, a camoufox-driven (patched-Firefox) stealth
-  browser. `[VERIFIED, scrapling.readthedocs.io stealthy]` It "bypasses all types of
+> **Stealth-engine reconciliation `[adversarial GAP-20 — MASTER_PLAN C-12 governs]`.** T02
+> (the live-benchmarked tooling authority) supersedes this section's earlier "camoufox-driven"
+> framing: Scrapling swapped its `StealthyFetcher` backend to **`patchright`** at v0.3.13, and the
+> camoufox pip wrapper is ~16 months stale (maintainer on medical hiatus). **Canonical: the primary
+> injector is `patchright` (the Scrapling default); camoufox is demoted to an OPTIONAL, pinned,
+> vendored injector** used only where a probe proves patchright is fingerprintable on a specific
+> target; **nodriver is allowed ONLY vendored at a pinned commit SHA** (never `@main` — a CI check
+> forbids unpinned VCS deps). The engine is injector-agnostic behind `engine/fetch/tiers/`, so the
+> swap is a one-file change. Any "camoufox-driven StealthyFetcher" phrasing below resolves to
+> "patchright-driven StealthyFetcher".
+
+- **Engine:** Scrapling `StealthyFetcher` (patchright backend ≥ Scrapling 0.3.13). `[VERIFIED,
+  scrapling.readthedocs.io stealthy; T02]` It "bypasses all types of
   Cloudflare's Turnstile/Interstitial automatically, bypasses CDP runtime leaks and
   WebRTC leaks, isolates JS execution, removes Playwright fingerprints." `[VERIFIED,
   websearch 2026-06]` For Chromium-shaped needs, `DynamicFetcher` (Playwright, ~60%
-  faster in current builds) `[VERIFIED]`; `patchright`/`nodriver`/`zendriver` are
-  drop-in CDP-stealth alternatives if a target fingerprints Firefox specifically.
+  faster in current builds) `[VERIFIED]`; **camoufox (pinned/vendored)** is the Firefox-shaped
+  fallback only when a target fingerprints Chromium specifically.
 - **Targets:** JS-rendered SPAs with no usable data-layer surface, and soft anti-bot:
   **Cloudflare (managed challenge / Turnstile)**, **DataDome** (when it serves an
   interstitial, not a hard sensor wall), GeeTest slider (with solver, §5).
@@ -193,6 +204,20 @@ signal and records the escalation back into the recipe (self-tuning, §9.4).
   automation wherever the wall is *cookie-issuance* (Akamai `_abck`, Incapsula) because
   it is cheaper and faster and lets the bulk drain run on Tier-0 with the minted cookie.
   Full BotBrowser render is the fallback when the wall needs live DOM + behavior.
+- **The mint-then-drain pattern is SCOPED, not universal `[adversarial GAP-19]`.** "Render once to
+  unlock, capture the clearance cookie, hand it down to Tier-0 curl for the bulk drain" works for
+  **cookie-ISSUANCE walls** (passive Cloudflare, Incapsula) where one cookie unlocks a session. It
+  does **NOT** beat **full-sensor walls**. Web-verified: DataDome runs 85,000+ per-customer ML models
+  scoring ~5T signals/day at the **request level** (TLS + IP + JS + behavior + motion), and Akamai's
+  `_abck` is **invalidated the instant `sensor_data` stops matching the live request fingerprint** —
+  so a clearance cookie replayed from a datacenter IP at curl-pace with zero mouse motion **re-scores
+  as bot on the NEXT request**. Consequence: a 50k-listing Akamai drain (e.g. Spoticar) is **NOT one
+  sensor mint then cheap — it is N sensor calls METERED PER PAGE.** Each source therefore carries a
+  `wall_class ∈ {cookie-issuance, full-sensor}`: cookie-issuance uses mint-then-drain; full-sensor is
+  **cost-modeled per request** (`pages × sensor_cost_per_call`, the authorization basis — MASTER_PLAN
+  §5.1 G-A19), changing the Tier-2 cost estimate by orders of magnitude. The prior doc quoted Akamai's
+  per-request `_abck` invalidation (00 §T1) but did not carry its consequence into the drain cost; it
+  does now.
 - **Hard rule:** **no Tier-2 component is invoked without the owner's explicit per-source
   spend authorization.** A source that requires Tier-2 and lacks authorization is parked
   in `state/tier1-blocked.json` with the *exact* wall (e.g. "Akamai `_abck`, sensor_data
@@ -363,11 +388,23 @@ which silently stops at `max_pages` and cannot drain a dealer larger than the ca
   the current Chrome major and that `curl_cffi` supports it; if curl_cffi lags a Chrome
   release, that lag itself is a tracked risk (the fingerprint becomes *stale-but-real*,
   still better than Python-shaped, but flagged).
-- **X25519MLKEM768 is mandatory and specifically monitored.** It is the current
-  highest-signal TLS discriminator — vendors flag its *absence* `[VERIFIED]`. A
-  fingerprint self-test on engine start asserts the key share is present in our
-  ClientHello (probe a TLS-echo / `tls.peet.ws`-class endpoint and diff against the
-  reference current-Chrome JA4). Drift → block start + alert.
+- **X25519MLKEM768 is no longer a boolean — it is a byte-exact shape + cross-session stability
+  problem `[adversarial GAP-17, web-verified 2026]`.** Akamai made PQ the **default** for all
+  client-to-Akamai connections (Jan-31-2026, full rollout Mar-2026), and **~57% of real browser
+  ClientHellos now carry it** (adding 1,088 bytes). The discriminator has moved on:
+  - **(a) The self-test is upgraded from presence to BYTE-EXACT diff.** "Is the key share present"
+    is insufficient. The engine-start self-test now diffs the **actual emitted ClientHello byte-for-
+    byte against a reference current-Chrome JA4** — the **key-share GROUP ORDER and the 1,088-byte
+    ClientHello shape**, not merely the presence of a PQ group. Drift in order/shape/length → block
+    start + alert.
+  - **(b) Cross-session fingerprint STABILITY for walled sources.** Akamai Bot Manager v4+ scores
+    fingerprint **consistency ACROSS sessions**, not just within one. CARDEEP law #3 enforces
+    *within-session* coherence but said nothing about cross-session stability — and rotating a fresh
+    browserforge identity per session (the prior design) is **itself a v4+ flag** ("accounts that
+    switch profiles mid-flow"). Fix: a **stable per-target identity that persists across sessions**
+    for behaviorally-scored/walled sources — the same target sees the same fingerprint over time
+    (the human pattern), while OPEN sources may still rotate. The identity is keyed by target and
+    pinned in `state/` so it survives restarts.
 - **Adaptive demotion of the target:** if `source_health` shows a fingerprint-correlated
   rise in challenge rate for a source, the router bumps that source's floor tier and
   files an alert — the fingerprint aged out *for that defense* and we stop bleeding

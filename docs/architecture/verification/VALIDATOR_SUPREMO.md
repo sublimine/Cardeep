@@ -534,9 +534,18 @@ different estimators**:
 
 End-to-end on the 20.000 (V6 §8): count quorum TRUSTWORTHY (div 0.01%); precision
 major-defect <1% @99% (n=459/c=0) PASS; the `cif` field 3.8% (Wilson CI [2.8%,5.2%])
-**FAILS** the 3% field gate → route *fix* (one parser, not a full re-ingest); recall vs a
-fresh PA+Overture recapture: `N̂ = (20001·24001)/16501 − 1 ≈ 29.091`, recall = 20.000/29.091
-= **68.8%** → **SEALED-WITH-DECLARED-GAP ≈ 9.091 missing**, route *research*.
+**FAILS** the 3% field gate → route *fix* (one parser, not a full re-ingest). Recall is
+measured against the **MEMBERSHIP-FILTERED frame** `[adversarial GAP-1 — MASTER_PLAN C-14 / V6 §4.7]`:
+the raw PA+Overture recapture gives `N̂_raw = (20001·24001)/16501 − 1 ≈ 29.091`, but PA+Overture
+include C2C private sellers and non-selling workshops that are NOT CARDEEP entities. After dropping
+sentinel-attributed C2C, `garaje sells_cars=false`, and non-POS from BOTH captures, the filtered
+universe is (illustratively) `N̂ᶠ ≈ 22.900` and **recall = 20.000/22.900 ≈ 87.3%** vs the entity
+frame → **SEALED-WITH-DECLARED-GAP ≈ 2.900 *entities* missing**, route *research*. The ~6.000
+difference to `N̂_raw` are C2C/non-POS — correctly NOT in the entity frame, served-attributed to the
+platform sentinel and counted on the `c2c_listed_pct` KPI line, never as "entities we missed". Recall
+is ALWAYS reported against `N̂ᶠ`, never `N̂_raw` (which would understate recall by counting non-entities
+as missed). Separately, **vehicle-recall** (`N̂_V`, V6 §4.8) is reported APART — entity-completeness
+and car-completeness are two measured fractions, not one.
 
 #### Worked single entity (V2 §8) `[example]`
 
@@ -557,9 +566,11 @@ odo monotone ✓; fresh 6h ago vs 7d SLA ✓ → **COMPLETED**.
 > completed at AQL 1%" only if ≤3 fail; we then publish the Clopper–Pearson bound the
 > sample earns — e.g. **"≥ 18.845 of 20.000 verified complete to spec at 95% confidence;
 > tier-1 stratum 100% clean; 2 defects routed to fix"** — never the bare "20.000 done."
-> And we report precision and recall apart: the rows we hold are clean, but we hold ~69%
-> of the estimated ~29.100 universe — **~9.091 entities we do not yet hold, confessed, not
-> hidden.** That number nobody can refute, with the gap stated out loud, is the product.*
+> And we report precision and recall apart, recall against the membership-FILTERED universe
+> (C2C/non-POS removed before Chapman): the rows we hold are clean, and we hold ~87% of the
+> estimated ~22.900 *entity* universe — **~2.900 entities we do not yet hold, confessed, not
+> hidden** (the larger raw listing count is C2C/non-POS, sized on its own KPI line, not counted as
+> missed entities). That number nobody can refute, with the gap stated out loud, is the product.*
 
 ---
 
@@ -596,8 +607,10 @@ as built.
 
 **Guarantees [by construction]:**
 1. No load-bearing value is served as *verified* unless ≥2 mutually-independent paths from
-   ≥2 collector families agreed within tolerance, with ≥1 path differing from the producer
-   on all four state dimensions — **enforced as a DB CHECK**, not a convention.
+   ≥2 collector families **AND ≥2 distinct origins** agreed within tolerance, with ≥1 path
+   differing from the producer on all four state dimensions — **enforced as a DB CHECK**
+   (`family_n ≥ 2 AND origin_n ≥ 2`, widened per adversarial GAP-30 so a same-host mislabel
+   cannot back-door the quorum), not a convention.
 2. Every lie-class L1–L7 has a dedicated detector and a dedicated orthogonal refuter.
 3. A denominator is **never** a bare scalar: it is an interval with a stated CI, gated
    against official registers; "100% coverage" is mathematically un-assertable without ≥3
@@ -611,9 +624,13 @@ as built.
    re-runnable (RNG seed + sampled-key list persisted).
 
 **Honest limits [ASSUMED / out of scope]:**
-- `migrations/0005`, the read-only `cardeep_inquisitor` role, and the separate-egress
-  network identity for live re-fetch are **design requirements not yet in the repo**; the
-  independence guarantees are *physical* only once they are built.
+- The read-only `cardeep_inquisitor` role and the separate-egress network identity for live
+  re-fetch were previously "design requirements not yet in the repo" (independence *procedural*
+  until built). **Closed `[adversarial GAP-9 — MASTER_PLAN C-16]`:** the role is created in
+  `0014` with `GRANT SELECT` only (a write attempt is DB-rejected, gated at P5), and an
+  `egress_id(skeptic) <> egress_id(producer)` DB CHECK on every live-refetch verdict makes the
+  separate egress a hard P11 gate. A "producer judges itself" attempt is now **rejected**, not
+  merely discouraged — independence is *physical*, not procedural.
 - Capture-recapture assumes (relaxable) independence, closure, and perfect matching; real
   sources are positively dependent and heterogeneous, both biasing the 2-source estimate
   **downward** — which is exactly why we report a *bounded interval and refuse "100%"*

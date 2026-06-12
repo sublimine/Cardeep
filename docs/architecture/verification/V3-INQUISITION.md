@@ -608,10 +608,14 @@ never see). The VAM verdict is an opinion; the Inquisition verdict is the ruling
   `meta.verification` caveat, and is deterministically routed to an action (§7).
 
 **Honest limits [ASSUMED / out of scope here]:**
-- The read-only `cardeep_inquisitor` DB role, the separate-egress network identity for
-  Lens C, and `migrations/0005` are **design requirements not yet in the repo**; they
-  must be implemented for the independence guarantees to be physical rather than
-  procedural.
+- The read-only `cardeep_inquisitor` DB role and the separate-egress network identity for
+  Lens C were "design requirements not yet in the repo" (independence procedural until built).
+  **Now CLOSED `[adversarial GAP-9 — MASTER_PLAN C-16]`:** the role is created in `0014`
+  (`GRANT SELECT` only — a write attempt is DB-rejected, gated at P5), and the separate egress
+  is enforced by an `egress_id(skeptic) <> egress_id(producer)` DB CHECK on every live-refetch
+  verdict (hard P11 gate). The DB previously enforced `quorum_n`/`family_n` but **nothing**
+  stopped the second family being produced by the same process/IP — that hole is now closed by
+  `origin_n ≥ 2` (V5, GAP-30) plus the egress CHECK. Independence is enforced, not trusted.
 - Chapman assumes source independence and a closed population; real sources have
   correlated coverage (PA and OSM both miss rural long-tail). The estimator yields a
   *defensible lower bound*, not a proven truth — which is exactly why the design **refuses
