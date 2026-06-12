@@ -158,3 +158,23 @@
 - **Honesto:** 138 dealers cayeron por throttling de AS24 bajo carga 4× (retry+backoff recuperó
   parte). Recuperación pendiente con menor concurrencia. La cosecha es el cuello (rate-limit de
   fuente), no el sistema — escala por nº de fuentes en paralelo + recetas Tier-1.
+
+## 2026-06-12 — REDISEÑO INSTITUCIONAL: arquitectura profunda (3 flotas de arquitectos)
+- **Orden del owner: plan/estructura/arquitectura ANTES de más código, al nivel más profundo.**
+  Paré la producción. Desplegué 3 workflows de arquitectura en paralelo (todo Fable):
+  - **Arquitectura maestra** (`wf_aebc925d-669`): 9 pilares `docs/architecture/00-08` + README +
+    `docs/MASTER_PLAN.md` (reconcilia contradicciones, supersede PLAN.md/ORQUESTACION.md).
+  - **Validador Supremo** (`wf_c0073370-8ee`): `docs/architecture/verification/V1-V6` + VALIDATOR_SUPREMO
+    — capture-recapture (Chapman/Chao/log-lineal+CI), gate de completitud 5 sub-puertas, Inquisición
+    5-lentes con quórum por independencia, Gestionador de mentiras, LQAS/Clopper-Pearson, meta-auditoría.
+    Responde literal a "¿500k? REFUTED salvo prueba" y "¿20k E2E? muestreo de aceptación estratificado".
+  - **Auditoría de tooling** (`wf_7fb56456-4ca`): `docs/architecture/tooling/T01-T16` + TOOLING (BOM) —
+    mejor herramienta por micro/macro tarea, recencia 2026 verificada en vivo (curl_cffi chrome146,
+    patchright/nodriver/Scrapling, Byparr, Decodo/IPRoyal, browserforge/camoufox, selectolax/extruct,
+    instructor/outlines, libpostal/shapely+IGN…), con config y challenge adversarial.
+- **34 docs, 20.075 líneas.** Todo verificado por mi mano antes de aceptar.
+- **Contaminación cazada y reparada (anti-cruce CARDEX):** 7 docs de tooling los escribieron agentes
+  en `projects/cardex-integration` y `~/CARDEX` (ruta relativa resuelta contra repos del entorno).
+  TODOS untracked (cero commit a CARDEX). Reubicados a cardeep, repos ajenos limpios. T10 (geocoding)
+  cayó por límite de sesión → rehecho con ruta ABSOLUTA pinneada. Lección: rutas absolutas a agentes.
+- **PENDIENTE: revisión y aprobación del owner del plan ANTES de tocar código de producción.**
