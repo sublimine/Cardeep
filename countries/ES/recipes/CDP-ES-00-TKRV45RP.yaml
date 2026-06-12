@@ -2,7 +2,7 @@
 # Reusable; re-scrape without raw crude.
 version: 1
 source: coches.net
-scope: platform-wholesale (web.gw.coches.net/search JSON API)
+scope: platform-facet (web.gw.coches.net/search; province + price-band partitions, sort=price for deterministic full drain)
 engine: curl_cffi+chrome131_impersonate+json_api(POST)
 access: OPEN internal JSON API (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). Public site is Imperva-fronted -> is_tier1=true; the API host web.gw.coches.net is unwalled.
 data_surface: internal_api
@@ -11,7 +11,7 @@ endpoint: POST https://web.gw.coches.net/search
 request:
   headers: Content-Type/Accept application/json, Origin, Referer, X-Schibsted-Tenant: coches
   body: categoryId=2500, sortBy=relevance, pagination={page:N,size:100} (NESTED — top-level page ignored)
-enumeration: pagination.page=1..N, size=100; meta.totalResults/totalPages drive the full drain
+enumeration: FACET partitions: provinceIds 1..52 (sort=price ASC); provinces >15000 split into 7 price bands; each partition drained to empty page
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE
 dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
 field_map:

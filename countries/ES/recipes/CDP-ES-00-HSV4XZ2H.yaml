@@ -1,0 +1,32 @@
+# Cardeep extraction recipe — CDP-ES-00-HSV4XZ2H
+# Reusable; re-scrape without raw crude.
+version: 1
+source: motor.es
+scope: platform-wholesale (SSR ?pagina=N census + PDP JSON-LD dealer attribution)
+engine: curl_cffi+chrome131_impersonate+ssr_html+json_ld
+access: OPEN/FREE (Chrome TLS fingerprint; no proxy, no browser, no solver). Public site is Cloudflare-fronted but permissive (200 to curl_cffi) -> is_tier1=true, defense_tier=t1_soft.
+data_surface: json_ld
+surface_intent: ssr_html_census + json_ld_pdp
+endpoint: GET https://www.motor.es/segunda-mano/coches/?pagina=N + /segunda-mano/anuncio/{id}/
+request:
+  list_headers: Referer: /segunda-mano/coches/
+  denominator: GET /segunda-mano/coches/get-data-ajax/ -> data.total (live census counter)
+enumeration: SURFACE A ?pagina=1..N, 22 cards/page (zero id overlap); ~2,316 pages for 50,938 cars
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=marketplace_motor, role=platform
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: base64-decode(card data-goto) = /segunda-mano/anuncio/{id}/ canonical PDP
+  listing_ref: card data-id (motor.es native listing id)
+  make: PDP JSON-LD[0] Car.brand.name
+  model: PDP JSON-LD[0] Car.model
+  km: PDP JSON-LD[0] Car.mileageFromOdometer.value (KMT)
+  price: PDP JSON-LD[0] Car.offers.price (EUR); fallback card precio-contado
+  fuel: PDP JSON-LD[0] Car.fuelType
+  photo_url: PDP JSON-LD[0] Car.image[0]
+  dealer_name: PDP JSON-LD[0] Car.offers.seller.name
+  dealer_identity: PDP /concesionarios/{provincia}/{slug}/ (stable per-dealer key)
+  location: card lugar 'City (Province)' -> city + province (INE-resolved)
+caveats:
+  vin: JSON-LD vehicleIdentificationNumber is a STATIC dummy (same on distinct cars) — ignored.
+  card_dealer: SSR card carries NO dealer name/id -> dealer attribution REQUIRES the PDP.
+  ajax_paginator: get-data-ajax is first-10 only; used for the denominator, NOT pagination.
