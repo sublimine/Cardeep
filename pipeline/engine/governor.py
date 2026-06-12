@@ -111,6 +111,25 @@ _HOST_RATE_CLASSES: dict[str, dict] = {
     # a first-party JSON gateway built to serve the brand's whole user base; tolerates JSON_API
     # pacing (open, no WAF challenge to curl_cffi — defense_tier=t0_open).
     "es.renew.auto": _JSON_API_PROFILE,
+    # Audi SCS (Stock Car Search) — scs.audi.de is Audi's GLOBAL first-party stock-search JSON
+    # gateway (the VTP backend serving every market's "Audi Selection :plus" buscador). It is
+    # fully OPEN: even plain python-urllib (no TLS impersonation) gets HTTP 200; the ONLY gate is
+    # a public static `token` header embedded in the page (defense_tier=t0_open, no WAF). Built to
+    # serve the whole brand user base across markets -> JSON_API pacing (like renew).
+    "scs.audi.de": _JSON_API_PROFILE,
+    # kiaokasion.net — the "Kia Okasión" vendor backend (ASP.NET/IIS) behind the kia.com Spain
+    # "Kia Seminuevos Certificados" buscador SPA. Its /kia/async/metodos.aspx async servlet is a
+    # first-party-grade JSON gateway serving the whole Kia ES used-car frontend; it returns clean
+    # 200 application/json to curl_cffi at high concurrency with no throttle (soft IIS request
+    # filtering only, no JS challenge — defense_tier=t1_soft). The OEM-VO catalog is partitioned by
+    # cluster id, so a full harvest must SWEEP ~2000 cluster probes + drain every live cluster;
+    # STEALTH pacing would make that impractical and the gateway tolerates JSON_API pacing.
+    "kiaokasion.net": _JSON_API_PROFILE,
+    # Flexicar (vo_chains group, source_group=chain) — services.flexicar.es/api/v1 is Flexicar's
+    # OPEN first-party REST/JSON gateway (the SPA backend serving the whole flexicar.es user base).
+    # Fully unwalled to chrome131 (defense_tier=t0_open, no WAF); size hard-capped at 24/page so the
+    # drain is request-bound, not payload-bound. Built for the brand's traffic -> JSON_API pacing.
+    "services.flexicar.es": _JSON_API_PROFILE,
 }
 
 
@@ -312,7 +331,31 @@ def governor() -> RateGovernor:
         # edge serves, but enough that the PDP-attribution path (the make-partition drain's
         # bottleneck, two www GETs per car) is not strangled. STILL well below any ban
         # rate; the breaker + first-CF-tripwire escalation (recipe) remain the safety net.
-        g.configure_host("www.autocasion.com", rate_per_sec=2.0, burst=4.0, min_spacing_s=0.5)
+        # Raised 2.0 -> 4.0 (operator, monitored): with the EVIDENCE above (CF-permissive,
+        # served 184 facets + national counter at scale, 0 429/403), 2 req/s is overly cautious
+        # for a 135k-car PDP-per-car drain (~23 h). 4 req/s halves it, still an order of
+        # magnitude under what a permissive CF edge serves. Reversible: a ban trips the breaker
+        # (graceful degradation) and we revert to 2.0.
+        g.configure_host("www.autocasion.com", rate_per_sec=4.0, burst=8.0, min_spacing_s=0.25)
+        # Ayvens Carmarket (ALD remarketing) auction host — carmarket.ayvens.com is an Angular
+        # Universal SSR app. The PUBLIC data surface is the server-rendered Apollo transfer-state
+        # (the `ng-state` <script>): each /es-es/lots render embeds the live "opened" sale events'
+        # lots (make/model/version/mileage/fuel/transmission/firstReg/saleEvent). The first-party
+        # GraphQL gateway behind it (api-carmarket.ayvens.com) is walled by an Azure APIM
+        # subscription key held SERVER-SIDE (401 without it; not in the client bundle) — so the SSR
+        # page is the only key-free public surface. It is an HTML/SSR surface, NOT an open JSON
+        # gateway, so it stays in the STEALTH family: paced conservatively below an unmeasured
+        # ceiling (like dasweltauto/coches.com), human-shaped. Serves cleanly to chrome131 with no
+        # WAF challenge (defense_tier=t0_open), but the conservative pace is the safe default until a
+        # ceiling is measured. The breaker is the safety net.
+        g.configure_host("carmarket.ayvens.com", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
+        # OcasionPlus (vo_chains group, source_group=chain) — www.ocasionplus.com is a Next.js
+        # App-Router SSR site whose public data surface is the schema.org JSON-LD ItemList embedded
+        # in each /coches-segunda-mano?page=N render. It is OPEN to chrome131 (x-powered-by Next.js,
+        # no Cloudflare/WAF -> defense_tier=t0_open), but it is an HTML/SSR surface, NOT a JSON
+        # gateway, so it stays in the STEALTH family: paced conservatively below an unmeasured ceiling
+        # (like dasweltauto/coches.com), human-shaped. The breaker is the safety net.
+        g.configure_host("www.ocasionplus.com", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
 
         # --- JSON_API class (fast, built-for-traffic first-party gateways) -----------
         # Apply the JSON-API rate class to every host registered in _HOST_RATE_CLASSES.
