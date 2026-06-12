@@ -197,3 +197,21 @@
   0010 (auction), 0011 (vehicle_event partition + immutability wiring), 0012 (rollups), 0099 (PostGIS).
 - Delegado a agente de contexto fresco con rutas absolutas (tras la lección de contaminación);
   verificado por mi mano. Siguiente en el DAG: P0.5 spike anti-detección → P1 governor+queue.
+
+## 2026-06-12 — ASALTO TIER-1 GRATIS: los 7 gigantes CAZADOS sin coste (orden del owner)
+- **Lección dura del owner:** prohibido decir "necesita IP residencial/gasto" sin agotar TODOS
+  los vectores libres. Lancé asalto de 7 cazadores (wf_53e3982f-a06), arsenal libre completo.
+- **RESULTADO: los 7 gigantes duros = FREE-harvestable, CERO proxy:**
+  - **coches.net 272.686 coches** [VERIFICADO POR MI MANO]: POST web.gw.coches.net/search (curl_cffi
+    chrome131, X-Schibsted-Tenant:coches, pagination NESTED {page,size}). Trae dealer + historial Δprecio.
+  - **wallapop ~750k**: GET api.wallapop.com/api/v3/search/section (geo lat/long honrada, next_page JWT,
+    PRO-dealer via /users/{id}). Sin auth/cookie/JS.
+  - **milanuncios ~667k**: camoufox (warm-up homepage mintea cookie Imperva reese84 + click SPA in-page +
+    scroll). Sin proxy. (Adevinta SRP server-rendered; el gateway advgo es tenant-gated a coches.net.)
+  - **coches.com 200k**: curl_cffi sitemap vo.xml→Todo-VO + __NEXT_DATA__ classified+dealer.
+  - **autocasion 115.179**: GraphQL gql.autocasion.com/graphql (introspección ABIERTA) + PDP JSON-LD AutoDealer.
+  - **spoticar ~50k** (Akamai) + **motor.es ~51k**: también free (recetas en disco).
+- **Universo Tier-1 ≈ 2,38M coches, TODO €0** (+ AS24 278k ya hecho). La IP residencial NO hace falta
+  para los gigantes. Recetas guardadas: docs/architecture/tier1_recipes/{platform}.md + README.
+- Siguiente: cablear estas recetas como conectores de plataforma (P7a a escala con el governor) →
+  ingest + platform_listing + delta + VAM por gigante.
