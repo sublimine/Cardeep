@@ -3,7 +3,8 @@
 Deterministic over the entity's canonical identity, so re-discovering the same
 entity through a different source never mints a second code.
 
-Canonical key priority: domain > CIF > normalized(name|municipality_code).
+Canonical key priority: particular(platform:sellerId) > domain > CIF >
+normalized(name|municipality_code).
 Format: CDP-ES-{province2}-{8 x Crockford-base32 of sha256(key)}.
 """
 from __future__ import annotations
@@ -32,7 +33,19 @@ def _base32(digest: bytes, length: int = 8) -> str:
 
 def canonical_key(*, domain: str | None = None, cif: str | None = None,
                   name: str | None = None, municipality_code: str | None = None,
-                  province_code: str | None = None, address: str | None = None) -> str:
+                  province_code: str | None = None, address: str | None = None,
+                  particular_platform: str | None = None,
+                  particular_seller_id: str | None = None) -> str:
+    # A private individual seller. Identity is the platform's OWN stable seller id where
+    # the source exposes one (milanuncios authorId, wallapop user_id) -> one entity per
+    # real human, so a particular with N cars is a single multi-car seller. Where the
+    # source anonymises privates (coches.net shares contractId='1', only a first name),
+    # the caller passes the province code as the seller id -> one 'Particulares' bucket
+    # per province. We never fabricate per-seller identity the source withholds.
+    if particular_platform and particular_seller_id:
+        plat = re.sub(r"[^a-z0-9]+", "", particular_platform.lower().strip())
+        sid = str(particular_seller_id).strip()
+        return f"particular:{plat}:{sid}"
     if domain:
         d = domain.lower().strip()
         d = re.sub(r"^https?://", "", d)
@@ -59,8 +72,11 @@ def canonical_key(*, domain: str | None = None, cif: str | None = None,
 
 def cdp_code(*, province_code: str, domain: str | None = None, cif: str | None = None,
              name: str | None = None, municipality_code: str | None = None,
-             address: str | None = None) -> str:
+             address: str | None = None, particular_platform: str | None = None,
+             particular_seller_id: str | None = None) -> str:
     key = canonical_key(domain=domain, cif=cif, name=name, municipality_code=municipality_code,
-                        province_code=province_code, address=address)
+                        province_code=province_code, address=address,
+                        particular_platform=particular_platform,
+                        particular_seller_id=particular_seller_id)
     digest = hashlib.sha256(key.encode("utf-8")).digest()
     return f"CDP-ES-{province_code}-{_base32(digest)}"
