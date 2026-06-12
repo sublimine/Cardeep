@@ -956,17 +956,29 @@ DEFAULT_CONCURRENCY = 12   # in-flight GETs per window; the JSON_API governor bu
 
 async def _drain_query(fetcher: WallapopFetcher, governed_fetch, conn, platform_ulid,
                        geo, geocoder, state, stats, *, keywords: str, lat: str, lon: str,
-                       target: int) -> tuple[bool, str | None, int | None]:
-    """Drain ONE (keyword, centroid) query via the JWT chain until it ends, the page cap is
-    hit, or the global target is reached. Each page is parsed+attributed+geo-resolved then
-    BULK-ingested. Returns (target_reached, fetch_error, last_http)."""
+                       target: int, order_by: str = "most_relevance",
+                       max_pages: int = MAX_PAGES_PER_QUERY) -> tuple[bool, str | None, int | None]:
+    """Drain ONE query via the JWT chain until it ends, the page cap is hit, or the global
+    target is reached. Each page is parsed+attributed+geo-resolved then BULK-ingested.
+    Returns (target_reached, fetch_error, last_http).
+
+    Two modes share this loop:
+      * keyword+centroid (order_by=most_relevance) — the supplement sweep.
+      * FLAT (keywords='', no lat/lon, order_by=newest) — the primary enumerator that walks
+        the whole UNFILTERED cars vertical (~651k) by the next_page JWT chain (verified live).
+    keywords/lat/lon are only sent when non-empty so the flat pass stays global."""
     params = {
-        "keywords": keywords, "source": "deep_link", "category_id": CATEGORY_CARS,
-        "search_id": str(uuid.uuid4()), "latitude": lat, "longitude": lon,
-        "order_by": "most_relevance", "section_type": "organic_search_results",
+        "source": "deep_link", "category_id": CATEGORY_CARS,
+        "search_id": str(uuid.uuid4()),
+        "order_by": order_by, "section_type": "organic_search_results",
     }
+    if keywords:
+        params["keywords"] = keywords
+    if lat and lon:
+        params["latitude"] = lat
+        params["longitude"] = lon
     next_jwt: str | None = None
-    for _page in range(MAX_PAGES_PER_QUERY):
+    for _page in range(max_pages):
         q = {"next_page": next_jwt} if next_jwt else params
         try:
             data = await fetcher.fetch_async(governed_fetch, SEARCH_ENDPOINT, params=q)
@@ -1037,6 +1049,22 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
         stats["wallapop_cars_before"] = cars_before
 
         target_reached = False
+
+        # PRIMARY enumerator: a single FLAT order_by=newest cursor over the UNFILTERED cars
+        # vertical (no keyword, no geo) walks the whole live catalog (~651k) by the next_page
+        # JWT chain — verified live (40/page, distinct, chains cleanly). The keyword x centroid
+        # sweep below stays as a SUPPLEMENT for any tail the flat cursor depth-caps.
+        flat_pages = max(MAX_PAGES_PER_QUERY, (target // 40) + 200)
+        freached, ferr, fhttp = await _drain_query(
+            fetcher, governed_fetch, conn, platform_ulid, geo, geocoder, state, stats,
+            keywords="", lat="", lon="", target=target, order_by="newest", max_pages=flat_pages)
+        if freached:
+            target_reached = True
+        elif ferr:
+            fetch_error, last_http = ferr, fhttp
+        print(f"[wallapop_wholesale] flat newest-cursor pass done: "
+              f"{len(state.harvested_cageable)} distinct cars caged (target {target}).")
+
         for kw in _KEYWORDS:
             if target_reached:
                 break
