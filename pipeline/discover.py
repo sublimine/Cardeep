@@ -18,6 +18,7 @@ from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
 from pipeline.sources.base import DiscoveredEntity, SourceAdapter
 from pipeline.sources.dgt_cat import DgtCatAdapter
+from pipeline.sources.oem_kia import KiaOemAdapter
 from pipeline.verify import record_count_verdict
 from services.api.codes import cdp_code
 
@@ -25,6 +26,7 @@ DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localho
 
 ADAPTERS: dict[str, type[SourceAdapter]] = {
     "dgt_cat": DgtCatAdapter,
+    "oem_kia": KiaOemAdapter,
 }
 
 
@@ -60,9 +62,11 @@ async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntit
 
 async def discover(source_key: str) -> None:
     adapter = ADAPTERS[source_key]()
-    declared = adapter.declared_count()
     entities = adapter.fetch()
-    print(f"[{source_key}] declared={declared} fetched={len(entities)}")
+    declared = adapter.declared_count()
+    excluded = getattr(adapter, "excluded_count", 0)
+    print(f"[{source_key}] declared={declared} fetched={len(entities)} "
+          f"excluded_out_of_scope={excluded}")
 
     conn = await asyncpg.connect(DSN)
     try:
@@ -74,9 +78,9 @@ async def discover(source_key: str) -> None:
             resolved += int(geo_ok)
             if not geo.province_code(e.province_name):
                 skipped += 1
+        # provenance count: entities attested by this source (works across sources/overlap)
         in_db = await conn.fetchval(
-            "SELECT count(*) FROM entity WHERE first_discovered_source=$1 AND kind='desguace'",
-            source_key)
+            "SELECT count(*) FROM entity_source WHERE source_key=$1", source_key)
         muni_rate = resolved / len(entities) if entities else 0
         print(f"[{source_key}] new={new} in_db={in_db} skipped_no_province={skipped} "
               f"municipality_resolved={resolved}/{len(entities)} ({muni_rate:.1%})")

@@ -88,3 +88,14 @@
   del registro oficial DGT). Siguiente: más adaptadores DESCUBRIR (AEDRA, OEM JSON,
   Páginas Amarillas, OSM/FSQ) + fases SCRAPEAR/RECETA sobre AutoScout24.es.
 
+### F3 — segundo vertical DESCUBRIR: OEM Kia (concesionarios oficiales)
+- Adaptador `pipeline/sources/oem_kia.py` (API JSON abierta verificada). discover.py
+  generalizado: conteo por provenance (`entity_source`), no por kind.
+- **241 concesionarios oficiales Kia** ingeridos. **VAM TRUSTWORTHY** (241=241=241).
+  Provincia por postcode[:2] (100%), municipio 85,1%, email 240/241.
+- **Causa raíz cazada (scope):** la API devuelve 242 incluyendo 1 dealer en **ANDORRA**
+  (AD500, Santa Coloma) — fuera de scope (misión = España). Filtrado transparente:
+  `excluded_out_of_scope=1`, denominador del gate = 241 españoles. Sin maquillaje.
+- **Estado vivo total: 1.533 entidades reales** = 1.292 desguace + 241 concesionario_oficial.
+  Dos segmentos del mandato poblados y verificados con el mismo pipeline.
+
