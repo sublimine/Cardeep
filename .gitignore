@@ -19,3 +19,4 @@ node_modules/
 .backups/
 scratch/
 scripts/_*.py
+scratch_*.py
