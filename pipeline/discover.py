@@ -46,13 +46,17 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
 }
 
 
-async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntity) -> tuple[bool, bool, bool]:
+async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntity,
+                  geocoder=None) -> tuple[bool, bool, bool]:
     """Returns (entity_was_new, municipality_resolved, province_resolved)."""
     prov = geo.province_code(e.province_name)
     muni = geo.municipality_code(prov, e.municipality_name)
     if not prov and e.municipality_name:
         # no province (e.g. OSM POI without postcode): recover via unambiguous city name
         prov, muni = geo.resolve_city_global(e.municipality_name)
+    if not prov and geocoder is not None:
+        # last resort: lat/lon -> nearest labeled province (long-tail geocoded POIs)
+        prov = geocoder.nearest_province(e.lat, e.lon)
     if not prov:
         # cannot mint a province-scoped code without a province; skip honestly
         return (False, False, False)
@@ -90,9 +94,14 @@ async def discover(source_key: str) -> None:
     conn = await asyncpg.connect(DSN)
     try:
         geo = await GeoResolver.load(conn)
+        geocoder = None
+        if any(e.lat is not None and not e.province_name for e in entities):
+            from pipeline.geocode import ProvinceGeocoder
+            geocoder = await ProvinceGeocoder.load(conn)
+            print(f"[{source_key}] province geocoder loaded ({geocoder.size()} labeled points)")
         new = resolved = skipped = 0
         for e in entities:
-            was_new, geo_ok, prov_ok = await _upsert(conn, geo, e)
+            was_new, geo_ok, prov_ok = await _upsert(conn, geo, e, geocoder)
             new += int(was_new)
             resolved += int(geo_ok)
             skipped += int(not prov_ok)
