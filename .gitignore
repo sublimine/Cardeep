@@ -1,0 +1,18 @@
+# Ephemeral raw harvests — evicted by capacity policy, never versioned
+data/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Volatile state (capacity ledger, run state)
+state/
+
+# Runtime noise
+*.log
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.pytest_cache/
