@@ -1,0 +1,30 @@
+# Cardeep extraction recipe — CDP-ES-00-QY06GW0B
+# Reusable; re-scrape without raw crude.
+version: 1
+source: autocasion.com
+scope: platform-wholesale (SSR enumerate -> GraphQL ad() hydrate -> PDP JSON-LD dealer)
+engine: curl_cffi+chrome131_impersonate+graphql(POST)+ssr/pdp(GET)
+access: FREE: Cloudflare-permissive to a Chrome TLS fingerprint (no proxy, no browser, no captcha). is_tier1=TRUE (Tier-1 motor brand) but defense_tier=t1_soft (WAF serves to curl_cffi). GraphQL introspection open.
+data_surface: graphql
+surface_intent: graphql+json_ld
+endpoints:
+  enumerate: GET https://www.autocasion.com/coches-ocasion?page=N
+  hydrate: POST https://gql.autocasion.com/graphql/  ad(adId:N){...}
+  dealer: GET https://www.autocasion.com{pdp_url}  (JSON-LD offers.offeredBy=AutoDealer)
+enumeration: SSR results pages 1..N (regex -ref(\d+) -> pdp_url + native id); GraphQL search.paginatedAds.total/pages = the live counter (~115k/4800)
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=marketplace_motor, role=platform
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  listing_ref: ad.id | ld.offers.itemOffered.identifier (native -ref{ID})
+  deep_link: https://www.autocasion.com + ad.url
+  make: ad.brand.name | ld.offers.itemOffered.manufacturer
+  model: ad.family.name | ld.offers.itemOffered.model
+  title: ad.title | ld.name
+  year: ad.year | ld.offers.itemOffered.productionDate
+  km: ad.kilometers | ld.offers.itemOffered.mileageFromOdometer.value
+  price: ad.price | ld.offers.price (EUR)
+  fuel: ad.fuel.name
+  transmission: ad.transmission.name | ld.offers.itemOffered.vehicleTransmission
+  photo_url: ld.image[0] (ad.image is gated null)
+  dealer: ld.offers.offeredBy {name, @id(/profesional/slug), telephone, @type=AutoDealer}
+  location: ld.offers.offeredBy.address {postalCode(->province=CP[:2]), addressLocality(->municipality)}

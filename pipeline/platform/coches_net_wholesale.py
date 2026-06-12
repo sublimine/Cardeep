@@ -247,15 +247,34 @@ def parse_item_vehicle(item: dict) -> Vehicle:
 
 
 class CochesFetcher:
-    """A fingerprint-coherent curl_cffi POST session for the coches.net search API.
+    """A POOL of fingerprint-coherent curl_cffi POST sessions for the coches.net API.
 
-    One session == one Chrome fingerprint == one cookie jar for the whole drain, so
-    the paginated harvest looks like one browser. The governor wraps `fetch_page` to
-    pace requests by the host bucket; this class only performs the actual POST.
+    Concurrency vs. coherence. A single `curl_cffi` Session is NOT safe to call from
+    several threads at once, and the governor runs each fetch in its own worker thread
+    (asyncio.to_thread) — so a concurrent drain with ONE shared session would race the
+    session's internal state. The fix is a small bounded POOL: one Session per
+    concurrency slot, each its own Chrome fingerprint + cookie jar. Within a slot the
+    drain still looks like one continuous browser; across slots it looks like a handful
+    of independent browsers hitting a public API — which is exactly what a JSON gateway
+    built for millions of users sees all day. The governor's per-host bucket still bounds
+    the AGGREGATE rate across every session, so the pool widens parallelism WITHOUT
+    out-pacing the host (the choke point is the bucket, never the session count).
+
+    `last_status` reflects the most recent POST across the pool — sufficient for the
+    breaker's http_status signal (a throttle shows as the same non-200 on any slot).
     """
 
-    def __init__(self) -> None:
-        self._session = cffi_requests.Session(impersonate=_IMPERSONATE)
+    def __init__(self, pool_size: int = 1) -> None:
+        self._pool_size = max(1, pool_size)
+        # One coherent session per slot. Built lazily would race; build them up front
+        # under no contention so the pool is ready before the first concurrent window.
+        self._sessions = [cffi_requests.Session(impersonate=_IMPERSONATE)
+                          for _ in range(self._pool_size)]
+        # Hand a session to a worker by slot index so each concurrent coroutine owns a
+        # distinct, never-shared session for the duration of its POST (thread-safe).
+        self._free: asyncio.Queue[int] = asyncio.Queue()
+        for i in range(self._pool_size):
+            self._free.put_nowait(i)
         self.last_status: int | None = None
 
     @staticmethod
@@ -272,20 +291,41 @@ class CochesFetcher:
             "km": {"from": None, "to": None},
         }
 
-    def fetch_page(self, url: str, *, page: int = 1, size: int = PAGE_SIZE) -> dict:
-        """POST the search request for `page` and return the decoded JSON dict.
+    def fetch_page(self, url: str, *, page: int = 1, size: int = PAGE_SIZE,
+                   slot: int = 0) -> dict:
+        """The synchronous POST on pool session `slot` (runs in a worker thread).
 
-        `url` is the endpoint (passed so the governor can derive the host and pace
-        the bucket). Raises on a non-200 so the caller sees the failure (never masks
-        a challenge/empty body — the breaker must catch throttling)."""
-        resp = self._session.post(url, json=self._payload(page, size), headers=_HEADERS,
-                                  impersonate=_IMPERSONATE, timeout=_TIMEOUT)
+        This is the callable handed to governor().wrap_fetch_text: the governor derives
+        the host from `url`, waits on the per-host bucket, then runs THIS off the event
+        loop. `slot` rides as a kwarg the governor forwards untouched, so each in-flight
+        request POSTs on its own leased, never-shared curl_cffi session (thread-safe).
+        `slot` defaults to 0 so the sequential/single-session contract still holds.
+
+        Raises on a non-200 so the caller sees the failure (never masks a challenge/empty
+        body — the breaker must catch throttling)."""
+        session = self._sessions[slot]
+        resp = session.post(url, json=self._payload(page, size), headers=_HEADERS,
+                            impersonate=_IMPERSONATE, timeout=_TIMEOUT)
         self.last_status = resp.status_code
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code} on {url} (page {page})")
         # The API serves UTF-8 JSON; decode explicitly so accented fuel/city names
         # (Diésel, A Coruña) survive regardless of curl_cffi's encoding guess.
         return json.loads(resp.content.decode("utf-8"))
+
+    async def fetch_page_async(self, governed_fetch, url: str, *, page: int,
+                               size: int = PAGE_SIZE) -> dict:
+        """Lease a pool slot, fetch `page` THROUGH the governor on that slot, release it.
+
+        `governed_fetch` is governor().wrap_fetch_text(self.fetch_page): the governor
+        derives the host, waits on the per-host bucket (the real limiter), then runs the
+        synchronous POST off the event loop — passing `slot` through to fetch_page. The
+        slot lease guarantees no two concurrent coroutines ever touch the same session."""
+        slot = await self._free.get()
+        try:
+            return await governed_fetch(url, page=page, size=size, slot=slot)
+        finally:
+            self._free.put_nowait(slot)
 
 
 # ---------------------------------------------------------------------------
@@ -455,15 +495,310 @@ async def emit_new_event(conn: asyncpg.Connection, vulid: str, dealer_ulid: str,
 # Orchestration
 # ---------------------------------------------------------------------------
 
+# Default concurrency: pages fetched in parallel per sliding window. The governor
+# (now 12 req/s for web.gw.coches.net) is the real limiter, so this only needs to be
+# wide enough to keep the bucket saturated — ~15 in-flight requests comfortably feed a
+# 12 req/s steady + 24 burst bucket without idle gaps. Higher just queues on the bucket.
+DEFAULT_CONCURRENCY = 15
 
-async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
+
+@dataclass
+class _CageRow:
+    """One fully-parsed, geo-anchored car ready for the bulk cage — the in-memory result
+    of the parse+resolve phase, before any SQL. Carries everything the batched upserts need
+    so the DB phase touches no per-item Python logic, only set-based statements."""
+    contract_id: str
+    dealer_cdp: str
+    dealer_name: str | None
+    dealer_province: str
+    dealer_muni: str | None
+    vehicle: Vehicle
+
+
+# The four bulk statements. Each is ONE round-trip per table per window (unnest-based
+# multi-row upsert), replacing the ~400 serialized statements/page the row-by-row path did.
+# The ON CONFLICT clauses are byte-for-byte the same idempotency the per-row path used, so
+# a re-run of an already-harvested window adds 0 rows and 0 events.
+
+_BULK_UPSERT_DEALERS = """
+INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
+        province_code, municipality_code, is_tier1, status, kind_source,
+        sells_cars, first_discovered_source, last_seen)
+SELECT u.entity_ulid, u.cdp_code, 'compraventa', u.name, u.name,
+       u.province_code, u.municipality_code, FALSE, 'active', 'platform_label',
+       TRUE, $7, now()
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::char(2)[], $5::char(5)[],
+              $6::text[]) AS u(entity_ulid, cdp_code, name, province_code,
+                               municipality_code, source_ref)
+ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
+"""
+
+_BULK_UPSERT_DEALER_SOURCES = """
+INSERT INTO entity_source (entity_ulid, source_key, source_ref)
+SELECT e.entity_ulid, $3, u.source_ref
+  FROM unnest($1::text[], $2::text[]) AS u(cdp_code, source_ref)
+  JOIN entity e ON e.cdp_code = u.cdp_code
+ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()
+"""
+
+_BULK_INSERT_VEHICLES = """
+INSERT INTO vehicle (vehicle_ulid, entity_ulid, deep_link, title, make, model,
+        year, km, price, fuel, transmission, photo_url, vin_ref, status)
+SELECT u.vehicle_ulid, u.entity_ulid, u.deep_link, u.title, u.make, u.model,
+       u.year, u.km, u.price, u.fuel, u.transmission, u.photo_url, u.vin_ref, 'available'
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[],
+              $7::int[], $8::int[], $9::numeric[], $10::text[], $11::text[], $12::text[],
+              $13::text[])
+       AS u(vehicle_ulid, entity_ulid, deep_link, title, make, model,
+            year, km, price, fuel, transmission, photo_url, vin_ref)
+ON CONFLICT (entity_ulid, deep_link) DO NOTHING
+"""
+
+_BULK_TOUCH_VEHICLES = """
+UPDATE vehicle v SET last_seen = now(), status = 'available'
+  FROM unnest($1::text[]) AS u(vehicle_ulid)
+ WHERE v.vehicle_ulid = u.vehicle_ulid
+"""
+
+_BULK_UPSERT_EDGES = """
+INSERT INTO platform_listing (vehicle_ulid, platform_entity_ulid, listing_url,
+        listing_ref, platform_price, status, first_seen, last_seen)
+SELECT u.vehicle_ulid, $5, u.listing_url, u.listing_ref, u.platform_price,
+       'listed', now(), now()
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::numeric[])
+       AS u(vehicle_ulid, listing_url, listing_ref, platform_price)
+ON CONFLICT (vehicle_ulid, platform_entity_ulid)
+  DO UPDATE SET last_seen = now(), status = 'listed',
+                platform_price = EXCLUDED.platform_price,
+                listing_ref = EXCLUDED.listing_ref
+RETURNING (xmax = 0) AS inserted
+"""
+
+_BULK_INSERT_EVENTS = """
+INSERT INTO vehicle_event (event_ulid, vehicle_ulid, entity_ulid, event_type,
+        old_value, new_value)
+SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::jsonb
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[])
+       AS u(event_ulid, vehicle_ulid, entity_ulid, new_value)
+"""
+
+
+def _parse_window(items_by_page: list[tuple[int, list]], geo: GeoResolver,
+                  seen_ids: set, harvested_cageable: set, stats: dict) -> list[_CageRow]:
+    """Parse + geo-resolve every item across the window IN PAGE ORDER — pure CPU, no SQL.
+
+    This is the EXACT per-item gate the row-by-row path applied (cross-page dedup, private
+    skip, geo skip, cageable truth), lifted out of the DB loop so the SQL phase is purely
+    set-based. `seen_ids`/`harvested_cageable`/`stats` are mutated here with the same
+    deterministic page-order semantics, so the VAM truth is byte-identical to before."""
+    rows: list[_CageRow] = []
+    for _page, items in items_by_page:
+        for item in items:
+            stats["items_seen"] += 1
+            item_id = str(item.get("id") or "")
+            if item_id and item_id in seen_ids:
+                stats["dup_ids_collapsed"] += 1
+                continue  # cross-page dedup (stable-sort hazard guard)
+            if item_id:
+                seen_ids.add(item_id)
+
+            d = parse_item_dealer(item)
+            if d is None:
+                stats["private_skipped"] += 1
+                continue
+            stats["dealer_items"] += 1
+
+            # Geo gate — the exact same province-range guard upsert_dealer applied, done in
+            # memory so a bad province is skipped without ever touching the DB (no FK risk).
+            if not d.province_code:
+                stats["geo_skipped"] += 1
+                continue
+            if not (d.province_code.isdigit() and "01" <= d.province_code <= "52"):
+                stats["geo_skipped"] += 1
+                continue
+            muni = geo.municipality_code(d.province_code, d.city)
+            dealer_cdp = cdp_code_dealer(d, muni)
+
+            v = parse_item_vehicle(item)
+            if not v.deep_link:
+                continue
+            harvested_cageable.add((d.contract_id, v.deep_link))
+            if v.price_drop:
+                stats["price_drops_captured"] += 1
+            rows.append(_CageRow(
+                contract_id=d.contract_id, dealer_cdp=dealer_cdp, dealer_name=d.name,
+                dealer_province=d.province_code, dealer_muni=muni, vehicle=v))
+    return rows
+
+
+async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid: str,
+                         items_by_page: list[tuple[int, list]], seen_ids: set,
+                         harvested_cageable: set, stats: dict) -> None:
+    """BULK-ingest a whole concurrent page-window in ONE transaction with set-based SQL.
+
+    Replaces the ~400-statements-per-page row-by-row drain with ONE round-trip per table
+    per window (unnest multi-row upserts). The delta/VAM/platform_listing semantics are
+    preserved EXACTLY: same ON CONFLICT idempotency, same cageable truth, same NEW-event
+    rule (emitted only for genuinely new vehicles), same price-drop capture in the payload.
+    A re-run of an already-harvested window adds 0 rows and 0 events.
+
+    Phases inside the single transaction:
+      1) parse+geo-resolve in memory (no SQL) -> cageable _CageRow list
+      2) dedup dealers by cdp_code, bulk-upsert dealers + entity_source, map cdp_code->ulid
+      3) split vehicles into existing vs new (one SELECT), bulk-touch existing, bulk-insert
+         new (with a Python-minted ulid each), confirm which inserts actually landed
+      4) bulk-upsert platform_listing edges (RETURNING counts the genuinely new edges)
+      5) bulk-insert NEW delta events for the genuinely new vehicles only
+    """
+    cage = _parse_window(items_by_page, geo, seen_ids, harvested_cageable, stats)
+    if not cage:
+        return
+
+    async with conn.transaction():
+        # ---- (2) DEALERS: dedup by cdp_code within the window, bulk-upsert, resolve ulids.
+        dealers: dict[str, _CageRow] = {}
+        for r in cage:
+            dealers.setdefault(r.dealer_cdp, r)  # first occurrence wins (deterministic)
+        d_ulids = [ulid() for _ in dealers]
+        d_cdps = list(dealers.keys())
+        d_names = [dealers[c].dealer_name for c in d_cdps]
+        d_provs = [dealers[c].dealer_province for c in d_cdps]
+        d_munis = [dealers[c].dealer_muni for c in d_cdps]
+        d_refs = [dealers[c].contract_id for c in d_cdps]
+        await conn.execute(_BULK_UPSERT_DEALERS, d_ulids, d_cdps, d_names, d_provs,
+                           d_munis, d_refs, COCHES_SOURCE_KEY)
+        await conn.execute(_BULK_UPSERT_DEALER_SOURCES, d_cdps, d_refs, COCHES_SOURCE_KEY)
+        cdp_to_ulid: dict[str, str] = {
+            row["cdp_code"]: row["entity_ulid"]
+            for row in await conn.fetch(
+                "SELECT cdp_code, entity_ulid FROM entity "
+                "WHERE cdp_code = ANY($1::text[])", d_cdps)
+        }
+
+        # ---- attach the resolved dealer_ulid to each cage row; dedup cars within the window
+        # by (dealer_ulid, deep_link) so the same ad seen twice in one window is one car.
+        cars: dict[tuple[str, str], _CageRow] = {}
+        car_dealer_ulid: dict[tuple[str, str], str] = {}
+        for r in cage:
+            du = cdp_to_ulid.get(r.dealer_cdp)
+            if du is None:
+                continue  # dealer upsert race-impossible here, but stay defensive
+            key = (du, r.vehicle.deep_link)
+            if key not in cars:
+                cars[key] = r
+                car_dealer_ulid[key] = du
+
+        # ---- (3) VEHICLES: one SELECT splits existing vs new (idempotency truth). Existing
+        # -> bulk touch (last_seen/status). New -> Python-minted ulid + bulk insert.
+        car_keys = list(cars.keys())
+        v_entity = [k[0] for k in car_keys]
+        v_links = [k[1] for k in car_keys]
+        existing: dict[tuple[str, str], str] = {
+            (row["entity_ulid"], row["deep_link"]): row["vehicle_ulid"]
+            for row in await conn.fetch(
+                """SELECT vehicle_ulid, entity_ulid, deep_link FROM vehicle
+                   WHERE (entity_ulid, deep_link) IN (
+                     SELECT * FROM unnest($1::text[], $2::text[]))""",
+                v_entity, v_links)
+        }
+
+        vehicle_ulid_for: dict[tuple[str, str], str] = {}
+        new_keys: list[tuple[str, str]] = []
+        touch_ulids: list[str] = []
+        for key in car_keys:
+            ex = existing.get(key)
+            if ex is not None:
+                vehicle_ulid_for[key] = ex
+                touch_ulids.append(ex)
+            else:
+                vid = ulid()
+                vehicle_ulid_for[key] = vid
+                new_keys.append(key)
+
+        if touch_ulids:
+            await conn.execute(_BULK_TOUCH_VEHICLES, touch_ulids)
+
+        if new_keys:
+            ins = [(vehicle_ulid_for[k], k[0], k[1], cars[k].vehicle) for k in new_keys]
+            await conn.execute(
+                _BULK_INSERT_VEHICLES,
+                [x[0] for x in ins], [x[1] for x in ins], [x[2] for x in ins],
+                [x[3].title for x in ins], [x[3].make for x in ins], [x[3].model for x in ins],
+                [x[3].year for x in ins], [x[3].km for x in ins], [x[3].price for x in ins],
+                [x[3].fuel for x in ins], [x[3].transmission for x in ins],
+                [x[3].photo_url for x in ins], [x[3].listing_ref for x in ins])
+            # Confirm which minted ulids actually landed (ON CONFLICT DO NOTHING could drop
+            # one if a concurrent writer inserted the same (entity,deep_link) first). Only a
+            # confirmed-new vehicle is counted new + gets a NEW event — preserves idempotency.
+            landed = {
+                (row["entity_ulid"], row["deep_link"]): row["vehicle_ulid"]
+                for row in await conn.fetch(
+                    """SELECT vehicle_ulid, entity_ulid, deep_link FROM vehicle
+                       WHERE vehicle_ulid = ANY($1::text[])""",
+                    [vehicle_ulid_for[k] for k in new_keys])
+            }
+            confirmed_new = []
+            for k in new_keys:
+                real = landed.get(k)
+                if real is not None and real == vehicle_ulid_for[k]:
+                    confirmed_new.append(k)
+                elif real is not None:
+                    vehicle_ulid_for[k] = real  # someone else won the race; adopt their ulid
+                else:
+                    # our insert was conflicted away by a row we can't see in this tx snapshot;
+                    # re-resolve so the edge/stat still points at a real vehicle.
+                    row = await conn.fetchrow(
+                        "SELECT vehicle_ulid FROM vehicle WHERE entity_ulid=$1 AND deep_link=$2",
+                        k[0], k[1])
+                    if row is not None:
+                        vehicle_ulid_for[k] = row["vehicle_ulid"]
+        else:
+            confirmed_new = []
+
+        stats["cars_caged"] += len(car_keys)
+        stats["new_cars"] += len(confirmed_new)
+
+        # ---- (4) EDGES: one batched upsert; RETURNING (xmax=0) counts genuinely new edges.
+        e_vehicles = [vehicle_ulid_for[k] for k in car_keys]
+        e_urls = [cars[k].vehicle.deep_link for k in car_keys]
+        e_refs = [cars[k].vehicle.listing_ref for k in car_keys]
+        e_prices = [cars[k].vehicle.price for k in car_keys]
+        edge_rows = await conn.fetch(_BULK_UPSERT_EDGES, e_vehicles, e_urls, e_refs,
+                                     e_prices, platform_ulid)
+        stats["edges_created"] += sum(1 for row in edge_rows if row["inserted"])
+
+        # ---- (5) NEW delta events — only for genuinely new vehicles, price-drop preserved.
+        if confirmed_new:
+            ev_ulids, ev_vehicles, ev_entities, ev_payloads = [], [], [], []
+            for k in confirmed_new:
+                v = cars[k].vehicle
+                payload = {"price": v.price, "title": v.title, "platform": COCHES_TRADE_NAME}
+                if v.price_drop:
+                    payload["price_drop"] = v.price_drop
+                ev_ulids.append(ulid())
+                ev_vehicles.append(vehicle_ulid_for[k])
+                ev_entities.append(k[0])
+                ev_payloads.append(json.dumps(payload))
+            await conn.execute(_BULK_INSERT_EVENTS, ev_ulids, ev_vehicles, ev_entities,
+                               ev_payloads)
+            stats["new_events"] += len(confirmed_new)
+
+
+async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
+                  concurrency: int = DEFAULT_CONCURRENCY) -> dict:
     conn = await asyncpg.connect(DSN)
-    fetcher = CochesFetcher()  # one fingerprint + cookie jar for the whole drain
+    concurrency = max(1, concurrency)
+    # One coherent curl_cffi session PER concurrency slot (a single shared session is not
+    # thread-safe under the governor's to_thread fetch). The governor's per-host bucket
+    # still bounds the aggregate rate across the whole pool, so widening the pool widens
+    # parallelism WITHOUT out-pacing the host.
+    fetcher = CochesFetcher(pool_size=concurrency)
     stats = {
         "pages_fetched": 0, "items_seen": 0, "dealer_items": 0,
         "private_skipped": 0, "geo_skipped": 0, "new_dealers": 0, "cars_caged": 0,
         "new_cars": 0, "edges_created": 0, "new_events": 0, "price_drops_captured": 0,
         "declared_full": None, "dup_ids_collapsed": 0, "dealers_distinct": 0,
+        "concurrency": concurrency,
     }
     # Harvest-side truth for the VAM: distinct CAGEABLE cars = distinct
     # (contract_id, deep_link) pairs that survived dealer-parse + geo-resolution.
@@ -480,7 +815,8 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
 
     # GOVERNOR: the single per-host choke point. wrap_fetch_text takes our POST
     # callable; every page passes through web.gw.coches.net's token bucket, off the
-    # event loop. No matter how many drains run, the host is never hammered.
+    # event loop. No matter how many pages are in flight, the host is never hammered:
+    # the bucket (now 12 req/s for this JSON host) is the limiter, not Python's awaits.
     gov = governor()
     governed_fetch = gov.wrap_fetch_text(fetcher.fetch_page)
 
@@ -492,68 +828,65 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
         platform_code = coches_platform_cdp_code()
         print(f"[coches_net_wholesale] platform entity ready: {platform_code} (ulid={platform_ulid})")
         print(f"[coches_net_wholesale] governor paces host {host_of(ENDPOINT)} (per-host token bucket).")
-        print(f"[coches_net_wholesale] PROOF SLICE cap = {max_pages} pages "
-              f"(~{max_pages * PAGE_SIZE} cars). NOT the full ~272k set (full drain = full governed run).")
+        print(f"[coches_net_wholesale] CONCURRENT drain: window={concurrency} pages in flight "
+              f"(governor is the limiter). Target = {max_pages} pages (~{max_pages * PAGE_SIZE} cars).")
 
         seen_ids: set[str] = set()
         dealers_before = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
 
-        for page in range(1, max_pages + 1):
-            try:
-                data = await governed_fetch(ENDPOINT, page=page, size=PAGE_SIZE)
-            except Exception as e:  # noqa: BLE001 — throttle/transient: back off, report
-                fetch_error = str(e)
-                last_http = fetcher.last_status
-                print(f"[coches_net_wholesale] page {page} fetch failed ({e}); stopping drain honestly.")
-                break
-            stats["pages_fetched"] += 1
-            meta = data.get("meta") or {}
-            if stats["declared_full"] is None:
-                stats["declared_full"] = _to_int(meta.get("totalResults"))
-            items = data.get("items") or []
-            if not items:
-                print(f"[coches_net_wholesale] page {page}: no items; stopping.")
-                break
+        # CONCURRENT sliding-window drain. Each window fetches up to `concurrency` pages
+        # in parallel through the governor (the host bucket paces the aggregate), then the
+        # pages are INGESTED sequentially in page order through the single asyncpg
+        # connection. Fetch is the slow leg (network + bucket); ingest is fast and DB-bound,
+        # so overlapping fetches while ingesting the previous window is where the speed is.
+        # A page that errors or comes back empty stops the drain honestly (end of data or a
+        # throttle the breaker must catch) — the same stop semantics as the sequential loop.
+        stop = False
+        next_page = 1
+        while next_page <= max_pages and not stop:
+            window = list(range(next_page, min(next_page + concurrency, max_pages + 1)))
+            next_page = window[-1] + 1
 
-            for item in items:
-                stats["items_seen"] += 1
-                item_id = str(item.get("id") or "")
-                if item_id and item_id in seen_ids:
-                    stats["dup_ids_collapsed"] += 1
-                    continue  # cross-page dedup (stable-sort hazard guard)
-                if item_id:
-                    seen_ids.add(item_id)
+            # fan-out: fetch every page in this window concurrently, paced by the bucket.
+            results = await asyncio.gather(
+                *(fetcher.fetch_page_async(governed_fetch, ENDPOINT, page=p, size=PAGE_SIZE)
+                  for p in window),
+                return_exceptions=True,
+            )
 
-                d = parse_item_dealer(item)
-                if d is None:
-                    stats["private_skipped"] += 1
-                    continue
-                stats["dealer_items"] += 1
+            # fan-in: collect the window's pages IN PAGE ORDER (so dedup + counts stay
+            # deterministic), then BULK-ingest the whole window in ONE transaction. A failed
+            # or empty page stops the drain after the in-order pages before it are ingested.
+            window_pages: list[tuple[int, list]] = []
+            for page, data in zip(window, results):
+                if isinstance(data, Exception):
+                    fetch_error = str(data)
+                    last_http = fetcher.last_status
+                    print(f"[coches_net_wholesale] page {page} fetch failed ({data}); stopping drain honestly.")
+                    stop = True
+                    break
+                meta = data.get("meta") or {}
+                if stats["declared_full"] is None:
+                    stats["declared_full"] = _to_int(meta.get("totalResults"))
+                items = data.get("items") or []
+                if not items:
+                    print(f"[coches_net_wholesale] page {page}: no items; stopping.")
+                    stop = True
+                    break
+                window_pages.append((page, items))
 
-                async with conn.transaction():
-                    dealer_ulid = await upsert_dealer(conn, geo, d)
-                    if dealer_ulid is None:
-                        stats["geo_skipped"] += 1
-                        continue
-                    v = parse_item_vehicle(item)
-                    if not v.deep_link:
-                        continue
-                    harvested_cageable.add((d.contract_id, v.deep_link))
-                    vulid, veh_new = await upsert_vehicle(conn, dealer_ulid, v)
-                    stats["cars_caged"] += 1
-                    if v.price_drop:
-                        stats["price_drops_captured"] += 1
-                    if veh_new:
-                        stats["new_cars"] += 1
-                        await emit_new_event(conn, vulid, dealer_ulid, v)
-                        stats["new_events"] += 1
-                    edge_new = await link_platform(conn, platform_ulid, vulid, v)
-                    if edge_new:
-                        stats["edges_created"] += 1
-
-            print(f"[coches_net_wholesale] page {page}: items={len(items)} "
-                  f"caged_total={stats['cars_caged']} edges={stats['edges_created']}")
+            if window_pages:
+                # ONE transaction, set-based SQL: ~6 statements for the whole window instead
+                # of ~400 per page. Idempotency/delta/VAM semantics are byte-identical.
+                await _ingest_window(conn, geo, platform_ulid, window_pages, seen_ids,
+                                     harvested_cageable, stats)
+                stats["pages_fetched"] += len(window_pages)
+                first_p, last_p = window_pages[0][0], window_pages[-1][0]
+                print(f"[coches_net_wholesale] window pages {first_p}-{last_p}: "
+                      f"items={sum(len(it) for _, it in window_pages)} "
+                      f"caged_total={stats['cars_caged']} new={stats['new_cars']} "
+                      f"edges={stats['edges_created']}")
 
         dealers_after = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
@@ -620,10 +953,11 @@ def _print_report(stats: dict) -> None:
         print(f"\n[coches_net_wholesale] SKIPPED: {stats.get('reason')}")
         return
     print("\n" + "=" * 64)
-    print("COCHES.NET WHOLESALE HARVEST — PROOF SLICE REPORT")
+    print("COCHES.NET WHOLESALE HARVEST — REPORT")
     print("=" * 64)
     print(f"  platform cdp_code     : {stats.get('platform_code')}")
-    print(f"  declared full (source): {stats.get('declared_full')}  (NOT harvested — proof slice)")
+    print(f"  declared full (source): {stats.get('declared_full')}")
+    print(f"  concurrency (window)  : {stats.get('concurrency')} pages in flight")
     print(f"  pages fetched         : {stats['pages_fetched']}")
     print(f"  items seen            : {stats['items_seen']}")
     print(f"  dealer items          : {stats['dealer_items']}")
@@ -648,11 +982,15 @@ def _print_report(stats: dict) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="coches.net wholesale proof-slice harvester")
+    parser = argparse.ArgumentParser(description="coches.net wholesale harvester (concurrent JSON-API drain)")
     parser.add_argument("--pages", type=int, default=DEFAULT_MAX_PAGES,
-                        help=f"pages to harvest (size={PAGE_SIZE}); default {DEFAULT_MAX_PAGES} (proof slice)")
+                        help=f"pages to harvest (size={PAGE_SIZE}); default {DEFAULT_MAX_PAGES}")
+    parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,
+                        help=(f"pages fetched in parallel per sliding window; default "
+                              f"{DEFAULT_CONCURRENCY}. The governor's per-host bucket is the "
+                              f"real limiter — this only needs to keep the bucket saturated."))
     args = parser.parse_args()
-    stats = asyncio.run(harvest(args.pages))
+    stats = asyncio.run(harvest(args.pages, args.concurrency))
     _print_report(stats)
 
 

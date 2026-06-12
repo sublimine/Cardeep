@@ -54,6 +54,62 @@ DEFAULT_MIN_SPACING_S = 1.0 / DEFAULT_RATE_PER_SEC   # floor between grants on o
 DEFAULT_JITTER_S = 0.25             # +U(0, jitter) on each grant: no lock-step probing
 
 
+# ---------------------------------------------------------------------------
+# RATE CLASSES — per-host pacing doctrine, by what the host actually IS.
+# ---------------------------------------------------------------------------
+# The governor's job is to never out-pace a host's true ceiling. That ceiling is NOT one
+# number: a public JSON search API built to serve millions of users tolerates 10-20 req/s
+# without blinking, while a fragile HTML/stealth surface behind an active WAF earns a ban
+# the moment you push past a human cadence. Pacing BOTH at the AS24-scar rate (0.7 req/s)
+# was correct safety for the fragile hosts but left the JSON APIs crawling at a tiny
+# fraction of what they happily allow — the harvest's real bottleneck.
+#
+# So pacing is keyed to a CLASS, not a global default:
+#
+#   STEALTH  (default, 0.7 req/s) — unknown / HTML / stealth / WAF-walled hosts whose true
+#            ceiling is unmeasured. The AS24 scar lives here: pace WELL below the rate that
+#            earned the ban, human-shaped, tiny burst. NEVER raise these without evidence.
+#
+#   JSON_API (12 req/s, burst 24) — first-party JSON gateways engineered for high traffic
+#            (mobile-app / SPA backends serving the whole user base). These tolerate an
+#            order of magnitude more than a stealth HTML scrape. The min-spacing floor and
+#            jitter still apply (no lock-step probing) — just at the higher rate, so the
+#            aggregate is fast but never a flat-out lockstep loop.
+#
+# To add a host: pick its class, add ONE line to _HOST_RATE_CLASSES below. Do not invent a
+# fourth knob per host — classes keep the table honest and auditable. A host with a measured
+# ceiling that differs from its class can still get a bespoke configure_host() override; the
+# classes are the documented, safe defaults.
+
+# JSON-API tier: first-party gateways built to serve millions. ~12 req/s steady, burst 24
+# (half a second of head-room), min-spacing ~0.03 s floor (+jitter) so even an empty bucket
+# paces ~33 req/s worst-case micro-bursts, not an unbounded flood. Jitter shrinks with the
+# rate so it stays a fraction of the spacing (no lock-step, no idle gaps).
+JSON_API_RATE_PER_SEC = 12.0
+JSON_API_BURST = 24.0
+JSON_API_MIN_SPACING_S = 0.03
+JSON_API_JITTER_S = 0.02
+
+# host -> rate-class profile. The single, auditable place pacing policy lives.
+# Anything NOT in this table inherits the STEALTH default (0.7 req/s) — the safe direction:
+# an unrecognized host is treated as fragile until proven otherwise, never the reverse.
+_JSON_API_PROFILE = {
+    "rate_per_sec": JSON_API_RATE_PER_SEC,
+    "burst": JSON_API_BURST,
+    "min_spacing_s": JSON_API_MIN_SPACING_S,
+    "jitter_s": JSON_API_JITTER_S,
+}
+_HOST_RATE_CLASSES: dict[str, dict] = {
+    # coches.net's internal search gateway — unwalled first-party JSON API, the SPA/mobile
+    # backend behind www.coches.net. Serves the whole user base; tolerates JSON_API pacing.
+    "web.gw.coches.net": _JSON_API_PROFILE,
+    # wallapop's public mobile-app JSON API — built for an enormous mobile install base.
+    "api.wallapop.com": _JSON_API_PROFILE,
+    # autocasion's GraphQL gateway — first-party JSON API serving the site's whole frontend.
+    "gql.autocasion.com": _JSON_API_PROFILE,
+}
+
+
 def host_of(url: str) -> str:
     """Registrable host for `url`, lower-cased, port-stripped. The bucket key.
 
@@ -221,13 +277,30 @@ def governor() -> RateGovernor:
     global _default_governor
     if _default_governor is None:
         g = RateGovernor()
+
+        # --- STEALTH class (conservative, the AS24 scar stays) -----------------------
+        # These hosts are HTML/stealth/WAF-walled with an UNMEASURED ceiling. They are
+        # paced WELL below the rate that earned the ban — never raised without evidence.
         # The scar's lesson, encoded: AS24 hosts paced below the banned rate.
         g.configure_host("www.autoscout24.es", rate_per_sec=0.5, burst=2.0, min_spacing_s=2.0)
         g.configure_host("autoscout24.es", rate_per_sec=0.5, burst=2.0, min_spacing_s=2.0)
-        # coches.net's API host (web.gw.coches.net) is an unwalled internal JSON
-        # gateway, but the brand is Tier-1/Imperva — pace it conservatively too, on
-        # the same below-the-unknown-ceiling doctrine the AS24 scar mandated.
-        g.configure_host("web.gw.coches.net", rate_per_sec=0.5, burst=2.0, min_spacing_s=2.0)
+        # coches.com (Carossa) is Imperva-fronted (is_tier1=TRUE) but serving PDPs/sitemap
+        # to a plain chrome131 impersonation today — a decaying-open window. The recipe
+        # paces ~0.6-0.9 s/req on a single held IP; the governor floors it at the
+        # conservative below-the-unknown-ceiling rate the AS24 scar mandated for any
+        # Tier-1 HTML host. STAYS conservative (sitemap + PDP = fragile stealth surface).
+        g.configure_host("www.coches.com", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
+        # motor.es — HTML/stealth surface, unmeasured ceiling: STAYS on the conservative
+        # default (no override needed; left here as an explicit reminder it must not move).
+
+        # --- JSON_API class (fast, built-for-traffic first-party gateways) -----------
+        # Apply the JSON-API rate class to every host registered in _HOST_RATE_CLASSES.
+        # These are first-party JSON gateways engineered to serve the whole user base; the
+        # AS24 stealth rate was strangling them at a fraction of what they happily allow.
+        # The min-spacing/jitter floor still holds — fast, but never a lock-step loop.
+        for host, profile in _HOST_RATE_CLASSES.items():
+            g.configure_host(host, **profile)
+
         _default_governor = g
     return _default_governor
 
