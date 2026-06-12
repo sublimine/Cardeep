@@ -1,0 +1,24 @@
+# Cardeep extraction recipe — CDP-ES-00-VMCZWW5N
+# Reusable; re-scrape without raw crude.
+version: 1
+source: autoscout24
+scope: platform-wholesale (/lst stream)
+engine: curl_cffi+chrome_impersonate+next_data
+access: OPEN (Chrome UA over Chrome TLS fingerprint; SSR __NEXT_DATA__). is_tier1=false
+data_surface: next_data
+enumeration: /lst?atype=C&cy=E&sort=age&desc=1&size=20&page=N (stable sort; dedup by listing id)
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only)
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: listing.url (host-prefixed)
+  listing_ref: listing.id (AS24 native listing id)
+  make: listing.vehicle.make
+  model: listing.vehicle.model
+  year: listing.vehicle.firstRegistrationDate | tracking.firstRegistration
+  km: listing.vehicle.mileageInKm | tracking.mileage
+  price: listing.prices.public.priceRaw | tracking.price
+  fuel: listing.vehicle.fuelCategory|fuel
+  transmission: listing.vehicle.transmissionType|transmission
+  photo_url: listing.images[0] | ocsImagesA[0]
+  dealer: listing.seller {id, companyName, type=Dealer, links.infoPage->slug}
+  location: listing.location {zip(zero-padded->province2), city, street}
