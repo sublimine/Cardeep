@@ -281,10 +281,10 @@ class CochesFetcher:
     def _payload(page: int, size: int) -> dict:
         # pagination is a NESTED object {page,size}; a top-level "page" is silently
         # ignored by the gateway (recipe root-caused this). price/year/km open.
+        # NO sortBy: 'relevance' silently caps the gateway result set at ~155k (frontend-only
+        # cap, verified by hand). The DEFAULT order has NO cap and enumerates all 272k pages.
         return {
             "categoryId": CATEGORY_CARS,
-            "sortBy": "relevance",
-            "sortOrder": "DESC",
             "pagination": {"page": page, "size": size},
             "price": {"from": None, "to": None},
             "year": {"from": None, "to": None},
