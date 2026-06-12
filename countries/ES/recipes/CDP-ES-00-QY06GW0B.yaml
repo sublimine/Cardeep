@@ -2,7 +2,7 @@
 # Reusable; re-scrape without raw crude.
 version: 1
 source: autocasion.com
-scope: platform-facet, segments=['vn'] (URL-path make partition per segment; make×province for any >10k make — uncapped surface past ES max_result_window=10000)
+scope: platform-wholesale (SSR enumerate -> GraphQL ad() hydrate -> PDP JSON-LD dealer)
 engine: curl_cffi+chrome131_impersonate+graphql(POST)+ssr/pdp(GET)
 access: FREE: Cloudflare-permissive to a Chrome TLS fingerprint (no proxy, no browser, no captcha). is_tier1=TRUE (Tier-1 motor brand) but defense_tier=t1_soft (WAF serves to curl_cffi). GraphQL introspection open.
 data_surface: graphql
@@ -11,7 +11,7 @@ endpoints:
   enumerate: GET https://www.autocasion.com/coches-ocasion?page=N
   hydrate: POST https://gql.autocasion.com/graphql/  ad(adId:N){...}
   dealer: GET https://www.autocasion.com{pdp_url}  (JSON-LD offers.offeredBy=AutoDealer)
-enumeration: FACET partitions PER SEGMENT: brands(type:CAR) make slugs sized by each segment's SSR <title>; any make slice >10000 split by province; each slice drained GET {segment_make_facet}[/{province}]?page=1..N to first 0-ref page. Segments: vo=/coches-segunda-mano/{make}-ocasion, vn=/coches-nuevos/{make}, km0=/coches-km0/{make}-km0. seen_ids dedups cross-page+cross-slice+cross-segment.
+enumeration: SSR results pages 1..N (regex -ref(\d+) -> pdp_url + native id); GraphQL search.paginatedAds.total/pages = the live counter (~115k/4800)
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=marketplace_motor, role=platform
 dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
 field_map:
@@ -28,8 +28,3 @@ field_map:
   photo_url: ld.image[0] (ad.image is gated null)
   dealer: ld.offers.offeredBy {name, @id(/profesional/slug), telephone, @type=AutoDealer}
   location: ld.offers.offeredBy.address {postalCode(->province=CP[:2]), addressLocality(->municipality)}
-segments:
-  vn:
-    label: NEW (coches nuevos / catalog)
-    make_facet: /coches-nuevos/{make}
-    province_facet: /coches-nuevos/{make}/{prov}-provincia
