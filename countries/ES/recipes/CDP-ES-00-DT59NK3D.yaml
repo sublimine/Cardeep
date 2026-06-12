@@ -1,0 +1,36 @@
+# Cardeep extraction recipe — CDP-ES-00-DT59NK3D
+# Reusable; re-scrape without raw crude.
+version: 1
+source: renew (es.renew.auto)
+scope: platform-wholesale (AEM+Elasticsearch faceted catalog via React-Router .data loader)
+engine: curl_cffi+chrome131_impersonate+es_facet_json(GET)
+access: OPEN/FREE (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). The /vehiculos route accepts RAW Elasticsearch facet params; its .data single-fetch loader returns clean faceted JSON. No WAF challenge -> defense_tier=t0_open.
+data_surface: es_facet
+surface_intent: es_facet_json_loader
+endpoint: GET https://es.renew.auto/vehiculos.data?<es_facets>&page=N
+request:
+  headers: Accept */*, Referer /vehiculos, X-Requested-With XMLHttpRequest
+  facets: RAW Elasticsearch params: brand.label.raw=RENAULT, model.label.raw=CLIO, ... (omit for full census)
+enumeration: page=1..N (23 cars/page, zero cross-page id overlap — clean stable paginator); block.totalElements/totalPages drive the full drain (~5,739 cars / ~250 pages unfiltered)
+block_path: content.contentZone.slice243v0.data {totalElements, totalPages, data[], facets}
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_vo_portal, role=platform, family=renault_group
+dual_membership: vehicle.entity_ulid=SELLING EXHIBITION-SITE DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: https://es.renew.auto/vehiculos/detalle.html?productId={car.productId}
+  listing_ref: car.identifier (renew native vehicle id; {dealerPrefix}_{plate})
+  vin: car.vin (REAL per-car VIN — gold for cross-source dedup)
+  make: car.brand.label
+  model: car.model.label
+  version: car.version.label
+  year: car.firstRegistrationDate (YYYY-MM-DD -> YYYY)
+  km: car.mileage (mileageUnit=KM)
+  price: car.prices[0].customerDisplayPrice (fallback priceWithTaxes), EUR
+  fuel: car.energy.label (Diesel/Gasolina/Eléctrico/...)
+  transmission: car.transmission.label (Manual/Automático)
+  photo_url: car.assets[0].renditions[resolutionType=medium].url
+  dealer: car.vehicleExhibitionSite {dealerId, name, address.postalCode, address.locality, geolocalization}
+  location: postalCode[:2] = INE province code; locality -> municipality (INE-resolved)
+caveats:
+  page_size: fixed 23 cars/page (loader-controlled, not a request param).
+  vin_gold: unlike motor.es (dummy VIN), renew exposes a REAL per-car VIN.
+  multi_brand: unfiltered census includes RENAULT + DACIA + Refactory-reconditioned others.

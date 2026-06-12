@@ -1,0 +1,28 @@
+# Cardeep extraction recipe — family_dealerk_wp
+# Reusable; re-scrape without raw crude.
+version: 1
+source: family_dealerk_wp
+family: DealerK WordPress (MotorK) dealer-site family
+scope: long-tail dealer OWN-SITE inventory, harvested by CMS family
+engine: curl_cffi+chrome131_impersonate+html(GET, server-rendered)
+access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser, no creds). Server-rendered HTML — no JS execution needed.
+data_surface: dealer_site_html
+fingerprint: WordPress + Elementor + 'tucoche' listing plugin; assets on *.dealerk.com/<tenant>/uploads/sites/<N>/ and photos on cdn.dealerk.es/dealer/datafiles/vehicle/*. A site is a member iff its HTML carries 'dealerk' (spine) AND at least one of 'tucoche' or 'cdn.dealerk.es/dealer/datafiles/vehicle'.
+listing_paths:
+  - /coches/segunda-mano/
+  - /seminuevos/
+  - /coches/
+enumeration: ?page=1..N until a page yields no cards (or max_pages cap)
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
+multiplier: ONE recipe + ONE parser harvests EVERY family member, because the vcard-* card markup is byte-identical across member sites.
+field_map:
+  deep_link: card PDP anchor href (.../coches/segunda-mano/.../<id>/)
+  listing_ref: numeric <id> in the PDP path
+  make: vcard-main-info__make-model anchor, first token
+  model: vcard-main-info__make-model anchor, remaining tokens
+  version: vcard-main-info__version
+  price: vcard-price__price (e.g. '19.995 €' -> 19995)
+  year: vcard-consumption__title 'MM/YYYY - KM Km - Fuel' -> YYYY
+  km: vcard-consumption__title -> KM
+  fuel: vcard-consumption__title -> Fuel
+  photo_url: first cdn.dealerk.* vehicle image in the card

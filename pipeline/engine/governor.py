@@ -107,6 +107,10 @@ _HOST_RATE_CLASSES: dict[str, dict] = {
     "api.wallapop.com": _JSON_API_PROFILE,
     # autocasion's GraphQL gateway — first-party JSON API serving the site's whole frontend.
     "gql.autocasion.com": _JSON_API_PROFILE,
+    # renew (Renault Group OEM-VO portal) — its AEM+Elasticsearch .data single-fetch loader is
+    # a first-party JSON gateway built to serve the brand's whole user base; tolerates JSON_API
+    # pacing (open, no WAF challenge to curl_cffi — defense_tier=t0_open).
+    "es.renew.auto": _JSON_API_PROFILE,
 }
 
 
@@ -292,6 +296,11 @@ def governor() -> RateGovernor:
         g.configure_host("www.coches.com", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
         # motor.es — HTML/stealth surface, unmeasured ceiling: STAYS on the conservative
         # default (no override needed; left here as an explicit reminder it must not move).
+        # Das WeltAuto (VW Group OEM-VO portal) — AEM/Motorflash SSR HTML behind a SOFT TLS/UA
+        # wall (origin 403s a naïve fetch, serves cleanly to chrome131; defense_tier=t1_soft, no
+        # JS challenge). It is an HTML surface, NOT a JSON gateway, so it stays in the STEALTH
+        # family: paced conservatively below an unmeasured ceiling (like coches.com), human-shaped.
+        g.configure_host("www.dasweltauto.es", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
 
         # --- JSON_API class (fast, built-for-traffic first-party gateways) -----------
         # Apply the JSON-API rate class to every host registered in _HOST_RATE_CLASSES.

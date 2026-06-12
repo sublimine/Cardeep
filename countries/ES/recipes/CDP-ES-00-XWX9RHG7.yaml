@@ -1,0 +1,36 @@
+# Cardeep extraction recipe — CDP-ES-00-XWX9RHG7
+# Reusable; re-scrape without raw crude.
+version: 1
+source: Das WeltAuto (www.dasweltauto.es)
+scope: platform-wholesale (AEM/Motorflash SSR HTML, per-province paginated listing)
+engine: curl_cffi+chrome131_impersonate+ssr_html_embedded_card_json(GET)
+access: OPEN to a Chrome TLS fingerprint (no proxy, no browser, no cookie warm-up). The www.dasweltauto.es origin returns 403 to a naïve fetch (soft TLS/UA wall) but serves cleanly to chrome131 impersonation -> defense_tier=t1_soft, no JS challenge.
+data_surface: next_data
+surface_intent: ssr_html_embedded_card_json
+endpoint: GET https://www.dasweltauto.es/esp/coches-de-segunda-mano-en-{provincia}?pagina=N
+request:
+  headers: Accept text/html, Accept-Language es-ES, Referer /esp/
+  enumeration_entry: per-province slug routes (homepage province links); ZIP[:2] is the authoritative geo anchor
+enumeration: PER-PROVINCE: /esp/coches-de-segunda-mano-en-{provincia}?pagina=1..N (23 cards/page). The bare national /coches-de-segunda-mano route IGNORES ?pagina. The last page CLAMP-REPEATS, so the stop signal is 'a page adds 0 NEW VehicleIds', not 'empty page'. Madrid drains to 1,043 distinct cars over 47 pages (verified live).
+card_path: each result card embeds data-configuration='{...car...}' + data-partner='{...dealer...}' as single-quoted HTML attributes; \uXXXX-escaped accents -> valid UTF-8 JSON.
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=vw_group
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: https://www.dasweltauto.es{data-url} (data-url=/esp/oferta/{slug}/{VehicleId})
+  listing_ref: Vehicle.VehicleId (Das WeltAuto native ad id)
+  make: VehicleManufacturer
+  model: Model.Name
+  year: Model.Year (fallback Production.Year)
+  km: Vehicle.Milage ('21.380 km' -> 21380)
+  price: Budget.Price.price (EUR)
+  fuel: Engine.FuelType.Main (Gasolina/Diésel/Eléctrico/...)
+  transmission: Gear.NumberType (free text -> Manual/Automático)
+  photo_url: images.motorflash.com/filter?path=<dasweltauto hosted jpg> (page-level, anchored by VehicleId)
+  seal: SealofQuality (e.g. 'WeltAuto' — OEM certification mark)
+  dealer: data-partner {InformationBnr(stable VW dealer no.), InformationName, InformationCity, InformationZIP}
+  location: InformationZIP[:2] = INE province code; InformationCity -> municipality (INE-resolved)
+caveats:
+  page_size: 23 cards/page (route-controlled, not a request param).
+  last_page_clamp: ?pagina beyond the last page repeats the last page's tail — dedup by VehicleId to stop.
+  national_route_no_paging: /esp/coches-de-segunda-mano ignores ?pagina; province routes are the deep paginator.
+  geo_anchor: the per-card data-partner ZIP is authoritative — a car attributes by ITS zip, not the slug it was found under.
