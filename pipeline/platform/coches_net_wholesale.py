@@ -785,7 +785,8 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ul
 
 
 async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
-                  concurrency: int = DEFAULT_CONCURRENCY) -> dict:
+                  concurrency: int = DEFAULT_CONCURRENCY,
+                  start_page: int = 1) -> dict:
     conn = await asyncpg.connect(DSN)
     concurrency = max(1, concurrency)
     # One coherent curl_cffi session PER concurrency slot (a single shared session is not
@@ -843,7 +844,7 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
         # A page that errors or comes back empty stops the drain honestly (end of data or a
         # throttle the breaker must catch) — the same stop semantics as the sequential loop.
         stop = False
-        next_page = 1
+        next_page = max(1, start_page)
         while next_page <= max_pages and not stop:
             window = list(range(next_page, min(next_page + concurrency, max_pages + 1)))
             next_page = window[-1] + 1
@@ -989,8 +990,10 @@ def main() -> None:
                         help=(f"pages fetched in parallel per sliding window; default "
                               f"{DEFAULT_CONCURRENCY}. The governor's per-host bucket is the "
                               f"real limiter — this only needs to keep the bucket saturated."))
+    parser.add_argument("--start-page", type=int, default=1,
+                        help="first page to fetch (skip already-harvested pages for an efficient top-up)")
     args = parser.parse_args()
-    stats = asyncio.run(harvest(args.pages, args.concurrency))
+    stats = asyncio.run(harvest(args.pages, args.concurrency, args.start_page))
     _print_report(stats)
 
 
