@@ -37,3 +37,29 @@
   serviceConfigEndpoint); Google Places ToS prohíbe indexar → sustituto legal FSQ/Overture.
 - **GATE F1 = VERDE.** Siguiente: F2 (columna de datos — esquema, geo INE, código único, API).
 
+## 2026-06-12 — F2 COLUMNA DE DATOS — GATE VERDE
+- **Motor:** PostgreSQL 16 en Docker `cardeep-pg` (puerto **5433**, `--shm-size=1g`,
+  volumen `cardeep_pg_data`) — separado de CARDEX (5432). Verificado `pg_isready` en 3s.
+- **Esquema (4 migraciones, 11 tablas):** 0001 geo (province/comarca/municipality),
+  0002 entity + entity_source + entity_alias, 0003 vehicle + vehicle_event (delta
+  append-only), 0004 verification_verdict + source_health + alert. Runner
+  `scripts/migrate.py` con ledger `schema_migrations`.
+- **Verificación E2E (patrón del mandato):** apply (4 OK) → 11 tablas presentes →
+  CHECK constraint rechaza kind inválido → **rollback → 0 tablas dominio → re-apply →
+  11 tablas** → idempotencia (2ª corrida = 0 aplicadas). Reversibilidad probada.
+- **Geo INE cargado:** fuente oficial `diccionario25.xlsx` (INE, autoritativa) →
+  **52 provincias + 8.132 municipios, 0 huérfanos, 52/52 provincias cubiertas.**
+  2-vías por hechos conocidos: Madrid 179 munis ✓, Barcelona 311 ✓, 28079=Madrid ✓.
+- **Código único `cdp_code`:** determinista e inmutable (`CDP-ES-{prov}-{b32(sha256)}`),
+  prioridad dominio>CIF>nombre+municipio. Probado: zonauto.es con/sin www/https/path →
+  mismo código (re-descubrimiento no duplica).
+- **API viva (FastAPI+asyncpg, esqueleto):** /health, /entities/{cdp_code},
+  /inventory, /delta, /geo/{prov}/entities + envelope {ok,data,error,meta}. **Verificada
+  E2E contra entidad piloto REAL** (ZONAUTO SUR, Pinto/Madrid 28113, del censo AMDA):
+  los 6 endpoints responden correcto + 404 con error limpio.
+- **Anti-maquillaje:** el vehículo del smoke-test era sintético (prueba de esquema) →
+  PURGADO. Queda 1 entidad real (seed), 0 inventario (F3 mete scraping real).
+- Reproducibilidad: `.env.example` + `requirements.txt` (deps verificadas presentes).
+- **GATE F2 = VERDE.** Siguiente: F3 (workflows átomo DESCUBRIR→SCRAPEAR→RECETA→API→BORRAR;
+  banco de pruebas = AutoScout24.es, abierto + JSON-LD dealer).
+

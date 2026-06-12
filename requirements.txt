@@ -1,0 +1,11 @@
+# Cardeep runtime dependencies (pin minor versions; verified present 2026-06-12)
+asyncpg>=0.29,<0.31
+fastapi>=0.110
+uvicorn[standard]>=0.29
+openpyxl>=3.1
+
+# Scraping arsenal (F3+; install as fronts come online)
+# scrapling>=0.4.9
+# camoufox[geoip]
+# curl_cffi>=0.15.1
+# browserforge
