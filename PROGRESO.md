@@ -215,3 +215,15 @@
   para los gigantes. Recetas guardadas: docs/architecture/tier1_recipes/{platform}.md + README.
 - Siguiente: cablear estas recetas como conectores de plataforma (P7a a escala con el governor) →
   ingest + platform_listing + delta + VAM por gigante.
+
+## 2026-06-12 — ESCALA coches.net (conector mayorista, gobernado) + verificación de números
+- **coches.net escalado 500→14.955 coches** (150 págs, gobernado por token-bucket, breaker cerrado).
+  VAM TRUSTWORTHY: harvested=db_edges=db_join=14.955, divergencia 0 [VERIFICADO por mi mano].
+  +1.018 dealers nuevos descubiertos de paso · 14.955 eventos delta · **2.171 bajadas de precio capturadas**.
+  El 100% de coches.net = mismo comando `--pages 2727`.
+- **Estado vivo: 54.291 vehículos · 14.030 entidades · 15.223 platform_listings · 3.919 compraventa.**
+- **Verificación de los 7 Tier-1 (mandato "verifica TODOS los números"):**
+  - Por mi mano: coches.net 272.682 ✓ · autocasión 115.179 ✓ · wallapop API libre 200 con coches reales ✓.
+  - **Cazado inflado:** coches.com NO 200k → **92.259 PDPs reales** en sitemap (200k era el contador web).
+  - Siguen de agente (browser, no re-derivados por mí): milanuncios ~667k · spoticar ~50k · motor.es ~51k.
+- **Estructura multi-eje (0016) clasificando lo vivo:** defense_tier × source_group × role × family.
