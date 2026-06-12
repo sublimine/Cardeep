@@ -19,6 +19,14 @@ from pipeline.ids import ulid
 from pipeline.sources.base import DiscoveredEntity, SourceAdapter
 from pipeline.sources.dgt_cat import DgtCatAdapter
 from pipeline.sources.oem_kia import KiaOemAdapter
+from pipeline.sources.oem_mg import OemMgAdapter
+from pipeline.sources.oem_byd import OemBydAdapter
+from pipeline.sources.oem_skoda import OemSkodaAdapter
+from pipeline.sources.oem_dacia import OemDaciaAdapter
+from pipeline.sources.oem_hyundai import HyundaiOemAdapter
+from pipeline.sources.oem_mercedes import OemMercedesAdapter
+from pipeline.sources.oem_seat import OemSeatAdapter
+from pipeline.sources.osm import OsmAdapter
 from pipeline.verify import record_count_verdict
 from services.api.codes import cdp_code
 
@@ -27,16 +35,27 @@ DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localho
 ADAPTERS: dict[str, type[SourceAdapter]] = {
     "dgt_cat": DgtCatAdapter,
     "oem_kia": KiaOemAdapter,
+    "oem_mg": OemMgAdapter,
+    "oem_byd": OemBydAdapter,
+    "oem_skoda": OemSkodaAdapter,
+    "oem_dacia": OemDaciaAdapter,
+    "oem_hyundai": HyundaiOemAdapter,
+    "oem_mercedes": OemMercedesAdapter,
+    "oem_seat": OemSeatAdapter,
+    "osm": OsmAdapter,
 }
 
 
-async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntity) -> tuple[bool, bool]:
-    """Returns (entity_was_new, geo_resolved)."""
+async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntity) -> tuple[bool, bool, bool]:
+    """Returns (entity_was_new, municipality_resolved, province_resolved)."""
     prov = geo.province_code(e.province_name)
     muni = geo.municipality_code(prov, e.municipality_name)
+    if not prov and e.municipality_name:
+        # no province (e.g. OSM POI without postcode): recover via unambiguous city name
+        prov, muni = geo.resolve_city_global(e.municipality_name)
     if not prov:
         # cannot mint a province-scoped code without a province; skip honestly
-        return (False, False)
+        return (False, False, False)
     code = cdp_code(province_code=prov, domain=e.website, cif=e.cif,
                     name=e.legal_name or e.trade_name, municipality_code=muni,
                     address=e.address)
@@ -57,7 +76,7 @@ async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntit
         "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
         "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
         real_ulid, e.source_key, e.source_ref)
-    return (bool(row["inserted"]), muni is not None)
+    return (bool(row["inserted"]), muni is not None, True)
 
 
 async def discover(source_key: str) -> None:
@@ -73,11 +92,10 @@ async def discover(source_key: str) -> None:
         geo = await GeoResolver.load(conn)
         new = resolved = skipped = 0
         for e in entities:
-            was_new, geo_ok = await _upsert(conn, geo, e)
+            was_new, geo_ok, prov_ok = await _upsert(conn, geo, e)
             new += int(was_new)
             resolved += int(geo_ok)
-            if not geo.province_code(e.province_name):
-                skipped += 1
+            skipped += int(not prov_ok)
         # provenance count: entities attested by this source (works across sources/overlap)
         in_db = await conn.fetchval(
             "SELECT count(*) FROM entity_source WHERE source_key=$1", source_key)

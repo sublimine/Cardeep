@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 
@@ -57,13 +58,27 @@ class DealerHarvest:
     raw_count: int = 0  # total listings seen before dedup (source may serve duplicates)
 
 
-def fetch_page(slug: str, page: int) -> str:
+def fetch_page(slug: str, page: int, retries: int = 3) -> str:
     # stable sort is load-bearing: paginating a non-stably-sorted live set fabricates
     # duplicates / drops across page boundaries (AS24 SSR hazard).
     url = f"{_BASE}/profesionales/{slug}?atype=C&sort=price&desc=1&page={page}"
-    req = urllib.request.Request(url, headers={"User-Agent": _UA})
-    with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310
-        return r.read().decode("utf-8", "replace")
+    import time
+    last_err = None
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": _UA})
+            with urllib.request.urlopen(req, timeout=40) as r:  # noqa: S310
+                return r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            last_err = e
+            if e.code in (429, 500, 502, 503, 504):  # transient throttle/gateway — back off
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise
+        except Exception as e:  # noqa: BLE001 — transient network blip
+            last_err = e
+            time.sleep(2 * (attempt + 1))
+    raise last_err
 
 
 def _next_data(html: str) -> dict:
@@ -223,6 +238,41 @@ def parse_page_dealer(data: dict) -> DealerInfo | None:
         zip=str(zip_) if zip_ else None,
         website=homepage,
     )
+
+
+def _lst_url(page: int, sort: str) -> str:
+    return f"{_BASE}/lst?atype=C&cy=E&sort={sort}&desc=1&size=20&page={page}"
+
+
+def collect_dealer_slugs(max_pages: int = 20, sort: str = "age") -> dict[str, dict]:
+    """Crawl /lst pages and collect distinct professional-dealer slugs with basic
+    location, from each listing's seller.links.infoPage. Returns {slug: {company, zip, city}}."""
+    import time
+    dealers: dict[str, dict] = {}
+    for page in range(1, max_pages + 1):
+        try:
+            req = urllib.request.Request(_lst_url(page, sort), headers={"User-Agent": _UA})
+            with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310
+                html = r.read().decode("utf-8", "replace")
+        except Exception:
+            break
+        data = _next_data(html)
+        listings = _find_listings(data)
+        if not listings:
+            break
+        for raw in listings:
+            seller = raw.get("seller") or {}
+            if seller.get("type") != "Dealer":
+                continue
+            links = seller.get("links") or {}
+            infopage = links.get("infoPage") if isinstance(links, dict) else None
+            slug = _slug_from_infopage(infopage)
+            if slug and slug not in dealers:
+                loc = raw.get("location") or {}
+                dealers[slug] = {"company": seller.get("companyName"),
+                                 "zip": loc.get("zip"), "city": loc.get("city")}
+        time.sleep(0.8)  # polite rate limit
+    return dealers
 
 
 def harvest_dealer(slug: str, max_pages: int = 50) -> DealerHarvest:

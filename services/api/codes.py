@@ -36,9 +36,15 @@ def canonical_key(*, domain: str | None = None, cif: str | None = None,
     if domain:
         d = domain.lower().strip()
         d = re.sub(r"^https?://", "", d)
-        d = re.sub(r"^www\.", "", d).split("/")[0]
-        if d:
-            return f"domain:{d}"
+        d = re.sub(r"^www\.", "", d)
+        d = d.split("?")[0].split("#")[0].rstrip("/")
+        host, _, path = d.partition("/")
+        # A BARE host (the dealer's own domain) is a strong cross-source dedup identity.
+        # A path-bearing URL is almost always an OEM/aggregator portal page
+        # ("hyundai.es/concesionarios/<slug>") shared by many branches — NOT an identity;
+        # fall through to name+address so distinct physical branches stay distinct.
+        if host and not path:
+            return f"domain:{host}"
     if cif:
         return f"cif:{cif.upper().strip()}"
     # A physical point of sale without domain/cif is identified by name + location +

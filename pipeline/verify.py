@@ -24,7 +24,9 @@ async def record_count_verdict(
     over-counts duplicates) does not refute when >=2 independent paths agree."""
     from collections import Counter
 
-    values = [v for v in paths.values() if v is not None]
+    items = [(k, v) for k, v in paths.items() if v is not None]
+    values = [v for _, v in items]
+    primary_path, primary_value = next(iter(paths.items()))
     if len(values) < 2:
         verdict, divergence = "UNVERIFIED", None
     else:
@@ -33,13 +35,16 @@ async def record_count_verdict(
         rivals = [val for val, n in freq.items() if n >= 2 and val != top_val]
         lo, hi = min(values), max(values)
         divergence = (hi - lo) / hi if hi else 0.0
-        if top_n >= 2 and not rivals:
+        # The primary path (what actually landed, e.g. db_ingested) MUST agree with at
+        # least one other path — otherwise a fetched/declared pair could mask real
+        # ingestion loss (collisions/skips). Silent data loss never reads as TRUSTWORTHY.
+        primary_agrees = sum(1 for v in values if v == primary_value) >= 2
+        if top_n >= 2 and not rivals and primary_agrees:
             verdict = "TRUSTWORTHY"
         elif divergence <= tolerance:
             verdict = "TRUSTWORTHY"
         else:
             verdict = "REFUTED"
-    primary_path, primary_value = next(iter(paths.items()))
     await conn.execute(
         """INSERT INTO verification_verdict
              (subject_type, subject_key, claim, primary_value, primary_path,

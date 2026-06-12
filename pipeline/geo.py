@@ -42,6 +42,7 @@ class GeoResolver:
     def __init__(self) -> None:
         self._muni: dict[str, dict[str, str]] = {}     # prov_code -> {muni key: code5}
         self._prov: dict[str, str] = {}                # province key -> code2
+        self._city_global: dict[str, set[tuple[str, str]]] = {}  # muni key -> {(prov, code5)}
 
     def _index_prov(self, name: str, code: str) -> None:
         self._prov.setdefault(_norm(name), code)
@@ -60,13 +61,26 @@ class GeoResolver:
             self._prov.setdefault(k, v)
         for r in await conn.fetch("SELECT code, name, province_code FROM geo_municipality"):
             d = self._muni.setdefault(r["province_code"], {})
-            d.setdefault(_norm(r["name"]), r["code"])
-            d.setdefault(_sorted_key(r["name"]), r["code"])
+            keys = {_norm(r["name"]), _sorted_key(r["name"])}
             for part in re.split(r"[/,]", r["name"]):
                 p = _norm(part)
                 if p:
-                    d.setdefault(p, r["code"])
+                    keys.add(p)
+            for k in keys:
+                d.setdefault(k, r["code"])
+                self._city_global.setdefault(k, set()).add((r["province_code"], r["code"]))
         return self
+
+    def resolve_city_global(self, city: str | None) -> tuple[str | None, str | None]:
+        """Resolve a bare city name to (province_code, municipality_code) only when it
+        maps to exactly one municipality nationally (unambiguous). Else (None, None)."""
+        if not city:
+            return (None, None)
+        hits = self._city_global.get(_norm(city)) or self._city_global.get(_sorted_key(city))
+        if hits and len(hits) == 1:
+            prov, code = next(iter(hits))
+            return (prov, code)
+        return (None, None)
 
     def province_code(self, name_or_code: str | None) -> str | None:
         if not name_or_code:

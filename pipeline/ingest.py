@@ -36,6 +36,10 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
     d = harvest.dealer
     if d is None or not d.province_code:
         return {"error": "no dealer / province", "ingested": 0}
+    # province must be a real Spanish INE province (01-52); a bad postcode (e.g. zip
+    # "89xxx") yields an out-of-range code that would violate the geo FK — skip honestly.
+    if not (d.province_code.isdigit() and "01" <= d.province_code <= "52"):
+        return {"error": f"province {d.province_code} out of Spain range (bad postcode)", "ingested": 0}
 
     muni = geo.municipality_code(d.province_code, d.city)
     code = cdp_code(province_code=d.province_code, domain=d.website, name=d.company_name,

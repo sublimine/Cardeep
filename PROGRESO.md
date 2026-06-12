@@ -122,3 +122,25 @@
 - **Estado vivo: 1.534 entidades + 78 vehículos servidos + 78 eventos de delta.**
 - **Pendiente F3:** fase BORRAR (evicción por capacidad + tombstone) + escalar a más dealers/fuentes.
 
+
+## 2026-06-12 — ESCALADO ORQUESTADO (flota de agentes en paralelo)
+- **Pivote a estándar institucional (orden del owner):** dejé el build artesanal; desplegué
+  workflows + ejércitos de agentes en paralelo. `docs/ORQUESTACION.md` (arquitectura de élite).
+- **WF-DISCOVERY-FLEET** (`wf_1ef5ffa9-470`, 23 agentes): 7 adaptadores OEM construidos +
+  verificados EN VIVO por mi mano (oem_mg/byd/skoda/dacia/hyundai/mercedes/seat). El resto
+  (9 build + 4 Tier-1 + audits) cortados por **límite de sesión de la API** (reset 15:10 Berlin)
+  — bloquea agentes nuevos, NO mi trabajo determinista, que continué solo.
+- **WF-INVENTORY-SCALE (AS24)**: 28 dealers cosechados → +7.466 coches; +5 recuperados tras fix.
+- **2 bugs de raíz cazados y corregidos:** (1) AS24 dealer con postcode "89" → ForeignKey
+  violation → guard provincia 01-52 en ingest (skip honesto, no crash); (2) HTTP 504 transitorio
+  perdía dealers → retry+backoff en fetch_page (auto-reparación).
+- **Bug de diseño del cdp_code cazado (anti-alucinación):** los adaptadores OEM ponían
+  `website = oem.es/concesionarios/{slug}` (página de portal, no dominio propio) → mi clave
+  reducía a `oem.es` → 175 Hyundai colapsaban a 48 códigos. Fix: el dominio solo es identidad
+  si es **host limpio sin path**; URL con path → cae a nombre+municipio+dirección. Hyundai 48→174.
+- **VAM endurecido:** la regla de quórum enmascaraba pérdida de ingesta (fetched=declared ocultaba
+  db<fetched). Ahora `db_ingested` (lo que aterrizó) DEBE concordar con ≥1 vía o es REFUTED.
+- **OSM long-tail:** +3.085 garajes/compraventas geo-localizados (de 10.809; 7.676 perdidos por
+  falta de provincia — POIs sin postcode, pendiente geocoding lat/lon→provincia). VAM REFUTED honesto.
+- **ESTADO VIVO: 5.771 entidades** (garaje 2.291 · concesionario_oficial 1.394 · desguace 1.292 ·
+  compraventa 794) · **9.872 vehículos servibles** · 52/52 provincias · 10 fuentes. Todo VAM por fuente.
