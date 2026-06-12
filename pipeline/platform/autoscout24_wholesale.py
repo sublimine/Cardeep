@@ -36,8 +36,10 @@ from dataclasses import dataclass
 import asyncpg
 
 from pipeline.engine.fetch import FetchEngine
+from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.sources.autoscout24 import (
     Vehicle,
@@ -314,13 +316,31 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
     # This is the like-with-like counterpart to db_edges (raw listing ids include
     # private sellers + cross-page dupes, so they are NOT comparable to edges).
     harvested_cageable: set[tuple[str, str]] = set()
+    # P4 S-HEALTH gate: if AS24's circuit breaker is OPEN (a recent ban/throttle still
+    # cooling), skip the drain gracefully — the API keeps serving the last good snapshot
+    # ("no se cae"). The breaker re-arms to half_open once its cooldown elapses (one probe).
+    if await is_open(conn, AS24_SOURCE_KEY):
+        print(f"[as24_wholesale] breaker OPEN for {AS24_SOURCE_KEY}; skipping drain "
+              f"(graceful degradation, API still serves last snapshot).")
+        await conn.close()
+        return {"skipped": True, "reason": "breaker_open", "source_key": AS24_SOURCE_KEY}
+
+    # P1 GOVERNOR: the single choke point in front of engine.fetch. EVERY page fetch for
+    # this host passes through the per-host token bucket, so no matter how many drains run
+    # in parallel, AS24 is never fetched faster than its bucket (the 4x-scar fix, 04 §5).
+    gov = governor()
+    governed_fetch = gov.wrap_fetch_text(engine.fetch_text)
+
+    fetch_error: str | None = None
+    last_http: int | None = None
     try:
         geo = await GeoResolver.load(conn)
         platform_ulid = await ensure_platform_entity(conn)
         platform_code = as24_platform_cdp_code()
         print(f"[as24_wholesale] platform entity ready: {platform_code} (ulid={platform_ulid})")
+        print(f"[as24_wholesale] governor paces host {host_of(_BASE)} (per-host token bucket).")
         print(f"[as24_wholesale] PROOF SLICE cap = {max_pages} pages "
-              f"(~{max_pages * PAGE_SIZE} cars). NOT the full ~278k set (needs P1 governor).")
+              f"(~{max_pages * PAGE_SIZE} cars). NOT the full ~278k set (full drain = P1 governed).")
 
         seen_listing_ids: set[str] = set()
         # dealers we INSERTED this run (to count new_dealers without a pre-count race)
@@ -330,8 +350,10 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
         for page in range(1, max_pages + 1):
             url = _lst_url(page)
             try:
-                html = engine.fetch_text(url)
+                html = await governed_fetch(url)   # paced by the host bucket, off the event loop
             except Exception as e:  # noqa: BLE001 — throttle/transient: back off, report what we got
+                fetch_error = str(e)
+                last_http = getattr(engine, "last_status", None)
                 print(f"[as24_wholesale] page {page} fetch failed ({e}); stopping drain honestly.")
                 break
             stats["pages_fetched"] += 1
@@ -428,6 +450,23 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
         stats["platform_code"] = platform_code
         stats["platform_ulid"] = platform_ulid
         stats["recipe_path"] = str(recipe_path)
+
+        # P4 S-HEALTH heartbeat: record THIS run's outcome so the watchdog tracks AS24's
+        # health, trips the breaker on a ban, and auto-repairs. A run is OK when at least
+        # one page was fetched and no fetch error stopped the drain; a REFUTED VAM or a
+        # fetch failure is a fail that feeds the breaker + the exact-origin alert.
+        run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
+        run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+        outcome = await record_run(
+            conn, AS24_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
+            error=run_error, http_status=last_http)
+        stats["health_status"] = outcome.status
+        stats["breaker_state"] = outcome.breaker_state
+        if not run_ok:
+            # the failure is typed, alerted with the exact origin, and a repair is logged.
+            stats["repair_action"] = await auto_repair(
+                conn, AS24_SOURCE_KEY, run_error or "harvest failed",
+                phase="scrape", http_status=last_http)
         return stats
     finally:
         await conn.close()
