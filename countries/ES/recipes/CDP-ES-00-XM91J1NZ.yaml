@@ -1,8 +1,16 @@
 # Cardeep extraction recipe — CDP-ES-00-XM91J1NZ
 # Reusable; re-scrape without raw crude.
-version: 2
+version: 3
 source: coches.com
-scope: platform-wholesale (SRP __NEXT_DATA__, per-make partition, 20 cars/req)
+scope: platform-wholesale, MULTI-SEGMENT (vo|km0|vn/catalog|renting|all)
+site_displayed_total: home shows 'más de 230.000 ofertas' — the platform's OWN count across showroom×financing surfaces (seoData[all-provinces] showroom_list sums ~4.28M, proving the multi-count). The REAL captureable sellable inventory is Σ of the segments below.
+segments:
+  vo: /coches-segunda-mano/{make-slug}.htm?page=N · classifieds.total=92,381 · seoData[all-makes] 93-make MECE partition · classified card (dealer+geo)
+  km0: /km0/{make-slug}.htm?page=N · Σ /km0/ brands == popularClassified.total=15,630 · STRUCTURAL TWIN of vo (same card, same per-make SRP, seoData[all-makes]) · deep_link rooted at /km0/ so km0 and vo never collide on (dealer, deep_link)
+  vn: /coches-nuevos/coches-nuevos.htm?page=N · search.total=826 · 20 version OFFERS/page (make/model/version, pvp, discount) · NO dealer -> owned by the PLATFORM entity · PVP->price discount captured as price_drop for delta
+  renting: /renting-coches · totalOffers=8,908 (declared) · SSR exposes specialOffersPunctual/Monthly (dealerId+href+fee) caged as platform-owned; full paginated list is client-XHR -> escalation reserve
+  all: drains vo->km0->vn->renting in SEQUENCE under ONE governor/breaker (one host).
+reconcile: vo 92,381 + km0 15,630 + vn 826 + renting 8,908 = ~117,745 captureable; the gap to the displayed 230,000 is the platform's offer-inflation, not stock.
 engine: curl_cffi+chrome131_impersonate+srp_next_data(GET)+make_partition
 access: FREE path, ZERO proxy (Chrome TLS fingerprint; no browser, no cookie warm-up). Imperva/Incapsula behind CloudFront -> is_tier1=true; serving the SRP __NEXT_DATA__ to chrome131 today (decaying-open window).
 data_surface: next_data

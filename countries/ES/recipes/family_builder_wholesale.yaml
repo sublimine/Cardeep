@@ -1,0 +1,46 @@
+# Cardeep extraction recipe — family_builder_wholesale
+# Reusable; re-scrape without raw crude.
+version: 1
+source: family_builder_wholesale
+family: Hosted site-builder dealer-site family (Wix/Ueni/Google Sites/BaseKit/Squarespace/Duda)
+scope: long-tail dealer OWN-SITE inventory on hosted site builders, by structured-data surface
+engine: curl_cffi+chrome131_impersonate+schema.org-jsonld(GET, server-rendered)
+access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser, no creds). Server-rendered HTML + JSON-LD — no JS execution needed.
+data_surface: schema.org JSON-LD (ItemList/Vehicle/Product) with SSR-card fallback
+fingerprint: Hosted builder spine in HTML: one of ueni, ueniweb, wix.com, wixstatic, parastorage, basekit, squarespace, static1.squarespace, duda, negocio.site, sites.google, googleusercontent, crestanevada.es. Membership is confirmed by the spine; harvest keys on the structured-data surface, not the builder identity.
+listing_paths:
+  - /coches-segunda-mano
+  - /coches-de-ocasion
+  - /coches-ocasion
+  - /coches
+  - /stock-vehiculos
+  - /vehiculos
+  - /vehiculos-ocasion
+  - /ocasion
+  - /compra-venta-vehiculos-ocasion
+  - /nuestros-coches
+  - /stock
+  - /
+page_params:
+  - pagina
+  - page
+  - p
+enumeration: probe ranked listing slugs; on the first yielding structured vehicles, walk ?<page_param>=1..N until a page adds no NEW deep_link (cap max_pages). Note: ueni's ?pagina=N is CUMULATIVE — dedup by deep_link handles it.
+strategies:
+  - 1) schema.org ItemList of Vehicle/Product (ueni custom listing, e.g. crestanevada.es)
+  - 2) standalone schema.org Vehicle/Car/Product JSON-LD blocks
+  - 3) generic SSR card heuristic: same-host anchor paired with a nearby € price
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
+multiplier: ONE recipe + ONE parser harvests EVERY family member that ships the structured surface, with zero per-site selector adaptation. Members with JS-only inventory are recorded honestly as no-SSR-inventory, never faked.
+field_map:
+  deep_link: schema.org offers.url | url (PDP)
+  listing_ref: trailing numeric id in the PDP url, when present
+  make: schema.org brand.name
+  model: schema.org model (or name minus brand)
+  year: productionDate/modelDate/dateVehicleFirstRegistered -> YYYY
+  km: mileageFromOdometer.value
+  price: offers.price (or offers.lowPrice)
+  fuel: fuelType
+  transmission: vehicleTransmission
+  photo_url: image (first)
+verified_live: 2026-06-13: crestanevada.es ships <script id='jsonld-itemlist-listado'> with 24 Vehicle objects/page; ?pagina=N cumulative; ~2450 offers total. wix/squarespace/basekit/google_sites members reachable but JS-only (no SSR inventory) — recorded honestly.

@@ -1,0 +1,43 @@
+# Cardeep extraction recipe — family_generic_custom
+# Reusable; re-scrape without raw crude.
+version: 1
+source: family_generic_custom
+family: Generic / custom (bespoke own-site) dealer family
+scope: long-tail dealer OWN-SITE inventory, bespoke/custom (no shared platform)
+engine: curl_cffi+chrome131_impersonate+html(GET, server-rendered)
+access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser, no creds). Server-rendered HTML — no JS execution needed.
+data_surface: dealer_site_html
+fingerprint: NONE shared — this is the generic/custom family: each dealer is a bespoke site with no detectable platform signal, so membership is by curated registry, not by a single fingerprint. Micro-family 'pymecar' (img.pymecar.com car-card markup) shares ONE parser.
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
+multiplier: architectural: ONE connector spine (cage/governor/health/VAM/delta) drives N per-dealer recipes; within it the 'pymecar' parser already serves multiple dealers (carhay.com + autopai.es).
+members:
+  autofesa.com:
+    listing_path: /coches-segunda-mano
+    pagination: ?page=N until a page yields no new cards
+    parser: parse_autofesa
+    subfamily: custom
+    notes: bespoke vehicle-card__* layout; ?page=N pagination verified live
+  carhay.com:
+    listing_path: /coches-segunda-mano/
+    pagination: single listing page
+    parser: parse_pymecar
+    subfamily: pymecar
+    notes: Pymecar stack (img.pymecar.com); single listing page (AJAX paging)
+  autopai.es:
+    listing_path: /vehiculos-ocasion/
+    pagination: single listing page
+    parser: parse_pymecar
+    subfamily: pymecar
+    notes: Pymecar stack (shares parse_pymecar with carhay.com)
+  arguelles-automoviles.com:
+    listing_path: /coches-segunda-mano.html
+    pagination: single listing page
+    parser: parse_arguelles
+    subfamily: custom
+    notes: bespoke inline-style cards; full inventory on one page
+  frworldcars.com:
+    listing_path: /vehiculos/
+    pagination: single listing page
+    parser: parse_frworldcars
+    subfamily: custom
+    notes: blog-style <article> cards; price embedded in <h3> headline

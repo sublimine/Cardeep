@@ -1,0 +1,46 @@
+# Cardeep extraction recipe — family_cms_wp
+# Reusable; re-scrape without raw crude.
+version: 1
+source: family_cms_wp
+family: WordPress-dominated dealer-site family (CMS long-tail #1)
+scope: long-tail dealer OWN-SITE inventory, harvested by CMS (WordPress) family
+engine: curl_cffi+chrome131_impersonate; Vehica REST JSON, else server-rendered HTML cards
+access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser, no creds). Vehica REST returns full inventory server-side; HTML card themes are server-rendered — no JS execution needed.
+data_surface: dealer_site (vehica_rest_json | wordpress_html_cards)
+fingerprint: WordPress (wp-content / wp-json). Member iff it exposes a car inventory surface: the Vehica plugin REST gateway /wp-json/vehica/v1/cars, OR server-rendered car cards under a ranked listing slug.
+strategy_a_vehica:
+  endpoint: /wp-json/vehica/v1/cars
+  shape: {resultsCount, results:[{id, name, url, slug, attributes:[...]}]}
+  note: returns the WHOLE inventory in one call; no pagination, no JS
+  field_map:
+    deep_link: results[].url
+    listing_ref: results[].id (native Vehica car id)
+    title: results[].name
+    make: attributes[name=Marca].value[0].name
+    model: attributes[name=Modelo].value[0].name
+    year: attributes[name=Año].value (number)
+    km: attributes[name=Kilómetros].value (number)
+    fuel: attributes[name=Combustible].value[0].name
+    price: attributes[name=Precio al contado].value{currency:€amount}
+strategy_b_html_cards:
+  listing_slugs_ranked:
+    - /coches
+    - /vehiculos
+    - /catalogo
+    - /ocasion
+    - /vehiculos-ocasion
+    - /stock
+    - /km0
+    - /seminuevos
+    - /coches-segunda-mano
+    - /coches-ocasion
+    - /coches/segunda-mano
+    - /vehiculos-de-ocasion
+    - /coches-de-ocasion
+  pagination: /page/N/ (or ?paged=N) until a page yields no NEW cards
+  theme_overrides:
+    - ga-car-card
+    - sc_cars_item
+  note: WordPress is theme-VARIED; each theme is ONE override entry (card splitter + field selectors). Adding a theme is one row.
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
+multiplier: ONE recipe + ONE Vehica parser harvests EVERY Vehica dealer (byte-identical JSON); the HTML half adds a thin per-theme selector override so one skeleton serves the volume tail.

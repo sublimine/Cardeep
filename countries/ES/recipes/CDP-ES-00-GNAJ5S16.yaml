@@ -1,0 +1,39 @@
+# Cardeep extraction recipe — CDP-ES-00-GNAJ5S16
+# Reusable; re-scrape without raw crude.
+version: 1
+source: toyota_lexus (toyota.es + lexusauto.es)
+scope: platform-wholesale (Toyota Plus + Lexus Select ES certified-used; USC Web Components JSON API)
+engine: curl_cffi+chrome131_impersonate+usc_internal_json_api(POST)
+access: OPEN (t0_open). USC API behind AWS CloudFront with NO bot WAF — serves 200 application/json to plain curl. chrome131 used only for fleet coherence. No proxy, no browser, no cookie warm-up, no auth, €0. is_tier1=FALSE (no tier-1 WAF).
+data_surface: internal_api
+surface_intent: usc_internal_json_api
+endpoint: POST https://usc-webcomponents.toyota-europe.com/v1/api/usedcars/results/es/es?brand={toyota|lexus}
+request:
+  headers: Content-Type application/json, Accept */*, Origin/Referer toyota.es
+  body: uscEnv=production, filters=[], filterContext=used, offset=ROW cursor, resultCount=page size, sortOrder=published, distributorCode=9424M
+enumeration: PER BRAND: offset=0..totalResultCount step resultCount; brand=toyota (~3274) + brand=lexus (~562). dedup on results[].id (UUID). Stop on offset>=totalResultCount or empty results[].
+denominator: totalResultCount (top-level) == Σ aggregations.usedCarBrand doc_count
+platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_vo_portal, role=platform, family=toyota_lexus_vo
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: constructed {portal_base}/pdp.{slug}-{id} (no url field in payload)
+  listing_ref: results[].id (UUID; stable id + dedup key)
+  vin: results[].vin (REAL per-car VIN — gold for cross-source dedup)
+  make: results[].product.brand.description
+  model: results[].product.model.description
+  version: results[].product.versionName
+  year: results[].product.modelYear (fallback history.registrationDate[:4])
+  km: results[].mileage.value
+  price: results[].price.sellingPriceInclVAT (currencyCode=EUR)
+  fuel: results[].product.engine.marketingFuelType.description (fallback displayFuelType)
+  transmission: results[].product.transmission.transmissionType.description
+  photo: results[].images[0].url (protocol-relative -> https)
+  dealer: results[].dealer {id, name, address{city,zip,region}, geoLocation{lat,lon}, website, phone}
+  location: dealer.address.zip[:2] = INE province (authoritative); dealer.geoLocation lat/lon -> ProvinceGeocoder fallback; dealer.address.city -> municipality (INE-resolved, best-effort)
+caveats:
+  page_size: body `resultCount` IS the page size (SPA sends 11; API honours >=100).
+  offset: `offset` is a ROW offset, not a page index — offset += resultCount.
+  brand_scope: ?brand=toyota returns the whole network incl. non-Toyota trade-ins (cage all).
+  encoding: brand/dealer/city/colour text is latin-1 mojibake (autom�tico, LA CORU�A); repair with s.encode('latin-1').decode('utf-8'). id/vin/numeric clean.
+  no_pdp_url: no PDP url in payload — constructed from id + slug fields.
+  no_private_sellers: OEM certified-used portal — every car belongs to an official dealer.

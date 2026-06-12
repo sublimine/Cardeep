@@ -51,8 +51,21 @@ the per-host governor (the SAME single choke point AS24/coches use). The synchro
 curl_cffi GET runs in a worker thread so the event loop is never blocked, and no host is
 fetched faster than its bucket.
 
+SEGMENTS (--segment {all|vo|km0|vn|catalog|renting}). motor.es exposes more than the used
+census; ONE command drains every segment through the SAME cage contract:
+  vo      USED census  /segunda-mano/{make}/{model}/   ~50,932 (get-data-ajax data.total)
+  km0     km0/seminuevos /coches-km0/                   ~5,594  — SUBSET of vo (same anuncio PDP)
+  vn      NEW offers   /coches-nuevos/ofertas/          ~476    — /{make}/{model}/ catalog offers
+  catalog NEW catalog  /coches-nuevos/                  ~450    — full configurator (⊃ vn)
+  renting renting      /renting/                        ~132    — catalog-shaped offers
+The site headline IS the ~50.9k used census (km0 INCLUDED); motor.es shows no 230k-style
+inflated figure. vo/km0 are the CARD+PDP family (dealer-owned cars); vn/catalog/renting are
+the OFFER family (platform-owned catalog offers, km=NULL — no individual id/km/dealer).
+
 Run (bounded proof):  python -m pipeline.platform.motor_es_wholesale --max-cells 6 --limit 10000
-Run (FULL ~51k):      python -m pipeline.platform.motor_es_wholesale --full
+Run (FULL ~51k used): python -m pipeline.platform.motor_es_wholesale --full
+Run (ALL segments):   python -m pipeline.platform.motor_es_wholesale --segment all --full
+Run (new-car proof):  python -m pipeline.platform.motor_es_wholesale --segment vn --max-cells 3
 """
 from __future__ import annotations
 
@@ -131,6 +144,95 @@ LEAF_MAX = CAP_PAGES * CARDS_PER_PAGE  # 1,100 — a facet bigger than this is s
 # --max-cells and --limit. --full drops both caps and drains every cell (the ~51k census).
 DEFAULT_MAX_CELLS = 6
 DEFAULT_LIMIT = 10000
+
+# ---------------------------------------------------------------------------
+# SEGMENT MAP — every inventory segment motor.es exposes, with its real surface
+# (recipe motor_es_datalayer.md + read-only probes verified live 2026-06-13).
+#
+# Reconciliation of motor.es's own displayed numbers:
+#   - VO used      /segunda-mano/{make}/{model}/   -> get-data-ajax data.total = 50,932
+#                                                      (landing headline "50.769 coches disponibles")
+#   - km0          /coches-km0/                     -> "5.594 coches" — but PROVEN A SUBSET of the
+#                                                      VO census: a km0 id (23564668, EBRO S700) is
+#                                                      present in the VO facet /segunda-mano/ebro/s700/.
+#                                                      km0 PDPs are the SAME /segunda-mano/anuncio/{id}/.
+#                                                      So VO already drains every km0 car; the km0
+#                                                      segment is a CONVENIENCE filter, not additive.
+#   - VN offers    /coches-nuevos/ofertas/          -> "476 coches encontrados" — new-car OFFERS, each
+#                                                      a /{make}/{model}/ catalog page (@type:Car +
+#                                                      offers.price). No individual id/km/dealer.
+#   - VN catalog   /coches-nuevos/                  -> "450 modelos" — the full new-car configurator
+#                                                      catalog (make x model x version). Superset of
+#                                                      ofertas; same /{make}/{model}/ offer pages.
+#   - renting      /renting/                        -> "132 coches encontrados" — renting offers,
+#                                                      catalog-shaped (no individual stock cards).
+#
+# motor.es does NOT display a 230k-style inflated figure: its headline IS the ~50.9k used census
+# (km0 included). The full sellable surface = ~50,932 individual (VO+km0) + ~476 new offers
+# + ~132 renting + the 450-model new catalog.
+#
+# Two FAMILIES of surface, two ingest paths:
+#   FAMILY "facet"  (vo, km0): SSR <article> cards -> /segunda-mano/anuncio/{id}/ PDP. Reuses the
+#                              ENTIRE existing card+PDP cage (dealer attribution, vehicle, edge).
+#   FAMILY "offer"  (vn, catalog, renting): /{make}/{model}/ catalog offer pages (@type:Car +
+#                              offers.price, NO id/km/dealer). Caged as platform-owned catalog
+#                              offers (km=NULL, no concesionario dealer).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SegmentSpec:
+    """One drainable inventory segment of motor.es."""
+    key: str                 # cli value
+    family: str              # 'facet' (card+PDP) or 'offer' (catalog page)
+    list_root: str           # the segment's listing root path (under _BASE)
+    facet_prefix: str        # path prefix for make/model facet cells ('' or 'coches-km0')
+    displayed_count: int     # the segment's own on-site counter (verified live)
+    subset_of_vo: bool       # True if its cars are already inside the VO census
+    note: str
+
+
+# facet_prefix '' means cells are '/segunda-mano/{make}/{model}'. A non-empty prefix means the
+# segment is its OWN listing root that paginates the same SSR card surface (km0 verified live).
+SEGMENTS: dict[str, SegmentSpec] = {
+    "vo": SegmentSpec("vo", "facet", LIST_PATH, "", 50932, False,
+                      "used-car census; make->model MECE partition (the original drain)"),
+    "km0": SegmentSpec("km0", "facet", "/coches-km0/", "coches-km0", 5594, True,
+                       "km0/seminuevos; SAME anuncio PDP namespace — a SUBSET of the VO census"),
+    "vn": SegmentSpec("vn", "offer", "/coches-nuevos/ofertas/", "", 476, False,
+                      "new-car OFFERS; /{make}/{model}/ catalog pages with offers.price"),
+    "catalog": SegmentSpec("catalog", "offer", "/coches-nuevos/", "", 450, False,
+                           "full new-car CATALOG (450 models); superset of vn offers"),
+    "renting": SegmentSpec("renting", "offer", "/renting/", "", 132, False,
+                           "renting offers; catalog-shaped (/{make}/{model}/)"),
+}
+SEGMENT_CHOICES = ["all", *SEGMENTS.keys()]
+
+# Editorial/non-vehicle first-path slugs to exclude when harvesting /{make}/{model}/ offer links.
+_OFFER_SECTION_BLOCKLIST = frozenset({
+    "noticias", "formula-1", "pruebas-coches", "coches-nuevos", "segunda-mano", "coches-km0",
+    "coches-electricos", "energia", "motos", "feed", "renting", "equipo", "favoritos",
+    "contacto-motorpuntoes", "videos", "diccionario", "fichas-tecnicas", "tasar-coche",
+    "comparador", "marcas", "concesionarios",
+})
+_OFFER_MODEL_BLOCKLIST = frozenset({"medidas", "noticias", "ofertas", "opiniones", "fotos"})
+
+# An /{make}/{model}/ offer link on the new-car / renting surfaces.
+_OFFER_LINK_RE = re.compile(
+    r'href="https://www\.motor\.es/([a-z0-9\-]+)/([a-z0-9\-]+)/?"')
+
+
+def resolve_segments(arg: str) -> list[SegmentSpec]:
+    """Map the --segment cli value to the ordered list of SegmentSpecs to drain.
+    'all' = every additive segment (vo + vn offers + renting). km0 and catalog are
+    redundant-by-default (km0 ⊂ vo; catalog ⊃ vn) so 'all' skips them to avoid
+    re-draining the same cars — request them explicitly when wanted."""
+    if arg == "all":
+        return [SEGMENTS["vo"], SEGMENTS["vn"], SEGMENTS["renting"]]
+    spec = SEGMENTS.get(arg)
+    if spec is None:
+        raise ValueError(f"unknown segment '{arg}'; choose from {SEGMENT_CHOICES}")
+    return [spec]
 
 # Regex spine over the SSR card HTML (recipe SURFACE A; field names inspected live).
 _CARD_RE = re.compile(
@@ -451,6 +553,15 @@ MOTOR_PLATFORM_RECIPE = {
         "dealer_identity": "PDP /concesionarios/{provincia}/{slug}/ (stable per-dealer key)",
         "location": "card lugar 'City (Province)' -> city + province (INE-resolved)",
     },
+    "segments": {
+        "vo": "USED census /segunda-mano/{make}/{model}/ -> ~50,932 (get-data-ajax data.total; landing '50.769 coches'). make->model card+PDP cage.",
+        "km0": "/coches-km0/{make}/{model}/ -> ~5,594. SAME /segunda-mano/anuncio/{id}/ PDP namespace; PROVEN A SUBSET of vo (km0 id 23564668 EBRO S700 present in /segunda-mano/ebro/s700/). Redundant with vo.",
+        "vn": "NEW-car OFFERS /coches-nuevos/ofertas/ -> ~476 'coches encontrados'. Each a /{make}/{model}/ catalog page (@type:Car + offers.price). No id/km/dealer -> caged as platform-owned catalog offers.",
+        "catalog": "FULL new-car CATALOG /coches-nuevos/ -> ~450 modelos (configurator make x model x version). Superset of vn offers; same /{make}/{model}/ offer pages.",
+        "renting": "RENTING offers /renting/ -> ~132 'coches encontrados'. Catalog-shaped (/{make}/{model}/). Caged as platform-owned offers.",
+        "reconciliation": "Site headline = the ~50.9k used census (km0 INCLUDED). NO 230k-style inflated figure shown. Full sellable surface = ~50,932 individual (vo, km0 within) + ~476 new offers + ~132 renting + the 450-model new catalog.",
+        "cli": "--segment {all|vo|km0|vn|catalog|renting}. 'all' = vo+vn+renting (additive union; skips km0 ⊂ vo and catalog ⊃ vn).",
+    },
     "caveats": {
         "page_cap": "HARD 50-page cap per facet (madrid ?pagina=51 -> 404). Flat drain reaches only ~1,150/50,932.",
         "query_filters_ignored": "?precio_hasta=/?anio_desde= are IGNORED; only PATH facets filter. Partition MUST be path-based.",
@@ -458,6 +569,8 @@ MOTOR_PLATFORM_RECIPE = {
         "card_dealer": "SSR card carries NO dealer name/id -> dealer attribution REQUIRES the PDP.",
         "ajax_paginator": "get-data-ajax is a frozen 10-row seed; used for the denominator + taxonomy, NOT pagination.",
         "promo_card": "23 <article> blocks/page; the 23rd is a 'tasacion' promo with no data-id (dropped by parse_card).",
+        "km0_subset": "km0 is a sub-FILTER of the used census, not additive stock — vo already drains every km0 car.",
+        "offer_no_dealer": "vn/catalog/renting offer pages carry NO individual id/km/selling dealer -> caged as platform-owned catalog offers (km=NULL).",
     },
 }
 
@@ -794,16 +907,52 @@ async def _declared_total(governed_fetch) -> int | None:
         return None
 
 
-async def _facet(fetcher: "MotorFetcher", governed_fetch, path: str) -> tuple[int | None, str]:
+def _facet_url(seg: SegmentSpec, path: str) -> str:
+    """The listing url for a make[/model] facet cell within a segment.
+
+    VO uses the bare /segunda-mano/{make}/{model}/ facets (facet_prefix=''). A prefixed
+    segment (km0) paginates its OWN listing root over the same SSR card surface, but is
+    still partitioned by make/model: /coches-km0/{make}/{model}/ (verified live: the km0
+    root, /coches-km0/ebro/ and ?pagina=N all serve elemento-segunda-mano cards)."""
+    if seg.facet_prefix:
+        return f"{_BASE}/{seg.facet_prefix}/{path}/" if path else f"{_BASE}{seg.list_root}"
+    return f"{_BASE}/segunda-mano/{path}/"
+
+
+async def _facet(fetcher: "MotorFetcher", governed_fetch, seg: SegmentSpec,
+                 path: str) -> tuple[int | None, str]:
     """GET a facet listing; return (its own result total, its HTML). One warm GET per facet,
     leased on a pool slot through the governor."""
-    body = await fetcher.fetch_async(governed_fetch, f"{_BASE}/segunda-mano/{path}/",
+    body = await fetcher.fetch_async(governed_fetch, _facet_url(seg, path),
                                      headers=_LIST_HEADERS)
     return _facet_total(body), body
 
 
-async def build_cells(fetcher: "MotorFetcher", governed_fetch, stats: dict) -> list[str]:
-    """Enumerate the MECE partition cells (recipe Vector 5).
+def _segment_makes(seg: SegmentSpec, root_html: str) -> list[str]:
+    """The 1-seg make slugs for a facet segment, harvested from its listing root sidebar.
+    For VO/km0 the sidebar enumerates make + province slugs; provinces are filtered out."""
+    if seg.facet_prefix:
+        # km0 root: make slugs appear as /coches-km0/{make}/ links.
+        slugs = set(re.findall(
+            rf'href="https://www\.motor\.es/{re.escape(seg.facet_prefix)}/([a-z0-9-]+)/"',
+            root_html))
+    else:
+        slugs = set(_ONE_SEG_RE.findall(root_html))
+    return sorted(x for x in slugs if x not in PROVINCE_SLUGS)
+
+
+def _segment_sub_slugs(seg: SegmentSpec, make: str, make_html: str) -> list[str]:
+    """Model sub-slugs under a make page for a facet segment (provinces filtered)."""
+    prefix = seg.facet_prefix or "segunda-mano"
+    subs = set(re.findall(
+        rf'href="https://www\.motor\.es/{re.escape(prefix)}/{re.escape(make)}/([a-z0-9-]+)/"',
+        make_html))
+    return sorted(s for s in subs if s not in PROVINCE_SLUGS)
+
+
+async def build_cells(fetcher: "MotorFetcher", governed_fetch, seg: SegmentSpec,
+                      stats: dict) -> list[str]:
+    """Enumerate the MECE partition cells for a FACET segment (recipe Vector 5).
 
     1) makes = 1-seg sidebar slugs that are NOT provinces.
     2) For each make: read its total.
@@ -812,23 +961,26 @@ async def build_cells(fetcher: "MotorFetcher", governed_fetch, stats: dict) -> l
                                STILL > LEAF_MAX, add the province 3rd level (one cell/province).
     Returns the ordered list of leaf paths to drain. Every leaf stays under the 50-page cap,
     and make->model is MECE, so the union of cells = the full census. (Pure enumeration —
-    drained identically by the bounded proof and the --full run; only the count differs.)"""
-    root = await fetcher.fetch_async(governed_fetch, f"{_BASE}{LIST_PATH}", headers=_LIST_HEADERS)
-    all_1seg = sorted(set(_ONE_SEG_RE.findall(root)))
-    makes = [x for x in all_1seg if x not in PROVINCE_SLUGS]
+    drained identically by the bounded proof and the --full run; only the count differs.)
+
+    The same machinery serves VO (/segunda-mano/{make}/{model}) and km0
+    (/coches-km0/{make}/{model}) — only the listing root / facet prefix differ."""
+    root = await fetcher.fetch_async(governed_fetch, f"{_BASE}{seg.list_root}",
+                                     headers=_LIST_HEADERS)
+    makes = _segment_makes(seg, root)
     stats["makes_discovered"] = len(makes)
 
     cells: list[str] = []
     for make in makes:
-        total, body = await _facet(fetcher, governed_fetch, make)
+        total, body = await _facet(fetcher, governed_fetch, seg, make)
         if total is None:
             continue
         if total <= LEAF_MAX:
             cells.append(make)
             continue
         # split by model
-        for model in _sub_slugs(make, body):
-            mtotal, mbody = await _facet(fetcher, governed_fetch, f"{make}/{model}")
+        for model in _segment_sub_slugs(seg, make, body):
+            mtotal, mbody = await _facet(fetcher, governed_fetch, seg, f"{make}/{model}")
             if mtotal is None:
                 # unknown total: still drain the leaf (≤50 pages bounds it)
                 cells.append(f"{make}/{model}")
@@ -843,7 +995,7 @@ async def build_cells(fetcher: "MotorFetcher", governed_fetch, stats: dict) -> l
     return cells
 
 
-async def drain_cell(fetcher: "MotorFetcher", governed_fetch, path: str,
+async def drain_cell(fetcher: "MotorFetcher", governed_fetch, seg: SegmentSpec, path: str,
                      seen_ids: set[str], stats: dict) -> list[CardRef]:
     """Drain ONE partition cell: ?pagina=1..min(50, ceil(total/22)). Parse each page's cards,
     dedup on data-id ACROSS cells (the recipe's drift/overlap absorber). Returns the NEW
@@ -852,8 +1004,9 @@ async def drain_cell(fetcher: "MotorFetcher", governed_fetch, path: str,
     Listing pages are read IN ORDER (a sequential walk is required to detect the cell's last
     page / the 50-cap 404 cleanly), each through the governor on a leased pool slot."""
     new_cards: list[CardRef] = []
+    base = _facet_url(seg, path).rstrip("/")
     for p in range(1, CAP_PAGES + 1):
-        url = f"{_BASE}/segunda-mano/{path}/" + (f"?pagina={p}" if p > 1 else "")
+        url = base + "/" + (f"?pagina={p}" if p > 1 else "")
         try:
             html = await fetcher.fetch_async(governed_fetch, url, headers=_LIST_HEADERS)
         except Exception:  # noqa: BLE001 — a 404 past the cell's last page ends it cleanly
@@ -872,19 +1025,350 @@ async def drain_cell(fetcher: "MotorFetcher", governed_fetch, path: str,
     return new_cards
 
 
+# ---------------------------------------------------------------------------
+# OFFER family (vn / catalog / renting): the /{make}/{model}/ catalog offer surface.
+# These pages carry @type:Car + offers.price but NO individual data-id, km, or selling
+# concesionario. They are MODEL offers, not stock. We cage each as a platform-owned catalog
+# offer (vehicle.entity_ulid = the platform itself), km=NULL, deep_link = the offer url, so
+# the same delta/edge/VAM contract holds with zero schema change.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class OfferRef:
+    """One new-car / renting catalog offer parsed from a /{make}/{model}/ page."""
+    make_slug: str
+    model_slug: str
+    url: str
+    make: str | None
+    model: str | None
+    title: str | None
+    price: float | None
+    fuel: str | None
+    photo_url: str | None
+
+
+def _enumerate_offer_links(html: str) -> list[tuple[str, str]]:
+    """Distinct /{make}/{model}/ offer pairs on an offer-segment listing (editorial/section
+    slugs filtered). Order-preserving (dict.fromkeys) so the proof drains a stable prefix."""
+    out: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for mk, md in _OFFER_LINK_RE.findall(html):
+        if mk in _OFFER_SECTION_BLOCKLIST or md in _OFFER_MODEL_BLOCKLIST:
+            continue
+        if md.endswith(".html"):
+            continue
+        key = (mk, md)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(key)
+    return out
+
+
+def parse_offer(html: str, make_slug: str, model_slug: str, url: str) -> OfferRef | None:
+    """Parse a /{make}/{model}/ catalog offer page (@type:Car block, with @type:Product as a
+    price fallback). Returns None if no Car/Product block is present (not an offer page)."""
+    car = _ld_car_block(html)
+    prod = None
+    if car is None:
+        for raw in _LDJSON_RE.findall(html):
+            try:
+                d = json.loads(raw)
+            except Exception:  # noqa: BLE001
+                continue
+            if d.get("@type") == "Product":
+                prod = d
+                break
+    src = car or prod
+    if src is None:
+        return None
+    brand = src.get("brand") or {}
+    make = brand.get("name") if isinstance(brand, dict) else (brand or None)
+    model = src.get("model")
+    if isinstance(model, dict):
+        model = model.get("name")
+    offers = src.get("offers") or {}
+    price = None
+    if isinstance(offers, dict):
+        for key in ("price", "lowPrice", "lowprice"):
+            if offers.get(key) is not None:
+                try:
+                    price = float(offers[key])
+                    break
+                except (TypeError, ValueError):
+                    price = None
+    image = src.get("image")
+    if isinstance(image, list):
+        image = image[0] if image else None
+    if isinstance(image, dict):
+        image = image.get("url")
+    return OfferRef(
+        make_slug=make_slug, model_slug=model_slug, url=url,
+        make=make, model=model, title=src.get("name"), price=price,
+        fuel=car.get("fuelType") if car else None,
+        photo_url=image if isinstance(image, str) else None,
+    )
+
+
+_BULK_INSERT_OFFER_VEHICLES = """
+INSERT INTO vehicle (vehicle_ulid, entity_ulid, deep_link, title, make, model,
+        year, km, price, fuel, transmission, photo_url, vin_ref, status)
+SELECT u.vehicle_ulid, $9, u.deep_link, u.title, u.make, u.model,
+       NULL, NULL, u.price, u.fuel, NULL, u.photo_url, NULL, 'available'
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[],
+              $6::numeric[], $7::text[], $8::text[])
+       AS u(vehicle_ulid, deep_link, title, make, model, price, fuel, photo_url)
+ON CONFLICT (entity_ulid, deep_link) DO NOTHING
+"""
+
+
+async def _ingest_offers(conn: asyncpg.Connection, platform_ulid: str,
+                         offers: list[OfferRef], stats: dict) -> None:
+    """BULK-cage one OFFER segment's catalog offers, all OWNED BY the platform itself
+    (vehicle.entity_ulid = platform_ulid), km=NULL. Same edge/delta/idempotency contract as
+    the facet path: ON CONFLICT (entity_ulid, deep_link) makes a re-run add 0 rows/events."""
+    if not offers:
+        return
+    # dedup within this run by url (the stable offer key)
+    uniq: dict[str, OfferRef] = {}
+    for o in offers:
+        uniq.setdefault(o.url, o)
+    links = list(uniq.keys())
+
+    async with conn.transaction():
+        existing = {
+            row["deep_link"]: row["vehicle_ulid"]
+            for row in await conn.fetch(
+                """SELECT vehicle_ulid, deep_link FROM vehicle
+                   WHERE entity_ulid = $1 AND deep_link = ANY($2::text[])""",
+                platform_ulid, links)
+        }
+        vehicle_ulid_for: dict[str, str] = {}
+        new_links: list[str] = []
+        touch_ulids: list[str] = []
+        for url in links:
+            ex = existing.get(url)
+            if ex is not None:
+                vehicle_ulid_for[url] = ex
+                touch_ulids.append(ex)
+            else:
+                vid = ulid()
+                vehicle_ulid_for[url] = vid
+                new_links.append(url)
+
+        if touch_ulids:
+            await conn.execute(_BULK_TOUCH_VEHICLES, touch_ulids)
+
+        confirmed_new: list[str] = []
+        if new_links:
+            await conn.execute(
+                _BULK_INSERT_OFFER_VEHICLES,
+                [vehicle_ulid_for[u] for u in new_links], new_links,
+                [uniq[u].title for u in new_links], [uniq[u].make for u in new_links],
+                [uniq[u].model for u in new_links], [uniq[u].price for u in new_links],
+                [uniq[u].fuel for u in new_links], [uniq[u].photo_url for u in new_links],
+                platform_ulid)
+            landed = {
+                row["deep_link"]: row["vehicle_ulid"]
+                for row in await conn.fetch(
+                    """SELECT vehicle_ulid, deep_link FROM vehicle
+                       WHERE vehicle_ulid = ANY($1::text[])""",
+                    [vehicle_ulid_for[u] for u in new_links])
+            }
+            for u in new_links:
+                real = landed.get(u)
+                if real is not None and real == vehicle_ulid_for[u]:
+                    confirmed_new.append(u)
+                elif real is not None:
+                    vehicle_ulid_for[u] = real
+                else:
+                    row = await conn.fetchrow(
+                        "SELECT vehicle_ulid FROM vehicle WHERE entity_ulid=$1 AND deep_link=$2",
+                        platform_ulid, u)
+                    if row is not None:
+                        vehicle_ulid_for[u] = row["vehicle_ulid"]
+
+        stats["cars_caged"] += len(links)
+        stats["new_cars"] += len(confirmed_new)
+
+        # EDGES: platform_listing offer<->platform (listing_ref = make/model slug pair).
+        e_vehicles = [vehicle_ulid_for[u] for u in links]
+        e_urls = links
+        e_refs = [f"{uniq[u].make_slug}/{uniq[u].model_slug}" for u in links]
+        e_prices = [uniq[u].price for u in links]
+        edge_rows = await conn.fetch(_BULK_UPSERT_EDGES, e_vehicles, e_urls, e_refs,
+                                     e_prices, platform_ulid)
+        stats["edges_created"] += sum(1 for row in edge_rows if row["inserted"])
+
+        if confirmed_new:
+            ev_ulids, ev_vehicles, ev_entities, ev_payloads = [], [], [], []
+            for u in confirmed_new:
+                o = uniq[u]
+                ev_ulids.append(ulid())
+                ev_vehicles.append(vehicle_ulid_for[u])
+                ev_entities.append(platform_ulid)
+                ev_payloads.append(json.dumps(
+                    {"price": o.price, "title": o.title, "platform": MOTOR_TRADE_NAME,
+                     "segment": "offer"}))
+            await conn.execute(_BULK_INSERT_EVENTS, ev_ulids, ev_vehicles, ev_entities,
+                               ev_payloads)
+            stats["new_events"] += len(confirmed_new)
+
+
+async def harvest_offers(fetcher: "MotorFetcher", governed_fetch, conn: asyncpg.Connection,
+                         platform_ulid: str, seg: SegmentSpec, *, full: bool,
+                         max_cells: int, limit: int,
+                         harvested_cageable: set[tuple[str, str]], stats: dict) -> None:
+    """Drain an OFFER segment (vn / catalog / renting): enumerate its /{make}/{model}/ offer
+    links from the listing root, fetch each offer page CONCURRENTLY, parse @type:Car offers,
+    and cage them as platform-owned catalog offers. Bounded by --max-cells/--limit in proof
+    mode (here a 'cell' = one offer page), uncapped with --full.
+
+    Offer keys are added to the shared harvested_cageable set (as ('offer:{platform}', url))
+    so the VAM quorum stays like-with-like: every caged car — facet dealer-car OR catalog
+    offer — counts toward the same harvest-truth denominator the db_edges path measures."""
+    root = await fetcher.fetch_async(governed_fetch, f"{_BASE}{seg.list_root}",
+                                     headers=_LIST_HEADERS)
+    pairs = _enumerate_offer_links(root)
+    stats["offer_links_found"] += len(pairs)
+    if not full:
+        pairs = pairs[:max(0, max_cells)]
+    print(f"[motor_es_wholesale] segment '{seg.key}' (offer): {len(pairs)} offer pages to drain "
+          f"(displayed_count={seg.displayed_count}).")
+
+    pages = await asyncio.gather(
+        *(fetcher.fetch_async(governed_fetch, f"{_BASE}/{mk}/{md}/", headers=_LIST_HEADERS)
+          for mk, md in pairs),
+        return_exceptions=True,
+    )
+    offers: list[OfferRef] = []
+    for (mk, md), page in zip(pairs, pages):
+        if isinstance(page, Exception):
+            stats["pdp_failed"] += 1
+            continue
+        stats["pdp_fetched"] += 1
+        off = parse_offer(page, mk, md, f"{_BASE}/{mk}/{md}/")
+        if off is None:
+            stats["no_dealer_skipped"] += 1
+            continue
+        offers.append(off)
+        harvested_cageable.add((f"offer:{platform_ulid}", off.url))
+        if not full and len(offers) >= limit:
+            break
+    await _ingest_offers(conn, platform_ulid, offers, stats)
+    print(f"[motor_es_wholesale] segment '{seg.key}': offers caged={len(offers)} "
+          f"caged_total={stats['cars_caged']} edges={stats['edges_created']}")
+
+
+async def _harvest_facet_segment(
+        fetcher: "MotorFetcher", governed_fetch, conn: asyncpg.Connection, geo: "GeoResolver",
+        platform_ulid: str, seg: SegmentSpec, *, full: bool, max_cells: int, limit: int,
+        seen_ids: set[str], harvested_cageable: set[tuple[str, str]],
+        stats: dict) -> tuple[str | None, int | None]:
+    """Drain a FACET segment (vo / km0): enumerate its make->model MECE partition, drain each
+    cell's SSR cards, PDP-enrich for the selling dealer, and bulk-cage. VO and km0 share this
+    EXACT path (km0 PDPs are the same /segunda-mano/anuncio/{id}/ namespace). Returns
+    (fetch_error, last_http). km0 cars are a SUBSET of the VO census, so seen_ids is shared
+    across segments in one run to dedup a car drained under both."""
+    fetch_error: str | None = None
+    last_http: int | None = None
+    try:
+        cells = await build_cells(fetcher, governed_fetch, seg, stats)
+    except Exception as e:  # noqa: BLE001 — taxonomy fetch failed: stop honestly
+        print(f"[motor_es_wholesale] segment '{seg.key}' enumeration failed ({e}); skipping.")
+        return str(e), fetcher.last_status
+
+    cells_to_drain = cells if full else cells[:max(0, max_cells)]
+    mode = "FULL" if full else "PROOF"
+    print(f"[motor_es_wholesale] segment '{seg.key}' (facet) {mode}: draining "
+          f"{len(cells_to_drain)} of {len(cells)} cells (displayed_count={seg.displayed_count}).")
+
+    for path in cells_to_drain:
+        if not full and len(harvested_cageable) >= limit:
+            break
+        try:
+            new_cards = await drain_cell(fetcher, governed_fetch, seg, path, seen_ids, stats)
+        except Exception as e:  # noqa: BLE001 — a cell-level fetch error stops honestly
+            fetch_error = str(e)
+            last_http = fetcher.last_status
+            print(f"[motor_es_wholesale] cell '{path}' fetch failed ({e}); stopping segment.")
+            break
+        stats["cells_drained"] += 1
+
+        # ENRICH the cell's NEW cards CONCURRENTLY: the dealer identity lives ONLY on the PDP,
+        # so each card needs one PDP GET. Fan out across the pool (the governor's bucket bounds
+        # the aggregate rate), then parse+resolve IN CARD ORDER so dedup/stats stay
+        # deterministic. A failed PDP is skipped, never fatal. The cell ingests in ONE txn.
+        pdp_results = await asyncio.gather(
+            *(fetcher.fetch_async(governed_fetch, c.pdp_url, headers=_LIST_HEADERS)
+              for c in new_cards),
+            return_exceptions=True,
+        )
+        cage: list[_CageRow] = []
+        stop = False
+        for card, pdp_html in zip(new_cards, pdp_results):
+            if isinstance(pdp_html, Exception):  # one bad PDP must not stop the drain
+                stats["pdp_failed"] += 1
+                last_http = fetcher.last_status
+                continue
+            stats["pdp_fetched"] += 1
+
+            d = parse_pdp_dealer(pdp_html, card)
+            if d is None:
+                stats["no_dealer_skipped"] += 1
+                continue
+            # Resolve the dealer province: prefer the card's parenthetical province name
+            # (the dealer's selling location); fall back to the concesionario path slug.
+            prov = geo.province_code(card.province_name) or geo.province_code(d.prov_slug)
+            if not prov or not (prov.isdigit() and "01" <= prov <= "52"):
+                stats["geo_skipped"] += 1
+                continue
+            d.province_code = prov
+            muni = geo.municipality_code(prov, d.city)
+            dealer_cdp = cdp_code_dealer(d, muni)
+
+            v = parse_pdp_vehicle(pdp_html, card)
+            if not v.deep_link:
+                continue
+            dealer_ref = f"{d.prov_slug}/{d.slug}"
+            harvested_cageable.add((dealer_ref, v.deep_link))
+            cage.append(_CageRow(
+                dealer_ref=dealer_ref, dealer_cdp=dealer_cdp, dealer_name=d.name,
+                dealer_province=prov, dealer_muni=muni, vehicle=v))
+
+            if not full and len(harvested_cageable) >= limit:
+                print(f"[motor_es_wholesale] reached --limit {limit} cars; "
+                      f"finishing this cell's ingest then stopping.")
+                stop = True
+                break
+
+        # BULK-ingest the whole cell in ONE transaction (set-based SQL, full contract).
+        await _ingest_cell(conn, platform_ulid, cage, stats)
+        print(f"[motor_es_wholesale] cell '{seg.key}:{path}': new_cards={len(new_cards)} "
+              f"caged_total={stats['cars_caged']} edges={stats['edges_created']} "
+              f"pdp_fail={stats['pdp_failed']}")
+        if stop:
+            break
+    return fetch_error, last_http
+
+
 async def harvest(max_cells: int = DEFAULT_MAX_CELLS, limit: int = DEFAULT_LIMIT,
                   full: bool = False, concurrency: int = DEFAULT_CONCURRENCY,
-                  rate_per_sec: float = 3.0) -> dict:
+                  rate_per_sec: float = 3.0, segment: str = "vo") -> dict:
     conn = await asyncpg.connect(DSN)
     concurrency = max(1, concurrency)
     fetcher = MotorFetcher(pool_size=concurrency)  # one coherent session per concurrency slot
+    segments = resolve_segments(segment)
     stats = {
         "makes_discovered": 0, "cells_enumerated": 0, "province_split_leaves": 0,
         "cells_drained": 0, "pages_fetched": 0, "cards_seen": 0, "pdp_fetched": 0,
         "pdp_failed": 0, "no_dealer_skipped": 0, "geo_skipped": 0, "new_dealers": 0,
         "cars_caged": 0, "new_cars": 0, "edges_created": 0, "new_events": 0,
         "declared_full": None, "dup_ids_collapsed": 0, "dealers_distinct": 0,
+        "offer_links_found": 0,
         "full": full, "concurrency": concurrency,
+        "segment_arg": segment, "segments_run": [s.key for s in segments],
     }
     # Harvest-side truth for the VAM: distinct CAGEABLE cars = distinct (dealer-slug,
     # deep_link) pairs that survived dealer-parse + geo-resolution. Like-with-like vs
@@ -915,97 +1399,37 @@ async def harvest(max_cells: int = DEFAULT_MAX_CELLS, limit: int = DEFAULT_LIMIT
         platform_code = motor_platform_cdp_code()
         print(f"[motor_es_wholesale] platform entity ready: {platform_code} (ulid={platform_ulid})")
         print(f"[motor_es_wholesale] governor paces host {host_of(_BASE)} (per-host token bucket).")
+        print(f"[motor_es_wholesale] segments: {[s.key for s in segments]} (from --segment {segment}).")
         stats["declared_full"] = await _declared_total(governed_fetch)
 
-        # Enumerate the MECE partition (identical for proof and --full).
-        try:
-            cells = await build_cells(fetcher, governed_fetch, stats)
-        except Exception as e:  # noqa: BLE001 — taxonomy fetch failed: stop honestly
-            fetch_error = str(e)
-            last_http = fetcher.last_status
-            print(f"[motor_es_wholesale] partition enumeration failed ({e}); stopping.")
-            cells = []
-
-        if full:
-            cells_to_drain = cells
-            print(f"[motor_es_wholesale] FULL drain: {len(cells)} cells -> the entire "
-                  f"~{stats['declared_full']} census (make->model MECE partition).")
-        else:
-            cells_to_drain = cells[:max(0, max_cells)]
-            print(f"[motor_es_wholesale] PROOF: draining {len(cells_to_drain)} of {len(cells)} "
-                  f"COMPLETE cells (<= {limit} cars; declared full ~{stats['declared_full']}; "
-                  f"full drain = same command + --full).")
-
+        # ONE seen_ids set shared across FACET segments in this run: a car drained under both
+        # vo and km0 is caged once (km0 ⊂ vo). Each segment dispatches to its family handler.
         seen_ids: set[str] = set()
         dealers_before = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
 
-        stop = False
-        for path in cells_to_drain:
-            if stop:
+        for seg in segments:
+            if not full and len(harvested_cageable) >= limit:
+                print(f"[motor_es_wholesale] global --limit {limit} reached; stopping before '{seg.key}'.")
                 break
-            # Drain the whole cell's card list (≤50 pages), deduped on data-id across cells.
-            try:
-                new_cards = await drain_cell(fetcher, governed_fetch, path, seen_ids, stats)
-            except Exception as e:  # noqa: BLE001 — a cell-level fetch error stops honestly
-                fetch_error = str(e)
-                last_http = fetcher.last_status
-                print(f"[motor_es_wholesale] cell '{path}' fetch failed ({e}); stopping drain honestly.")
-                break
-            stats["cells_drained"] += 1
-
-            # ENRICH the cell's NEW cards CONCURRENTLY: the dealer identity lives ONLY on the
-            # PDP, so each card needs one PDP GET. Fan out the PDP fetches across the pool
-            # (the governor's bucket bounds the aggregate rate), then parse+resolve IN CARD
-            # ORDER so dedup/stats/cageable truth stay deterministic. A failed PDP is skipped,
-            # never fatal. The whole cell is then ingested in ONE bulk transaction.
-            pdp_results = await asyncio.gather(
-                *(fetcher.fetch_async(governed_fetch, c.pdp_url, headers=_LIST_HEADERS)
-                  for c in new_cards),
-                return_exceptions=True,
-            )
-            cage: list[_CageRow] = []
-            for card, pdp_html in zip(new_cards, pdp_results):
-                if isinstance(pdp_html, Exception):  # one bad PDP must not stop the drain
-                    stats["pdp_failed"] += 1
-                    last_http = fetcher.last_status
-                    continue
-                stats["pdp_fetched"] += 1
-
-                d = parse_pdp_dealer(pdp_html, card)
-                if d is None:
-                    stats["no_dealer_skipped"] += 1
-                    continue
-                # Resolve the dealer province: prefer the card's parenthetical province name
-                # (the dealer's selling location); fall back to the concesionario path slug.
-                prov = geo.province_code(card.province_name) or geo.province_code(d.prov_slug)
-                if not prov or not (prov.isdigit() and "01" <= prov <= "52"):
-                    stats["geo_skipped"] += 1
-                    continue
-                d.province_code = prov
-                muni = geo.municipality_code(prov, d.city)
-                dealer_cdp = cdp_code_dealer(d, muni)
-
-                v = parse_pdp_vehicle(pdp_html, card)
-                if not v.deep_link:
-                    continue
-                dealer_ref = f"{d.prov_slug}/{d.slug}"
-                harvested_cageable.add((dealer_ref, v.deep_link))
-                cage.append(_CageRow(
-                    dealer_ref=dealer_ref, dealer_cdp=dealer_cdp, dealer_name=d.name,
-                    dealer_province=prov, dealer_muni=muni, vehicle=v))
-
-                if not full and len(harvested_cageable) >= limit:
-                    print(f"[motor_es_wholesale] reached --limit {limit} cars; "
-                          f"finishing this cell's ingest then stopping.")
-                    stop = True
-                    break
-
-            # BULK-ingest the whole cell in ONE transaction (set-based SQL, full contract).
-            await _ingest_cell(conn, platform_ulid, cage, stats)
-            print(f"[motor_es_wholesale] cell '{path}': new_cards={len(new_cards)} "
-                  f"caged_total={stats['cars_caged']} edges={stats['edges_created']} "
-                  f"pdp_fail={stats['pdp_failed']}")
+            if seg.family == "facet":
+                ferr, lhttp = await _harvest_facet_segment(
+                    fetcher, governed_fetch, conn, geo, platform_ulid, seg,
+                    full=full, max_cells=max_cells, limit=limit,
+                    seen_ids=seen_ids, harvested_cageable=harvested_cageable, stats=stats)
+            else:
+                ferr, lhttp = None, None
+                try:
+                    await harvest_offers(fetcher, governed_fetch, conn, platform_ulid, seg,
+                                         full=full, max_cells=max_cells, limit=limit,
+                                         harvested_cageable=harvested_cageable, stats=stats)
+                except Exception as e:  # noqa: BLE001 — an offer-segment error stops honestly
+                    ferr, lhttp = str(e), fetcher.last_status
+                    print(f"[motor_es_wholesale] segment '{seg.key}' (offer) failed ({e}).")
+            if ferr is not None:
+                fetch_error = ferr
+            if lhttp is not None:
+                last_http = lhttp
 
         dealers_after = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
@@ -1046,9 +1470,12 @@ async def harvest(max_cells: int = DEFAULT_MAX_CELLS, limit: int = DEFAULT_LIMIT
         stats["recipe_path"] = str(recipe_path)
 
         # S-HEALTH heartbeat: record THIS run's outcome so the watchdog tracks motor.es,
-        # trips the breaker on a ban, and auto-repairs. OK when >=1 cell drained, no fetch
-        # error stopped the drain, and the VAM did not refute.
-        run_ok = fetch_error is None and stats["cells_drained"] > 0 and verdict != "REFUTED"
+        # trips the breaker on a ban, and auto-repairs. OK when at least one unit of work
+        # landed (a facet cell drained OR an offer caged), no fetch error stopped the drain,
+        # and the VAM did not refute. (An offer-only segment drains 0 facet cells but still
+        # cages cars — so progress is measured by cars_caged, not cells alone.)
+        made_progress = stats["cells_drained"] > 0 or stats["cars_caged"] > 0
+        run_ok = fetch_error is None and made_progress and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
         outcome = await record_run(
             conn, MOTOR_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
@@ -1073,7 +1500,9 @@ def _print_report(stats: dict) -> None:
     print(f"MOTOR.ES WHOLESALE HARVEST — {mode} REPORT")
     print("=" * 64)
     print(f"  platform cdp_code     : {stats.get('platform_code')}")
-    print(f"  declared full (source): {stats.get('declared_full')}")
+    print(f"  segments run          : {stats.get('segments_run')} (--segment {stats.get('segment_arg')})")
+    print(f"  declared full (source): {stats.get('declared_full')} (used-car census; km0 included)")
+    print(f"  offer links found     : {stats.get('offer_links_found')} (vn/catalog/renting offer pages)")
     print(f"  concurrency (PDP pool): {stats.get('concurrency')}")
     print(f"  makes discovered      : {stats.get('makes_discovered')}")
     print(f"  cells enumerated      : {stats.get('cells_enumerated')} "
@@ -1120,9 +1549,16 @@ def main() -> None:
                         help=("aggregate req/s for www.motor.es (the governor bucket). Default 3.0 "
                               "(polite for the permissive Cloudflare). The host is never fetched "
                               "faster than this regardless of --concurrency."))
+    parser.add_argument("--segment", choices=SEGMENT_CHOICES, default="vo",
+                        help=("inventory segment(s) to drain. vo=used census (~50,932, km0 "
+                              "included); km0=km0/seminuevos subset (~5,594, ⊂ vo); "
+                              "vn=new-car offers (~476); catalog=full new-car catalog (~450 "
+                              "models, ⊃ vn); renting=renting offers (~132); "
+                              "all=vo+vn+renting (the additive union, skips the redundant "
+                              "km0⊂vo and catalog⊃vn). Default 'vo'."))
     args = parser.parse_args()
     stats = asyncio.run(harvest(args.max_cells, args.limit, args.full,
-                                args.concurrency, args.rate))
+                                args.concurrency, args.rate, args.segment))
     _print_report(stats)
 
 

@@ -149,6 +149,29 @@ PRICE_BANDS: tuple[tuple[int | None, int | None], ...] = (
 
 SPANISH_PROVINCES = tuple(range(1, 53))  # INE province ids 1..52.
 
+# ---------------------------------------------------------------------------
+# SEGMENTS — milanuncios has ONE flat supply index, not separate segment backends.
+# Every sellable car (used, km0, seminuevo, "a estrenar", pro, private) is an ordinary
+# transaction=supply ad INSIDE this one ES index; "segments" are per-item FACET slices, not
+# separate products (verified 2026-06-13, docs/architecture/segments/milanuncios.md). So the
+# segment flag is an OPTIONAL FACET NARROWING of every partition cell — the SAME cage contract,
+# only the per-cell query params change. `all` (default) = the whole index = legacy behavior =
+# full coverage. The narrower segments exist only for targeted re-drains.
+#
+# Ignored-param trap (verified): condition/vehicleState/isNew/km0 query params are SILENTLY
+# IGNORED by the API. The REAL facet axes that "take" are kilometersFrom/kilometersTo (km0 and
+# "a estrenar" are km-band slices, NOT a condition enum). milanuncios has NO new-car catalog/
+# configurator and NO renting product on its coches vertical, so those segments do not exist.
+SEGMENTS: dict[str, dict[str, str]] = {
+    "all": {},                                  # the whole flat supply index (full coverage).
+    "vo": {"kilometersFrom": "1000"},           # used / ocasión (excludes near-new km<1000).
+    "km0": {"kilometersTo": "1000"},            # km0 / seminuevo / near-new (km<=1000).
+    "vn": {"kilometersTo": "100"},              # "nuevo / a estrenar" lowest-km (no true catalog).
+    "catalog": {"kilometersTo": "100"},         # alias of vn — milanuncios has no separate catalog.
+    "renting": None,                            # not a milanuncios product (handled: clean exit).
+}
+DEFAULT_SEGMENT = "all"
+
 # transmission raw value (uppercase EN token on the wire) -> human label.
 _TRANSMISSION = {"AUTOMATIC": "Automático", "MANUAL": "Manual"}
 # fuel raw value (lowercase EN slug on the wire) -> human label (the formatted value is
@@ -395,7 +418,8 @@ class MilanunciosFetcher:
     http_status signal (a throttle shows as the same non-200 on any slot).
     """
 
-    def __init__(self, pool_size: int = 1) -> None:
+    def __init__(self, pool_size: int = 1,
+                 segment_params: dict[str, str] | None = None) -> None:
         self._pool_size = max(1, pool_size)
         self._sessions = [cffi_requests.Session(impersonate=_IMPERSONATE)
                           for _ in range(self._pool_size)]
@@ -403,13 +427,18 @@ class MilanunciosFetcher:
         for i in range(self._pool_size):
             self._free.put_nowait(i)
         self.last_status: int | None = None
+        # The active segment's facet params (e.g. {"kilometersTo":"1000"} for km0); empty for
+        # the default `all` segment. Merged into EVERY request so probe + drain see the same
+        # filtered view — the partition's eq/gte counts and the drained ads stay consistent.
+        self._segment_params: dict[str, str] = dict(segment_params or {})
 
-    @staticmethod
-    def _params(*, offset: int, limit: int, province: int,
+    def _params(self, *, offset: int, limit: int, province: int,
                 price_from: int | None, price_to: int | None) -> dict:
         # The verified GET shape: category=13 + transaction=supply + sort=newest, partitioned
         # by the singular `province` (INE code; provinceIds/regions are SILENTLY ignored) and
-        # the priceFrom/priceTo band. offset walks the cell; limit honored to 100.
+        # the priceFrom/priceTo band. offset walks the cell; limit honored to 100. The segment
+        # facet params (km band; empty for `all`) ride on every request so the filtered view is
+        # identical for the count probe and the offset drain.
         p = {
             "category": CATEGORY_CARS,
             "transaction": TRANSACTION_SUPPLY,
@@ -422,6 +451,7 @@ class MilanunciosFetcher:
             p["priceFrom"] = str(price_from)
         if price_to is not None:
             p["priceTo"] = str(price_to)
+        p.update(self._segment_params)
         return p
 
     def fetch_page(self, url: str, *, offset: int = 0, limit: int = PAGE_SIZE,
@@ -1013,6 +1043,7 @@ def _national_total(fetcher: MilanunciosFetcher) -> tuple[str, int]:
     (clamped), so this is a floor, not a quorum path — reported for honesty only."""
     p = {"category": CATEGORY_CARS, "transaction": TRANSACTION_SUPPLY, "limit": "1",
          "sort": "newest"}
+    p.update(fetcher._segment_params)  # national count of the ACTIVE segment's view.
     resp = fetcher._sessions[0].get(ENDPOINT, params=p, headers=_HEADERS,
                                     impersonate=_IMPERSONATE, timeout=_TIMEOUT)
     th = (resp.json().get("pagination") or {}).get("totalHits") or {}
@@ -1105,11 +1136,25 @@ DEFAULT_MAX_PAGES = 100   # per-cell page cap (proof bound); a real cell ends na
 async def harvest(provinces: tuple[int, ...] = SPANISH_PROVINCES,
                   concurrency: int = DEFAULT_CONCURRENCY,
                   max_pages: int = DEFAULT_MAX_PAGES,
-                  page_size: int = PAGE_SIZE) -> dict:
+                  page_size: int = PAGE_SIZE,
+                  segment: str = DEFAULT_SEGMENT) -> dict:
+    # Resolve the segment to its facet params. `all` (default) = no facet = the whole flat
+    # supply index = full coverage = legacy behavior. `renting` is not a milanuncios product:
+    # exit cleanly without a drain (no edges to add, no false count).
+    segment = (segment or DEFAULT_SEGMENT).lower()
+    if segment not in SEGMENTS:
+        raise SystemExit(f"unknown --segment {segment!r}; valid: {', '.join(SEGMENTS)}")
+    segment_params = SEGMENTS[segment]
+    if segment_params is None:
+        print(f"[milanuncios_wholesale] segment '{segment}' is not a milanuncios product "
+              f"(no renting/subscription on the coches vertical); nothing to drain.")
+        return {"skipped": True, "reason": f"segment_{segment}_not_a_product",
+                "source_key": MN_SOURCE_KEY, "segment": segment}
+
     conn = await asyncpg.connect(DSN)
     concurrency = max(1, concurrency)
     page_size = max(1, min(page_size, PAGE_SIZE))
-    fetcher = MilanunciosFetcher(pool_size=concurrency)
+    fetcher = MilanunciosFetcher(pool_size=concurrency, segment_params=segment_params)
     stats = {
         "pages_fetched": 0, "items_seen": 0, "dealer_items": 0,
         "private_caged": 0, "unattributed_skipped": 0, "geo_skipped": 0,
@@ -1120,7 +1165,8 @@ async def harvest(provinces: tuple[int, ...] = SPANISH_PROVINCES,
         "concurrency": concurrency, "partitions": 0, "partitions_clean": 0,
         "partitions_errored": 0, "coverage_sum": 0, "national_relation": None,
         "dense_provinces": 0, "bands_still_capped": 0, "page_size": page_size,
-        "max_pages": max_pages,
+        "max_pages": max_pages, "segment": segment,
+        "segment_params": dict(segment_params),
     }
     # GLOBAL harvest truth — distinct across ALL partitions (cross-cell overlap from province/
     # price edge-membership + offset overlap collapses here exactly once).
@@ -1153,6 +1199,8 @@ async def harvest(provinces: tuple[int, ...] = SPANISH_PROVINCES,
         print(f"[milanuncios_wholesale] governor paces host {host_of(ENDPOINT)} (JSON_API bucket).")
 
         # ---- PLAN: probe every province's totalHits; split the dense ones by price band.
+        seg_label = segment + (f" {segment_params}" if segment_params else " (full index)")
+        print(f"[milanuncios_wholesale] segment = {seg_label}")
         print(f"[milanuncios_wholesale] planning FACET partitions over {len(provinces)} "
               f"provinces (limit={page_size}, max_pages/cell={max_pages})...")
         nat_rel, nat_val = _national_total(fetcher)
@@ -1220,7 +1268,15 @@ async def harvest(provinces: tuple[int, ...] = SPANISH_PROVINCES,
                JOIN entity e ON e.entity_ulid = v.entity_ulid
                WHERE pl.platform_entity_ulid = $1 AND e.kind = 'particular'""", platform_ulid)
 
-        recipe_path = write_recipe(platform_code, MN_PLATFORM_RECIPE)
+        # Persist the recipe annotated with THIS run's segment view (a facet of the one flat
+        # supply index; 'all' = the whole index). The base recipe is unchanged; we add the
+        # segment so the artifact records exactly which view was drained.
+        run_recipe = {**MN_PLATFORM_RECIPE, "segment": segment,
+                      "segment_params": dict(segment_params),
+                      "segment_note": ("milanuncios is ONE flat supply index; segments are "
+                                       "per-item facet slices (km band / sellerType), NOT "
+                                       "separate backends. 'all' = full coverage.")}
+        recipe_path = write_recipe(platform_code, run_recipe)
         print(f"[milanuncios_wholesale] recipe written: {recipe_path}")
 
         # ---- VAM count quorum — THREE orthogonal like-with-like paths that all measure
@@ -1280,6 +1336,7 @@ def _print_report(stats: dict) -> None:
     print("MILANUNCIOS WHOLESALE HARVEST — REPORT")
     print("=" * 64)
     print(f"  platform cdp_code     : {stats.get('platform_code')}")
+    print(f"  segment               : {stats.get('segment')} {stats.get('segment_params') or '(full index)'}")
     print(f"  national declared     : {stats.get('national_relation')} (clamped floor)")
     print("  --- coverage (facet partition) ---")
     print(f"  partitions            : {stats.get('partitions')} "
@@ -1348,9 +1405,17 @@ def main() -> None:
                         help=(f"pages fetched in parallel per sliding window; default "
                               f"{DEFAULT_CONCURRENCY}. The governor's per-host bucket is the "
                               f"real limiter — this only needs to keep the bucket saturated."))
+    parser.add_argument("--segment", type=str, default=DEFAULT_SEGMENT,
+                        choices=tuple(SEGMENTS.keys()),
+                        help=("inventory segment (a FACET of the one flat supply index): "
+                              "all (default, full coverage) | vo (used, km>=1000) | km0 "
+                              "(km<=1000) | vn (nuevo/a estrenar, km<=100) | catalog (alias of "
+                              "vn; milanuncios has no separate new-car catalog) | renting "
+                              "(no-op: not a milanuncios product). 'all' drains every segment."))
     args = parser.parse_args()
     provinces = _parse_provinces(args.provinces)
-    stats = asyncio.run(harvest(provinces, args.concurrency, args.pages, args.limit))
+    stats = asyncio.run(harvest(provinces, args.concurrency, args.pages, args.limit,
+                                args.segment))
     _print_report(stats)
 
 

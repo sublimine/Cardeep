@@ -1,4 +1,4 @@
-"""autocasion FACET-PARTITION harvester — drains the FULL inventory past the 10k wall.
+"""autocasion FACET-PARTITION harvester — drains the FULL inventory of EVERY segment.
 
 THE PROBLEM (proven, docs/architecture/tier1_recipes/autocasion_datalayer.md). Both
 autocasion surfaces — GraphQL `search` and the flat SSR results stream
@@ -25,22 +25,46 @@ through per-make SSR facet pages whose every slice is < 10k:
   Σ make slices ≈ 123,530 ≈ the SRP declared 123,512. No slice exceeds 10k, so the ES
   wall is NEVER hit and the partition is the complete, uncapped surface.
 
+EVERY SEGMENT, NOT ONLY USED (owner mandate — verified live 2026-06-13,
+docs/architecture/segments/autocasion.md). autocasion exposes THREE drainable inventory
+segments, each its OWN SSR facet tree carrying PDP -ref{ID} cards and a <title> count,
+each drained by the SAME make-partition machinery — only the facet path template + title
+shape differ per segment:
+  • vo  (USED / ocasión)  — /coches-segunda-mano/{make}-ocasion[/{province}]   ~123,512
+        (the historical default; MERCEDES-BENZ > 10k → province split)
+  • vn  (NEW / coches nuevos, == the new-car catalog: every make/model/version offer is a
+        sellable -ref{ID} ad) — /coches-nuevos/{make}                            ~5,946
+        (76 makes w/ stock; EVERY make < 10k → no province split needed)
+  • km0 (KM0 / Demo)      — /coches-km0/{make}-km0                                ~5,994
+        (84 makes w/ stock; EVERY make < 10k → no province split needed)
+RENTING does not exist on autocasion (every /renting* path 404s); `catalog` is an alias of
+`vn` (the new offers ARE the catalog). ad() hydration + PDP JSON-LD AutoDealer attribution
+were verified live on a vn ref (AUDI A3, dealer unoauto/28027) and a km0 ref (SEAT Arona,
+km0=true) — so the proven cage path drains vn/km0 byte-for-byte, no new hydrate code.
+Site-displayed reconciliation: 123,512 (vo) + 5,946 (vn) + 5,994 (km0) ≈ 135,452 cars.
+
 ARCHITECTURE REUSE. This module does NOT fork the harvest engine — it is the exact same
 move pipeline.platform.coches_net_facet makes for coches.net. It imports the wholesale
 module's proven per-ref cage path (`process_ref`: GraphQL ad() hydrate → PDP JSON-LD
 AutoDealer → per-car transaction → delta NEW/PRICE_CHANGE → platform_listing edge,
 idempotent ON CONFLICT), its platform identity, the per-host governor (gql + www buckets),
 the S-HEALTH breaker, the VAM count quorum, and the dual-membership model. The ONLY
-additions are: (a) the make/province partition enumeration + sizing, (b) the partition
-plan (make slices; MB→province), and (c) the partition loop that drains each slice's SSR
-?page=N through that same machinery with a GLOBAL seen_ids set so cross-slice overlap is
-collapsed exactly once. Delta / VAM / idempotency are preserved byte-for-byte.
+additions are: (a) the SEGMENT descriptor (per-segment facet path + title shape),
+(b) the make/province partition enumeration + sizing over the chosen segment(s),
+(c) the partition plan (make slices; province-split only when a slice > 10k), and (d) the
+partition loop that drains each slice's SSR ?page=N through that same machinery with a
+GLOBAL seen_ids set so cross-slice AND cross-segment overlap is collapsed exactly once.
+Delta / VAM / idempotency are preserved byte-for-byte.
 
-Run (full uncapped drain — every make slice, the operator's one command):
-    python -m pipeline.platform.autocasion_facet --makes all
-Run (bounded proof — first N makes by size, or named makes):
-    python -m pipeline.platform.autocasion_facet --max-makes 15
-    python -m pipeline.platform.autocasion_facet --make seat --make volkswagen
+Run (FULL uncapped drain of EVERY segment — the operator's one command):
+    python -m pipeline.platform.autocasion_facet --segment all
+Run (one segment fully):
+    python -m pipeline.platform.autocasion_facet --segment vn
+    python -m pipeline.platform.autocasion_facet --segment km0
+    python -m pipeline.platform.autocasion_facet --segment vo   (default; back-compat)
+Run (bounded proof — first N slices by size, or named makes, within a segment):
+    python -m pipeline.platform.autocasion_facet --segment vn --max-makes 5
+    python -m pipeline.platform.autocasion_facet --segment vn --make seat --make audi
 """
 from __future__ import annotations
 
@@ -50,6 +74,7 @@ import json
 import re
 import sys
 import time
+from dataclasses import dataclass
 
 import asyncpg
 
@@ -101,10 +126,107 @@ _TITLE_TOTAL_RE = re.compile(r"<title>\s*([\d\.]+)\s")
 MERCEDES_SLUG = "mercedes-benz"
 
 
-def _facet_path(make_slug: str, province_slug: str | None = None) -> str:
-    """The SSR facet path for a slice. make-only, or make×province for the split make."""
-    base = f"{SSR_HOST}/coches-segunda-mano/{make_slug}-ocasion"
-    return f"{base}/{province_slug}" if province_slug else base
+# ---------------------------------------------------------------------------
+# SEGMENT descriptors — each inventory segment autocasion exposes as its OWN SSR facet
+# tree (verified live 2026-06-13, docs/architecture/segments/autocasion.md). Each segment
+# is drained by the SAME make-partition machinery; only the facet-path template and the
+# make-facet <title> shape differ. A segment whose make slice exceeds 10k is split by
+# province the same way the used segment splits MERCEDES-BENZ (none of vn/km0 do today —
+# every make slice < 10k — but the split path is segment-generic, future-drift-safe).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Segment:
+    """One drainable inventory segment of autocasion.
+
+    key:        the --segment selector (vo|vn|km0).
+    label:      human label for the report / recipe.
+    make_path:  SSR facet path template for a make slice -> "{make}" is the brand slug.
+    prov_path:  SSR facet path template for a make×province slice when a make > 10k; takes
+                "{make}" and "{prov}". Used only when SPLIT_THRESHOLD is exceeded.
+    The slice <title> always leads with the slice total ("161 Seat nuevos…",
+    "74 Km 0 Seat…", "5.448 SEAT de segunda mano…") so _parse_title_total reads all three.
+    """
+    key: str
+    label: str
+    make_path: str
+    prov_path: str
+
+
+# vo: the historical default — used/ocasión, make[-province] facet, MB splits by province.
+SEG_VO = Segment(
+    key="vo", label="USED (ocasión)",
+    make_path="/coches-segunda-mano/{make}-ocasion",
+    prov_path="/coches-segunda-mano/{make}-ocasion/{prov}",
+)
+# vn: NEW / coches nuevos (the new-car catalog). Make facet /coches-nuevos/{make};
+# province facet /coches-nuevos/{make}/{prov}-provincia (only if a make ever > 10k).
+SEG_VN = Segment(
+    key="vn", label="NEW (coches nuevos / catalog)",
+    make_path="/coches-nuevos/{make}",
+    prov_path="/coches-nuevos/{make}/{prov}-provincia",
+)
+# km0: KM0 / Demo. Make facet /coches-km0/{make}-km0; province facet
+# /coches-km0/{make}-km0/{prov} (only if a make ever > 10k; km0 uses bare city slugs).
+SEG_KM0 = Segment(
+    key="km0", label="KM0 (km cero / demo)",
+    make_path="/coches-km0/{make}-km0",
+    prov_path="/coches-km0/{make}-km0/{prov}",
+)
+
+# Canonical registry + the aliases the owner mandate names. `catalog` == vn (the new
+# offers ARE the catalog). `renting` does not exist on autocasion (every /renting* 404s) —
+# accepted as a selector but resolves to an empty plan and is reported as a non-existent
+# segment (honest declared gap, never a silent skip).
+SEGMENTS: dict[str, Segment] = {s.key: s for s in (SEG_VO, SEG_VN, SEG_KM0)}
+SEGMENT_ALIASES: dict[str, str] = {"catalog": "vn", "vehiculos-nuevos": "vn"}
+NONEXISTENT_SEGMENTS: set[str] = {"renting"}
+ALL_SEGMENT_KEYS: list[str] = ["vo", "vn", "km0"]
+
+
+def resolve_segments(selector: str | None) -> tuple[list[Segment], list[str]]:
+    """Resolve a --segment selector to (segments_to_drain, nonexistent_requested).
+
+    selector None or 'vo' -> [vo] (back-compat default). 'all' -> [vo, vn, km0].
+    A comma list ('vn,km0') -> those. Aliases map to their canonical key. A requested
+    segment that does not exist on autocasion (renting) is returned in the second list so
+    the caller can report it as a declared gap rather than silently dropping it."""
+    if not selector or selector.lower() == "vo":
+        return [SEG_VO], []
+    sel = selector.lower()
+    if sel == "all":
+        return [SEGMENTS[k] for k in ALL_SEGMENT_KEYS], []
+    wanted: list[Segment] = []
+    nonexistent: list[str] = []
+    seen: set[str] = set()
+    for raw in sel.split(","):
+        name = raw.strip()
+        if not name:
+            continue
+        canon = SEGMENT_ALIASES.get(name, name)
+        if canon in NONEXISTENT_SEGMENTS:
+            nonexistent.append(name)
+            continue
+        seg = SEGMENTS.get(canon)
+        if seg is None:
+            raise SystemExit(
+                f"[autocasion_facet] unknown segment '{name}'. "
+                f"Valid: {', '.join(ALL_SEGMENT_KEYS)}, all, "
+                f"{', '.join(SEGMENT_ALIASES)} (alias of vn); renting (non-existent).")
+        if seg.key not in seen:
+            seen.add(seg.key)
+            wanted.append(seg)
+    return wanted, nonexistent
+
+
+def _facet_path(seg: Segment, make_slug: str, province_slug: str | None = None) -> str:
+    """The SSR facet URL for a slice of `seg`: make-only, or make×province for a split make."""
+    if province_slug:
+        rel = seg.prov_path.format(make=make_slug, prov=province_slug)
+    else:
+        rel = seg.make_path.format(make=make_slug)
+    return f"{SSR_HOST}{rel}"
 
 
 def _parse_title_total(html: str) -> int:
@@ -136,40 +258,41 @@ async def enumerate_provinces(governed_fetch) -> list[dict]:
     return [p for p in provs if p.get("slug")]
 
 
-async def plan_partitions(governed_fetch, makes: list[dict],
+async def plan_partitions(governed_fetch, seg: Segment, makes: list[dict],
                           provinces: list[dict]) -> tuple[list[dict], int, int]:
-    """Build the slice list + summed declared coverage.
+    """Build the slice list + summed declared coverage for ONE segment.
 
-    For each make: probe its <title> total. If 0 (no live stock) skip it. If <=
-    SPLIT_THRESHOLD it is one slice. If it exceeds it (only MERCEDES-BENZ today), split
-    into the 52 province slices (each sized from its own <title>). Returns
-    (slices, coverage_sum, makes_with_stock). coverage_sum sums the slices ACTUALLY
-    drained (province bands for the split make, not the make aggregate) so it matches what
-    the drain traverses."""
+    For each make: probe its <title> total on `seg`'s make facet. If 0 (no live stock in
+    this segment) skip it. If <= SPLIT_THRESHOLD it is one slice. If it exceeds it (only
+    MERCEDES-BENZ on vo today; never on vn/km0), split into province slices (each sized
+    from its own <title>). Returns (slices, coverage_sum, makes_with_stock). coverage_sum
+    sums the slices ACTUALLY drained (province bands for a split make, not the make
+    aggregate) so it matches what the drain traverses. Every slice carries its `segment`
+    key so the drain rebuilds the right facet path and seen_ids dedups cross-segment."""
     slices: list[dict] = []
     coverage_sum = 0
     makes_with_stock = 0
     for mk in makes:
         slug = mk["slug"]
-        html = await governed_fetch(_facet_path(slug))
+        html = await governed_fetch(_facet_path(seg, slug))
         total = _parse_title_total(html)
         if total <= 0:
-            continue  # make with no live stock — not a partition.
+            continue  # make with no live stock in this segment — not a partition.
         makes_with_stock += 1
         if total <= SPLIT_THRESHOLD:
-            slices.append({"make": slug, "make_name": mk.get("name"), "province": None,
-                           "province_name": None, "declared": total})
+            slices.append({"segment": seg.key, "make": slug, "make_name": mk.get("name"),
+                           "province": None, "province_name": None, "declared": total})
             coverage_sum += total
             continue
         # Over the 10k wall -> province sub-partition (each province slice < 10k, verified).
-        print(f"[autocasion_facet] make {slug} declared {total} > {SPLIT_THRESHOLD}; "
-              f"splitting by {len(provinces)} provinces.")
+        print(f"[autocasion_facet] [{seg.key}] make {slug} declared {total} > "
+              f"{SPLIT_THRESHOLD}; splitting by {len(provinces)} provinces.")
         for pv in provinces:
-            phtml = await governed_fetch(_facet_path(slug, pv["slug"]))
+            phtml = await governed_fetch(_facet_path(seg, slug, pv["slug"]))
             pt = _parse_title_total(phtml)
             if pt <= 0:
                 continue
-            slices.append({"make": slug, "make_name": mk.get("name"),
+            slices.append({"segment": seg.key, "make": slug, "make_name": mk.get("name"),
                            "province": pv["slug"], "province_name": pv.get("name"),
                            "declared": pt})
             coverage_sum += pt
@@ -193,8 +316,9 @@ async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid
     ended on an empty/no-results page (fully drained); False means an SSR fetch error
     stopped it (the breaker signal). Each ?page=N is enumerated, then every -ref{ID} on it
     is hydrated + caged through process_ref (the shared, proven path). A GLOBAL seen_ids
-    dedups across BOTH pages and slices."""
-    path = _facet_path(slc["make"], slc["province"])
+    dedups across BOTH pages and slices (and across segments)."""
+    seg = SEGMENTS[slc["segment"]]
+    path = _facet_path(seg, slc["make"], slc["province"])
     fetch_error: str | None = None
     last_http: int | None = None
     for page in range(1, MAX_PAGES_PER_SLICE + 1):
@@ -204,7 +328,7 @@ async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid
         except Exception as e:  # noqa: BLE001
             fetch_error = str(e)
             last_http = fetcher.last_status
-            print(f"[autocasion_facet] slice {slc['make']}"
+            print(f"[autocasion_facet] [{seg.key}] slice {slc['make']}"
                   f"{('/' + slc['province']) if slc['province'] else ''} page {page} "
                   f"SSR failed ({e}); stopping this slice honestly.")
             break
@@ -230,13 +354,28 @@ async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid
 
 
 async def harvest_facet(make_filter: list[str] | None = None,
-                        max_makes: int | None = None) -> dict:
-    """Drain autocasion by make-partition.
+                        max_makes: int | None = None,
+                        segments: list[Segment] | None = None,
+                        nonexistent: list[str] | None = None) -> dict:
+    """Drain autocasion by make-partition, over one or more SEGMENTS.
 
     make_filter: explicit make slugs to drain (None = all makes with stock).
-    max_makes:   after sizing, keep only the first N makes (by descending declared size)
+    max_makes:   after sizing, keep only the first N slices (by descending declared size)
                  — the bounded proof knob. None = no cap (the full uncapped drain).
+    segments:    the segments to drain (None = [vo], the back-compat default). Each is
+                 planned independently then concatenated into ONE slice list so the GLOBAL
+                 seen_ids set collapses any cross-segment overlap exactly once.
+    nonexistent: segment names requested that do not exist on autocasion (e.g. renting),
+                 carried into the report as a declared gap (never a silent skip).
     """
+    nonexistent = nonexistent or []
+    if segments is None:
+        segments = [SEG_VO]  # back-compat default (only when caller passed nothing)
+    if not segments:
+        # Only non-existent segment(s) requested (e.g. renting) — nothing to drain, but
+        # report honestly instead of silently defaulting to vo.
+        return {"skipped": True, "reason": "no_existing_segment",
+                "segments_nonexistent": list(nonexistent), "source_key": AC_SOURCE_KEY}
     conn = await asyncpg.connect(DSN)
     fetcher = AutocasionFetcher()  # one fingerprint + cookie jar for the whole drain
     stats = {
@@ -247,6 +386,9 @@ async def harvest_facet(make_filter: list[str] | None = None,
         "parse_errors": 0, "dealers_distinct": 0,
         "makes_total": 0, "makes_with_stock": 0, "slices": 0,
         "slices_clean": 0, "slices_errored": 0, "coverage_sum": 0,
+        "segments_requested": [s.key for s in segments],
+        "segments_nonexistent": list(nonexistent),
+        "per_segment": {},  # key -> {label, makes_with_stock, slices, declared, caged}
     }
     # GLOBAL harvest truth — distinct across ALL slices (cross-slice overlap from a listing
     # appearing under make AND make×province collapses here exactly once).
@@ -276,30 +418,49 @@ async def harvest_facet(make_filter: list[str] | None = None,
         print(f"[autocasion_facet] governor paces hosts {host_of(SSR_HOST)} + "
               f"{host_of(GQL_ENDPOINT)} (per-host token buckets).")
 
-        # ---- ENUMERATE the partition keys.
+        # ---- ENUMERATE the partition keys (shared across every segment — same make/province
+        # vocabulary; each segment only differs in its facet-path template + title shape).
         makes = await enumerate_makes(governed_fetch)
         provinces = await enumerate_provinces(governed_fetch)
         stats["makes_total"] = len(makes)
+        seg_keys = ", ".join(s.key for s in segments)
         print(f"[autocasion_facet] brands(type:CAR) -> {len(makes)} makes; "
-              f"provinces -> {len(provinces)} (for the >10k make split).")
+              f"provinces -> {len(provinces)} (for any >10k make split). "
+              f"segments = [{seg_keys}]"
+              + (f"; non-existent requested = {nonexistent}" if nonexistent else ""))
         if make_filter:
             wanted = {s.lower() for s in make_filter}
             makes = [m for m in makes if m["slug"].lower() in wanted]
             print(f"[autocasion_facet] --make filter -> {len(makes)} makes: "
                   f"{[m['slug'] for m in makes]}")
 
-        # ---- PLAN: size every make slice from its <title>; split the >10k make by province.
-        print(f"[autocasion_facet] planning slices over {len(makes)} makes "
-              f"(split threshold {SPLIT_THRESHOLD})...")
-        slices, coverage_sum, makes_with_stock = await plan_partitions(
-            governed_fetch, makes, provinces)
-        stats["makes_with_stock"] = makes_with_stock
+        # ---- PLAN: per segment, size every make slice from its <title>; split any >10k
+        # make by province. Concatenate into ONE slice list (seen_ids dedups cross-segment).
+        slices: list[dict] = []
+        coverage_sum = 0
+        makes_with_stock_union: set[str] = set()
+        for seg in segments:
+            print(f"[autocasion_facet] [{seg.key}] planning slices over {len(makes)} makes "
+                  f"(split threshold {SPLIT_THRESHOLD})...")
+            seg_slices, seg_cov, seg_mws = await plan_partitions(
+                governed_fetch, seg, makes, provinces)
+            slices.extend(seg_slices)
+            coverage_sum += seg_cov
+            makes_with_stock_union.update(s["make"] for s in seg_slices)
+            stats["per_segment"][seg.key] = {
+                "label": seg.label, "makes_with_stock": seg_mws,
+                "slices": len(seg_slices), "declared": seg_cov, "caged": 0,
+                "split_makes": sorted({s["make"] for s in seg_slices if s["province"]}),
+            }
+            print(f"[autocasion_facet] [{seg.key}] planned {len(seg_slices)} slices "
+                  f"({seg_mws} makes w/ stock); declared = {seg_cov}.")
+        stats["makes_with_stock"] = len(makes_with_stock_union)
         stats["coverage_sum"] = coverage_sum
         stats["declared_full"] = coverage_sum
 
-        # Bounded proof: keep the N largest slices (by declared size) so the proof drains
-        # several COMPLETE mid/large slices end to end, proving the partition reaches past
-        # the 10k wall. None = the full uncapped drain (every slice).
+        # Bounded proof: keep the N largest slices (by declared size) ACROSS segments so the
+        # proof drains several COMPLETE mid/large slices end to end, proving the partition
+        # reaches past the 10k wall. None = the full uncapped drain (every slice).
         if max_makes is not None and max_makes > 0:
             slices = sorted(slices, key=lambda s: s["declared"], reverse=True)[:max_makes]
             coverage_sum = sum(s["declared"] for s in slices)
@@ -307,9 +468,9 @@ async def harvest_facet(make_filter: list[str] | None = None,
             print(f"[autocasion_facet] --max-makes {max_makes} -> draining the "
                   f"{len(slices)} largest slices (sum declared = {coverage_sum}).")
         stats["slices"] = len(slices)
-        split_make = sorted({s["make"] for s in slices if s["province"]})
-        print(f"[autocasion_facet] PLAN: {len(slices)} slices to drain; "
-              f"province-split makes = {split_make or 'none'}; "
+        split_make = sorted({f"{s['segment']}:{s['make']}" for s in slices if s["province"]})
+        print(f"[autocasion_facet] PLAN: {len(slices)} slices to drain across "
+              f"{len(segments)} segment(s); province-split = {split_make or 'none'}; "
               f"sum(slice declared) = {coverage_sum}.")
 
         dealers_before = {r["cdp_code"] for r in await conn.fetch(
@@ -317,9 +478,15 @@ async def harvest_facet(make_filter: list[str] | None = None,
 
         # ---- DRAIN: every slice to its end through the shared per-ref cage path.
         for i, slc in enumerate(slices, 1):
+            caged_before = stats["cars_caged"]
             clean, perr, phttp = await _drain_slice(
                 conn, geo, platform_ulid, fetcher, governed_fetch, slc,
                 seen_ids, harvested_cageable, stats)
+            # Attribute this slice's caged delta to its segment (distinct cars; cross-segment
+            # dups already collapsed by the global seen_ids, so this is non-double-counting).
+            seg_row = stats["per_segment"].get(slc["segment"])
+            if seg_row is not None:
+                seg_row["caged"] += stats["cars_caged"] - caged_before
             if clean:
                 stats["slices_clean"] += 1
             else:
@@ -328,8 +495,9 @@ async def harvest_facet(make_filter: list[str] | None = None,
                 last_http = phttp if phttp is not None else last_http
             elapsed = time.monotonic() - t0
             cpm = stats["cars_caged"] / (elapsed / 60) if elapsed > 0 else 0.0
-            label = slc["make"] + (f"/{slc['province']}" if slc["province"] else "")
-            print(f"[autocasion_facet] [{i}/{len(slices)}] {label:<28} "
+            label = f"{slc['segment']}:" + slc["make"] + (
+                f"/{slc['province']}" if slc["province"] else "")
+            print(f"[autocasion_facet] [{i}/{len(slices)}] {label:<32} "
                   f"declared={slc['declared']:6d} -> caged_total={stats['cars_caged']} "
                   f"new={stats['new_cars']} edges={stats['edges_created']} "
                   f"distinct_ids={len(seen_ids)} | {cpm:.0f} cars/min "
@@ -347,13 +515,21 @@ async def harvest_facet(make_filter: list[str] | None = None,
                JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                WHERE pl.platform_entity_ulid = $1""", platform_ulid)
 
+        seg_keys = [s.key for s in segments]
         recipe = dict(AC_PLATFORM_RECIPE)
-        recipe["scope"] = ("platform-facet (URL-path make partition; make×province for the "
-                           ">10k make — uncapped surface past ES max_result_window=10000)")
+        recipe["scope"] = (
+            f"platform-facet, segments={seg_keys} (URL-path make partition per segment; "
+            "make×province for any >10k make — uncapped surface past ES max_result_window=10000)")
+        recipe["segments"] = {
+            s.key: {"label": s.label, "make_facet": s.make_path,
+                    "province_facet": s.prov_path} for s in segments}
         recipe["enumeration"] = (
-            "FACET partitions: brands(type:CAR) make slugs sized by SSR <title>; "
-            f"makes >{SPLIT_THRESHOLD} split by 52 provinces; each slice drained "
-            "GET /coches-segunda-mano/{make}-ocasion[/{province}]?page=1..N to first 0-ref page")
+            "FACET partitions PER SEGMENT: brands(type:CAR) make slugs sized by each "
+            "segment's SSR <title>; any make slice >"
+            f"{SPLIT_THRESHOLD} split by province; each slice drained "
+            "GET {segment_make_facet}[/{province}]?page=1..N to first 0-ref page. "
+            "Segments: vo=/coches-segunda-mano/{make}-ocasion, vn=/coches-nuevos/{make}, "
+            "km0=/coches-km0/{make}-km0. seen_ids dedups cross-page+cross-slice+cross-segment.")
         recipe_path = write_recipe(platform_code, recipe)
         print(f"[autocasion_facet] recipe written: {recipe_path}")
 
@@ -407,11 +583,23 @@ def _print_report(stats: dict) -> None:
     print("AUTOCASION FACET-PARTITION HARVEST — REPORT")
     print("=" * 64)
     print(f"  platform cdp_code     : {stats.get('platform_code')}")
+    print(f"  segments requested    : {stats.get('segments_requested')}"
+          + (f"  (non-existent: {stats.get('segments_nonexistent')})"
+             if stats.get('segments_nonexistent') else ""))
+    per_seg = stats.get("per_segment") or {}
+    if per_seg:
+        print("  --- per-segment plan + drain ---")
+        for key, row in per_seg.items():
+            print(f"    [{key:<4}] {row.get('label','')[:24]:<24} "
+                  f"makes_w_stock={row.get('makes_with_stock'):>3} "
+                  f"slices={row.get('slices'):>3} declared={row.get('declared'):>7} "
+                  f"caged={row.get('caged'):>7}"
+                  + (f" split={row.get('split_makes')}" if row.get('split_makes') else ""))
     print("  --- coverage proof (capture-recapture) ---")
     print(f"  makes (total/w-stock) : {stats.get('makes_total')} / {stats.get('makes_with_stock')}")
     print(f"  slices drained        : {stats.get('slices')} "
           f"({stats.get('slices_clean')} clean / {stats.get('slices_errored')} errored)")
-    print(f"  sum(slice declared)   : {stats.get('coverage_sum')}  (declared full this run)")
+    print(f"  sum(slice declared)   : {stats.get('coverage_sum')}  (declared full this run, all segments)")
     print("  --- drain ---")
     print(f"  SSR pages fetched     : {stats['pages_fetched']}")
     print(f"  refs seen             : {stats['refs_seen']}")
@@ -451,10 +639,15 @@ def main() -> None:
         except (AttributeError, ValueError):  # pragma: no cover — non-reconfigurable stream
             pass
     parser = argparse.ArgumentParser(
-        description="autocasion FACET-PARTITION harvester (make-partition uncapped drain to 100%)")
+        description="autocasion FACET-PARTITION harvester (per-segment make-partition drain to 100%)")
+    parser.add_argument("--segment", type=str, default=None, metavar="SEG",
+                        help="segment(s) to drain: all | vo | vn | km0 (comma-list ok, e.g. "
+                             "vn,km0). 'all' = vo+vn+km0 (every sellable segment). 'catalog' "
+                             "is an alias of vn (the new-car catalog). 'renting' is accepted "
+                             "but reported as non-existent on autocasion. Omit = vo (back-compat).")
     parser.add_argument("--make", action="append", default=None, metavar="SLUG",
                         help="drain only this make slug (repeatable: --make seat --make audi). "
-                             "Omit to enumerate all makes.")
+                             "Omit to enumerate all makes. Applies within the chosen segment(s).")
     parser.add_argument("--makes", type=str, default=None,
                         help="'all' = the FULL uncapped drain (every make slice, one command). "
                              "Equivalent to omitting --make/--max-makes.")
@@ -469,7 +662,13 @@ def main() -> None:
     elif args.makes and args.makes.lower() != "all":
         make_filter = [s.strip() for s in args.makes.split(",") if s.strip()]
 
-    stats = asyncio.run(harvest_facet(make_filter=make_filter, max_makes=args.max_makes))
+    segments, nonexistent = resolve_segments(args.segment)
+    if not segments and nonexistent:
+        print(f"[autocasion_facet] only non-existent segment(s) requested ({nonexistent}); "
+              f"nothing to drain on autocasion.")
+    stats = asyncio.run(harvest_facet(
+        make_filter=make_filter, max_makes=args.max_makes,
+        segments=segments, nonexistent=nonexistent))
     _print_report(stats)
 
 

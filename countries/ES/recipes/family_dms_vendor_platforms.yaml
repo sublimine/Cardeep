@@ -1,0 +1,51 @@
+# Cardeep extraction recipe — family_dms_vendor_platforms
+# Reusable; re-scrape without raw crude.
+version: 1
+source: family_dms_vendor_platforms
+family: DMS vendor platforms (inventario.pro + motorflash) dealer-site family
+scope: long-tail dealer OWN-SITE inventory, harvested by DMS vendor family
+engine: curl_cffi+chrome131_impersonate+html(GET, server-rendered)
+access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser, no creds). Server-rendered HTML — no JS execution needed.
+data_surface: dealer_site_html
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
+multiplier: ONE recipe + per-subfamily parser harvests EVERY family member, because the card markup is uniform across each vendor's sites.
+subfamilies:
+  inventario_pro:
+    fingerprint: the 'inventario.pro' asset host appears on every page
+    listing_paths:
+      - /coches
+      - /coches-ocasion
+      - /coches-nuevos
+      - /vehiculos
+    pagination: ?pagina=N until a page yields no NEW cards (or max_pages cap)
+    detail_template: /coches/<make>/<model>/<numeric_id>
+    field_map:
+      deep_link: card detail anchor /coches/<make>/<model>/<id>
+      listing_ref: trailing numeric <id> in the detail path
+      make: titulo_card first token (fallback: <make> URL slug)
+      model: titulo_card remaining tokens (fallback: <model> URL slug)
+      title: div.titulo_card text
+      price: div.precio text (e.g. '45.900 €' -> 45900)
+      km: div.detalle with span.uk-icon-road -> N km
+      year: div.detalle with span.uk-icon-calendar-o -> YYYY
+      fuel: div.detalle with span.inventario-icon-fuel
+      photo_url: first imgs.inventario.pro/* image in the card
+  motorflash:
+    fingerprint: the 'motorflash' signal (Motorflash stock widget; host CMS varies)
+    listing_paths:
+      - /coches-ocasion
+      - /coches
+      - /coches-segunda-mano
+      - /coches-nuevos
+      - /vehiculos-de-ocasion
+    pagination: ?pag=N until a page yields no NEW cards (or max_pages cap)
+    detail_template: /ficha-vehiculo-ocasion/<slug>/<id>
+    field_map:
+      deep_link: card detail anchor /ficha-vehiculo-ocasion/<slug>/<id>
+      listing_ref: trailing numeric <id> in the ficha path
+      make: hidden input name='marcaVehiculo'
+      model: hidden input name='modeloVehiculo'
+      price: hidden input name='precio'
+      km: hidden input name='kilometros'
+      year: derived from hidden input name='mesesAntiguedad' (age months)
+      photo_url: first images.motorflash.com/* image in the card
