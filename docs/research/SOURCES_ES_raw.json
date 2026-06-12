@@ -1,0 +1,2713 @@
+{
+ "generated": "2026-06-12",
+ "run": "wf_14d4c728-691",
+ "agentCount": 56,
+ "logs": [
+  "F1 census: 7 modalities fan-out, each verifies its high-priority sources as soon as found",
+  "census:oficial — 9 high-priority sources, verifying top 8, 1 deferred to manual pass",
+  "census:desguaces — 10 high-priority sources, verifying top 8, 2 deferred to manual pass",
+  "census:oem — 26 high-priority sources, verifying top 8, 18 deferred to manual pass",
+  "F1 census closed: 7/7 modalities returned"
+ ],
+ "modalities": [
+  {
+   "modality": "oficial",
+   "total_found": 21,
+   "sources": [
+    {
+     "name": "DGT - Microdatos de Transferencias de Vehiculos (mensual/diario)",
+     "url": "https://www.dgt.es/menusecundario/dgt-en-cifras/dgt-en-cifras-resultados/dgt-en-cifras-detalle/Microdatos-de-Transferencias-de-Vehiculos-mensual/",
+     "yields": "Raw per-transfer ownership-change records for all of Spain. Lets Cardeep detect active used-car traders (compraventas) by transaction patterns and geography, and size each trader's monthly volume. Companion microdata on the same portal: Matriculaciones (new registrations, dealer activity) and Bajas (deregistrations, feeds desguaces intelligence).",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Monthly ZIP files, national scope; Spanish used-vehicle market is on the order of 2M transfers/yr (sector estimate, figure not stated on the page itself)",
+     "notes": "VERIFIED live 2026-06-12. Free ZIP download, no auth; programmatic download also via IEST web service (sedeapl.dgt.gob.es/IEST_INTER, descargaFicheroMicrodatos) and portal sedeapl.dgt.gob.es/WEB_IEST_CONSULTA. Since 2025-02-01 VIN/chassis is stripped (must request with legitimate interest via form). Record layout PDF ('diseno de registro') is linked on the page; whether it carries an explicit professional-seller/compraventa flag was NOT confirmed this session - verify against the layout PDF before relying on it.",
+     "priority": "high"
+    },
+    {
+     "name": "DGT - Centros Autorizados de Tratamiento de Vehiculos (CAT / desguaces)",
+     "url": "https://www.dgt.es/es/seguridad-vial/centros-colaboradores/centros-tratamiento-vehiculos/",
+     "yields": "The official, complete national list of authorized scrapyards (CATs) with province/municipality - the ground truth for the desguaces segment of the index.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "Total not stated on page; sector body SIGRAUTO cites roughly 1,200-1,300 CATs nationally (unverified this session)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. Interactive map + list with province/municipality filters, last updated 2025-11-27; no bulk PDF/Excel export visible - scrape the underlying XHR/JSON behind the map per province. A datos.gob.es data request for this exact list (https://datos.gob.es/es/solicitud-de-datos/centros-autorizados-de-tratamiento-de-vehiculos-desguaces) is 'Asignado' to DGT as of 2026-03 but no open dataset published yet."
+    },
+    {
+     "name": "BOE - BORME open data API (Registro Mercantil)",
+     "url": "https://www.boe.es/datosabiertos/api/api.php",
+     "yields": "Daily commercial-registry acts: constituciones, ceses, disoluciones, cambios de objeto/domicilio (14 act types in Section I). Filter objeto social text for car-sales keywords to capture company births/deaths for dealers, compraventas, talleres, desguaces - the freshness signal for the index.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Daily summaries; ~100k new companies/yr across all sectors in Spain (car subset requires text filtering of act PDFs/XML)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. GET /datosabiertos/api/borme/sumario/{yyyymmdd}, XML and JSON, no auth or rate limits documented; XSD schemas provided; per-act documents in PDF (Section II also HTML/XML). FAQ at boe.es/datosabiertos/faq/borme.php. Pre-parsed alternatives seen: rOpenSpain/BOE (GitHub), openmercantil.es."
+    },
+    {
+     "name": "INE - DIRCE / Estadistica Estructural de Empresas (counts by CNAE)",
+     "url": "https://www.ine.es/jaxiT3/Tabla.htm?t=39372",
+     "yields": "Official company COUNTS by CNAE group and region: 451 venta de vehiculos, 452 mantenimiento y reparacion, 454 motocicletas (confirmed present in table selector); 4-digit indicators (4511, 4519, 4520, 4540, 4677) via EEE tables t=24889 / t=25041. No company names (DIRCE microdata is confidential) - use as the coverage denominator / QA benchmark for Cardeep, not as an entity source.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Counts only, no entity records; full regional x CNAE-group matrix downloadable",
+     "priority": "medium",
+     "notes": "VERIFIED live 2026-06-12 (table config page; groups 451/452/454 listed; export via dlgExport.htm?t=39372). Programmatic access via INE Tempus3 JSON API (servicios.ine.es/wstempus). Actual national figures not extracted this session - pull them when setting QA targets."
+    },
+    {
+     "name": "Iberinform - Directorio de empresas por CNAE",
+     "url": "https://www.iberinform.es/informacion-de-empresas/directorio-cnae/4511/venta-de-automoviles-y-vehiculos-de-motor-ligeros",
+     "yields": "Free browsable list of company name + province + municipality for the entire vehicle-retail CNAE; the fetched page (rendered under the new CNAE-2025 code 4781, comercio al por menor de vehiculos de motor) showed 26,205 companies in its breadcrumb - the single best free enumeration of car-sales companies seen this session.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "26,205 companies under retail motor-vehicle CNAE (count seen on fetched page 2026-06-12)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. Simple numbered pagination; also a 'Directorio Geografico' view. Deeper data (CIF, financials) is paid (Iberinform/Crédito y Caución). Site is migrating CNAE 2009 -> CNAE 2025 codes, so enumerate both code systems. Anti-bot posture untested at volume - assume rate limiting."
+    },
+    {
+     "name": "eInforma - Directorio de empresas por CNAE + informes sectoriales",
+     "url": "https://www.einforma.com/empresas/CNAE.html",
+     "yields": "Free per-CNAE company lists with name, city, province and website (40/page); free sector reports give official-style counts, e.g. CNAE 4671 wholesale of motor vehicles = 3,489 companies with revenue breakdown by region.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "3,489 companies CNAE 4671 wholesale (stated in fetched sector report); retail CNAE pages paginated 40/page x 17+ pages on the listing fetched",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12 (fetched CNAE-4511 listing URL, which now serves CNAE-2025 content - same migration caveat as Iberinform). Listing pages free; CIF/financials paid. eInforma is also the data provider behind elEconomista's ranking pages."
+    },
+    {
+     "name": "Empresite (elEconomista) - paginas de actividad",
+     "url": "https://empresite.eleconomista.es/Actividad/CONCESIONARIOS/",
+     "yields": "Keyword-based activity directories with unusually rich free contact data: 706 'Concesionarios' listed with phone (555), website (476), email (502), province filter (Madrid 124, Barcelona 75, Valencia 34). Sister activity pages exist for compraventa, talleres, desguaces keywords.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "706 companies under keyword CONCESIONARIOS (stated on page); other activity keywords add distinct sets",
+     "priority": "medium",
+     "notes": "VERIFIED live 2026-06-12. 30 results/page, numbered pagination, browsable by all 52 provinces. Keyword taxonomy, not strict CNAE - good for contact enrichment rather than exhaustive enumeration."
+    },
+    {
+     "name": "Axesor - Listado de empresas por CNAE",
+     "url": "https://www.axesor.es/listado-empresas.aspx",
+     "yields": "Browse/segment >5M Spanish company records by CNAE and province; free segmenter tool yields counts and basic lists for the car CNAEs.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": ">5M total company records claimed on page; car-sales CNAE subset within",
+     "priority": "medium",
+     "notes": "VERIFIED live 2026-06-12. Free fields per company not itemized on the landing page; bulk extracts are a paid product. Useful as cross-check against Iberinform/eInforma."
+    },
+    {
+     "name": "elEconomista Ranking de Empresas - sector 4511",
+     "url": "https://ranking-empresas.eleconomista.es/sector-4511.html",
+     "yields": "Revenue-ranked dealer list with name, revenue, size and province (data by eInforma) - useful for prioritizing large dealer groups.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "Unknown - page returned 0 results when fetched",
+     "priority": "low",
+     "notes": "Fetched live 2026-06-12 but it showed 'No se han encontrado resultados' for sector 4511 - likely mid-migration to CNAE-2025 sector codes. Re-test with new sector codes before relying on it."
+    },
+    {
+     "name": "Expansion - Directorio de empresas (INFORMA D&B)",
+     "url": "https://www.expansion.com/directorio-empresas.html",
+     "yields": "Company directory browsable by name/sector, powered by INFORMA D&B; potential alternate free surface for the same CNAE lists.",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "Unconfirmed",
+     "priority": "low",
+     "notes": "NOT verified: WebFetch was blocked ('unable to fetch from www.expansion.com'), suggesting bot protection; needs a real-browser pass. Listed from search results only."
+    },
+    {
+     "name": "Infocif - directorio de empresas",
+     "url": "https://www.infocif.es/",
+     "yields": "Claimed free company directory with CNAE browsing.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "Unconfirmed",
+     "priority": "low",
+     "notes": "NOT verified this session - searches for an Infocif CNAE-4511 listing surfaced competitors (Iberinform, eInforma, Axesor, DatosCif, Empresia) instead. Verify a working CNAE listing exists before planning extraction. Adjacent unverified free directories from the same search: empresia.es/empresas/cnae/, datoscif.es."
+    },
+    {
+     "name": "Camaras de Comercio - Censo Publico de Empresas (censo.camara.es / Camerdata)",
+     "url": "https://www.camara.es/funcion-consultiva/consulta-del-censo-publico-de-empresas",
+     "yields": "Chamber-census records (business name, address, postal code, municipality, activity) for all registered businesses, searchable by activity criteria - an official-adjacent enumeration independent of the credit bureaus.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "National census of all businesses; car subset via activity filters; web queries capped at 50 results each",
+     "priority": "medium",
+     "notes": "VERIFIED live 2026-06-12. Query UI at censo.camara.es returns max 50 documents per search - segment queries by activity x province/municipality to enumerate. Bulk extracts sold cheaply via Camerdata (related Chambers site)."
+    },
+    {
+     "name": "datos.gob.es - catalogo federado nacional",
+     "url": "https://datos.gob.es/es/catalogo/conjuntos-datos",
+     "yields": "Federated hub over all state/CCAA/municipal open data - the systematic way to enumerate every regional talleres registry and municipal premises census. Confirmed car-relevant entries this session: a09002970 (Cataluna talleres), a07002862 (talleres), a12002994 (registro de talleres), Madrid and Barcelona premises censuses, DGT statistical datasets.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Catalog-level: dozens of car-trade-relevant regional datasets",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12 (multiple catalog pages fetched). CKAN API available for programmatic catalog sweep; search terms to exhaust: talleres, concesionarios, desguaces, CAT, locales, actividades economicas, IAE. No state-level dataset of concesionarios/compraventas exists - only counts, registries and censuses."
+    },
+    {
+     "name": "Generalitat de Catalunya - Talleres de reparacion de vehiculos (RASIC)",
+     "url": "https://datos.gob.es/es/catalogo/a09002970-talleres-de-reparacion-de-vehiculos",
+     "yields": "Complete official registry of vehicle repair workshops in Catalonia (RASIC industrial-safety register) - full garage segment for the region.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Region-wide registry; record count not stated (Catalonia is ~16% of Spanish market)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. Updated 2026-05-31. Direct Socrata endpoints: https://analisi.transparenciacatalunya.cat/api/views/ebyt-8dme/rows.csv?accessType=DOWNLOAD (also .json/.xml/.rdf) - so SODA API queryable too. Public search UI: canalempresa.gencat.cat cercador de tallers."
+    },
+    {
+     "name": "Junta de Castilla y Leon - Talleres de reparacion de vehiculos",
+     "url": "https://datosabiertos.jcyl.es/web/jcyl/set/es/industria/talleres-reparacion-vehiculos/1284993284985",
+     "yields": "Official registry of repair/maintenance workshops in Castilla y Leon with locality, titularidad (owner) and CNAE per workshop.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Region-wide; count not stated on page",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. CSV download, annual updates since 2020, CC BY 4.0, published by Direccion General de Industria JCyL."
+    },
+    {
+     "name": "Otros registros autonomicos de talleres en datos.gob.es (GVA, Illes Balears, etc.)",
+     "url": "https://datos.gob.es/es/catalogo/a12002994-registro-de-talleres-de-reparacion-de-vehiculos1",
+     "yields": "Same pattern as Catalonia/JCyL for other regions: official per-CCAA workshop registries (datasets a12002994 and a07002862 seen in the national catalog).",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "One registry per CCAA; counts unconfirmed",
+     "priority": "medium",
+     "notes": "Catalog entries seen in datos.gob.es search results 2026-06-12 but dataset pages NOT opened this session - publishers/formats unconfirmed. Each CCAA keeps a registro de talleres (industrial safety); sweep all 17 via the datos.gob.es CKAN API and fall back to each CCAA industry department where no dataset exists."
+    },
+    {
+     "name": "Ayuntamiento de Madrid - Censo de locales y sus actividades",
+     "url": "https://datos.madrid.es/dataset/200085-0-censo-locales",
+     "yields": "Every business premises in Madrid city with activity epigraph and open/closed status - pinpoints physical dealers, compraventas and garages with street-level precision; historic version back to 2014 for churn analysis.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "City-wide premises census (order of 150k+ premises; exact count not stated on dataset page)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. CSV/JSON/XML + API/SPARQL, DAILY updates (last 2026-06-12), CC BY 4.0. Activities coded with MUNICIPAL epigraphs, not CNAE - join against the separate 'Epigrafes de actividad economica' code-list dataset. Historic dataset: datos.madrid.es/dataset/209548-0-censo-locales-historico."
+    },
+    {
+     "name": "Open Data BCN - Cens d'activitats economiques en planta baixa",
+     "url": "https://opendata-ajuntament.barcelona.cat/data/ca/dataset/cens-activitats-comercials",
+     "yields": "Census of all ground-floor premises with economic activity in Barcelona city, with own activity classification including vehicle sale/repair categories.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "2024 CSV file approx 23.9 MB (tens of thousands of premises; exact count unconfirmed)",
+     "priority": "medium",
+     "notes": "VERIFIED via Open Data BCN + datos.gob.es catalog entries 2026-06-12 (dataset pages located, file size confirmed in catalog; CSV not downloaded). Companion datasets: cens-locals-planta-baixa-act-economica and the activity code list (cens-activitats-economiques-class-bcn). Methodology break in 2022 - do not mix vintages."
+    },
+    {
+     "name": "Ayuntamiento de Valencia - Censo de Actividades Economicas (IAE)",
+     "url": "https://www.valencia.es/es/-/censo-actividades-econ%C3%B3micas-2021",
+     "yields": "City business census built from the IAE (business-tax) roll, by activity type - candidate source for Valencia premises-level car businesses.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "Unconfirmed",
+     "priority": "low",
+     "notes": "Located via search 2026-06-12 (municipal statistics office news page); downloadable products and granularity (aggregates vs per-premises) NOT confirmed - related datos.gob.es datasets for Valencia appear aggregate (IAE receipts by district). Verify whether per-establishment data is published before counting on it."
+    },
+    {
+     "name": "Ayuntamiento de Zaragoza - Datos Abiertos",
+     "url": "https://www.zaragoza.es/sede/portal/datos-abiertos/",
+     "yields": "Municipal open-data portal with economy/licensing categories - potential premises/activity dataset for Zaragoza.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Unconfirmed",
+     "priority": "low",
+     "notes": "Portal existence VERIFIED via search 2026-06-12; a specific business-premises census dataset was NOT confirmed. Portal exposes REST/SPARQL; sweep its catalog (and Sevilla/Malaga/Bilbao equivalents) during the municipal pass."
+    },
+    {
+     "name": "Registros autonomicos de gestores de residuos / listados CAT por CCAA",
+     "url": "http://extremambiente.juntaex.es/index.php?option=com_content&view=article&id=2045&Itemid=244",
+     "yields": "Per-region official lists of authorized vehicle treatment centers with authorization numbers (e.g. Extremadura environment dept; GVA publishes a CAT PDF at mediambient.gva.es) - enrich/cross-check the DGT CAT list with regional authorization metadata.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "17 regional lists; aggregate roughly matches DGT national CAT count",
+     "priority": "low",
+     "notes": "Located via search 2026-06-12, pages NOT fetched - formats (HTML vs PDF) per region unconfirmed. Use as enrichment layer after the DGT CAT scrape, not as primary enumeration."
+    }
+   ],
+   "verified": [
+    {
+     "name": "DGT - Microdatos de Transferencias de Vehiculos (mensual/diario)",
+     "url": "https://www.dgt.es/menusecundario/dgt-en-cifras/dgt-en-cifras-resultados/dgt-en-cifras-detalle/Microdatos-de-Transferencias-de-Vehiculos-mensual/",
+     "yields": "Raw per-transfer ownership-change records for all of Spain. Lets Cardeep detect active used-car traders (compraventas) by transaction patterns and geography, and size each trader's monthly volume. Companion microdata on the same portal: Matriculaciones (new registrations, dealer activity) and Bajas (deregistrations, feeds desguaces intelligence).",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Monthly ZIP files, national scope; Spanish used-vehicle market is on the order of 2M transfers/yr (sector estimate, figure not stated on the page itself)",
+     "notes": "VERIFIED live 2026-06-12. Free ZIP download, no auth; programmatic download also via IEST web service (sedeapl.dgt.gob.es/IEST_INTER, descargaFicheroMicrodatos) and portal sedeapl.dgt.gob.es/WEB_IEST_CONSULTA. Since 2025-02-01 VIN/chassis is stripped (must request with legitimate interest via form). Record layout PDF ('diseno de registro') is linked on the page; whether it carries an explicit professional-seller/compraventa flag was NOT confirmed this session - verify against the layout PDF before relying on it.",
+     "priority": "high",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "HTTP 200 ZIPs: export_mensual_trf_202512.zip 43,037,887 B; mat_202512 15.2MB; bajas_202512 36MB. Page 'Microdatos de Transferencias de Vehiculos (mensual)' upd 30/04/2026; full VIN omitted since 01/02/2025",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "DGT - Centros Autorizados de Tratamiento de Vehiculos (CAT / desguaces)",
+     "url": "https://www.dgt.es/es/seguridad-vial/centros-colaboradores/centros-tratamiento-vehiculos/",
+     "yields": "The official, complete national list of authorized scrapyards (CATs) with province/municipality - the ground truth for the desguaces segment of the index.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "Total not stated on page; sector body SIGRAUTO cites roughly 1,200-1,300 CATs nationally (unverified this session)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. Interactive map + list with province/municipality filters, last updated 2025-11-27; no bulk PDF/Excel export visible - scrape the underlying XHR/JSON behind the map per province. A datos.gob.es data request for this exact list (https://datos.gob.es/es/solicitud-de-datos/centros-autorizados-de-tratamiento-de-vehiculos-desguaces) is 'Asignado' to DGT as of 2026-03 but no open dataset published yet.",
+     "live": {
+      "alive": true,
+      "contains_real_data": true,
+      "http_status": 200,
+      "blocker": "none",
+      "evidence": "1292 CATs via ArcGIS CATV/FeatureServer/0 (services3.arcgis.com/TXNiwnLDifb5lMaR); e.g. VALORIZACION DEL AUTOMOVIL S.L., Zaragoza, tel 976 591 610; 54 province values, Barcelona 76; updated 27-11-2025"
+     }
+    },
+    {
+     "name": "BOE - BORME open data API (Registro Mercantil)",
+     "url": "https://www.boe.es/datosabiertos/api/api.php",
+     "yields": "Daily commercial-registry acts: constituciones, ceses, disoluciones, cambios de objeto/domicilio (14 act types in Section I). Filter objeto social text for car-sales keywords to capture company births/deaths for dealers, compraventas, talleres, desguaces - the freshness signal for the index.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Daily summaries; ~100k new companies/yr across all sectors in Spain (car subset requires text filtering of act PDFs/XML)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. GET /datosabiertos/api/borme/sumario/{yyyymmdd}, XML and JSON, no auth or rate limits documented; XSD schemas provided; per-act documents in PDF (Section II also HTML/XML). FAQ at boe.es/datosabiertos/faq/borme.php. Pre-parsed alternatives seen: rOpenSpain/BOE (GitHub), openmercantil.es.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "BORME nº110 11/06/2026: 24 provinces in Sección A; Alicante XML has 21 Constituciones, 23 Ceses, 5 Disoluciones; objeto social 'Comercio al por mayor de vehículos de motor' found. Requires Accept: application/json header (400 without it).",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Iberinform - Directorio de empresas por CNAE",
+     "url": "https://www.iberinform.es/informacion-de-empresas/directorio-cnae/4511/venta-de-automoviles-y-vehiculos-de-motor-ligeros",
+     "yields": "Free browsable list of company name + province + municipality for the entire vehicle-retail CNAE; the fetched page (rendered under the new CNAE-2025 code 4781, comercio al por menor de vehiculos de motor) showed 26,205 companies in its breadcrumb - the single best free enumeration of car-sales companies seen this session.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "26,205 companies under retail motor-vehicle CNAE (count seen on fetched page 2026-06-12)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. Simple numbered pagination; also a 'Directorio Geografico' view. Deeper data (CIF, financials) is paid (Iberinform/Crédito y Caución). Site is migrating CNAE 2009 -> CNAE 2025 codes, so enumerate both code systems. Anti-bot posture untested at volume - assume rate limiting.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Breadcrumb 'Comercio al por menor de vehiculos de motor (26205)' under CNAE 4781; 60 companies/page with name+province+municipio; deep page /paginacion/100 serves 'Drvmb - Cadrete, Zaragoza'",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "eInforma - Directorio de empresas por CNAE + informes sectoriales",
+     "url": "https://www.einforma.com/empresas/CNAE.html",
+     "yields": "Free per-CNAE company lists with name, city, province and website (40/page); free sector reports give official-style counts, e.g. CNAE 4671 wholesale of motor vehicles = 3,489 companies with revenue breakdown by region.",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "3,489 companies CNAE 4671 wholesale (stated in fetched sector report); retail CNAE pages paginated 40/page x 17+ pages on the listing fetched",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12 (fetched CNAE-4511 listing URL, which now serves CNAE-2025 content - same migration caveat as Iberinform). Listing pages free; CIF/financials paid. eInforma is also the data provider behind elEconomista's ranking pages.",
+     "live": {
+      "alive": true,
+      "blocker": "none — no captcha/WAF/login seen, but robots.txt has Disallow:/ for ClaudeBot, anthropic-ai, Claude-Web",
+      "contains_real_data": true,
+      "evidence": "List 40/pg: \"F TOME SA|Madrid|www.ftome.com\"; report 4671: \"NÚMERO TOTAL DE EMPRESAS: 3.489\" + revenue by region — claim CONFIRMED; but pagination caps at 17 pages (~680), Empresas-38.html 404s",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "datos.gob.es - catalogo federado nacional",
+     "url": "https://datos.gob.es/es/catalogo/conjuntos-datos",
+     "yields": "Federated hub over all state/CCAA/municipal open data - the systematic way to enumerate every regional talleres registry and municipal premises census. Confirmed car-relevant entries this session: a09002970 (Cataluna talleres), a07002862 (talleres), a12002994 (registro de talleres), Madrid and Barcelona premises censuses, DGT statistical datasets.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Catalog-level: dozens of car-trade-relevant regional datasets",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12 (multiple catalog pages fetched). CKAN API available for programmatic catalog sweep; search terms to exhaust: talleres, concesionarios, desguaces, CAT, locales, actividades economicas, IAE. No state-level dataset of concesionarios/compraventas exists - only counts, registries and censuses.",
+     "live": {
+      "alive": true,
+      "blocker": "none — HTML catalog renders empty to non-JS fetchers; robots.txt disallows /api/ and theme_id pagination, but /apidata JSON API is open (publisher IDs case-sensitive, must be uppercase)",
+      "contains_real_data": true,
+      "evidence": "apidata API: \"Registro de talleres de reparacion de vehiculos\" pubs A09002970/A07002862/A12002994; DGT \"Matriculaciones-Tablas Estadisticas 2025\" E00130502; Madrid censo locales L01280796. Barcelona no vista",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Generalitat de Catalunya - Talleres de reparacion de vehiculos (RASIC)",
+     "url": "https://datos.gob.es/es/catalogo/a09002970-talleres-de-reparacion-de-vehiculos",
+     "yields": "Complete official registry of vehicle repair workshops in Catalonia (RASIC industrial-safety register) - full garage segment for the region.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Region-wide registry; record count not stated (Catalonia is ~16% of Spanish market)",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. Updated 2026-05-31. Direct Socrata endpoints: https://analisi.transparenciacatalunya.cat/api/views/ebyt-8dme/rows.csv?accessType=DOWNLOAD (also .json/.xml/.rdf) - so SODA API queryable too. Public search UI: canalempresa.gencat.cat cercador de tallers.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "RASIC Catalonia: 12155 rows via Socrata API ebyt-8dme; sample 'SALA MOTORS SA' RASIC-TRA-000300017, Lleida 25191, flags mecanica/electricitat. Publisher Generalitat de Catalunya, updated 31/05/2026.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Junta de Castilla y Leon - Talleres de reparacion de vehiculos",
+     "url": "https://datosabiertos.jcyl.es/web/jcyl/set/es/industria/talleres-reparacion-vehiculos/1284993284985",
+     "yields": "Official registry of repair/maintenance workshops in Castilla y Leon with locality, titularidad (owner) and CNAE per workshop.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Region-wide; count not stated on page",
+     "priority": "high",
+     "notes": "VERIFIED live 2026-06-12. CSV download, annual updates since 2020, CC BY 4.0, published by Direccion General de Industria JCyL.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "CSV ~6,714 talleres en 9 provincias CyL (LEÓN 1667, VALLADOLID 1115...). Header: PROVINCIA;MUNICIPIO;LOCALIDAD;...;TITULAR;CNAE PRINCIPAL. Fila: GARCIA GALAN JESUS, ÁVILA, CNAE 4520. CC-BY 4.0",
+      "http_status": 200
+     }
+    }
+   ]
+  },
+  {
+   "modality": "asociaciones",
+   "total_found": 22,
+   "sources": [
+    {
+     "name": "AEDRA - Buscador de Socios (desguaces/CAT)",
+     "url": "https://aedra.org/buscador-de-socios/",
+     "yields": "Scrapyards / authorized treatment centers (CATs) nationwide: business name, province, phone, website per member",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "615 members (page literally shows '615 Elementos encontrados'; association claims 600+)",
+     "notes": "[VERIFICADO] Fully public WordPress directory. Browse by province via URL pattern aedra.org/buscador-de-socios/asociados/asociados-[provincia]/ (e.g. asociados-caceres showed 13 members with name/phone/website) plus pagination /page/N/ across 52+ pages. Best single national source for desguaces. One search snippet for /asociaciones/ showed 'One moment, please...' so an occasional Cloudflare-style challenge may exist on some paths, though all my fetches passed clean."
+    },
+    {
+     "name": "AECA-ITV - Listado de estaciones ITV por CCAA + Asociados",
+     "url": "https://www.aeca-itv.com/la-itv/listado-por-comunidades-autonomas/",
+     "yields": "All ITV inspection stations in Spain: municipality, postal code, address, operating entity, station number, inspection lines, phone, email; plus ~60-82 operator companies at /asociados/ with links to their sites",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "~418 stations / 82 operator entities (association claim; site footer says 'más de 400 centros, más de 1.000 líneas')",
+     "notes": "[VERIFICADO] Public collapsible HTML tables per autonomous community — richest structured dataset of any association found (full address + station ID per row). Companion page https://www.aeca-itv.com/asociados/ lists the operator companies (SGS, TÜV Rheinland, DEKRA, Itevelesa-type groups) with website links. AECA-ITV claims to cover practically all ITV operators in Spain."
+    },
+    {
+     "name": "Gremi del Motor de Barcelona - Buscador de agremiados",
+     "url": "https://gremidelmotor.com/es/buscar-agremiados",
+     "yields": "Member dealerships, used-car traders and after-sales businesses in Barcelona province: name, town, link to per-member profile page",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "693 members ('693 resultados', 14 pages — seen on page)",
+     "notes": "[VERIFICADO] Public, paginated, alphabetical, with detail-page links per member. Note /es/agremiats returns 404 — use /es/buscar-agremiados. This is the Barcelona pillar of FECAVEM."
+    },
+    {
+     "name": "AMDA Madrid - Concesionarios asociados",
+     "url": "https://www.amdamadrid.com/concesionarios-asociados/",
+     "yields": "Madrid-region dealerships: business name, phone, full address, website, email, municipality, brand affiliations, photos",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "147 dealers ('147 Elementos encontrados', 13 pages — seen on page)",
+     "notes": "[VERIFICADO] Asociación Madrileña de Distribuidores de Automoción. Fully public, filterable by 25+ municipalities and 80+ brands. The best regional dealer directory found for Madrid."
+    },
+    {
+     "name": "AETRAC - Socios (CATs Cataluña)",
+     "url": "https://aetrac.org/es/socios/",
+     "yields": "Vehicle treatment centers / desguaces in Catalonia, filterable by comarca and vehicle type (industrial, turismo, moto)",
+     "access_method": "browser",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "107 members (page shows 'Se han encontrado 107 asociados'; claims 80% of Catalan dismantlers)",
+     "notes": "[VERIFICADO] Count and filters confirmed, but results render via AJAX search ('realiza una búsqueda...') — extract via headless browser or by hitting the underlying WordPress admin-ajax endpoint. Complements AEDRA for Catalonia."
+    },
+    {
+     "name": "CETRAA - Asociaciones provinciales de talleres",
+     "url": "https://www.cetraa.com/asociados/",
+     "yields": "Gateway: 30 provincial garage/workshop associations with names and websites (APETREVA Albacete, GREMI Barcelona, NATRAM Madrid, ATRA Pontevedra, CORVE Girona, FEVAUTO Valencia, BAT Vizcaya, AEGA Guipúzcoa, ATARE Las Palmas, etc.) — each provincial site is where individual workshop directories live",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "30 associations representing ~20,000 workshop companies (~70% of Spanish repair shops, per CETRAA claim)",
+     "notes": "[VERIFICADO] I extracted the full 30-row table with websites. CETRAA itself lists associations, not workshops — treat as a fan-out seed: crawl each member site's 'talleres asociados' search (several confirmed below). Highest multiplier source for garages."
+    },
+    {
+     "name": "CORVE Girona - Cercador d'associats",
+     "url": "https://www.corve.org/",
+     "yields": "Member vehicle dealers, repair shops and related businesses in Girona province via public establishment search",
+     "access_method": "browser",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "unknown (directory confirmed, count not displayed on homepage)",
+     "notes": "[VERIFICADO] Site confirms a public 'Cercador' over all associated establishments ('Cerca entre tots els establiments que tenim associats') with sector sections. Search interface likely needs browser/AJAX extraction. Girona pillar of FECAVEM and CETRAA member."
+    },
+    {
+     "name": "ASETRA Madrid - Buscador de talleres asociados",
+     "url": "https://asetramadrid.com/zona-automovilistas/",
+     "yields": "Member repair workshops in Madrid with their centros de trabajo (locations)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "unknown (directory confirmed, count not seen)",
+     "notes": "[VERIFICADO] Homepage links 'Buscador de talleres' under Zona Automovilistas and urges members to publish their work centers in it. CONEPA member federation for Madrid workshops."
+    },
+    {
+     "name": "ATRA Pontevedra - Talleres asociados (Galicia)",
+     "url": "https://atra.gal/",
+     "yields": "Member repair workshops in Pontevedra province: directory at /talleres filterable by activity, dealership brand affiliation and services",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "unknown (directory confirmed; ATRA claims to be the only workshop association in Pontevedra)",
+     "notes": "[VERIFICADO] 'Asociados' menu links to /talleres with activity/brand/service filters. Best confirmed Galicia association directory; sibling APTCOR (A Coruña, aptcor.org) and ATAVE (Ourense) exist via CETRAA/CONEPA but their directories were not individually verified."
+    },
+    {
+     "name": "FEDEME Sevilla - Directorio de empresas (incl. ASCONSE concesionarios)",
+     "url": "https://www.fedeme.com/directorio/",
+     "yields": "Member companies of Sevilla metal federation filterable by sector 'Automoción' — includes ASCONSE (Sevilla car/moto/industrial-vehicle dealers) and the provincial workshop association members",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "unknown; only members who authorized publication appear (stated on page)",
+     "notes": "[VERIFICADO] Public paginated directory with sector filter (Automoción / Estaciones de Servicio etc.). ASCONSE page (https://www.fedeme.com/asociacion-asconse/) confirms the dealers association exists but publishes no roster of its own — the /directorio/ is the extraction point. Main verified Andalusia association source."
+    },
+    {
+     "name": "FER - Federación Española de la Recuperación y el Reciclaje - Buscador de Socios",
+     "url": "https://www.recuperacion.org/",
+     "yields": "Recycling/recovery member companies including end-of-life vehicle (VFU/CAT) operators: public member search under 'Socios > Buscador de Socios'",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "280+ direct members, 435+ companies via regional associations (association claim seen in search results)",
+     "notes": "[VERIFICADO] Navigation confirms 'Buscador de Socios' exists and is public; VFU companies are a subset, so filter after extraction. Overlaps AEDRA but adds non-AEDRA recyclers."
+    },
+    {
+     "name": "FACONAUTO - Organigrama (asociaciones de concesionarios por marca)",
+     "url": "https://www.faconauto.com/organigrama/",
+     "yields": "Gateway: 26 brand dealer associations (ANCR Renault, ACEVAS VW/Audi/Skoda, ANCOSAT Seat, ACONISSAN, ACOFORD, ANEFA Fiat, Stellantis AECS, Toyota, BMW-Mini, Kia, etc.) representing the franchised-dealer universe",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "26 brand associations / 2,018 dealerships + 3,642 second-tier agents (FACONAUTO claim, not listed on site)",
+     "notes": "[VERIFICADO] FACONAUTO publishes NO public dealer directory — only the organigrama naming the 26 brand associations (no websites given). Extraction path: enumerate brand associations (some have own sites, e.g. asociacionstellantis.com, asociacioncitroen.com), but franchised dealers themselves are better obtained from brand dealer-locators (different modality). Keep as authoritative universe-sizing + gateway source."
+    },
+    {
+     "name": "FECAVEM / Gremimotor - Establecimientos asociados (Cataluña)",
+     "url": "https://www.gremimotor.com/associats.php",
+     "yields": "Professional vehicle sellers (dealers and compraventas) across Catalonia that publish guaranteed VO stock on the federation portal",
+     "access_method": "browser",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "unknown; FECAVEM federates Gremi del Motor BCN (693), CORVE Girona, ASTAVE Tarragona, Lleida and Sabadell associations",
+     "notes": "[VERIFICADO] 'ESTABLECIMIENTOS ASOCIADOS' page exists but renders empty via curl (JS-loaded) — needs headless browser. fecavem.com confirms the 5 member organizations with phones. Largely overlaps Gremi del Motor directory but adds Tarragona (astave.org) and Lleida (automocio.cat) members not otherwise enumerated."
+    },
+    {
+     "name": "Agencia Tributaria - Relación de asociaciones del sector automoción (ámbito estatal)",
+     "url": "https://sede.agenciatributaria.gob.es/Sede/colaborar-agencia-tributaria/colaboracion-social-presentacion-declaraciones/relacion-entidades-acuerdo/tipo-7-asociaciones-sector-automocion/asociaciones-automocion/ambito-estatal.html",
+     "yields": "Gateway: official enumeration of 20 national automotive trade associations with AEAT agreements (FACONAUTO, GANVAM, ANCOVE, ANIACAM, FENAR Renault agents, ANSIT intermarcas, ANCIMOTO motos, ASOAP Peugeot, ANRAO Opel, Kia/Porsche/Mazda/Honda/Suzuki dealer groups...)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "20 national associations (seen on page)",
+     "notes": "[VERIFICADO] Government page — use it to complete the universe of national sector bodies beyond the obvious ones (e.g. ANSIT and ANCIMOTO for independent official services/moto dealers, FENAR for Renault agent network). No regional listing linked from this page."
+    },
+    {
+     "name": "RO-DES - Panorama de asociaciones de desguaces de España",
+     "url": "https://www.ro-des.com/desguaces/desguaces-asociaciones-de-espana/",
+     "yields": "Gateway: enumeration of ~18 regional desguace/CAT associations (ADESAR Aragón, ABACAT Baleares, REVECAN Cantabria, ADECOVA Valencia, ACL CARD CyL, ADERECAM CLM, CATEX Extremadura, TRAVEGA Galicia, AETRAC Cataluña, ASMADE Madrid, ADREMUR Murcia, ANDARA Navarra, ARICAT/ASCARDETE Canarias...)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "3 national + ~18 regional associations (seen on page; no websites listed)",
+     "notes": "[VERIFICADO] Commercial site but the most complete public map of regional dismantler associations; corroborated by reciclauto.com/index.php/conocer-reciclauto/asociaciones-... Use to seed per-region association crawls (ADECOVA at adecova.com confirmed live via search but its member list unverified). Most members already inside AEDRA's 615."
+    },
+    {
+     "name": "CONEPA - Federación Española de Empresarios de Talleres",
+     "url": "http://www.conepa.org/conozcanos/",
+     "yields": "Gateway: 21 provincial workshop associations (~10,000 companies) — incl. ASETRA Madrid, ATAM, Lugo, Cantabria, Menorca, Valladolid associations per news items",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "21 associations / ~10,000 companies (stated on conozcanos page, members NOT enumerated there)",
+     "notes": "[VERIFICADO que la página no lista los 21 miembros] I curl-parsed the page: it states the figure but publishes no roster. Reconstruct membership from news posts (conepa.org news + asetramadrid.com) then crawl each member association's own taller directory. Complements CETRAA (different federations, overlapping population)."
+    },
+    {
+     "name": "Salón del Vehículo de Ocasión y Seminuevo (IFEMA Madrid) - Catálogo de expositores",
+     "url": "https://www.ifema.es/vehiculoocasion/edicion-anterior/expositores",
+     "yields": "Exhibiting VO dealers/compraventas/platforms (Flexicar, OcasiónPlus, Automotor Dursan, Box Auto, CAR10, Total Ocasión, Aldauto, Ford Deysa, Audi Retail Madrid, C. de Salamanca, Toyota Ocasión, Volvo Auto Elia...)",
+     "access_method": "browser",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "dozens of exhibitor companies per edition (~30,000 m2, 2,000+ vehicles claimed); catalog page currently returns ZERO records",
+     "notes": "[VERIFICADO] The official catalog page exists with filters/card-view but rendered empty when fetched ('no hemos encontrado nada') — likely JS/API-populated around event dates (next edition June). Fallback: IFEMA press notes (https://www.ifema.es/vehiculoocasion/notas-prensa/mayor-oferta-actividades) name the main exhibitor groups. Low data yield vs effort; useful for identifying large VO chains."
+    },
+    {
+     "name": "GANVAM - Asociación Nacional de Vendedores de Vehículos",
+     "url": "https://ganvam.es/afiliados-asociaciones/",
+     "yields": "Nothing directly extractable: claims ~7,500 member companies (dealers, independent sellers, workshops) but publishes no member directory",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "~7,500 companies (claim on page; zero listed)",
+     "notes": "[VERIFICADO] Checked homepage, /afiliados/ and /afiliados-asociaciones/ — informational only, no roster, no links to member directories. Keep only for market-sizing stats and as contact channel; not a scraping source."
+    },
+    {
+     "name": "ANCOVE - Asociación Nacional de Comerciantes de Vehículos",
+     "url": "https://www.ancove.es/",
+     "yields": "Nothing directly extractable: national used-car traders (compraventas) association with no public member directory; /enlaces/asociaciones lists only national/EU bodies (ACEA, AEDRA, ANFAC, ANIACAM, ANESDOR, AE-Renting, APCAS, CECRA)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "unknown member count; present in all CCAA (claim)",
+     "notes": "[VERIFICADO] Full nav crawled via curl: member content sits behind affiliate login; no provincial member associations published. Its agenda page is a useful calendar of regional VO fairs (Firauto Alicante, Salón VO Ourense, Car Outlet Vigo) whose exhibitor lists could enumerate compraventas — secondary lead."
+    },
+    {
+     "name": "ASEPA - Asociación Española de Profesionales de Automoción",
+     "url": "https://www.asepa.es/",
+     "yields": "Not a POS source: individual engineers/professionals plus corporate 'socios protectores' (Bosch, Repsol, Michelin); member lists behind login",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "n/a for dealers",
+     "notes": "[VERIFICADO] Professional/technical society, not a trade body of dealerships. Exclude from extraction pipeline; covered here only for completeness of the mandated checklist."
+    },
+    {
+     "name": "SIGRAUTO - Asociación para el tratamiento de VFU",
+     "url": "http://www.sigrauto.com/quienes-somos",
+     "yields": "No own directory: members are AEDRA, ANFAC, FER, FREDICA/AICA (Canarias) and Tesla/Lynk&Co; refers to AEDRA's ~600-center network",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "~600 CATs referenced (via AEDRA)",
+     "notes": "[VERIFICADO] Umbrella ELV body without a published facility list — AEDRA's buscador is the actual data source. FREDICA/AICA are leads for Canarias dealer/importer enumeration (unverified directories)."
+    },
+    {
+     "name": "AEGA Gipuzkoa - Asociación de Empresarios de Automoción de Gipuzkoa",
+     "url": "http://www.aega.es/",
+     "yields": "Potential: 400+ Gipuzkoa companies across the whole value chain (official dealers, workshops, service stations, scrapyards)",
+     "access_method": "html",
+     "defense": "other",
+     "priority": "low",
+     "est_volume": "400+ companies (claim via third-party profiles, not verified on site)",
+     "notes": "[NO VERIFICADO] aega.es returned HTTP 503 (Retry-After 3600) during this run, so the existence of a public member directory could not be confirmed. Best Basque Country association lead (Bizkaia counterpart BAT at bat-tav.es is workshops-only via CETRAA; an 'Asociación de Concesionarios de Bizkaia' was mentioned in third-party text but no live site was found). Retry later with browser."
+    }
+   ],
+   "verified": [
+    {
+     "name": "AEDRA - Buscador de Socios (desguaces/CAT)",
+     "url": "https://aedra.org/buscador-de-socios/",
+     "yields": "Scrapyards / authorized treatment centers (CATs) nationwide: business name, province, phone, website per member",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "615 members (page literally shows '615 Elementos encontrados'; association claims 600+)",
+     "notes": "[VERIFICADO] Fully public WordPress directory. Browse by province via URL pattern aedra.org/buscador-de-socios/asociados/asociados-[provincia]/ (e.g. asociados-caceres showed 13 members with name/phone/website) plus pagination /page/N/ across 52+ pages. Best single national source for desguaces. One search snippet for /asociaciones/ showed 'One moment, please...' so an occasional Cloudflare-style challenge may exist on some paths, though all my fetches passed clean.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "\"615 Elementos encontrados\", ~52 pages; e.g. \"3-LEZAMAUTO, Álava, 945892699\", \"A-4 Desguaces Barcelona S.L., 936549592\", \"Abril 2001 Desguaces S.A., León, 987212126\"; websites like www.aprovechauto.com",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "AECA-ITV - Listado de estaciones ITV por CCAA + Asociados",
+     "url": "https://www.aeca-itv.com/la-itv/listado-por-comunidades-autonomas/",
+     "yields": "All ITV inspection stations in Spain: municipality, postal code, address, operating entity, station number, inspection lines, phone, email; plus ~60-82 operator companies at /asociados/ with links to their sites",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "~418 stations / 82 operator entities (association claim; site footer says 'más de 400 centros, más de 1.000 líneas')",
+     "notes": "[VERIFICADO] Public collapsible HTML tables per autonomous community — richest structured dataset of any association found (full address + station ID per row). Companion page https://www.aeca-itv.com/asociados/ lists the operator companies (SGS, TÜV Rheinland, DEKRA, Itevelesa-type groups) with website links. AECA-ITV claims to cover practically all ITV operators in Spain.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "HTTP 200. Entry: \"Avilés|33401|Travesía de la Industria,53|ITVASA|3307|5 lines|985 520 228\"; 16 CCAA+Ceuta; /asociados/ lists 60+ operators (ITEVELESA, APPLUS, DEKRA) w/ links; robots.txt Allow:/",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Gremi del Motor de Barcelona - Buscador de agremiados",
+     "url": "https://gremidelmotor.com/es/buscar-agremiados",
+     "yields": "Member dealerships, used-car traders and after-sales businesses in Barcelona province: name, town, link to per-member profile page",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "693 members ('693 resultados', 14 pages — seen on page)",
+     "notes": "[VERIFICADO] Public, paginated, alphabetical, with detail-page links per member. Note /es/agremiats returns 404 — use /es/buscar-agremiados. This is the Barcelona pillar of FECAVEM.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "693 resultados/14 pages; per-member URLs /es/agremiados/<slug>/; profile ACAUTO: Carrer Mallorca 92 Barcelona, tel 934106974, Servicio Oficial Dacia/Renault. Coverage exceeds Barcelona prov (Blanes, Ripoll)",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "AMDA Madrid - Concesionarios asociados",
+     "url": "https://www.amdamadrid.com/concesionarios-asociados/",
+     "yields": "Madrid-region dealerships: business name, phone, full address, website, email, municipality, brand affiliations, photos",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "147 dealers ('147 Elementos encontrados', 13 pages — seen on page)",
+     "notes": "[VERIFICADO] Asociación Madrileña de Distribuidores de Automoción. Fully public, filterable by 25+ municipalities and 80+ brands. The best regional dealer directory found for Madrid.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "\"147 Elementos encontrados\", 13 pages; e.g. ZONAUTO SUR S.L (PINTO) tel 916910808, C. Sestao 3 Pinto, ventas.zonauto@redhyundai.com, HYUNDAI, photo Fachada-Pinto-640x360.jpg. All census fields confirmed.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "AETRAC - Socios (CATs Cataluña)",
+     "url": "https://aetrac.org/es/socios/",
+     "yields": "Vehicle treatment centers / desguaces in Catalonia, filterable by comarca and vehicle type (industrial, turismo, moto)",
+     "access_method": "browser",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "107 members (page shows 'Se han encontrado 107 asociados'; claims 80% of Catalan dismantlers)",
+     "notes": "[VERIFICADO] Count and filters confirmed, but results render via AJAX search ('realiza una búsqueda...') — extract via headless browser or by hitting the underlying WordPress admin-ajax endpoint. Complements AEDRA for Catalonia.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "\"Se han encontrado 107 asociados\"; filters: 42 comarcas + Vehicles Industrials/Turisme/Motocicletes; associats-sitemap.xml lists 130 members e.g. DESGUACE LA ROCA S.L., AUTO DESGUACES MIR",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "CETRAA - Asociaciones provinciales de talleres",
+     "url": "https://www.cetraa.com/asociados/",
+     "yields": "Gateway: 30 provincial garage/workshop associations with names and websites (APETREVA Albacete, GREMI Barcelona, NATRAM Madrid, ATRA Pontevedra, CORVE Girona, FEVAUTO Valencia, BAT Vizcaya, AEGA Guipúzcoa, ATARE Las Palmas, etc.) — each provincial site is where individual workshop directories live",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "30 associations representing ~20,000 workshop companies (~70% of Spanish repair shops, per CETRAA claim)",
+     "notes": "[VERIFICADO] I extracted the full 30-row table with websites. CETRAA itself lists associations, not workshops — treat as a fan-out seed: crawl each member site's 'talleres asociados' search (several confirmed below). Highest multiplier source for garages.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "HTTP 200, 193KB. Raw HTML contains \"30 asociaciones\" + all 9 census names verified (APETREVA, GREMI, NATRAM, atra.gal, CORVE, FEVAUTO, bat-tav, AEGA, ATARE) with province+website each. Gateway tier, not individual workshops.",
+      "http_status": 200
+     }
+    }
+   ]
+  },
+  {
+   "modality": "oem",
+   "total_found": 44,
+   "sources": [
+    {
+     "name": "Volkswagen ES dealer API (OneHub bff-search)",
+     "url": "https://v3-81-1.ds.dcc.feature-app.io/bff-search/dealers?lufthansaApiKey=h0CQWvPYSBvp5KYXUpRU4FpZrnl0tZx1&query={\"type\":\"DEALER\",\"countryCode\":\"ES\",\"name\":\" \"}",
+     "yields": "Full VW Spain dealer list as JSON: id, name, address, province, coordinates, phone, email, website, hours. 263 dealers returned in one call. Entry page: https://www.volkswagen.es/es/buscador-de-concesionarios.html",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "263 dealers (counted in fetched JSON)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: single unauthenticated GET returns all 263 ES dealers with full contact data. API key is embedded in public page JS. serviceConfigEndpoint param required (copy from page network call)."
+    },
+    {
+     "name": "Das WeltAuto España (SEAT/Skoda/Cupra/VW VO)",
+     "url": "https://www.dasweltauto.es/esp/seat",
+     "yields": "Official VW Group certified used stock per brand section (SEAT 4,083; VW 3,000 observed; plus Skoda and Cupra sections) with per-province/per-dealer dealer pages (/esp/seat/red-de-concesionarios, /esp/concesionarios-seat-en-madrid). Listing IDs are Motorflash-style anuncio IDs.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~10-12k vehicles total (SEAT 4,083 + VW 3,000 counted on page; Skoda+Cupra extrapolated)",
+     "priority": "high",
+     "notes": "VERIFIED in browser and curl (homepage 200; 403 only for non-browser UA on some paths). Server-rendered listing pages = easy scrape. Per-dealer stock attribution present. VW brand section at /esp/volkswagen-de-segunda-mano."
+    },
+    {
+     "name": "Volkswagen Approved (VW VO portal)",
+     "url": "https://www.volkswagen.es/es/approved.html",
+     "yields": "VW certified used cars with per-province pages (/es/approved/provincia/madrid.html) server-rendering listings; dealer-attributed stock.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~3,000 vehicles (DWA VW section count; Approved is the renamed program)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200 (940KB page; Madrid province page renders listings server-side). Program renamed from Das WeltAuto to Volkswagen Approved in 2025."
+    },
+    {
+     "name": "SEAT dealer network (concesionarios.seat)",
+     "url": "https://www.concesionarios.seat/red-concesionarios",
+     "yields": "All official SEAT dealers via 51 province pages; each dealer has own subsite. Sitemap.xml exposes 18,424 URLs incl. all dealer/offer pages. Workshops at talleres.seat.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "51 province pages; ~260+ dealers (sitemap has 18,424 URLs incl. per-dealer offer pages)",
+     "priority": "high",
+     "notes": "VERIFIED: sitemap fetched (3.3MB), 51 red-concesionarios province URLs counted. AEM edealer platform; dealer cards hydrate via JS on province pages — use sitemap + dealer subsites."
+    },
+    {
+     "name": "Skoda ES dealer directory (retailers app sitemap)",
+     "url": "https://www.skoda.es/apps/retailers/sitemap.xml",
+     "yields": "Every official Skoda ES dealer as /apps/retailers/dealer/<id> page; 215 dealer URLs in sitemap.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "215 dealer pages (counted in sitemap)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: 216 loc entries (1 index + 215 dealers). Skoda VO is on Das WeltAuto; Skoda Plus page at skoda.es/skoda-plus/tu-concesionario (200)."
+    },
+    {
+     "name": "Cupra ES dealer locator",
+     "url": "https://www.cupra.com/es-es/red",
+     "yields": "Official Cupra Spain dealer search (Cupra Garage/specialists). Cupra VO (Cupra Approved) stock lives in Das WeltAuto /esp/cupra section.",
+     "access_method": "browser",
+     "defense": "none",
+     "est_volume": "~80-100 points (not counted; SEAT-network subset)",
+     "priority": "medium",
+     "notes": "VERIFIED 200 via curl, JS app (same VW Group platform as concesionarios.seat). Volume not directly observed — derive from SEAT/Cupra shared network."
+    },
+    {
+     "name": "Audi Selection :plus (Audi VO)",
+     "url": "https://www.audi.es/es/compra/vehiculos-ocasion/",
+     "yields": "Audi certified used program; central portal routes to per-dealer Selection:plus subsites (audiselectionplus.audiretailmadrid.es, audiselectionplus.sevillawagen.es, etc.) each listing that dealer's stock (Motorflash-powered).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "dozens of dealer subsites; stock per dealer 30-300 (not counted centrally)",
+     "priority": "high",
+     "notes": "VERIFIED in browser (audi.es served 503 to curl at check time; loads fine in browser). Per-dealer subdomain pattern audiselectionplus.<dealersite>.es confirmed via live search results. Audi dealer locator: https://www.audi.es/es/compra/buscador-de-concesionarios/"
+    },
+    {
+     "name": "renew (Renault Group VO — Renault/Dacia/multi)",
+     "url": "https://es.renew.auto/vehiculos.html",
+     "yields": "Official Renault Group ES used-car marketplace: 5,745 vehicles, brand filters (RENAULT/DACIA), server-rendered listings, per-dealer attribution on detail pages ('vendido por concesionario renew en ARANJUEZ').",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "5,745 vehicles (count rendered on page)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: 1.4MB server-rendered page, count and dealer attribution confirmed. This replaces old Renault Selection/Occasion portals. GOLD for per-dealer VO stock."
+    },
+    {
+     "name": "Dacia ES dealer directory",
+     "url": "https://concesionario.dacia.es/find-a-dealer-listing.html",
+     "yields": "Paginated HTML directory of all official Dacia dealers with per-dealer pages (<slug>.html).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~150-200 dealers (paginated listing, 5+ pages observed; not fully counted)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200: dealer detail links and ?page=N pagination confirmed in HTML. Renault equivalent locator at renault.es/concesionarios.html is JS-driven (browser)."
+    },
+    {
+     "name": "Renault ES dealer locator",
+     "url": "https://www.renault.es/concesionarios.html",
+     "yields": "Official Renault Spain dealer search (JS app, results on location query).",
+     "access_method": "browser",
+     "defense": "none",
+     "est_volume": "~400 sales/service points (not counted; network larger than Dacia's)",
+     "priority": "medium",
+     "notes": "VERIFIED page loads (curl 200, title 'Encuentra tu concesionario'); dealer JSON fires only after search interaction — capture via browser. renew covers VO."
+    },
+    {
+     "name": "Spoticar España (Stellantis VO — Peugeot/Citroën/Opel/Fiat/Jeep/DS)",
+     "url": "https://www.spoticar.es/comprar-coches-de-ocasion",
+     "yields": "6,334 used vehicles across all Stellantis brands (Jeep/Opel/Peugeot listings observed) + dealer locator /concesionarios-spoticar + per-dealer pages /concesionarios/<slug>-<id>; each vehicle links its selling dealer. Internal API /api/count-published-vo; locator uses Woosmap (public key woos-88a51d0b-2d09-3438-8c39-e8f17727f0a2).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "6,334 vehicles (count rendered on search page); ~hundreds of POS",
+     "priority": "high",
+     "notes": "VERIFIED in browser; plain curl gets 403 (Stellantis/awsmpsa WAF on CloudFront). Woosmap stores API is a known enumerable JSON backend for the dealer network. GOLD: single source for VO stock of 6 Stellantis brands with dealer attribution."
+    },
+    {
+     "name": "Red Comercial Peugeot (dealer directory)",
+     "url": "https://redcomercial.peugeot.es/",
+     "yields": "ALL official Peugeot ES dealers on one page grouped by region: 275 dealer subsites (each with own offers/contact).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "275 dealer pages (counted in DOM)",
+     "priority": "high",
+     "notes": "VERIFIED in browser (275 links counted). curl returns 6KB JS shell — render needed. Stellantis 'edealer' platform; same exists for Citroën at redoficial.citroen.es but that host returned 500/'Internal DNS Error' at check time."
+    },
+    {
+     "name": "Citroën ES dealer locator",
+     "url": "https://www.citroen.es/herramientas/red-oficial.html",
+     "yields": "Official Citroën dealer/workshop search for Spain (search-driven).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "~250 dealers (not counted; comparable to Peugeot's 275)",
+     "priority": "medium",
+     "notes": "VERIFIED loads in browser; curl 403 (Stellantis WAF). Directory alternative redoficial.citroen.es was erroring (500) when checked — retry later."
+    },
+    {
+     "name": "Opel ES dealer locator",
+     "url": "https://www.opel.es/herramientas/concesionarios-opel.html",
+     "yields": "Official Opel dealer search, query-param driven (?searchTerm=<city>&searchType=city).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "~150-200 dealers (not counted)",
+     "priority": "medium",
+     "notes": "VERIFIED loads in browser; curl 403. Same Stellantis platform; VO covered by Spoticar."
+    },
+    {
+     "name": "Fiat ES dealer locator",
+     "url": "https://www.fiat.es/herramientas/dealer-locator",
+     "yields": "Official Fiat ES dealer search (city/postal-code driven).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "~100-150 dealers (not counted)",
+     "priority": "medium",
+     "notes": "VERIFIED loads in browser ('Lista de concesionarios Fiat en España'); curl 403. VO covered by Spoticar."
+    },
+    {
+     "name": "Jeep ES dealer locator",
+     "url": "https://www.jeep.es/concesionarios",
+     "yields": "Official Jeep ES dealer listing/search.",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "~70-100 dealers (not counted)",
+     "priority": "medium",
+     "notes": "curl 403 (same Stellantis WAF as fiat.es/opel.es which both render in browser) — browser render ASSUMED working, not individually verified. VO covered by Spoticar."
+    },
+    {
+     "name": "Toyota ES dealer directory",
+     "url": "https://www.toyota.es/concesionarios",
+     "yields": "98 dealer-group pages server-listed (toyota.es/concesionarios/<slug>), each with installations; backing JSON API at kong-proxy-aws.toyota-europe.com/dxp/dealers/api/ (reachable, route params needed).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "98 dealer groups (counted in DOM); ~300 installations",
+     "priority": "high",
+     "notes": "VERIFIED: 98 unique dealer links counted; Toyota Europe DXP API gateway endpoints found embedded in page HTML."
+    },
+    {
+     "name": "Toyota Ocasión (Toyota VO)",
+     "url": "https://www.toyota.es/coches-segunda-mano",
+     "yields": "Toyota certified used stock; server HTML includes per-dealer attribution ('Concesionario Alcobendas', 'Concesionario Collado Villalba'...). Uses toyota-europe c1-apigateway for used-car search.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "thousands (not counted; 1.1MB server page with listings)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200: dealer names present in static HTML. GOLD: per-dealer used stock on OEM platform."
+    },
+    {
+     "name": "Lexus ES dealer directory + Lexus Select Seminuevos (VO)",
+     "url": "https://www.lexusauto.es/concesionarios",
+     "yields": "44 Lexus dealer pages server-rendered; VO program at /lexus-seminuevos (Lexus Select, 150-point certified, per-city pages e.g. /lexus-seminuevos/lexus-seminuevos-madrid).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "44 dealers (counted); VO stock in hundreds",
+     "priority": "high",
+     "notes": "VERIFIED: both URLs curl 200; 44 dealer links counted in HTML. Same Toyota DXP platform."
+    },
+    {
+     "name": "Kia ES dealer API",
+     "url": "https://www.kia.com/api/bin/dealer?locale=es-es&program=dealerLocatorSearch",
+     "yields": "Full Kia Spain dealer list as JSON: 242 dealers with name, type (incl. 'Centros Kia Seminuevos Certificados' flag), lat/lng, address, external IDs.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "242 dealers (counted in fetched JSON)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: unauthenticated GET returns all 242. Locator page: kia.com/es/buscador-concesionarios/. GOLD."
+    },
+    {
+     "name": "Kia Seminuevos Certificados (Kia VO)",
+     "url": "https://www.kia.com/es/soluciones-de-movilidad/kia-seminuevos-certificados-/",
+     "yields": "Kia certified used program with per-dealer stock browsers on kia.com (e.g. /es/concesionarios/masmotorsa/kia-seminuevos-certificados/buscador/).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "per-dealer buscadores across ~240-dealer network (stock not counted)",
+     "priority": "high",
+     "notes": "Program page VERIFIED 200 via curl. Per-dealer buscador URL pattern confirmed via live search results (masmotorsa example) — enumerate using the 242-dealer API list."
+    },
+    {
+     "name": "Hyundai ES dealer locator",
+     "url": "https://www.hyundai.com/es/es/concesionarios.html",
+     "yields": "Official Hyundai Spain dealer search ('dealer search' WWN component; JSON fires on search interaction).",
+     "access_method": "browser",
+     "defense": "none",
+     "est_volume": "~250 points (not counted)",
+     "priority": "medium",
+     "notes": "VERIFIED page loads in browser; dealer API not captured without interaction (guessed endpoints 404). Scrape via browser automation."
+    },
+    {
+     "name": "Hyundai Seminuevos / Promise (Hyundai VO)",
+     "url": "https://www.hyundai.es/seminuevos/",
+     "yields": "Hyundai certified used stock (Hyundai Promise): 420 coches counted server-side; program page at hyundai.com/es/es/seminuevos/vehiculos-seminuevos/hyundaipromise.html.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "420 cars (count in fetched HTML)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200 with visible count. Listings dealer-attributed on detail (platform is Motorflash-style 'H Promise')."
+    },
+    {
+     "name": "Ford Selección (Ford VO) + dealer locator",
+     "url": "https://secure.ford.es/compra/explora/vehiculos-de-ocasion/turismos",
+     "yields": "Ford certified used inventory search (turismos + comerciales); dealer locator at ford.es/buscar-concesionario.",
+     "access_method": "browser",
+     "defense": "akamai",
+     "est_volume": "thousands (not counted — JS app behind cookie wall)",
+     "priority": "medium",
+     "notes": "VERIFIED loads in browser; curl connection refused (000) and Akamai boomerang/ak.ai observed. Needs browser automation; stock is dealer-attributed per Ford Selección model."
+    },
+    {
+     "name": "BMW Premium Selection España (BMW VO)",
+     "url": "https://www.bmwpremiumselection.es/",
+     "yields": "BPS certified used stock with dealer directory: '56 concesionarios' listed at /concesionarios/; per-dealer used stock pages.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "56 BPS dealers (string in HTML); stock in thousands (JS-rendered)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200 (391KB). GOLD: doubles as a clean BMW dealer list since bmw.es blocks curl. bmw.es locator (https://www.bmw.es/es/informacion/encuentra-tu-concesionario.html) loads in browser only."
+    },
+    {
+     "name": "MINI NEXT España (MINI VO)",
+     "url": "https://www.mininext.es/",
+     "yields": "MINI certified used stock portal (same BMW Group platform as BPS) with dealer-attributed listings.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "hundreds of vehicles (not counted; JS-rendered listings)",
+     "priority": "high",
+     "notes": "VERIFIED curl 200. mini.es itself unreachable to curl (000) — MINI dealer list obtainable via this portal or BMW network. Mark mini.es locator low/unconfirmed."
+    },
+    {
+     "name": "Mercedes-Benz ES dealer API (OneWeb dms-plus)",
+     "url": "https://api.oneweb.mercedes-benz.com/dms-plus/v3/api/dealers/market?marketCode=ES&searchProfile=0001_DLp-ES&page=1&size=250",
+     "yields": "Full Mercedes ES dealer list (legalName, outletId, coordinates) paged 250/page. Locator page: mercedes-benz.es/passengercars/mercedes-benz-cars/dealer-locator.html",
+     "access_method": "api",
+     "defense": "other",
+     "est_volume": "~250+ outlets (size=250 single page requested by app)",
+     "priority": "high",
+     "notes": "API call observed returning 200 in browser; direct curl gets 401 — requires apikey header embedded in front-end JS bundle (extractable). Use browser capture or extract key once."
+    },
+    {
+     "name": "Mercedes-Benz Certified (ocasion.mercedes-benz.es)",
+     "url": "https://ocasion.mercedes-benz.es/vehiclesearch",
+     "yields": "Official MB Certified used stock for Spain: 4,696 vehicles, filterable, dealer-attributed listings.",
+     "access_method": "browser",
+     "defense": "none",
+     "est_volume": "4,696 vehicles (count rendered in browser)",
+     "priority": "high",
+     "notes": "VERIFIED: curl 200 (JS shell), count read in browser. smart VO has no separate OEM portal (smartocasion.com is dealer-group QUADIS, not OEM)."
+    },
+    {
+     "name": "smart España agent locator",
+     "url": "https://es.smart.com/es/dealer-locator/",
+     "yields": "Official smart (new EV brand) agent/dealer locator for Spain.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~30-50 agents (not counted)",
+     "priority": "medium",
+     "notes": "VERIFIED curl 200 (636KB Next-style page, data embedded). Old smart.mercedes-benz.com host is dead (DNS)."
+    },
+    {
+     "name": "Volvo ES dealer locator",
+     "url": "https://www.volvocars.com/es/dealers/concesionarios-talleres/",
+     "yields": "Official Volvo Spain dealer/workshop map (clustered markers summing ~92 locations).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "~92 locations (sum of map cluster badges)",
+     "priority": "medium",
+     "notes": "VERIFIED in browser; curl 403. Dealer data loads into map without obvious public XHR — scrape via browser."
+    },
+    {
+     "name": "Volvo Selekt España (Volvo VO)",
+     "url": "https://selekt.volvocars.es/es-ES/store",
+     "yields": "Volvo Selekt certified used stock storefront for Spain, dealer-attributed.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "hundreds-low thousands (not counted; JS app)",
+     "priority": "high",
+     "notes": "VERIFIED curl 200 (redirect from selekt.volvocars.es). Separate host from volvocars.com so curl works; listing data JS-rendered — browser or API capture."
+    },
+    {
+     "name": "Nissan ES dealer locator + API",
+     "url": "https://www.nissan.es/red-nissan.html",
+     "yields": "Official Nissan dealer search; HTML embeds API endpoints eu.nissan-api.net/v2/dealers and apigateway-eu-prod.nissanpace.com public-access-token (brand=NISSAN&market=ES).",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "~150-200 dealers (not counted)",
+     "priority": "medium",
+     "notes": "VERIFIED endpoints present in fetched HTML; /v2/dealers returns 400 without apikey — key obtainable from public-access-token flow visible in page. Browser capture recommended."
+    },
+    {
+     "name": "Nissan Ocasión (Nissan VO)",
+     "url": "https://ocasion.nissan.es/landing/home",
+     "yields": "Official Nissan ES used-car portal: 1,546 vehicles, dealer network stock.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "1,546 vehicles (count in fetched HTML)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200 with count visible. Backed by nissanpace API gateway (live dataSource)."
+    },
+    {
+     "name": "Mazda ES dealer locator + network directory",
+     "url": "https://www.redconcesionariosmazda.com/",
+     "yields": "Mazda dealer network directory; official locator form at mazda.es/formularios/localiza-tu-concesionario/.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~80-100 dealers (not counted)",
+     "priority": "medium",
+     "notes": "redconcesionariosmazda.com VERIFIED curl 200. mazda.es locator URL confirmed via live search but not fetched individually."
+    },
+    {
+     "name": "Mazda Selected (Mazda VO)",
+     "url": "https://www.mazdaselected.es/",
+     "yields": "Official Mazda certified used portal with per-dealer stock pages (/concesionario/<dealer> pattern confirmed via search).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "hundreds (not counted)",
+     "priority": "medium",
+     "notes": "Domain confirmed official via live search results (per-dealer page /concesionario/mazdaautomoviles seen); curl connection failed (000) at check time — needs browser. UNCONFIRMED render: verify in browser before integrating."
+    },
+    {
+     "name": "Honda ES dealer locator",
+     "url": "https://www.honda.es/cars/find-a-dealer.html",
+     "yields": "Official Honda cars dealer search for Spain.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~60-80 dealers (not counted)",
+     "priority": "medium",
+     "notes": "VERIFIED curl 200 (redirect from dealer-search.html)."
+    },
+    {
+     "name": "Honda Vehículos de Ocasión (Honda VO)",
+     "url": "https://vehiculosdeocasion.honda.es/es/home",
+     "yields": "Official Honda ES used-car portal with dealer directory at /es/concesionarios and search at /es/ocasion-honda/buscador/modelos — per-dealer stock.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "hundreds (counts JS-rendered)",
+     "priority": "high",
+     "notes": "VERIFIED curl 200 on /es/home and /es/concesionarios. Per-dealer attribution structure confirmed by dedicated concesionarios section."
+    },
+    {
+     "name": "Suzuki ES dealer locator + VO",
+     "url": "https://auto.suzuki.es/concesionarios",
+     "yields": "Official Suzuki dealer search and used-vehicle section at /vehiculos-ocasion (network of 40+ dealers per site copy).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "40+ dealers (site claim via search snippet); VO stock small (hundreds)",
+     "priority": "medium",
+     "notes": "Both URLs VERIFIED curl 200; listing content JS-rendered — browser for stock extraction."
+    },
+    {
+     "name": "MG Motor España dealer JSON",
+     "url": "https://www.mgmotor.eu/data/map.json?site=mgMotorsSpain",
+     "yields": "GeoJSON of all MG Spain sales/service points: 212 features with geometry + properties; also /es-ES//actions/mg-business-logic/brand-stores endpoint. Map page: mgmotor.eu/es-ES/map",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "212 locations (counted in fetched GeoJSON)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: unauthenticated JSON. No official MG VO portal for ES found (only dealer-group sites) — VO low priority gap."
+    },
+    {
+     "name": "BYD España dealer JSON",
+     "url": "https://eu-site-api.byd.com/byd-api/eu/dealer/getFindDealer?country=ES&type=sales",
+     "yields": "All BYD ES sales dealers as JSON: 106 entries with organizationName, lat/lng, zipCode, phone, mail, website; type=Service variant for workshops. Page: byd.com/es-es/find-store",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "106 sales dealers (counted; press release claims 100+, target 130 in 2026)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: unauthenticated GET. GOLD for fast-growing Chinese brand coverage."
+    },
+    {
+     "name": "Omoda & Jaecoo España dealer locator",
+     "url": "https://www.omodajaecoo.es/localizador-de-concesionarios",
+     "yields": "Official Omoda/Jaecoo ES dealer locator; backend storefront API host storefront-management.chr.drivvn.tech referenced in HTML.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~70 dealers (brand press claim 2025; not counted on page)",
+     "priority": "medium",
+     "notes": "VERIFIED curl 200. drivvn storefront API probe 404 without correct route/key — capture exact endpoint in browser if needed. No official VO portal yet (brand launched 2024)."
+    },
+    {
+     "name": "Tesla España (stores + used inventory API)",
+     "url": "https://www.tesla.com/es_ES/findus/list/stores/Spain",
+     "yields": "Tesla stores/service centers list for Spain; used+new inventory via JSON API /inventory/api/v4/inventory-results (market=ES) returning VIN-level records with city.",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "~30-40 ES locations; used inventory per model in dozens (22 used Model 3 ES counted via API)",
+     "priority": "high",
+     "notes": "VERIFIED: findus list loads in browser (curl 403); inventory API returned 200 with total_matches_found=22 and VINs when called from browser context. Direct-sales brand: no franchise dealers."
+    },
+    {
+     "name": "BMW ES dealer locator",
+     "url": "https://www.bmw.es/es/informacion/encuentra-tu-concesionario.html",
+     "yields": "Official BMW Spain dealer search (JS app).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "~80-90 dealer organizations (not counted)",
+     "priority": "low",
+     "notes": "Page title verified loading once in browser, then session blanked; curl blocked at TLS level (000). Legacy public API c2b-services.bmw.com now returns 403 'Missing Authentication Token'. Prefer BPS /concesionarios/ (56 dealers) as enumerable source."
+    },
+    {
+     "name": "Hyundai Promise program page (hyundai.com)",
+     "url": "https://www.hyundai.com/es/es/seminuevos/vehiculos-seminuevos/hyundaipromise.html",
+     "yields": "Program description and entry to certified used stock (complements hyundai.es/seminuevos).",
+     "access_method": "browser",
+     "defense": "none",
+     "est_volume": "n/a (program page)",
+     "priority": "low",
+     "notes": "Link verified present on hyundai.com ES homepage in browser; not fetched individually. seminuevos.hyundai.es host failed DNS at check time."
+    }
+   ],
+   "verified": [
+    {
+     "name": "Volkswagen ES dealer API (OneHub bff-search)",
+     "url": "https://v3-81-1.ds.dcc.feature-app.io/bff-search/dealers?lufthansaApiKey=h0CQWvPYSBvp5KYXUpRU4FpZrnl0tZx1&query={\"type\":\"DEALER\",\"countryCode\":\"ES\",\"name\":\" \"}",
+     "yields": "Full VW Spain dealer list as JSON: id, name, address, province, coordinates, phone, email, website, hours. 263 dealers returned in one call. Entry page: https://www.volkswagen.es/es/buscador-de-concesionarios.html",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "263 dealers (counted in fetched JSON)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: single unauthenticated GET returns all 263 ES dealers with full contact data. API key is embedded in public page JS. serviceConfigEndpoint param required (copy from page network call).",
+     "live": {
+      "alive": true,
+      "contains_real_data": false,
+      "evidence": "All param variants return HTTP 500 {\"message\":\"Error: No service endpoint provided.\",\"bffLoggerCalls\":[]}. Zero dealers. Refutes \"263 dealers\" claim.",
+      "blocker": "none",
+      "http_status": 500
+     }
+    },
+    {
+     "name": "Das WeltAuto España (SEAT/Skoda/Cupra/VW VO)",
+     "url": "https://www.dasweltauto.es/esp/seat",
+     "yields": "Official VW Group certified used stock per brand section (SEAT 4,083; VW 3,000 observed; plus Skoda and Cupra sections) with per-province/per-dealer dealer pages (/esp/seat/red-de-concesionarios, /esp/concesionarios-seat-en-madrid). Listing IDs are Motorflash-style anuncio IDs.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~10-12k vehicles total (SEAT 4,083 + VW 3,000 counted on page; Skoda+Cupra extrapolated)",
+     "priority": "high",
+     "notes": "VERIFIED in browser and curl (homepage 200; 403 only for non-browser UA on some paths). Server-rendered listing pages = easy scrape. Per-dealer stock attribution present. VW brand section at /esp/volkswagen-de-segunda-mano.",
+     "live": {
+      "alive": true,
+      "blocker": "waf — 403 to non-browser UAs (WebFetch/bots, even robots.txt); 200 with Chrome UA; no captcha/login. Dealer-locator names are JS-rendered.",
+      "contains_real_data": true,
+      "evidence": "SEAT \"4.078 coches\" (claim 4,083 OK); VW \"3.000\"; Skoda 1.383; Cupra 1.459; listing 155374600 SEAT Ateca 2022 Jaen 23.900EUR dealer \"SAVOY / OLIVAUTO\"; Motorflash confirmed (mfTrack.js, images.motorflash.com)",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Volkswagen Approved (VW VO portal)",
+     "url": "https://www.volkswagen.es/es/approved.html",
+     "yields": "VW certified used cars with per-province pages (/es/approved/provincia/madrid.html) server-rendering listings; dealer-attributed stock.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~3,000 vehicles (DWA VW section count; Approved is the renamed program)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200 (940KB page; Madrid province page renders listings server-side). Program renamed from Das WeltAuto to Volkswagen Approved in 2025.",
+     "live": {
+      "alive": true,
+      "blocker": "none — no captcha/WAF/login; BFF API curl-able using oneapiKey + signed endpoint blob embedded in public page HTML; stock app is noindex,nofollow and robots.txt disallows /app/ for most bots",
+      "contains_real_data": true,
+      "evidence": "200 OK; 52 provincia pages in sitemap are SEO doorways (NO SSR listings); real data via gsl.feature-app.io BFF: resultNumber=556 Madrid 50km, Polo 12.990 EUR 11/2018 156.500km, dealer F. TOME 28042",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "SEAT dealer network (concesionarios.seat)",
+     "url": "https://www.concesionarios.seat/red-concesionarios",
+     "yields": "All official SEAT dealers via 51 province pages; each dealer has own subsite. Sitemap.xml exposes 18,424 URLs incl. all dealer/offer pages. Workshops at talleres.seat.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "51 province pages; ~260+ dealers (sitemap has 18,424 URLs incl. per-dealer offer pages)",
+     "priority": "high",
+     "notes": "VERIFIED: sitemap fetched (3.3MB), 51 red-concesionarios province URLs counted. AEM edealer platform; dealer cards hydrate via JS on province pages — use sitemap + dealer subsites.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "sitemap.xml: exactly 18,424 <loc> URLs, 166 dealer subsites (.dealer.slug), 51 province slugs. Madrid page lists 11 dealers (Ancrisa, Sealco, Castellana Motor...). talleres.seat live (Arci Motor, Cadiz)",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Skoda ES dealer directory (retailers app sitemap)",
+     "url": "https://www.skoda.es/apps/retailers/sitemap.xml",
+     "yields": "Every official Skoda ES dealer as /apps/retailers/dealer/<id> page; 215 dealer URLs in sitemap.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "215 dealer pages (counted in sitemap)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: 216 loc entries (1 index + 215 dealers). Skoda VO is on Das WeltAuto; Skoda Plus page at skoda.es/skoda-plus/tu-concesionario (200).",
+     "live": {
+      "alive": true,
+      "http_status": 200,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Sitemap 200: 215 /dealer/<id> URLs (census CONFIRMED, curl count). Open JSON API /apps/retailers/api/572/es-ES/DealersV2/GetDealers returns 215 dealers, e.g. AUTOCENTER BARCELONA, 08035, tel 932542600"
+     }
+    },
+    {
+     "name": "Audi Selection :plus (Audi VO)",
+     "url": "https://www.audi.es/es/compra/vehiculos-ocasion/",
+     "yields": "Audi certified used program; central portal routes to per-dealer Selection:plus subsites (audiselectionplus.audiretailmadrid.es, audiselectionplus.sevillawagen.es, etc.) each listing that dealer's stock (Motorflash-powered).",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "dozens of dealer subsites; stock per dealer 30-300 (not counted centrally)",
+     "priority": "high",
+     "notes": "VERIFIED in browser (audi.es served 503 to curl at check time; loads fine in browser). Per-dealer subdomain pattern audiselectionplus.<dealersite>.es confirmed via live search results. Audi dealer locator: https://www.audi.es/es/compra/buscador-de-concesionarios/",
+     "live": {
+      "alive": true,
+      "blocker": "waf (Akamai serves static 503 maintenance page to non-browser TLS fingerprints on all of www.audi.es; real browser gets 200, no captcha/login; audiselectionplus.* dealer subsites return 403 to bot UAs)",
+      "contains_real_data": true,
+      "evidence": "Central PLP on audi.es lists real cars: vehicleid=ESP05346128322740, dealers LEIOA WAGEN, SUPERWAGEN, AUDI CENTER VALENCIA. Claim part-refuted: portal has own searcher; Motorflash subsites exist separately",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "renew (Renault Group VO — Renault/Dacia/multi)",
+     "url": "https://es.renew.auto/vehiculos.html",
+     "yields": "Official Renault Group ES used-car marketplace: 5,745 vehicles, brand filters (RENAULT/DACIA), server-rendered listings, per-dealer attribution on detail pages ('vendido por concesionario renew en ARANJUEZ').",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "5,745 vehicles (count rendered on page)",
+     "priority": "high",
+     "notes": "VERIFIED via curl: 1.4MB server-rendered page, count and dealer attribution confirmed. This replaces old Renault Selection/Occasion portals. GOLD for per-dealer VO stock.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "\"5747 coches de segunda mano disponibles\"; Renault 4282/Dacia 1014; detalle: Dacia Sandero Stepway 13.440EUR vendido por JAPEMASA SOLAR, S.L. (GRANADA); AUTOSAE, S.A.U (ARANJUEZ) en listado",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Dacia ES dealer directory",
+     "url": "https://concesionario.dacia.es/find-a-dealer-listing.html",
+     "yields": "Paginated HTML directory of all official Dacia dealers with per-dealer pages (<slug>.html).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~150-200 dealers (paginated listing, 5+ pages observed; not fully counted)",
+     "priority": "high",
+     "notes": "VERIFIED via curl 200: dealer detail links and ?page=N pagination confirmed in HTML. Renault equivalent locator at renault.es/concesionarios.html is JS-driven (browser).",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Census URL 404s; real directory at root /?page=1..5 (~40+/page). Per-dealer slug.html live: talleres-escorial.html = TALLERES ESCORIAL S.L., AVDA FELIPE II 25, 28280 EL ESCORIAL, tel 918900505",
+      "http_status": 404
+     }
+    }
+   ]
+  },
+  {
+   "modality": "plataformas",
+   "total_found": 18,
+   "sources": [
+    {
+     "name": "coches.net (segunda mano)",
+     "url": "https://www.coches.net/segunda-mano/",
+     "yields": "Largest pure-play SP car classifieds w/ full dealer (profesional) attribution; private + dealer listings nationwide. Detail PDPs expose selling dealer/concesionario.",
+     "access_method": "api",
+     "defense": "other",
+     "est_volume": "248,920 used cars (VERIFIED: counter '248.920 Coches' in HTML body, 2026-06-12)",
+     "priority": "high",
+     "notes": "TIER-1. Adevinta Spain stack: CloudFront + Lambda@Edge bot wall ('LambdaGeneratedResponse', server fronting). Homepage 200 to curl, but sitemap-index path (servicios/sitemaps/sitemap-index.xml) and detail .aspx pages return HTTP 405 Not Allowed with a JS challenge body referencing geetest/hcaptcha/recaptcha. Sitemap declared in robots.txt but 405-walled to non-browsers. JSON-LD not retrievable (blocked). Internal search API: ms-mt--api-web.spain.advgo.net/search (POST JSON, 502 on malformed probe = exists). Same infra as milanuncios/fotocasa (Adevinta). Needs browser/residential proxies or the advgo API w/ correct payload."
+    },
+    {
+     "name": "AutoScout24 España (/lst)",
+     "url": "https://www.autoscout24.es/lst",
+     "yields": "Pan-EU marketplace, ES inventory dominated by professional dealers; PDPs carry full dealer Organization + PostalAddress in JSON-LD (dealer attribution strong).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "278,163 results (VERIFIED: \"numberOfResults\":278163 embedded in /lst HTML, 2026-06-12)",
+     "priority": "high",
+     "notes": "Effectively OPEN despite size. /lst returned full 619 KB HTML to plain curl (nginx + CloudFront, no DataDome/Akamai/challenge). robots.txt permits listing pages. JSON-LD present: 3 blocks, @type Car/Product/Offer/Organization/PostalAddress/EngineSpecification. 62 'dealer' references per PDP. No sitemap.xml (404) — crawl via /lst pagination + /anuncios/{slug} detail URLs. Highest value-to-effort target."
+    },
+    {
+     "name": "Milanuncios (coches de segunda mano)",
+     "url": "https://www.milanuncios.com/coches-de-segunda-mano/",
+     "yields": "Massive C2C + dealer classifieds (Adevinta); both private and professional sellers. Largest raw volume incl dealer ads.",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "Hundreds of thousands nationwide (VERIFIED partials: Madrid prov. 52,491 used cars; Madrid motor 666,901 — milanuncios.com/coches-de-segunda-mano-en-madrid)",
+     "priority": "high",
+     "notes": "TIER-1. Adevinta gateway (server: 'bon') + CloudFront + Lambda@Edge. Homepage 200 to curl, but the listing path /coches-de-segunda-mano/ returns HTTP 405 Not Allowed with a 96 KB GeeTest challenge body (28x 'geetest', recaptcha). robots.txt empty (no sitemap). No public sitemap. Requires headless browser + GeeTest solving or residential proxies. National used-car total not exposed on a single counter."
+    },
+    {
+     "name": "Wallapop — Motor / Coches",
+     "url": "https://es.wallapop.com/coches-segunda-mano",
+     "yields": "Huge C2C + Wallapop PRO dealer inventory (4,500+ dealerships). Largest single car count in SP. PRO listings carry dealer attribution.",
+     "access_method": "api",
+     "defense": "cloudflare",
+     "est_volume": "753,652 used cars (VERIFIED: page title '753652 coches de segunda mano y de ocasión', 2026-06-12)",
+     "priority": "high",
+     "notes": "TIER-1 app but API-backed. CloudFront fronting Next.js. robots.txt = Disallow / for all + explicit bot blocklist. Public API api.wallapop.com/api/v3/cars/search returns 200 JSON to curl (empty without proper geo/params) — usable with correct lat/long + pagination + X-DeviceOS header; but api/v3/general/search returns 403 CloudFront (request signing/header gating). Recommend the cars/search v3 endpoint with browser-mimicked headers. Dealer data via Wallapop PRO."
+    },
+    {
+     "name": "Autocasión",
+     "url": "https://www.autocasion.com/coches-segunda-mano",
+     "yields": "Established dealer-focused classifieds (Grupo Luike); professional sellers dominate. PDPs expose dealer (profesional) + PostalAddress.",
+     "access_method": "html",
+     "defense": "cloudflare",
+     "est_volume": "121,985 results (VERIFIED: '121.985 resultados' in HTML, 2026-06-12)",
+     "priority": "high",
+     "notes": "Cloudflare (server: cloudflare, cf-ray, cf-cache-status DYNAMIC) but currently passing plain curl (no JS challenge). robots.txt: Disallow / yet declares two sitemaps (actualidad/sitemap_index.xml + uploads/sitemap.xml). PDPs 200 to curl with JSON-LD (1 block: Car/Offer/Product/PostalAddress/EngineSpecification/Brand) + 58 'dealer' / 30 'profesional' markers. Detail URL pattern /coches-segunda-mano/{marca}-ocasion/{slug}-ref{ID}. Strong dealer attribution; monitor for Cloudflare hardening."
+    },
+    {
+     "name": "coches.com",
+     "url": "https://www.coches.com/coches-segunda-mano/",
+     "yields": "Dealer-sourced VO + VN aggregator; PDPs carry dealer/concesionario + Place. Public sitemap enumerates every VO unit.",
+     "access_method": "sitemap",
+     "defense": "other",
+     "est_volume": "~67,259 used-car detail URLs (VERIFIED: sitemap/vo.xml -> Todo-VO-0..3 = 25,000+25,000+25,000+17,259)",
+     "priority": "high",
+     "notes": "TIER-1 defense (Imperva/Incapsula: X-CDN: Imperva, X-Iinfo, visid_incap_/incap_ses_/nlbi_ cookies) behind CloudFront — but currently serving sitemaps + PDPs to plain curl. robots.txt Disallow /. Public sitemap index (sitemap.xml -> vn.xml/vo.xml/renting.xml -> Todo-VO-{n}.xml) gives direct PDP URLs w/ ?id=. PDP JSON-LD: 2 blocks (Car/Offer/Product/Brand/Place). Dealer attribution present. Sitemap-first crawl recommended before Imperva escalates."
+    },
+    {
+     "name": "OcasiónPlus",
+     "url": "https://www.ocasionplus.com/coches-segunda-mano",
+     "yields": "Single national used-car retailer chain (own stock, ~40 stores). One-seller attribution; good for direct-stock baseline.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "14,049 cars (VERIFIED: 'Encuentra tu coche... (14.049)', 2026-06-12)",
+     "priority": "medium",
+     "notes": "OPEN. CloudFront + Next.js, no bot wall. Very rich sitemap.xml = 263 child sitemaps incl per-brand (sitemap.coches_audi.xml...) and per-province (sitemap.coches_madrid.xml...) enumerating real PDPs (/coches-segunda-mano/{slug}-{km}km-{year}-{id}). PDP 200 w/ JSON-LD (2 blocks: Product/Organization/ContactPoint). Seller = OcasionPlus itself."
+    },
+    {
+     "name": "Flexicar",
+     "url": "https://www.flexicar.es/coches-segunda-mano/",
+     "yields": "National used-car franchise chain (own/franchise stock, ~70 dealerships). Single-brand attribution; per-store location in PDP.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "Claims 25,000 cars (site banner '25.000 coches'; treat as marketing round number — sitemap has 10,287 URLs but mostly SEO landing pages)",
+     "priority": "medium",
+     "notes": "OPEN. nginx + Google Cloud (Next.js, x-nextjs-cache HIT). sitemap.xml = 10,287 URLs but dominated by brand/province SEO landing pages (e.g. /peugeot/coches-madrid/segunda-mano/); real PDPs under /coches-ocasion/{slug}_{9digit-id}/. PDP 200 to curl but NO JSON-LD (0 blocks) — parse HTML. 9 'concesionario' markers (store location)."
+    },
+    {
+     "name": "Clicars",
+     "url": "https://www.clicars.com/coches-segunda-mano-ocasion",
+     "yields": "Online used-car retailer (own reconditioned stock). Single-seller; PDPs include AutoDealer JSON-LD + dealer address.",
+     "access_method": "sitemap",
+     "defense": "cloudflare",
+     "est_volume": "~1,600 cars (VERIFIED: '1.604 coches' on listing, 2026-06-12)",
+     "priority": "medium",
+     "notes": "OPEN in practice. Cloudflare (server: cloudflare, cf-cache-status HIT) but PDPs + sitemap serve to curl. robots.txt sitemap 302-redirects to storage.googleapis.com/clicars-storage-prod-public/.../sitemap.xml -> versions.xml has 9,043 URLs but those are model/version SEO pages, NOT 9k live units (real stock ~1,600). PDP JSON-LD rich: 4 blocks incl AutoDealer/Product/AggregateRating/PostalAddress."
+    },
+    {
+     "name": "Spoticar España (Stellantis)",
+     "url": "https://www.spoticar.es/comprar-coches-de-ocasion",
+     "yields": "Stellantis multi-brand official-dealer used network (200+ sales points). Each unit tied to an official Stellantis dealer — high-quality dealer attribution.",
+     "access_method": "browser",
+     "defense": "akamai",
+     "est_volume": "~50,000 vehicles (per Spoticar/Stellantis public claims; not verifiable on-site due to hard block)",
+     "priority": "medium",
+     "notes": "TIER-1, hardest wall: AkamaiGHost returns HTTP 403 Forbidden on homepage, listing path AND /sitemap.xml to plain curl — blocks before any content. robots.txt empty. Requires full browser fingerprint + Akamai sensor (residential proxies). Verify volume only via headless browser session."
+    },
+    {
+     "name": "motor.es — Segunda Mano (clasificados)",
+     "url": "https://www.motor.es/segunda-mano/coches/",
+     "yields": "Editorial-site classifieds aggregator pulling dealer stock; dealer attribution on PDPs (/vercoche/). Useful cross-reference for dealer coverage.",
+     "access_method": "html",
+     "defense": "cloudflare",
+     "est_volume": "50,935 used cars (VERIFIED: '50.935 Coches de segunda mano y ocasión', 2026-06-12)",
+     "priority": "medium",
+     "notes": "Cloudflare + Next.js, passing curl. robots.txt disallows /vercoche/* (the actual PDP path) but declares sitemap_vo.xml — which contains only 2,620 SEO category/province URLs (segunda-mano/{tipo}/{provincia}/), NOT vehicle details. Listing pages crawlable; PDPs are robots-disallowed. Aggregator of dealer inventory."
+    },
+    {
+     "name": "Autohero España (AUTO1)",
+     "url": "https://www.autohero.com/es/search/",
+     "yields": "AUTO1 online used-car retailer, own reconditioned stock, nationwide delivery. Single-seller attribution.",
+     "access_method": "browser",
+     "defense": "none",
+     "est_volume": "~3,000 cars (VERIFIED: '3.000 coches' in /es/search HTML, 2026-06-12)",
+     "priority": "medium",
+     "notes": "ALIVE in ES (autohero.com/es/ 200; .es redirects to /es/). AWS CloudFront, no bot wall, but heavy SPA — sitemap (autohero.com/es/sitemap.xml) thin (7 SEO URLs only), PDPs under /es/details/{slug} rendered client-side. Needs headless browser or their internal search API. Single-brand stock."
+    },
+    {
+     "name": "Motorflash",
+     "url": "https://www.motorflash.com/coches-segunda-mano/",
+     "yields": "Dealer-inventory aggregator with explicit concesionario directory — PDP + dealer pages map units to named dealerships. Good dealer-discovery source.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "Not exposed on a single counter; mid-size aggregator (concesionarios sitemap enumerates dealer stock pages)",
+     "priority": "medium",
+     "notes": "OPEN (discovered, not in original brief). CloudFront/200 to curl. robots.txt declares segmented sitemaps: sitemap.concesionarios.xml (dealer pages e.g. /concesionario/{name}/coches-segunda-mano/{id}/), .segunda-mano.xml, .km0.xml, .seminuevos.xml, .nuevos.xml, .industriales.xml. Strong dealer attribution via concesionario sitemap. Worth full sitemap walk."
+    },
+    {
+     "name": "Crestanevada",
+     "url": "https://www.crestanevada.es/coches-segunda-mano",
+     "yields": "Large single used-car dealer group (Granada/Andalucía, multi-site). Own stock; one-dealer attribution, multiple physical locations.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "Claims '1.000 Coches' on homepage (marketing figure; sitemap.xml 4,791 URLs but mostly city/brand landing pages)",
+     "priority": "low",
+     "notes": "OPEN. Apache/2.4 + PHP/7.3, no bot wall. robots.txt declares sitemap.xml (4,791 URLs: /coches-segunda-mano/{ciudad}, /{marca}/coches-segunda-mano/{ciudad}). PDP path deeper; parse HTML (no JSON-LD seen). Single dealer group — low strategic value vs marketplaces but clean direct stock."
+    },
+    {
+     "name": "Das WeltAuto España (VW)",
+     "url": "https://www.dasweltauto.es/esp/buscar-coches-de-ocasion.html",
+     "yields": "Volkswagen Group official used-car network; units tied to VW official dealers (dealer attribution by brand network).",
+     "access_method": "browser",
+     "defense": "none",
+     "est_volume": "Not verified — search page 403 to WebFetch; sitemap-vw-segunda-mano.xml has 181 SEO URLs (brand/province), no live counter retrieved",
+     "priority": "low",
+     "notes": "Discovered. nginx, homepage 302->200. robots declares sitemap.xml (8 entries) + sitemap-vw-segunda-mano.xml (181 SEO landing URLs, not unit-level). Search results JS-rendered (WebFetch 403 on buscar page). Needs headless browser. VW-only network; secondary to Spoticar for OEM-used coverage."
+    },
+    {
+     "name": "unoauto.com",
+     "url": "https://www.unoauto.com/",
+     "yields": "Regional used-car retailer (own stock). Single-seller attribution; direct dealer baseline.",
+     "access_method": "sitemap",
+     "defense": "none",
+     "est_volume": "~5,000 offers (VERIFIED: '5.000 ofertas' on homepage, 2026-06-12)",
+     "priority": "low",
+     "notes": "OPEN. nginx + PHP/8.3, no bot wall. robots declares sitemap product.xml (5,820 /oferta/{slug}-ref{ID} URLs) + brand/family sitemaps. CAVEAT: sampled /oferta/ URLs from product.xml returned HTTP 404 (sitemap stale or path rotated) — validate freshness before bulk crawl. No JSON-LD on PDPs."
+    },
+    {
+     "name": "heycar España",
+     "url": "https://heycar.com/es",
+     "yields": "NONE for Spain — platform discontinued in ES.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "0 — DEAD in Spain",
+     "priority": "low",
+     "notes": "CONFIRMED DEAD: heycar.com/es returns 200 with title 'heycar dice adiós' (heycar says goodbye). No Spanish inventory remains. heycar.com root redirects to /uk. Exclude from Spain index."
+    },
+    {
+     "name": "GarantiPlus / GarantiPRO (Mobius)",
+     "url": "https://mobiusgarantipro.es/",
+     "yields": "NOT a marketplace — B2B mechanical-warranty provider for dealers; no vehicle inventory. Only useful as a dealer-network signal (which dealers offer GarantiPRO).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "0 vehicles (warranty network, not POS listings)",
+     "priority": "low",
+     "notes": "Out of modality. garantiplus.es 301-redirects to mobiusgarantipro.es (GarantiPRO mechanical-warranty brand, title 'Garantía mecánica para coche o moto | GarantiPRO'). nginx, no bot wall. Pages target 'para tu concesionario' (B2B). No car listings to scrape; could mine their dealer/concesionario directory as a lead list only."
+    }
+   ],
+   "verified": [
+    {
+     "name": "coches.net (segunda mano)",
+     "url": "https://www.coches.net/segunda-mano/",
+     "yields": "Largest pure-play SP car classifieds w/ full dealer (profesional) attribution; private + dealer listings nationwide. Detail PDPs expose selling dealer/concesionario.",
+     "access_method": "api",
+     "defense": "other",
+     "est_volume": "248,920 used cars (VERIFIED: counter '248.920 Coches' in HTML body, 2026-06-12)",
+     "priority": "high",
+     "notes": "TIER-1. Adevinta Spain stack: CloudFront + Lambda@Edge bot wall ('LambdaGeneratedResponse', server fronting). Homepage 200 to curl, but sitemap-index path (servicios/sitemaps/sitemap-index.xml) and detail .aspx pages return HTTP 405 Not Allowed with a JS challenge body referencing geetest/hcaptcha/recaptcha. Sitemap declared in robots.txt but 405-walled to non-browsers. JSON-LD not retrievable (blocked). Internal search API: ms-mt--api-web.spain.advgo.net/search (POST JSON, 502 on malformed probe = exists). Same infra as milanuncios/fotocasa (Adevinta). Needs browser/residential proxies or the advgo API w/ correct payload.",
+     "live": {
+      "alive": true,
+      "http_status": 200,
+      "blocker": "none on /segunda-mano/ SRPs; WAF-style HTTP 405 on /concesionario(s)/* and sitemap-index.xml; robots.txt bans scraper UAs and pagination pg=7-69",
+      "contains_real_data": true,
+      "evidence": "\"248.925 Coches de segunda mano y ocasión\"; profesionales filter=134.347 listings, \"143.950 vehículos de profesionales\"; cards tagged \"Profesional 4.7\"; AUDI A4 Avant 26.990 EUR; dealer pages /concesionario/&lt;slug&gt;/ exist"
+     }
+    },
+    {
+     "name": "AutoScout24 España (/lst)",
+     "url": "https://www.autoscout24.es/lst",
+     "yields": "Pan-EU marketplace, ES inventory dominated by professional dealers; PDPs carry full dealer Organization + PostalAddress in JSON-LD (dealer attribution strong).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "278,163 results (VERIFIED: \"numberOfResults\":278163 embedded in /lst HTML, 2026-06-12)",
+     "priority": "high",
+     "notes": "Effectively OPEN despite size. /lst returned full 619 KB HTML to plain curl (nginx + CloudFront, no DataDome/Akamai/challenge). robots.txt permits listing pages. JSON-LD present: 3 blocks, @type Car/Product/Offer/Organization/PostalAddress/EngineSpecification. 62 'dealer' references per PDP. No sitemap.xml (404) — crawl via /lst pagination + /anuncios/{slug} detail URLs. Highest value-to-effort target.",
+     "live": {
+      "alive": true,
+      "blocker": "none via plain curl + browser UA (full SSR HTML, no captcha/WAF/login); but domain blocks Anthropic crawler UA (WebFetch/WebSearch refused); robots.txt disallows /lst? query variants, allows /lst",
+      "contains_real_data": true,
+      "evidence": "\"numberOfResults\":278190 on /lst; PDP JSON-LD AutoDealer \"LEXUS MADRID OCASION Y SEMINUEVOS\" + PostalAddress AVDA. BURGOS 114, 28050 MADRID, ES; Lexus NX 300h 27990 EUR; FLEXICAR/CLICARS/GAMBOA seen",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Milanuncios (coches de segunda mano)",
+     "url": "https://www.milanuncios.com/coches-de-segunda-mano/",
+     "yields": "Massive C2C + dealer classifieds (Adevinta); both private and professional sellers. Largest raw volume incl dealer ads.",
+     "access_method": "browser",
+     "defense": "other",
+     "est_volume": "Hundreds of thousands nationwide (VERIFIED partials: Madrid prov. 52,491 used cars; Madrid motor 666,901 — milanuncios.com/coches-de-segunda-mano-en-madrid)",
+     "priority": "high",
+     "notes": "TIER-1. Adevinta gateway (server: 'bon') + CloudFront + Lambda@Edge. Homepage 200 to curl, but the listing path /coches-de-segunda-mano/ returns HTTP 405 Not Allowed with a 96 KB GeeTest challenge body (28x 'geetest', recaptcha). robots.txt empty (no sitemap). No public sitemap. Requires headless browser + GeeTest solving or residential proxies. National used-car total not exposed on a single counter.",
+     "live": {
+      "alive": true,
+      "blocker": "captcha/waf (GeeTest captcha behind 'Pardon Our Interruption' bot wall on CloudFront; geo-sensitive — page says browsing outside Spain triggers it; robots.txt=405, sitemap.xml=403)",
+      "contains_real_data": true,
+      "evidence": "Direct fetch=405 GeeTest wall; same-domain indexed titles: '666.901...motor en Madrid', '2.887 Concesionario...Valencia', '928 Kia...Barcelona', dealer facet 'mc auto' — confirms massive C2C+dealer volume",
+      "http_status": 405
+     }
+    },
+    {
+     "name": "Wallapop — Motor / Coches",
+     "url": "https://es.wallapop.com/coches-segunda-mano",
+     "yields": "Huge C2C + Wallapop PRO dealer inventory (4,500+ dealerships). Largest single car count in SP. PRO listings carry dealer attribution.",
+     "access_method": "api",
+     "defense": "cloudflare",
+     "est_volume": "753,652 used cars (VERIFIED: page title '753652 coches de segunda mano y de ocasión', 2026-06-12)",
+     "priority": "high",
+     "notes": "TIER-1 app but API-backed. CloudFront fronting Next.js. robots.txt = Disallow / for all + explicit bot blocklist. Public API api.wallapop.com/api/v3/cars/search returns 200 JSON to curl (empty without proper geo/params) — usable with correct lat/long + pagination + X-DeviceOS header; but api/v3/general/search returns 403 CloudFront (request signing/header gating). Recommend the cars/search v3 endpoint with browser-mimicked headers. Dealer data via Wallapop PRO.",
+     "live": {
+      "alive": true,
+      "blocker": "none (fetch OK; robots.txt disallows /search and /app/, blocks named bots, no sitemap listed)",
+      "contains_real_data": true,
+      "evidence": "Header '753652 coches de segunda mano'; BMW 220iA 27.850€; PRO dealers CSV Motor, MGR AUTOMOBILS, TREND CARS; /wallapop-pro-cars: '+4.500 concesionarios confían en nosotros' — census CONFIRMED",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Autocasión",
+     "url": "https://www.autocasion.com/coches-segunda-mano",
+     "yields": "Established dealer-focused classifieds (Grupo Luike); professional sellers dominate. PDPs expose dealer (profesional) + PostalAddress.",
+     "access_method": "html",
+     "defense": "cloudflare",
+     "est_volume": "121,985 results (VERIFIED: '121.985 resultados' in HTML, 2026-06-12)",
+     "priority": "high",
+     "notes": "Cloudflare (server: cloudflare, cf-ray, cf-cache-status DYNAMIC) but currently passing plain curl (no JS challenge). robots.txt: Disallow / yet declares two sitemaps (actualidad/sitemap_index.xml + uploads/sitemap.xml). PDPs 200 to curl with JSON-LD (1 block: Car/Offer/Product/PostalAddress/EngineSpecification/Brand) + 58 'dealer' / 30 'profesional' markers. Detail URL pattern /coches-segunda-mano/{marca}-ocasion/{slug}-ref{ID}. Strong dealer attribution; monitor for Cloudflare hardening.",
+     "live": {
+      "alive": true,
+      "blocker": "none for browser UA (no captcha/waf/login); Anthropic crawler UA blocked at domain level — WebFetch/WebSearch refused, curl with Chrome UA returns HTTP 200",
+      "contains_real_data": true,
+      "evidence": "PDP ref19790434: FORD Focus 10.050€, JSON-LD AutoDealer 'YAMOVIL' tel 914287884 + PostalAddress 'C/ EMBAJADORES, 139, 28045 MADRID, ES'; Madrid page 26 Car/Offer JSON-LD. Footer: Grupo Vocento, not Luike",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "coches.com",
+     "url": "https://www.coches.com/coches-segunda-mano/",
+     "yields": "Dealer-sourced VO + VN aggregator; PDPs carry dealer/concesionario + Place. Public sitemap enumerates every VO unit.",
+     "access_method": "sitemap",
+     "defense": "other",
+     "est_volume": "~67,259 used-car detail URLs (VERIFIED: sitemap/vo.xml -> Todo-VO-0..3 = 25,000+25,000+25,000+17,259)",
+     "priority": "high",
+     "notes": "TIER-1 defense (Imperva/Incapsula: X-CDN: Imperva, X-Iinfo, visid_incap_/incap_ses_/nlbi_ cookies) behind CloudFront — but currently serving sitemaps + PDPs to plain curl. robots.txt Disallow /. Public sitemap index (sitemap.xml -> vn.xml/vo.xml/renting.xml -> Todo-VO-{n}.xml) gives direct PDP URLs w/ ?id=. PDP JSON-LD: 2 blocks (Car/Offer/Product/Brand/Place). Dealer attribution present. Sitemap-first crawl recommended before Imperva escalates.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "PDP dealer 'Subastacar, C/ Pico Almanzor 4, Arganda del Rey (Madrid) 28500', PROFESIONAL; sitemap/vo.xml->Todo-VO-0..3.xml enumerate per-unit URLs (?id=ELkOhfGqQBfk); Madrid 35.724 coches",
+      "http_status": 200
+     }
+    }
+   ]
+  },
+  {
+   "modality": "directorios",
+   "total_found": 20,
+   "sources": [
+    {
+     "name": "Páginas Amarillas (paginasamarillas.es)",
+     "url": "https://www.paginasamarillas.es/search/talleres-de-automoviles/all-ma/all-pr/all-is/all-ci/all-ba/all-pu/all-nc/1",
+     "yields": "El directorio generalista nº1 para long tail ES: nombre, dirección completa, teléfono (tras click 'Ver teléfono'), web, horarios, descripción de servicios. Conteos verificados en vivo (12-jun-2026): talleres de automóviles 29.955, concesionarios 11.202, compraventa de automóviles 1.662, desguaces 1.636 ≈ 44.4k listados auto brutos (con solapamiento entre rúbricas).",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "~40-44k puntos de venta auto (suma de las 4 rúbricas verificadas en la propia SERP de PA, menos solapamiento estimado)",
+     "priority": "high",
+     "notes": "[VERIFICADO] Defensa: Imperva/Incapsula (robots.txt referencia /_Incapsula_Resource), pero las páginas de búsqueda respondieron a fetch plano hoy. robots.txt SIN sitemap → enumerar vía /search/{rubro}/{provincia}/.../{página}; segmentar por provincia/municipio para agotar paginación. Propiedad BeeDigital/hibu (sello 'Beedigital' visto en listados)."
+    },
+    {
+     "name": "Google Places API (Google Maps Platform)",
+     "url": "https://developers.google.com/maps/billing-and-pricing/pricing",
+     "yields": "La cobertura más completa y fresca del long tail (talleres, compraventas, desguaces con horario, teléfono, web, rating): types car_dealer, car_repair, car_wash. Barrido por Text Search/Nearby Search en rejilla municipal + Place Details.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "50-90k POIs auto en España [ASUMIDO: extrapolación de PA 44k + OSM 12k; Google suele superar a PA]. Coste verificado: Text Search $32/1k (Essentials y Pro; $35 Enterprise), Nearby Search $32/1k Pro, Place Details $5/1k Essentials-$17/1k Pro-$20/1k Enterprise; free tier 10k/5k/1k llamadas/mes por SKU; descuentos por volumen (Text Search Pro baja a $25,60/1k en tramo 100k-500k). Barrido nacional ~60-100k requests ≈ $2-3k + Details.",
+     "priority": "high",
+     "notes": "[VERIFICADO pricing y ToS] RIESGO LEGAL CLAVE: los términos (cloud.google.com/maps-platform/terms, fetcheados) dicen literalmente 'No Scraping', 'No Caching: Customer will not cache Google Maps Content except as expressly permitted under the Maps Service Specific Terms' y 'No Creating Content From Google Maps Content' → construir un índice independiente con datos de Places incumple ToS; usar solo como verificación/enriquecimiento efímero o asumir el riesgo. Excepción de almacenamiento del place ID en Service Specific Terms (no quoteado en mi fetch, página truncada) [ASUMIDO]."
+    },
+    {
+     "name": "OpenStreetMap (Overpass / dump Geofabrik)",
+     "url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+     "yields": "POIs auto con coordenadas, nombre, a menudo teléfono/web/horario. Conteos Overpass España ejecutados 12-jun-2026 (datos base 2026-06-12T11:25Z): shop=car 3.516 (2.290 nodos/1.205 ways/21 rel), shop=car_repair 7.847, shop=car_parts 714 → 12.077 POIs.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "12.077 POIs auto (query Overpass real ejecutada; ~27% del universo PA → cobertura parcial del long tail pero gratis y con geometría)",
+     "priority": "high",
+     "notes": "[VERIFICADO] overpass-api.de y kumi.systems estaban saturados (Dispatcher timeout); el mirror maps.mail.ru respondió. Para producción: descargar spain-latest.osm.pbf de Geofabrik y filtrar con osmium (cero rate limits). Licencia ODbL: share-alike sobre la base de datos derivada — evaluar antes de mezclar."
+    },
+    {
+     "name": "Foursquare Open Source Places (FSQ OS Places)",
+     "url": "https://huggingface.co/datasets/foursquare/fsq-os-places",
+     "yields": "Dataset abierto de 100M+ POIs globales, 22 atributos (nombre, dirección, ciudad, país, web, redes sociales, lat/lon, categoría — incluye Car Dealership, Automotive Repair). Subset España filtrable por columna country.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Decenas de miles de POIs auto ES [ASUMIDO: 100M+ global verificado; el conteo ES exacto se obtiene en minutos con DuckDB sobre los parquet]",
+     "priority": "high",
+     "notes": "[VERIFICADO existencia/licencia] Apache 2.0, uso comercial permitido, actualización mensual; parquet en Hugging Face (gated, registro gratuito) y S3. Fuente: huggingface.co/datasets/foursquare/fsq-os-places + blog oficial Foursquare. Complemento ideal sin riesgo legal frente a Google."
+    },
+    {
+     "name": "Overture Maps — Places theme",
+     "url": "https://docs.overturemaps.org/guides/places/",
+     "yields": "64M+ lugares globales (incluye datos de Meta/Facebook places — muchos negocios pequeños con página FB que no están en otros directorios). Categorías auto; nombre, dirección, teléfono, web, confianza.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Decenas de miles de POIs auto ES [ASUMIDO: 64M+ global verificado en docs; subset ES queryable con DuckDB/CLI overturemaps]",
+     "priority": "high",
+     "notes": "[VERIFICADO] Licencia CDLA-Permissive-2.0 (places theme), GeoParquet en S3/Azure, releases mensuales. docs.overturemaps.org/attribution. Junto con FSQ OS Places forma la columna vertebral gratuita y legal del long tail."
+    },
+    {
+     "name": "Empresite (El Economista) — directorio registral",
+     "url": "https://empresite.eleconomista.es/Actividad/TALLERES-MECANICOS/",
+     "yields": "Empresas con denominación social, dirección, actividad, web, y en ficha CIF/CNAE/facturación (registro mercantil) — clave para casar listados de mapa con entidad jurídica. Verificado: 'Hemos encontrado 18.574 empresas de Talleres Mecanicos' y 706 en actividad CONCESIONARIOS; filtros por provincia, forma jurídica, empleados, fecha de creación.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~20-25k empresas auto por actividades keyword (18.574 talleres + 706 concesionarios verificados; faltan rúbricas compraventa/desguaces no fetcheadas). Universo registral CNAE 45 completo es mayor.",
+     "priority": "high",
+     "notes": "[VERIFICADO] 30 resultados/página; el paginador mostró '1..40' (~1.200 visibles por actividad) → segmentar por provincia para agotar. Mismo grupo: ranking-empresas.eleconomista.es (carga por JS, la página sector-4520 devolvió 0 resultados sin JS → requiere browser)."
+    },
+    {
+     "name": "eInforma / Iberinform — directorios CNAE registrales",
+     "url": "https://www.iberinform.es/informacion-de-empresas/directorio-cnae/45/venta-y-reparacion-de-vehiculos-de-motor-y-motocicletas",
+     "yields": "Browse gratuito de listas de empresas por CNAE (4511 venta de automóviles, 4520 mantenimiento y reparación, 4531/4532 repuestos); fichas con CIF, dirección, estado (activa/inactiva). Iberinform mostró 26.205 empresas en 'Comercio al por menor de vehículos de motor' y breadcrumbs con totales (Comercio 769.229).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~70-80k empresas CNAE división 45 [ASUMIDO: el PDF DIRCE 2025 del INE (leído, 3.310.824 empresas activas; Comercio 625.664) no desglosa la división 45; el conteo exacto está en INEbase]. Páginas eInforma de CNAE redirigen de forma inconsistente (fetch devolvió contenido CNAE 47/4671).",
+     "priority": "medium",
+     "notes": "[VERIFICADO parcial] Útil como verdad jurídica (CIF/CNAE) para deduplicar; datos financieros de pago. Listas paginadas tipo /Empresas-45.html crawleables. Axesor (axesor.es/directorio-empresas, ahora Experian) devolvió HTTP 500 a fetch → low, alternativa equivalente."
+    },
+    {
+     "name": "Camerdata (Cámaras de Comercio de España)",
+     "url": "https://www.camerdata.es/",
+     "yields": "Base de datos oficial agregada de las Cámaras de Comercio: censo empresarial con actividad IAE/CNAE, dirección, teléfono — cubre autónomos y microempresas (compraventas pequeñas) mejor que los directorios web. Venta de ficheros segmentados por actividad/provincia.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Censo ~3M empresas ES [ASUMIDO: cifra histórica del producto; la home (HTTP 200 verificado) no expone conteos sin JS y su cadena TLS rompe WebFetch]",
+     "priority": "medium",
+     "notes": "[VERIFICADO vivo, contenido no extraído] Producto de pago (ficheros/consultas); coste por registro típico céntimos. Vía legal y limpia para comprar el universo CNAE 4511/4520/4677 de golpe — recomendable pedir presupuesto."
+    },
+    {
+     "name": "Cylex España (cylex.es)",
+     "url": "https://www.cylex.es/",
+     "yields": "Directorio generalista con páginas ciudad×categoría ('talleres mecánicos en {ciudad}', verificadas vía índice de Google: /el-vendrell/talleres-mecánicos/, /talavera-de-la-reina/...) con teléfono, dirección, horario, reseñas.",
+     "access_method": "browser",
+     "defense": "cloudflare",
+     "est_volume": "Desconocido; probablemente 10-30k auto ES [ASUMIDO: agregador que mezcla fuentes; sin conteo visible porque bloquea el fetch]",
+     "priority": "medium",
+     "notes": "[VERIFICADO bloqueo] HTTP 403 tanto a WebFetch como a curl con UA Chrome (Server: cloudflare, CF-RAY ZRH) → requiere browser real/TLS-fingerprint (Playwright + stealth) o crawl vía caché de buscadores. Estructura de URLs predecible facilita enumeración una vez superado Cloudflare."
+    },
+    {
+     "name": "11870.com",
+     "url": "https://www.11870.com/",
+     "yields": "Directorio local español veterano (Zahara Capital SL); guarda fichas de negocios con reseñas. Valor incremental dudoso: contenido envejecido desde ~2015.",
+     "access_method": "browser",
+     "defense": "cloudflare",
+     "est_volume": "Desconocido y probablemente bajo/desactualizado para auto [ASUMIDO: no pude ver el contenido]",
+     "priority": "low",
+     "notes": "[VERIFICADO bloqueo, vida parcial] 403 Cloudflare a curl/WebFetch; búsquedas externas muestran que el dominio publica contenido en 2026 pero no pude confirmar funcionalidad de directorio. Tratar como fuente de validación residual, no primaria."
+    },
+    {
+     "name": "QDQ (qdq.com)",
+     "url": "https://www.qdq.com/",
+     "yields": "NADA como directorio: verificado en vivo que QDQ es hoy una agencia de marketing digital ('tu equipo de marketing digital', planes 150-250 EUR/mes, '59mil negocios ya han confiado'); sin búsqueda de negocios por categoría/ciudad. empresas.qdq.com devuelve HTTP 502.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "0 — el directorio histórico está muerto",
+     "priority": "low",
+     "notes": "[VERIFICADO] Excluir del pipeline. Su sucesor de datos es BeeDigital/Páginas Amarillas (misma órbita Telefónica histórica)."
+    },
+    {
+     "name": "Yelp España (yelp.es + Fusion/Places API)",
+     "url": "https://www.yelp.es/",
+     "yields": "Directorio vivo (verificado: navegación Madrid con categoría 'Automoción'), pero cobertura ES de talleres/compraventas históricamente fina frente a PA/Google.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Pocos miles de negocios auto ES [ASUMIDO: cobertura ES de Yelp es débil fuera de hostelería]",
+     "priority": "low",
+     "notes": "[VERIFICADO vivo + pricing] Fusion/Places API ya sin free tier permanente: trial 30 días/5.000 calls; planes Starter $7,99/1k (cap 300/día), Plus $9,99/1k (500/día), Enterprise $14,99/1k (docs.developer.yelp.com/docs/plans, business.yelp.com/data). Mal ratio coste/cobertura para España → solo si sobra presupuesto."
+    },
+    {
+     "name": "Europages (europages.es)",
+     "url": "https://www.europages.es/",
+     "yields": "Marketplace B2B vivo (verificado: '2,2 millones' de proveedores globales, 111 sectores, browse alfabético y por categoría). Sesgo a fabricantes/mayoristas: captura recambistas y distribuidores, NO el taller/compraventa de barrio.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "Cientos-pocos miles de empresas auto ES relevantes [ASUMIDO: sin desglose ES visible en la home]",
+     "priority": "low",
+     "notes": "[VERIFICADO vivo] Útil solo para la capa B2B (venta de recambios al por mayor, importadores). Crawl HTML simple."
+    },
+    {
+     "name": "Hotfrog España (hotfrog.es)",
+     "url": "https://www.hotfrog.es/",
+     "yields": "Directorio agregador vivo (título 'Bienvenido a Hotfrog' verificado vía curl; tras Cloudflare permisivo) con fichas de empresa autogeneradas; datos mayormente clonados de otras fuentes, frescura baja.",
+     "access_method": "html",
+     "defense": "cloudflare",
+     "est_volume": "Miles de fichas auto ES [ASUMIDO: la búsqueda interna no expuso conteos en el HTML]",
+     "priority": "low",
+     "notes": "[VERIFICADO vivo, contenido fino] 403 a WebFetch pero 200 a curl con UA navegador (Cloudflare en modo permisivo). Valor: cross-check de teléfonos; no fuente primaria."
+    },
+    {
+     "name": "Infobel España (infobel.com/es/spain)",
+     "url": "https://www.infobel.com/es/spain",
+     "yields": "Directorio telefónico de empresas locales ('Directorio de empresas locales de España', claim global '280 millones de empresas activas' — ambos extraídos del HTML real); además vende producto de datos B2B (Infobel PRO) con ficheros por país/actividad.",
+     "access_method": "html",
+     "defense": "cloudflare",
+     "est_volume": "Decenas de miles de empresas auto ES [ASUMIDO: base telefónica ES amplia; sin desglose por categoría visible]",
+     "priority": "medium",
+     "notes": "[VERIFICADO vivo] 403 a WebFetch, 200 a curl con UA navegador. Doble vía: crawl HTML del directorio o compra del fichero Infobel PRO (legal, dedup hecho). Buen candidato para teléfonos del long tail."
+    },
+    {
+     "name": "Opendi España (opendi.es)",
+     "url": "https://www.opendi.es/",
+     "yields": "Directorio vivo con cifras propias verificadas en la home: '1.681.046 Registros informativos', '79.052 empresas con información detallada', 40.000 horarios. Browse por ciudad y sector en toda España.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~30-50k fichas auto ES [ASUMIDO: 2-3% del 1,68M total verificado; categorías auto no enumeradas en la home]",
+     "priority": "medium",
+     "notes": "[VERIFICADO vivo] Respondió 200 a curl y WebFetch sin defensa. Red Opendi (alemana) — datos parcialmente clonados; útil para cobertura y horarios. Crawl HTML simple por ciudad×categoría."
+    },
+    {
+     "name": "Vulka (vulka.es)",
+     "url": "https://www.vulka.es/",
+     "yields": "Directorio vivo gratuito con browse por las 17 CCAA/provincias y categorías; sección 'Vehículos' con 153.138 listados según su propia home (incluye alquiler, gasolineras, mecánicos — cifra inflada para nuestro target).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "153.138 en categoría Vehículos (cifra de la propia web, verificada; el subset talleres/concesionarios/compraventa real será una fracción, est. 20-40k [ASUMIDO])",
+     "priority": "low",
+     "notes": "[VERIFICADO vivo] Sin defensa (nginx, 200 a curl y WebFetch). Datos de calidad/frescura dudosa típica de agregador; usar para rellenar huecos de teléfono/dirección y cross-validación."
+    },
+    {
+     "name": "Infoisinfo España (infoisinfo.es)",
+     "url": "https://www.infoisinfo.es/",
+     "yields": "Directorio vivo con browse por categoría y ciudad (Madrid, Barcelona, Valencia... todas las provincias); las categorías auto existen en su árbol aunque la home no las destaca; sin conteos públicos.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "Miles-decenas de miles de fichas auto [ASUMIDO: sin conteos visibles]",
+     "priority": "low",
+     "notes": "[VERIFICADO vivo] 200 sin defensa. Red internacional (LatAm/UK/AU). Mismo rol que Vulka/Opendi: relleno y validación cruzada del long tail."
+    },
+    {
+     "name": "Bing Maps API → Azure Maps (Microsoft)",
+     "url": "https://learn.microsoft.com/en-us/azure/azure-maps/migrate-bing-maps-overview",
+     "yields": "Bing Maps for Enterprise está RETIRADO para cuentas Basic/free desde el 30-jun-2025 (blogs.bing.com verificado vía búsqueda); enterprise existentes hasta 30-jun-2028. Sustituto: Azure Maps Search (POI search, datos TomTom) para dealers/talleres.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "Decenas de miles de POIs auto ES vía Azure Maps [ASUMIDO: base TomTom, cobertura ES decente pero inferior a Google]",
+     "priority": "low",
+     "notes": "[VERIFICADO retiro] No iniciar nada nuevo sobre Bing Maps. Azure Maps tiene free tier (transacciones mensuales) y ToS más laxos que Google en almacenamiento limitado, pero igualmente restringe crear base de datos permanente [ASUMIDO — verificar ToS Azure antes de usar]."
+    },
+    {
+     "name": "Tuugo España y clones zombi (tuugo.es, misterwhat.es, guiaempresas.universia.es, infocif.es, empresasysociedades.com)",
+     "url": "https://www.tuugo.es/",
+     "yields": "NADA fiable: tuugo.es responde 200 pero su contenido actual es spam SEO de casinos (verificado: la home sirve una review de 'BetLabel'); misterwhat.es, guiaempresas.universia.es, infocif.es y talleres-mecanicos.empresasysociedades.com no resuelven (timeout/000).",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "0 utilizable",
+     "priority": "low",
+     "notes": "[VERIFICADO] Excluir todos del pipeline; documentados aquí para cerrar el universo de directorios genéricos ES. guia33.com también mutó a agencia de marketing (queda un directorio.guia33.com no verificado, alcance Barcelona — irrelevante a escala nacional)."
+    }
+   ],
+   "verified": [
+    {
+     "name": "Páginas Amarillas (paginasamarillas.es)",
+     "url": "https://www.paginasamarillas.es/search/talleres-de-automoviles/all-ma/all-pr/all-is/all-ci/all-ba/all-pu/all-nc/1",
+     "yields": "El directorio generalista nº1 para long tail ES: nombre, dirección completa, teléfono (tras click 'Ver teléfono'), web, horarios, descripción de servicios. Conteos verificados en vivo (12-jun-2026): talleres de automóviles 29.955, concesionarios 11.202, compraventa de automóviles 1.662, desguaces 1.636 ≈ 44.4k listados auto brutos (con solapamiento entre rúbricas).",
+     "access_method": "html",
+     "defense": "other",
+     "est_volume": "~40-44k puntos de venta auto (suma de las 4 rúbricas verificadas en la propia SERP de PA, menos solapamiento estimado)",
+     "priority": "high",
+     "notes": "[VERIFICADO] Defensa: Imperva/Incapsula (robots.txt referencia /_Incapsula_Resource), pero las páginas de búsqueda respondieron a fetch plano hoy. robots.txt SIN sitemap → enumerar vía /search/{rubro}/{provincia}/.../{página}; segmentar por provincia/municipio para agotar paginación. Propiedad BeeDigital/hibu (sello 'Beedigital' visto en listados).",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Counts live 12-jun-2026: Talleres (29.954), Concesionarios (11.202), Compraventa (1.661), Desguaces (1.636). Listing: Car Raez Automoción, C/ Juan Brito 5, 35500 Arrecife, tel 928520062. Census confirmed ±1.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Google Places API (Google Maps Platform)",
+     "url": "https://developers.google.com/maps/billing-and-pricing/pricing",
+     "yields": "La cobertura más completa y fresca del long tail (talleres, compraventas, desguaces con horario, teléfono, web, rating): types car_dealer, car_repair, car_wash. Barrido por Text Search/Nearby Search en rejilla municipal + Place Details.",
+     "access_method": "api",
+     "defense": "none",
+     "est_volume": "50-90k POIs auto en España [ASUMIDO: extrapolación de PA 44k + OSM 12k; Google suele superar a PA]. Coste verificado: Text Search $32/1k (Essentials y Pro; $35 Enterprise), Nearby Search $32/1k Pro, Place Details $5/1k Essentials-$17/1k Pro-$20/1k Enterprise; free tier 10k/5k/1k llamadas/mes por SKU; descuentos por volumen (Text Search Pro baja a $25,60/1k en tramo 100k-500k). Barrido nacional ~60-100k requests ≈ $2-3k + Details.",
+     "priority": "high",
+     "notes": "[VERIFICADO pricing y ToS] RIESGO LEGAL CLAVE: los términos (cloud.google.com/maps-platform/terms, fetcheados) dicen literalmente 'No Scraping', 'No Caching: Customer will not cache Google Maps Content except as expressly permitted under the Maps Service Specific Terms' y 'No Creating Content From Google Maps Content' → construir un índice independiente con datos de Places incumple ToS; usar solo como verificación/enriquecimiento efímero o asumir el riesgo. Excepción de almacenamiento del place ID en Service Specific Terms (no quoteado en mi fetch, página truncada) [ASUMIDO].",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "Live pricing page upd 2026-06-11: Text/Nearby Search Pro $32/1k (5k free). Table A has car_dealer/car_repair/car_wash; Place Details Enterprise=hours/phone/web/rating. No dealer/Spain data on page.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "OpenStreetMap (Overpass / dump Geofabrik)",
+     "url": "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+     "yields": "POIs auto con coordenadas, nombre, a menudo teléfono/web/horario. Conteos Overpass España ejecutados 12-jun-2026 (datos base 2026-06-12T11:25Z): shop=car 3.516 (2.290 nodos/1.205 ways/21 rel), shop=car_repair 7.847, shop=car_parts 714 → 12.077 POIs.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "12.077 POIs auto (query Overpass real ejecutada; ~27% del universo PA → cobertura parcial del long tail pero gratis y con geometría)",
+     "priority": "high",
+     "notes": "[VERIFICADO] overpass-api.de y kumi.systems estaban saturados (Dispatcher timeout); el mirror maps.mail.ru respondió. Para producción: descargar spain-latest.osm.pbf de Geofabrik y filtrar con osmium (cero rate limits). Licencia ODbL: share-alike sobre la base de datos derivada — evaluar antes de mezclar.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Live counts match census exactly: shop=car 3516 (2290n/1205w/21r), car_repair 7847, car_parts 714 = 12077; osm_base 2026-06-12T11:32:31Z; sample dealer \"Mavensa Volvo Caceres\" +34 927 26 90 40",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Foursquare Open Source Places (FSQ OS Places)",
+     "url": "https://huggingface.co/datasets/foursquare/fsq-os-places",
+     "yields": "Dataset abierto de 100M+ POIs globales, 22 atributos (nombre, dirección, ciudad, país, web, redes sociales, lat/lon, categoría — incluye Car Dealership, Automotive Repair). Subset España filtrable por columna country.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Decenas de miles de POIs auto ES [ASUMIDO: 100M+ global verificado; el conteo ES exacto se obtiene en minutos con DuckDB sobre los parquet]",
+     "priority": "high",
+     "notes": "[VERIFICADO existencia/licencia] Apache 2.0, uso comercial permitido, actualización mensual; parquet en Hugging Face (gated, registro gratuito) y S3. Fuente: huggingface.co/datasets/foursquare/fsq-os-places + blog oficial Foursquare. Complemento ideal sin riesgo legal frente a Google.",
+     "live": {
+      "alive": true,
+      "http_status": 200,
+      "blocker": "login",
+      "contains_real_data": true,
+      "evidence": "DuckDB query country='ES': \"Taller Mecanico San Miguel S.L.\", Trigueros (Huelva), cat \"Retail > Automotive Retail > Car Dealership\". Official repo gated=auto (401 anon API), 216GB, updated 2026-06-11."
+     }
+    },
+    {
+     "name": "Overture Maps — Places theme",
+     "url": "https://docs.overturemaps.org/guides/places/",
+     "yields": "64M+ lugares globales (incluye datos de Meta/Facebook places — muchos negocios pequeños con página FB que no están en otros directorios). Categorías auto; nombre, dirección, teléfono, web, confianza.",
+     "access_method": "dump",
+     "defense": "none",
+     "est_volume": "Decenas de miles de POIs auto ES [ASUMIDO: 64M+ global verificado en docs; subset ES queryable con DuckDB/CLI overturemaps]",
+     "priority": "high",
+     "notes": "[VERIFICADO] Licencia CDLA-Permissive-2.0 (places theme), GeoParquet en S3/Azure, releases mensuales. docs.overturemaps.org/attribution. Junto con FSQ OS Places forma la columna vertebral gratuita y legal del long tail.",
+     "live": {
+      "alive": true,
+      "http_status": 200,
+      "blocker": "none (robots.txt=404; taxonomy browser is JS-rendered; data access = GeoParquet download, no REST API)",
+      "contains_real_data": true,
+      "evidence": "Docs live: '64 million point representations'; meta source=59,195,082 features; taxonomy browser node 'Automotive 3,192,006'; fields name/address/phone/website/confidence. No individual Spain dealer record on docs page — data is in GeoParquet."
+     }
+    },
+    {
+     "name": "Empresite (El Economista) — directorio registral",
+     "url": "https://empresite.eleconomista.es/Actividad/TALLERES-MECANICOS/",
+     "yields": "Empresas con denominación social, dirección, actividad, web, y en ficha CIF/CNAE/facturación (registro mercantil) — clave para casar listados de mapa con entidad jurídica. Verificado: 'Hemos encontrado 18.574 empresas de Talleres Mecanicos' y 706 en actividad CONCESIONARIOS; filtros por provincia, forma jurídica, empleados, fecha de creación.",
+     "access_method": "html",
+     "defense": "none",
+     "est_volume": "~20-25k empresas auto por actividades keyword (18.574 talleres + 706 concesionarios verificados; faltan rúbricas compraventa/desguaces no fetcheadas). Universo registral CNAE 45 completo es mayor.",
+     "priority": "high",
+     "notes": "[VERIFICADO] 30 resultados/página; el paginador mostró '1..40' (~1.200 visibles por actividad) → segmentar por provincia para agotar. Mismo grupo: ranking-empresas.eleconomista.es (carga por JS, la página sector-4520 devolvió 0 resultados sin JS → requiere browser).",
+     "live": {
+      "alive": true,
+      "blocker": "Aggressive per-IP rate limit: HTTP 429 after ~1 req, then reCAPTCHA Enterprise gate ('Demasiadas peticiones detectadas... resuelva el Captcha'). No login wall. robots.txt only disallows /servlet/; sitemaps published.",
+      "contains_real_data": true,
+      "evidence": "LIVE: \"Hemos encontrado 18.574 empresas de Talleres Mecanicos\"; filters provincia/forma juridica/empleados/fecha creacion; e.g. Talleres Mecanicos Noal SL Gijon (ficha CIF B33789348, CNAE 2511). CONCESIONARIOS=706 confirmed via snippet only. Data: INFORMA D&B/eInforma.",
+      "http_status": 200
+     }
+    }
+   ]
+  },
+  {
+   "modality": "desguaces",
+   "total_found": 34,
+   "sources": [
+    {
+     "name": "AEDRA — Buscador de socios (asociación nacional de desguaces)",
+     "url": "https://aedra.org/buscador-de-socios/",
+     "yields": "615 CATs/desguaces asociados con nombre, provincia, teléfono y a veces web; filtrable por provincia",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "615 entidades (contador '615 Elementos encontrados' visto en la página, 52 páginas de paginación)",
+     "notes": "[VERIFICADO] Fetch directo OK. Paginación clásica 1..52 (~12 por página), filtros por formulario. Lista de socios = subconjunto de calidad del universo CAT (~1.400). Sin dirección completa en vista lista; hay ficha por socio."
+    },
+    {
+     "name": "SIGRAUTO — Dónde puedo entregar mi vehículo (PDFs por CCAA)",
+     "url": "https://www.sigrauto.com/donde-puedo-entregar-mi-vehiculo",
+     "yields": "595 desguaces (CATs) + 25 fragmentadoras concertadas con fabricantes, listados PDF por comunidad autónoma + mapa + app",
+     "access_method": "dump",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "595 CATs + 25 fragmentadoras (texto visto: 'Última actualización: 18-05-2026')",
+     "notes": "[VERIFICADO] PDFs en https://www.sigrauto.com/pdf/ccaa/<region>.pdf (frag.pdf confirmado en el HTML). Navegación por mapa-imagen (mapcomu.gif); enumerar probando slugs de CCAA en /pdf/ccaa/."
+    },
+    {
+     "name": "DGT — Centros Autorizados de Tratamiento de Vehículos (registro oficial)",
+     "url": "https://www.dgt.es/es/seguridad-vial/centros-colaboradores/centros-tratamiento-vehiculos/",
+     "yields": "Universo oficial completo de CATs autorizados por la DGT (el padre de todos los desguaces legales de España), filtrable por provincia y municipio",
+     "access_method": "api",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "~1.400 CATs (cifra citada en resultados de búsqueda; el mapa no muestra total)",
+     "notes": "[VERIFICADO] La página existe y es un mapa interactivo sin descarga masiva; el mapa se alimenta casi seguro de un JSON interno (interceptar con navegador/red). Existe petición de datos abiertos en datos.gob.es ('Centros Autorizados de Tratamiento de Vehículos (Desguaces)'). Fuente de verdad regulatoria — prioridad máxima."
+    },
+    {
+     "name": "DesguacesDirecto — Directorio de desguaces CATV autorizados",
+     "url": "https://desguacesdirecto.com/",
+     "yields": "1.393 centros CATV en 854 localidades con dirección, teléfono/WhatsApp, horarios y servicios (grúa, baja DGT, venta de piezas, envío)",
+     "access_method": "sitemap",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "1.393 CATVs / 854 localidades (cifras vistas en portada)",
+     "notes": "[VERIFICADO] WordPress con sitemap index en /sitemap.xml que incluye un 'desguaces-sitemap.xml' dedicado — enumeración limpia de todas las fichas. El conteo más alto de todos los directorios verificados."
+    },
+    {
+     "name": "DesguacesOficiales — Directorio de CATs por provincia y municipio",
+     "url": "https://desguacesoficiales.com/",
+     "yields": "1.300+ CATs con nombre, dirección, teléfono, email y horarios, organizados por 52 provincias y municipio",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "1.300+ centros (claim de portada; contadores por provincia vistos: Barcelona 83, Madrid 53)",
+     "notes": "[VERIFICADO] Páginas de provincia tipo /zona/<provincia>/ con desglose municipal; footer lista las 52 provincias con conteo — usar como semilla de crawling. Excelente para cross-check con DesguacesDirecto y SIGRAUTO."
+    },
+    {
+     "name": "Ovoko (RRR.lt) España — marketplace de piezas usadas",
+     "url": "https://ovoko.es/",
+     "yields": "Vendedores/desguaces españoles con página propia (ej. ovoko.es/avila, /mora, /redia, /desguacesplaza) + stock de piezas online por vendedor",
+     "access_method": "browser",
+     "defense": "cloudflare",
+     "priority": "high",
+     "est_volume": "6.730+ desguaces online en toda la plataforma (cifra pan-EU del propio sitio vía snippet de buscador); subconjunto español sin cifra pública — estimable en cientos",
+     "notes": "[VERIFICADO 403] Root, /acerca-de-nosotros y /sitemap.xml devuelven 403 a fetch plano — requiere navegador real/stealth. Las páginas de vendedor (slug corto por desguace) son el patrón de enumeración; el sitemap accesible vía navegador debería listarlas. Stock online completo por vendedor — fuente doble: entidades + inventario."
+    },
+    {
+     "name": "Opisto — directorio de desguaces colaboradores",
+     "url": "https://www.opisto.com/es/desguaces-de-automoviles",
+     "yields": "Directorio alfabético de desguaces con ficha por yard (/es/desguaces-de-automoviles/detalles/<id>), incluye españoles (Málaga, Gijón, Valencia, Granada...) con stock online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "Cientos de fichas en el directorio (lista continua vista); ~44-100+ desguaces españoles según prensa (Infotaller 2023: '44 españoles'; nota posterior: 'más de cien')",
+     "notes": "[VERIFICADO] El directorio es HTML plano con IDs numéricos secuenciales en /detalles/<id> (ej. 6201, 6250) — enumerable por barrido de IDs. opisto.es redirige con errores; usar opisto.com/es. Marketplace con 3,4M+ piezas online."
+    },
+    {
+     "name": "Recambiofacil — plataforma B2B de recambio usado",
+     "url": "https://www.recambiofacil.com/",
+     "yields": "776 desguaces registrados (cifra pública en portada) + 26.483 talleres + 4.828 recambistas; stock 25,2M piezas buscable",
+     "access_method": "browser",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "776 desguaces (contador visto en portada, mayo 2026)",
+     "notes": "[VERIFICADO] Sin directorio público de socios — los datos de miembros requieren cuenta B2B registrada. Útil como cifra de control del universo y como fuente de stock si se obtiene acceso profesional."
+    },
+    {
+     "name": "Azeler Recambios — agregador de recambio recuperado",
+     "url": "https://www.azelerecambios.com/",
+     "yields": "Red de 280 'Desguaces Oficiales' + 280 remanufacturadores; páginas por provincia (patrón /recambios-de-coche-en-<provincia>) y stock 15M+ piezas online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "280 desguaces oficiales (cifra vista en su web; prensa dice 250+ CATs)",
+     "notes": "[VERIFICADO] Fetch directo OK. Las páginas provinciales sirven de índice geográfico; no publica lista nominal completa de los 280 CATs — enumerar vía páginas de provincia y fichas de pieza (cada pieza referencia su desguace de origen)."
+    },
+    {
+     "name": "RO-DES / desguaces.net / RodesRecambios — red operativa de desguaces",
+     "url": "https://www.ro-des.com/",
+     "yields": "Red de servicio (baja+recogida) que cubre ~90% del territorio con páginas provinciales /red-operativa/desguaces-<provincia>/; marketplace de piezas en rodesrecambios.es",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "Sin cifra pública de yards miembro; cobertura declarada ~90% de España",
+     "notes": "[VERIFICADO] desguaces.net (fetcheado) es la marca de servicio del mismo grupo y tampoco lista yards individuales. Valor: páginas provinciales + marketplace rodesrecambios.es con stock; los miembros concretos no se publican — prioridad media como fuente de cobertura, no de censo."
+    },
+    {
+     "name": "B-Parts (Stellantis SUSTAINera) — marketplace de piezas usadas",
+     "url": "https://www.b-parts.com/es/",
+     "yields": "Stock de piezas de CATs certificados vendible a España; NO publica directorio de desguaces proveedores",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "0 entidades enumerables públicamente (verificado: sin lista de partners)",
+     "notes": "[VERIFICADO] Fetch OK. Solo dice que las piezas vienen de 'CATs con licencia y certificación' sin nombrarlos. Las fichas de pieza podrían filtrar ubicación del vendedor — requeriría scraping del catálogo para inferir yards. Baja prioridad para censo de entidades."
+    },
+    {
+     "name": "GPA (gpa26.com, Francia) — reciclador exportando a España",
+     "url": "https://www.gpa26.com/",
+     "yields": "Sin yards en España: es un desguace industrial francés (Drôme) que exporta piezas a España vía eBay desde 2025",
+     "access_method": "browser",
+     "defense": "other",
+     "priority": "low",
+     "est_volume": "0 entidades españolas (confirmado vía prensa j2rauto.com: exporta a Alemania, Italia, España y Austria por eBay)",
+     "notes": "[VERIFICADO 403] El sitio bloquea fetch plano. Para el censo español no aporta puntos de venta físicos — descartable salvo que interese el flujo de piezas transfronterizo."
+    },
+    {
+     "name": "desguacecoches.com — Directorio Desguaces España",
+     "url": "https://www.desguacecoches.com/",
+     "yields": "586 empresas de desguace 'verificadas' con nombre, ubicación, rating, tipos de vehículo y especialización, por CCAA→provincia→ciudad",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "586 empresas (cifra vista en el sitio; secciones de stats dicen '500+')",
+     "notes": "[VERIFICADO] Navegación por buscar.html?comunidad=<region> y fichas 'Ver detalles'. Útil para cross-check de teléfonos/WhatsApp y ratings."
+    },
+    {
+     "name": "desguaces.eu — guía de desguaces por provincia",
+     "url": "https://www.desguaces.eu/",
+     "yields": "Directorio por 50 provincias (/desguaces-<provincia>/) con ficha por desguace; también índices por tipo de vehículo, pieza y marca",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "Sin total publicado; 50 páginas provinciales + ~20 destacados en portada vistos",
+     "notes": "[VERIFICADO] Estructura limpia de URLs provinciales para crawl completo. Solapará mucho con DesguacesDirecto/Oficiales — usar para dedupe y enriquecimiento."
+    },
+    {
+     "name": "infodesguaces.es — directorio de desguaces",
+     "url": "https://infodesguaces.es/",
+     "yields": "Páginas por las 52 provincias (infodesguaces.es/<provincia>/) con fichas de desguaces y servicios",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "Sin total publicado; 52 índices provinciales verificados en navegación",
+     "notes": "[VERIFICADO] Fetch OK. Cuarto directorio independiente — valor marginal decreciente pero útil para completar cobertura y validar bajas/altas."
+    },
+    {
+     "name": "tudesguace.com — guía de desguaces de España",
+     "url": "https://www.tudesguace.com/",
+     "yields": "Directorio por 52 provincias con nombre, provincia y enlace 'Teléfono y dirección' por desguace; buscador de piezas a la red asociada",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "Sin total publicado; 52 páginas provinciales + ~20 destacados vistos",
+     "notes": "[VERIFICADO] Mismo patrón que desguaces.eu. Crawl provincial directo."
+    },
+    {
+     "name": "ecomovilidad.es/catvs — Desguaces autorizados por la DGT",
+     "url": "https://ecomovilidad.es/catvs/",
+     "yields": "Directorio jerárquico de CATVs por 52 provincias (categorías alfabéticas → provincia → ficha)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "Sin total publicado; 52 categorías provinciales vistas",
+     "notes": "[VERIFICADO] Quinto directorio redundante; usar solo si los cuatro grandes dejan huecos."
+    },
+    {
+     "name": "Recambio Verde (SIDEO) — tienda online de piezas de desguace",
+     "url": "https://recambioverde.es/",
+     "yields": "Stock online de piezas; sin lista de desguaces ni ubicaciones físicas públicas",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "0 entidades enumerables (verificado: sin directorio de yards)",
+     "notes": "[VERIFICADO] Plataforma de la agencia SIDEO (que también lleva webs de desguaces y la presencia de Ovoko ES). Pista útil: el footer 'by SIDEO' aparece en muchas webs de desguaces individuales — buscar 'SIDEO desguace' puede enumerar clientes-yards."
+    },
+    {
+     "name": "EuroPiezas (recambioseuropiezas.com) — buscador de recambio verde",
+     "url": "https://www.recambioseuropiezas.com/",
+     "yields": "Red de desguaces asociados con 'TOP 15' nominal visible (Logroño, Girona, León, Granada, Murcia, Pontevedra, Navarra, Madrid...)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "15 yards nombrados públicamente; total de la red no publicado",
+     "notes": "[VERIFICADO] Modelo de petición de pieza→contacto del desguace; solo aporta una lista parcial curada."
+    },
+    {
+     "name": "desguacesonline.com — DOMINIO MUERTO",
+     "url": "https://www.desguacesonline.com/",
+     "yields": "Nada: el dominio está en venta en HugeDomains",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "0 (verificado: redirect 302 a hugedomains.com)",
+     "notes": "[VERIFICADO] La fuente 'desguacesonline' pedida en el encargo no existe como tal; los vivos son desguacesonline.info y desguacesonline.eu (guías menores detectadas en SERP, no fetcheadas — sin confirmar contenido)."
+    },
+    {
+     "name": "Flexicar — red de compraventa nº1 de España",
+     "url": "https://www.flexicar.es/delegaciones-flexicar/",
+     "yields": "~250 delegaciones listadas alfabéticamente con URL propia por sede (/delegaciones-flexicar/<slug>/); stock completo online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "~250 sedes listadas en la página de delegaciones (vista); su portada dice '175+ concesionarios' en España y prensa 200+ incl. Portugal",
+     "notes": "[VERIFICADO] Enumeración trivial desde la página de delegaciones. Cada sede tiene página con stock filtrable. La mayor cadena de VO del país."
+    },
+    {
+     "name": "OcasionPlus — cadena de compraventa",
+     "url": "https://www.ocasionplus.com/",
+     "yields": "120 centros en España con búsqueda por provincia y concesionario; 14.000-20.000 coches con stock online filtrable",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "120 centros / +20.000 coches (claims vistos en portada; buscador muestra 14.050 coches)",
+     "notes": "[VERIFICADO] El selector 'Búsqueda por provincia y concesionario' de la home es el punto de enumeración (probable JS — confirmar con navegador si el listado completo no está en HTML estático)."
+    },
+    {
+     "name": "Compramostucoche.es (wirkaufendeinauto/AUTO1 Group) — red de compra de coches",
+     "url": "https://www.compramostucoche.es/sucursales/",
+     "yields": "107-108 sucursales de compra organizadas por CCAA, cada una con página propia (/sucursales/<ciudad>-<cp>/) con dirección, horarios y teléfono",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "'Más de 107 sucursales' (visto en la propia página de sucursales)",
+     "notes": "[VERIFICADO] Solo compra (no venta al público — el stock va a AUTO1 B2B), pero son puntos de venta físicos del censo compraventa. Enumeración completa desde una sola página. Existe también compramostucoche.com (clon/competidor menor — distinguirlos)."
+    },
+    {
+     "name": "Crestanevada — cadena de compraventa",
+     "url": "https://www.crestanevada.es/conocenos/concesionarios-crestanevada",
+     "yields": "32 tiendas con ciudades listadas (Granada x2, Málaga x3, Sevilla x3, Murcia x3, Madrid-Leganés, Barcelona, Valencia...) y páginas por sede con stock",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "32 sedes (contadas en la página de red verificada)",
+     "notes": "[VERIFICADO] Patrón de stock por ciudad: crestanevada.es/coches-segunda-mano/<ciudad>. Stock online."
+    },
+    {
+     "name": "HR Motor — cadena de compraventa",
+     "url": "https://www.hrmotor.com/",
+     "yields": "30+ concesionarios con página propia por sede (patrón /concesionario-ocasion-<ciudad>/) y stock de 3.000+ coches online",
+     "access_method": "browser",
+     "defense": "other",
+     "priority": "medium",
+     "est_volume": "30+ centros (prensa/SERP 2026 con distribución: Madrid 4, Barcelona 4, Valencia 3, Sevilla 3...)",
+     "notes": "[ASUMIDO conteo, VERIFICADO patrón URL] El root devuelve 403 a fetch plano (anti-bot no identificado) pero las URLs por sede están indexadas en Google — enumerar vía sitemap con navegador real o vía SERP site:hrmotor.com/concesionario-ocasion-."
+    },
+    {
+     "name": "CarOutlet (caroutlet.es) — minicadena Alicante",
+     "url": "https://caroutlet.es/locations/",
+     "yields": "3 sedes (Ondara CC Portal de la Marina, Ondara N-332a, Benimeli — todas en Alicante) con ~112 coches en stock online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "3 sedes (página de locations verificada)",
+     "notes": "[VERIFICADO] No es cadena nacional: 3 puntos en la Marina Alta. La 'feria Caroutlet' de Lugo (El Progreso, jun-2026) es un evento distinto sin relación. Cubierto igualmente por coches.net/concesionario/caroutletverger."
+    },
+    {
+     "name": "Clicars (Grupo Stellantis/Aramis) — VO online con centros",
+     "url": "https://www.clicars.com/",
+     "yields": "Stock nacional online (~miles de coches reacondicionados); centros físicos en Madrid y Zaragoza",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "2 plazas físicas; 70.000+ clientes desde 2016 (SERP de su propia web)",
+     "notes": "[ASUMIDO detalle, base SERP] No fetcheado directamente. Pocas sedes pero gran stock online — relevante para inventario más que para censo de puntos."
+    },
+    {
+     "name": "Autohero (AUTO1 Group) — VO online con Autohero Centers",
+     "url": "https://www.autohero.com/es/",
+     "yields": "3.500+ coches online; centros físicos tipo 'Autohero Center' (ej. Madrid-Seseña, Toledo)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "3.500+ vehículos online; nº de centros físicos reducido (1-3, base SERP)",
+     "notes": "[ASUMIDO, base SERP] No fetcheado directamente. Hermano de compramostucoche.es dentro de AUTO1."
+    },
+    {
+     "name": "OK Mobility / OK Cars — venta VO de flota de alquiler",
+     "url": "https://www.okmobility.com/",
+     "yields": "Puntos de venta de coches de ocasión ex-alquiler (Mallorca, Barcelona y otras plazas turísticas)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "Sin cifra de puntos de venta VO verificada (presencia confirmada vía coches.net y autocasionmallorca.com)",
+     "notes": "[ASUMIDO, base SERP] No fetcheado. Las 'stores' OK Mobility son principalmente rent-a-car; la venta VO es línea secundaria. Verificar en fase de scraping si sus stores califican como punto de venta."
+    },
+    {
+     "name": "Spoticar España (Stellantis) — red VO multimarca",
+     "url": "https://www.spoticar.es/concesionarios-spoticar",
+     "yields": "200+ puntos de venta multimarca (redes Peugeot/Citroën/Opel) con buscador de concesionarios y 5.000+ vehículos online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "200+ puntos de venta (prensa pruebatucoche.es/espirituracer; web propia con buscador de puntos)",
+     "notes": "[ASUMIDO conteo, base SERP múltiple] Página de puntos de venta existe (/concesionarios-spoticar). OJO solapamiento: son concesionarios oficiales Stellantis que el agente de modalidad 'concesionarios' ya capturará — usar como atributo (vende VO Spoticar), no como entidad nueva."
+    },
+    {
+     "name": "Das WeltAuto España (Grupo VW) — red VO multimarca",
+     "url": "https://www.dasweltauto.es/",
+     "yields": "Red de concesionarios VW con VO certificado; páginas por provincia/ciudad (patrón /esp/concesionarios-en-<provincia>/<ciudad>) y stock online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "medium",
+     "est_volume": "Sin cifra pública verificada de puntos; patrón URL de concesionarios confirmado vía SERP (ej. /esp/concesionarios-en-alicante/torrevieja)",
+     "notes": "[ASUMIDO, base SERP] No fetcheado directamente. Igual que Spoticar: solapa con modalidad concesionarios — tratar como atributo de red VO."
+    },
+    {
+     "name": "Movilcar — NO ES CADENA DE COMPRAVENTA",
+     "url": "https://www.movilcar.es/",
+     "yields": "Nada para esta modalidad: movilcar.es es un taller de chapa y pintura de Sevilla (1 sede, Polígono La Negrilla)",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "1 taller (verificado en su web); búsquedas de 'Movilcar compraventa' no devuelven ninguna cadena nacional",
+     "notes": "[VERIFICADO] El nombre 'Movilcar' del encargo no corresponde a ninguna cadena de compraventa localizable; posible confusión del orquestador (¿quizá 'Mobilcar' local o 'Movilauto'?). Requiere aclaración upstream."
+    },
+    {
+     "name": "'Grupo García' — AMBIGUO, sin cadena nacional identificable",
+     "url": "https://www.garciaautomoviles.com/",
+     "yields": "Múltiples compraventas locales independientes llamadas García (Badajoz, Barcelona, León, Fuenlabrada, Mollet del Vallès...), ninguna red nacional unificada",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "5-6 negocios homónimos independientes detectados vía SERP; ninguno multi-provincia",
+     "notes": "[VERIFICADO búsqueda, no fetcheado cada uno] La búsqueda exhaustiva de '\"Grupo García\" coches ocasión' no revela cadena. Posibles candidatos a lo que quería el orquestador: García Automóviles (Badajoz/Mérida) o Garciauto Hnos (León). Pedir desambiguación; mientras tanto cubrir vía portales de clasificados."
+    },
+    {
+     "name": "Driveris / Compra y Conduce / Autofesa — cadenas VO secundarias detectadas",
+     "url": "https://www.driveris.es/coches-segunda-mano",
+     "yields": "Cadenas VO adicionales descubiertas en SERP durante el barrido: Driveris (Bergé), comprayconduce.es, Autofesa (Zaragoza), Outletcars.es — todas con stock online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "low",
+     "est_volume": "Sin conteos de sedes verificados aún (solo presencia SERP + Trustpilot Driveris 4,6/89 reseñas)",
+     "notes": "[ASUMIDO, base SERP] Detectadas pero no fetcheadas — siguiente pasada debe abrir cada una y contar sedes. Las incluyo para que el censo de cadenas no quede en muestra: el universo de cadenas VO multi-sucursal en España ronda 10-15 marcas (Flexicar, OcasionPlus, CTC/compramostucoche, Crestanevada, HR Motor, Clicars, Autohero, Driveris, Spoticar, Das WeltAuto, OK Cars, CarOutlet + regionales)."
+    }
+   ],
+   "verified": [
+    {
+     "name": "AEDRA — Buscador de socios (asociación nacional de desguaces)",
+     "url": "https://aedra.org/buscador-de-socios/",
+     "yields": "615 CATs/desguaces asociados con nombre, provincia, teléfono y a veces web; filtrable por provincia",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "615 entidades (contador '615 Elementos encontrados' visto en la página, 52 páginas de paginación)",
+     "notes": "[VERIFICADO] Fetch directo OK. Paginación clásica 1..52 (~12 por página), filtros por formulario. Lista de socios = subconjunto de calidad del universo CAT (~1.400). Sin dirección completa en vista lista; hay ficha por socio.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "HTTP 200, 267KB. Raw HTML: \"615</span> Elementos encontrados\"; province filter dropdown; members: 3-LEZAMAUTO (Alava, 945892699), Abril 2001 Desguaces S.A. (Leon, 987212126), web www.desguaceslaopcionfk.com. Census claim CONFIRMED.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "SIGRAUTO — Dónde puedo entregar mi vehículo (PDFs por CCAA)",
+     "url": "https://www.sigrauto.com/donde-puedo-entregar-mi-vehiculo",
+     "yields": "595 desguaces (CATs) + 25 fragmentadoras concertadas con fabricantes, listados PDF por comunidad autónoma + mapa + app",
+     "access_method": "dump",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "595 CATs + 25 fragmentadoras (texto visto: 'Última actualización: 18-05-2026')",
+     "notes": "[VERIFICADO] PDFs en https://www.sigrauto.com/pdf/ccaa/<region>.pdf (frag.pdf confirmado en el HTML). Navegación por mapa-imagen (mapcomu.gif); enumerar probando slugs de CCAA en /pdf/ccaa/.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Page states \"595 desguaces (CATs) y 25 Fragmentadores (Ultima actualizacion: 18-05-2026)\" + PDF lists per comunidad autonoma, interactive map, iOS/Android app. Census claim CONFIRMED verbatim.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "DGT — Centros Autorizados de Tratamiento de Vehículos (registro oficial)",
+     "url": "https://www.dgt.es/es/seguridad-vial/centros-colaboradores/centros-tratamiento-vehiculos/",
+     "yields": "Universo oficial completo de CATs autorizados por la DGT (el padre de todos los desguaces legales de España), filtrable por provincia y municipio",
+     "access_method": "api",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "~1.400 CATs (cifra citada en resultados de búsqueda; el mapa no muestra total)",
+     "notes": "[VERIFICADO] La página existe y es un mapa interactivo sin descarga masiva; el mapa se alimenta casi seguro de un JSON interno (interceptar con navegador/red). Existe petición de datos abiertos en datos.gob.es ('Centros Autorizados de Tratamiento de Vehículos (Desguaces)'). Fuente de verdad regulatoria — prioridad máxima.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "1292 CATs via page's ArcGIS layer CATV/FeatureServer/0; e.g. 'DESGUACES LA TORRE S.A.' (Torrejon de la Calzada, Madrid); Provincia/Municipio fields; page updated 27 nov 2025; layer data edited 2022-03",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "DesguacesDirecto — Directorio de desguaces CATV autorizados",
+     "url": "https://desguacesdirecto.com/",
+     "yields": "1.393 centros CATV en 854 localidades con dirección, teléfono/WhatsApp, horarios y servicios (grúa, baja DGT, venta de piezas, envío)",
+     "access_method": "sitemap",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "1.393 CATVs / 854 localidades (cifras vistas en portada)",
+     "notes": "[VERIFICADO] WordPress con sitemap index en /sitemap.xml que incluye un 'desguaces-sitemap.xml' dedicado — enumeración limpia de todas las fichas. El conteo más alto de todos los directorios verificados.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Sitemap: 1386 /desguace/ URLs (claim 1393). Madrid: 52 centros; AUTO RECYCLIN TEO MARTIN 916914030 CATV-MD-03044; Chatarras Clemente Albacete 967502640. WhatsApp/horarios no vistos en muestra",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "DesguacesOficiales — Directorio de CATs por provincia y municipio",
+     "url": "https://desguacesoficiales.com/",
+     "yields": "1.300+ CATs con nombre, dirección, teléfono, email y horarios, organizados por 52 provincias y municipio",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "1.300+ centros (claim de portada; contadores por provincia vistos: Barcelona 83, Madrid 53)",
+     "notes": "[VERIFICADO] Páginas de provincia tipo /zona/<provincia>/ con desglose municipal; footer lista las 52 provincias con conteo — usar como semilla de crawling. Excelente para cross-check con DesguacesDirecto y SIGRAUTO.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "Ficha real: RECICLAJES 55 SCP, Carrer Arquimedes 18, L'Hospitalet, tel 936376027, desguace55@hotmail.com. Home: 'mas de 1.300 desguaces', 52 prov. Sitemaps ~2.049 fichas. Horarios AUSENTES (0/2).",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Ovoko (RRR.lt) España — marketplace de piezas usadas",
+     "url": "https://ovoko.es/",
+     "yields": "Vendedores/desguaces españoles con página propia (ej. ovoko.es/avila, /mora, /redia, /desguacesplaza) + stock de piezas online por vendedor",
+     "access_method": "browser",
+     "defense": "cloudflare",
+     "priority": "high",
+     "est_volume": "6.730+ desguaces online en toda la plataforma (cifra pan-EU del propio sitio vía snippet de buscador); subconjunto español sin cifra pública — estimable en cientos",
+     "notes": "[VERIFICADO 403] Root, /acerca-de-nosotros y /sitemap.xml devuelven 403 a fetch plano — requiere navegador real/stealth. Las páginas de vendedor (slug corto por desguace) son el patrón de enumeración; el sitemap accesible vía navegador debería listarlas. Stock online completo por vendedor — fuente doble: entidades + inventario.",
+     "live": {
+      "alive": true,
+      "http_status": 403,
+      "blocker": "waf",
+      "contains_real_data": true,
+      "evidence": "/avila rendered in real browser: \"Desguaces Ávila S.L. ofrece más de 2394 repuestos\", tel +34620281424, listing \"Faro delantero VW Polo IV 9N3\" 60.50 EUR; /mora /redia /desguacesplaza confirmed indexed"
+     }
+    },
+    {
+     "name": "Opisto — directorio de desguaces colaboradores",
+     "url": "https://www.opisto.com/es/desguaces-de-automoviles",
+     "yields": "Directorio alfabético de desguaces con ficha por yard (/es/desguaces-de-automoviles/detalles/<id>), incluye españoles (Málaga, Gijón, Valencia, Granada...) con stock online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "Cientos de fichas en el directorio (lista continua vista); ~44-100+ desguaces españoles según prensa (Infotaller 2023: '44 españoles'; nota posterior: 'más de cien')",
+     "notes": "[VERIFICADO] El directorio es HTML plano con IDs numéricos secuenciales en /detalles/<id> (ej. 6201, 6250) — enumerable por barrido de IDs. opisto.es redirige con errores; usar opisto.com/es. Marketplace con 3,4M+ piezas online.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "449 fichas /detalles/<id>. Verificado /detalles/6183: \"DESGUACES GERARDO S.L, CTRA GIJON AVILES 980 33961 GIJON ESPAÑA\", \"Total de las piezas : 32351\". HTML incluye ARCHIDONA (MÁLAGA), GRANADA. Sitemap_Listing_es.xml en robots.txt",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "Flexicar — red de compraventa nº1 de España",
+     "url": "https://www.flexicar.es/delegaciones-flexicar/",
+     "yields": "~250 delegaciones listadas alfabéticamente con URL propia por sede (/delegaciones-flexicar/<slug>/); stock completo online",
+     "access_method": "html",
+     "defense": "none",
+     "priority": "high",
+     "est_volume": "~250 sedes listadas en la página de delegaciones (vista); su portada dice '175+ concesionarios' en España y prensa 200+ incl. Portugal",
+     "notes": "[VERIFICADO] Enumeración trivial desde la página de delegaciones. Cada sede tiene página con stock filtrable. La mayor cadena de VO del país.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": true,
+      "evidence": "sitemap.xml: 283 /delegaciones-flexicar/ URLs (claim ~250 confirmed/exceeded); sede Madrid Av. Andalucia, C/ Magacela 4, tel 910973512; stock online 23.769 coches, ej. Renault Clio 2021 15.490 EUR",
+      "http_status": 200
+     }
+    }
+   ]
+  },
+  {
+   "modality": "arsenal",
+   "total_found": 22,
+   "sources": [
+    {
+     "name": "camoufox (daijro/camoufox)",
+     "url": "https://github.com/daijro/camoufox",
+     "yields": "Stealth Firefox build with C++-level fingerprint spoofing (canvas, WebGL, fonts, navigator, screen). Primary engine for rendering JS-heavy Spanish POS sites (dealer locators, used-car portals) behind Cloudflare/Turnstile and fingerprint walls.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/very active. 9,169 stars. Latest release v150.0.2-beta.25 (2026-05-11), repo pushed 2026-06-10. 256 open issues (active triage).",
+     "notes": "VERIFIED via GitHub API. Best-in-class for fingerprint-level evasion; pairs natively with Scrapling and browserforge. Still beta-tagged but mainstream. Top recommendation for the browser tier."
+    },
+    {
+     "name": "curl_cffi (lexiforest/curl_cffi)",
+     "url": "https://github.com/lexiforest/curl_cffi",
+     "yields": "Python HTTP client with JA3/JA4 + HTTP2 + Akamai TLS fingerprint impersonation of real browsers. Fast no-browser path for hitting JSON/XHR endpoints of Spanish portals (coches.net, dealer APIs) without paying browser cost.",
+     "access_method": "api",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/very active. 5,801 stars. Latest release v0.15.1b2 (2026-06-05), repo pushed 2026-06-07.",
+     "notes": "VERIFIED via API. Repo was renamed from yifeikong/curl_cffi -> lexiforest/curl_cffi (old URL 301-redirects, same repo). Core workhorse for the no-browser tier; beats most TLS defenses cheaply."
+    },
+    {
+     "name": "curl-impersonate (lexiforest fork)",
+     "url": "https://github.com/lexiforest/curl-impersonate",
+     "yields": "The patched C curl/BoringSSL backend that curl_cffi wraps. Direct CLI/lib use for TLS+HTTP2 impersonation in non-Python stacks.",
+     "access_method": "api",
+     "priority": "medium",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 2,564 stars. Repo pushed 2026-06-03 (fork of lwthiker/curl-impersonate).",
+     "notes": "VERIFIED via API. IMPORTANT: the ORIGINAL lwthiker/curl-impersonate is effectively DEAD (last push 2024-07-18, ~23 months stale). lexiforest fork is the maintained successor. Use the fork, not the original."
+    },
+    {
+     "name": "Scrapling (D4Vinci/Scrapling)",
+     "url": "https://github.com/D4Vinci/Scrapling",
+     "yields": "High-level adaptive scraping framework: StealthyFetcher (camoufox), PlayWrightFetcher, and TLS Fetcher in one API, plus self-healing selectors that survive site redesigns. Ideal orchestration layer for a multi-source Spain POS pipeline.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/extremely active. 63,184 stars (largest in this census). Latest release v0.4.9 (2026-06-07), repo pushed 2026-06-07. Only 5 open issues.",
+     "notes": "VERIFIED via API. Bundles camoufox + browserforge under the hood and exposes adaptive selectors — strong default framework to standardize the Cardeep arsenal on."
+    },
+    {
+     "name": "patchright (python) (Kaliiiiiiiiii-Vinyzu/patchright-python)",
+     "url": "https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python",
+     "yields": "Drop-in undetected Playwright patch (removes Runtime.enable/CDP leaks, closes console/navigator tells). Lets existing Playwright scraper code pass Cloudflare/DataDome with minimal rewrite.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 1,383 stars. Latest release v1.60.0 (2026-06-03), repo pushed 2026-06-09. 1 open issue.",
+     "notes": "VERIFIED via API. Tracks upstream Playwright versions closely; the modern replacement for the dead playwright-stealth approach. Top pick if the team already has Playwright code."
+    },
+    {
+     "name": "patchright (nodejs) (Kaliiiiiiiiii-Vinyzu/patchright-nodejs)",
+     "url": "https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-nodejs",
+     "yields": "Node/TypeScript build of the undetected Playwright patch. Same evasion for JS-stack scrapers.",
+     "access_method": "browser",
+     "priority": "medium",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 713 stars. Repo pushed 2026-06-09. 0 open issues.",
+     "notes": "VERIFIED via API. Use only if the pipeline is Node-based; otherwise prefer the Python build."
+    },
+    {
+     "name": "nodriver (ultrafunkamsterdam/nodriver)",
+     "url": "https://github.com/ultrafunkamsterdam/nodriver",
+     "yields": "Official successor to undetected-chromedriver: direct CDP control, no Selenium/webdriver, async, hard to fingerprint. Solid general-purpose stealth browser for difficult Spanish targets.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 4,350 stars. Repo pushed 2026-05-13. Ships releases via PyPI (no GitHub Releases — API 404 is expected, not a death signal).",
+     "notes": "VERIFIED via API. Cadence is a bit slower than camoufox/Scrapling but stable. Same author as undetected-chromedriver, which this replaces."
+    },
+    {
+     "name": "zendriver (cdpdriver/zendriver)",
+     "url": "https://github.com/cdpdriver/zendriver",
+     "yields": "Actively maintained fork of nodriver with extra fixes, typing, and faster issue response. Same direct-CDP stealth browsing for hard targets.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 1,318 stars. Latest release v0.15.3 (2026-03-12), repo pushed 2026-04-19. 70 open issues (engaged community).",
+     "notes": "VERIFIED via API. Repo moved from stephanlensky/zendriver -> cdpdriver org (old URL redirects). Choose between nodriver and zendriver; zendriver tends to merge community fixes faster."
+    },
+    {
+     "name": "primp (deedy5/primp)",
+     "url": "https://github.com/deedy5/primp",
+     "yields": "Rust-backed Python HTTP client with browser TLS/JA3 + header-order impersonation. Lightweight alternative to curl_cffi for high-volume no-browser fetching.",
+     "access_method": "api",
+     "priority": "medium",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 538 stars. Latest release v1.3.1 (2026-05-23), repo pushed 2026-06-09.",
+     "notes": "VERIFIED via API. Smaller community than curl_cffi but actively maintained; viable secondary TLS client for rotation/diversity."
+    },
+    {
+     "name": "botasaurus (omkarcloud/botasaurus)",
+     "url": "https://github.com/omkarcloud/botasaurus",
+     "yields": "All-in-one anti-detect scraping framework (browser + request modes, caching, parallelism, built-in Cloudflare handling, UI generator). Rapid-build option for standing up a Spain POS scraper quickly.",
+     "access_method": "browser",
+     "priority": "medium",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE but slower cadence. 4,796 stars. Repo pushed 2026-03-18 (~3 months before census). Releases via PyPI (no GitHub Releases).",
+     "notes": "VERIFIED via API. Healthy but commit cadence trails the front-runners; fine as a framework, less cutting-edge on evasion than camoufox/patchright."
+    },
+    {
+     "name": "SeleniumBase (seleniumbase/SeleniumBase) — UC/CDP Mode",
+     "url": "https://github.com/seleniumbase/SeleniumBase",
+     "yields": "Mature test/scrape framework whose UC Mode and CDP Mode reliably clear Cloudflare Turnstile and similar. Battle-tested, heavily documented, huge user base — low-risk choice for production Cardeep crawling.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/very active. 12,781 stars. Repo pushed 2026-06-12 (day of census). Only 14 open issues.",
+     "notes": "VERIFIED via API. Was missing from the original list but is a first-tier Cloudflare/Turnstile tool. Byparr uses it internally. Strong, well-supported default."
+    },
+    {
+     "name": "FlareSolverr (FlareSolverr/FlareSolverr)",
+     "url": "https://github.com/FlareSolverr/FlareSolverr",
+     "yields": "Standalone proxy service that solves Cloudflare/anti-bot challenges and returns cookies+HTML; language-agnostic, sits in front of any scraper. Drop-in unblock service for the pipeline.",
+     "access_method": "browser",
+     "priority": "medium",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE again. 14,270 stars. Latest release v3.5.0 (2026-05-26), repo pushed 2026-06-05. 74 open issues.",
+     "notes": "VERIFIED via API. Had a long stall period; v3.5.0 indicates renewed activity. Weaker against modern Cloudflare Turnstile than camoufox/SeleniumBase — keep Byparr as the alternative."
+    },
+    {
+     "name": "Byparr (ThePhaseless/Byparr)",
+     "url": "https://github.com/ThePhaseless/Byparr",
+     "yields": "Drop-in FlareSolverr-API-compatible successor built on SeleniumBase/nodriver. Same proxy-unblock contract with a more modern solver core. Direct swap for stacks already calling FlareSolverr.",
+     "access_method": "browser",
+     "priority": "medium",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 1,601 stars. Latest release v2.1.0 (2026-02-08), repo pushed 2026-06-11. 25 open issues.",
+     "notes": "VERIFIED via API. The named FlareSolverr successor; keeps the same /v1 API so it slots in without client changes. Recommended unblock-service tier alongside SeleniumBase."
+    },
+    {
+     "name": "browserforge (daijro/browserforge)",
+     "url": "https://github.com/daijro/browserforge",
+     "yields": "Intelligent header + browser-fingerprint generator (realistic, internally-consistent User-Agent/Accept/sec-ch-ua sets via Bayesian model). The modern replacement for fake-useragent; feeds realistic headers to curl_cffi/requests.",
+     "access_method": "api",
+     "priority": "medium",
+     "defense": "other",
+     "est_volume": "ALIVE. 1,130 stars. Repo pushed 2026-02-26 (~3.5 months before census). Releases via PyPI.",
+     "notes": "VERIFIED via API. Used internally by camoufox and hrequests. Recommend this over the archived fake-useragent for UA/header generation."
+    },
+    {
+     "name": "fake-useragent (fake-useragent/fake-useragent) — ARCHIVED/DEAD",
+     "url": "https://github.com/fake-useragent/fake-useragent",
+     "yields": "Random User-Agent string provider from a bundled dataset. Still importable but no longer updated.",
+     "access_method": "api",
+     "priority": "low",
+     "defense": "none",
+     "est_volume": "DEAD/ARCHIVED. 4,058 stars. Archived (read-only) by owner on Apr 1, 2026. Last release 2.2.0 (2025-04-14).",
+     "notes": "VERIFIED: archive banner reads 'This repository was archived by the owner on Apr 1, 2026. It is now read-only.' No official successor named. DO NOT adopt for new work — use browserforge instead. UA-string-only spoofing is also insufficient against modern fingerprinting."
+    },
+    {
+     "name": "playwright-stealth (Mattwmaster58/playwright_stealth)",
+     "url": "https://github.com/Mattwmaster58/playwright_stealth",
+     "yields": "Maintained fork that owns the current playwright-stealth PyPI package: JS evasion patches for vanilla Playwright. Light-touch hardening when patchright is not an option.",
+     "access_method": "browser",
+     "priority": "low",
+     "defense": "other",
+     "est_volume": "Semi-active. 249 stars. Repo pushed 2026-04-04 (~2 months before census).",
+     "notes": "VERIFIED via API. IMPORTANT: the widely-cited ORIGINAL AtuboDad/playwright_stealth is DEAD (last push 2024-07-29, ~22 months stale). The JS-evasion approach is largely outclassed by patchright/camoufox — prefer those; keep this only as a fallback."
+    },
+    {
+     "name": "hrequests (daijro/hrequests) — STALE",
+     "url": "https://github.com/daijro/hrequests",
+     "yields": "Hybrid HTTP client + headless browser with TLS impersonation and HTML parsing in one package. Conceptually convenient but no longer kept current.",
+     "access_method": "api",
+     "priority": "low",
+     "defense": "cloudflare",
+     "est_volume": "STALE/DORMANT. 1,009 stars. Last release/commit 2024-12-01 (~18 months before census). No deprecation notice in README, but zero commits since.",
+     "notes": "VERIFIED via API + README fetch (no 'deprecated' wording, but ~18 months with no activity). Treat as effectively unmaintained — its impersonation profiles will drift behind current browsers. Prefer curl_cffi + camoufox/Scrapling instead."
+    },
+    {
+     "name": "ulixee/hero (ulixee/hero)",
+     "url": "https://github.com/ulixee/hero",
+     "yields": "Full-stack 'scraper browser' with emulated human profiles and a high-level client/DOM API. Ambitious but perpetually pre-release.",
+     "access_method": "browser",
+     "priority": "low",
+     "defense": "other",
+     "est_volume": "Slow/alpha. 1,544 stars. Latest release v2.0.0-alpha.34 (2025-09-08, ~9 months before census), repo pushed 2026-05-16.",
+     "notes": "VERIFIED via API. Still committed to but stuck in long-running alpha; heavier and less proven than camoufox/nodriver for production. Low priority for Cardeep."
+    },
+    {
+     "name": "undetected-chromedriver (ultrafunkamsterdam/undetected-chromedriver) — LEGACY",
+     "url": "https://github.com/ultrafunkamsterdam/undetected-chromedriver",
+     "yields": "The classic Selenium-based stealth Chromedriver. Historically the default anti-bot browser; now superseded.",
+     "access_method": "browser",
+     "priority": "low",
+     "defense": "cloudflare",
+     "est_volume": "Declining/maintenance-limbo. 12,682 stars. Last push 2025-07-05 (~11 months before census). 1,143 open issues (large backlog).",
+     "notes": "VERIFIED via API. Same author explicitly moved effort to nodriver. Large unmaintained issue backlog; webdriver-based detection is increasingly caught. Use nodriver/zendriver instead — listed here only to flag it as legacy."
+    },
+    {
+     "name": "BotBrowser (botswin/BotBrowser)",
+     "url": "https://github.com/botswin/BotBrowser",
+     "yields": "Patched Chromium core with unified fingerprint defense advertised against Cloudflare, Akamai, Kasada, DataDome, PerimeterX, Imperva and others. Heavy-duty engine for the hardest Spanish targets (e.g. Akamai-protected OEM/finance portals).",
+     "access_method": "browser",
+     "priority": "medium",
+     "defense": "akamai",
+     "est_volume": "ALIVE. 2,489 stars. Repo pushed 2026-06-10. Only 4 open issues.",
+     "notes": "VERIFIED via API + surfaced in GitHub anti-bot search. Broadest defense coverage (incl. Akamai/DataDome/PerimeterX) of any tool here. Distributed as patched-browser binaries — evaluate licensing/operational fit before adopting."
+    },
+    {
+     "name": "browsers-benchmark (techinz/browsers-benchmark)",
+     "url": "https://github.com/techinz/browsers-benchmark",
+     "yields": "Reproducible benchmark of bypass/success rates and performance across engines (camoufox, nodriver, patchright, SeleniumBase, etc.) vs Cloudflare, DataDome, Akamai, PerimeterX, Kasada, reCAPTCHA. Decision-support to pick the right tool per Spanish source's defense.",
+     "access_method": "html",
+     "priority": "medium",
+     "defense": "other",
+     "est_volume": "ALIVE. 324 stars. Repo pushed 2026-06-09. 1 open issue.",
+     "notes": "VERIFIED via API + search. Not a scraper itself — a current empirical reference for choosing engines. Useful to ground Cardeep's per-source tool routing in data rather than reputation."
+    },
+    {
+     "name": "is-antibot (microlinkhq/is-antibot)",
+     "url": "https://github.com/microlinkhq/is-antibot",
+     "yields": "Library to detect which anti-bot provider protects a target (20+: Cloudflare, Akamai, DataDome, PerimeterX, Kasada, Imperva, reCAPTCHA, hCaptcha, Turnstile...). Lets the pipeline auto-route each Spanish POS source to the correct evasion strategy.",
+     "access_method": "api",
+     "priority": "low",
+     "defense": "other",
+     "est_volume": "Active per GitHub search listing (updated 2026-06-12). 34 stars.",
+     "notes": "VERIFIED via GitHub search results (saw updatedAt 2026-06-12); did not deep-fetch the repo page. Helper/classifier, not a bypass tool — valuable for orchestration (fingerprint each source, then dispatch the right scraper)."
+    }
+   ],
+   "verified": [
+    {
+     "name": "camoufox (daijro/camoufox)",
+     "url": "https://github.com/daijro/camoufox",
+     "yields": "Stealth Firefox build with C++-level fingerprint spoofing (canvas, WebGL, fonts, navigator, screen). Primary engine for rendering JS-heavy Spanish POS sites (dealer locators, used-car portals) behind Cloudflare/Turnstile and fingerprint walls.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/very active. 9,169 stars. Latest release v150.0.2-beta.25 (2026-05-11), repo pushed 2026-06-10. 256 open issues (active triage).",
+     "notes": "VERIFIED via GitHub API. Best-in-class for fingerprint-level evasion; pairs natively with Scrapling and browserforge. Still beta-tagged but mainstream. Top recommendation for the browser tier.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "Alive 200; 9.2k stars; v150.0.2 (2026-05-11); README: 'data is intercepted at the C++ implementation level'; tool only, zero ES dealer/vehicle data; caveat: some Cloudflare WAFs detect Spidermonkey",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "curl_cffi (lexiforest/curl_cffi)",
+     "url": "https://github.com/lexiforest/curl_cffi",
+     "yields": "Python HTTP client with JA3/JA4 + HTTP2 + Akamai TLS fingerprint impersonation of real browsers. Fast no-browser path for hitting JSON/XHR endpoints of Spanish portals (coches.net, dealer APIs) without paying browser cost.",
+     "access_method": "api",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/very active. 5,801 stars. Latest release v0.15.1b2 (2026-06-05), repo pushed 2026-06-07.",
+     "notes": "VERIFIED via API. Repo was renamed from yifeikong/curl_cffi -> lexiforest/curl_cffi (old URL 301-redirects, same repo). Core workhorse for the no-browser tier; beats most TLS defenses cheaply.",
+     "live": {
+      "alive": true,
+      "http_status": 200,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "5.8k stars, v0.15.1b2 (2026-06-05), MIT. README: \"impersonate browsers' TLS/JA3 and HTTP/2 fingerprints\"; docs: custom ja3+akamai strings. JA4 not named. No Spain/dealer/vehicle data — tool only."
+     }
+    },
+    {
+     "name": "Scrapling (D4Vinci/Scrapling)",
+     "url": "https://github.com/D4Vinci/Scrapling",
+     "yields": "High-level adaptive scraping framework: StealthyFetcher (camoufox), PlayWrightFetcher, and TLS Fetcher in one API, plus self-healing selectors that survive site redesigns. Ideal orchestration layer for a multi-source Spain POS pipeline.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/extremely active. 63,184 stars (largest in this census). Latest release v0.4.9 (2026-06-07), repo pushed 2026-06-07. Only 5 open issues.",
+     "notes": "VERIFIED via API. Bundles camoufox + browserforge under the hood and exposes adaptive selectors — strong default framework to standardize the Cardeep arsenal on.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "v0.4.9 (2026-06-07), 63.2k stars, BSD-3; StealthyFetcher + DynamicFetcher (ex-PlayWrightFetcher) + TLS-impersonating Fetcher + 'automatically relocates your elements' confirmed; tool only, zero Spain dealer/vehicle data",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "patchright (python) (Kaliiiiiiiiii-Vinyzu/patchright-python)",
+     "url": "https://github.com/Kaliiiiiiiiii-Vinyzu/patchright-python",
+     "yields": "Drop-in undetected Playwright patch (removes Runtime.enable/CDP leaks, closes console/navigator tells). Lets existing Playwright scraper code pass Cloudflare/DataDome with minimal rewrite.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 1,383 stars. Latest release v1.60.0 (2026-06-03), repo pushed 2026-06-09. 1 open issue.",
+     "notes": "VERIFIED via API. Tracks upstream Playwright versions closely; the modern replacement for the dead playwright-stealth approach. Top pick if the team already has Playwright code.",
+     "live": {
+      "alive": true,
+      "http_status": 200,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "1.4k stars, v1.60.0/PyPI 1.60.1 (2026-06-03); README: \"drop-in-replacement for Playwright\", patches Runtime.enable via isolated contexts, disables Console API, claims pass Cloudflare/DataDome; Chromium-only"
+     }
+    },
+    {
+     "name": "nodriver (ultrafunkamsterdam/nodriver)",
+     "url": "https://github.com/ultrafunkamsterdam/nodriver",
+     "yields": "Official successor to undetected-chromedriver: direct CDP control, no Selenium/webdriver, async, hard to fingerprint. Solid general-purpose stealth browser for difficult Spanish targets.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 4,350 stars. Repo pushed 2026-05-13. Ships releases via PyPI (no GitHub Releases — API 404 is expected, not a death signal).",
+     "notes": "VERIFIED via API. Cadence is a bit slower than camoufox/Scrapling but stable. Same author as undetected-chromedriver, which this replaces.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "HTTP 200; 4,350 stars; pushed 2026-05-13; README: \"official successor of the Undetected-Chromedriver python package\", direct CDP, no Selenium, async, anti-bot. Tool only — zero Spanish dealer/vehicle data.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "zendriver (cdpdriver/zendriver)",
+     "url": "https://github.com/cdpdriver/zendriver",
+     "yields": "Actively maintained fork of nodriver with extra fixes, typing, and faster issue response. Same direct-CDP stealth browsing for hard targets.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE. 1,318 stars. Latest release v0.15.3 (2026-03-12), repo pushed 2026-04-19. 70 open issues (engaged community).",
+     "notes": "VERIFIED via API. Repo moved from stephanlensky/zendriver -> cdpdriver org (old URL redirects). Choose between nodriver and zendriver; zendriver tends to merge community fixes faster.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "Repo alive: 1.3k stars, last commit 2026-04-19, release v0.15.3 2026-03-12; README: \"fork of ultrafunkamsterdam/nodriver\", CDP \"undetectable webscraping\". It is a scraping TOOL — zero Spain dealer/vehicle data.",
+      "http_status": 200
+     }
+    },
+    {
+     "name": "SeleniumBase (seleniumbase/SeleniumBase) — UC/CDP Mode",
+     "url": "https://github.com/seleniumbase/SeleniumBase",
+     "yields": "Mature test/scrape framework whose UC Mode and CDP Mode reliably clear Cloudflare Turnstile and similar. Battle-tested, heavily documented, huge user base — low-risk choice for production Cardeep crawling.",
+     "access_method": "browser",
+     "priority": "high",
+     "defense": "cloudflare",
+     "est_volume": "ALIVE/very active. 12,781 stars. Repo pushed 2026-06-12 (day of census). Only 14 open issues.",
+     "notes": "VERIFIED via API. Was missing from the original list but is a first-tier Cloudflare/Turnstile tool. Byparr uses it internally. Strong, well-supported default.",
+     "live": {
+      "alive": true,
+      "blocker": "none",
+      "contains_real_data": false,
+      "evidence": "v4.49.10 \"CDP Mode: Patch 114\" published 2026-06-12; 12,781 stars, 10,039 commits, MIT; docs: \"sb.solve_captcha() handles\" Turnstile (not in headless). Zero Spain dealer/vehicle data — tool, not source.",
+      "http_status": 200
+     }
+    }
+   ]
+  }
+ ]
+}
