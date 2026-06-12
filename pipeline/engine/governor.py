@@ -224,6 +224,10 @@ def governor() -> RateGovernor:
         # The scar's lesson, encoded: AS24 hosts paced below the banned rate.
         g.configure_host("www.autoscout24.es", rate_per_sec=0.5, burst=2.0, min_spacing_s=2.0)
         g.configure_host("autoscout24.es", rate_per_sec=0.5, burst=2.0, min_spacing_s=2.0)
+        # coches.net's API host (web.gw.coches.net) is an unwalled internal JSON
+        # gateway, but the brand is Tier-1/Imperva — pace it conservatively too, on
+        # the same below-the-unknown-ceiling doctrine the AS24 scar mandated.
+        g.configure_host("web.gw.coches.net", rate_per_sec=0.5, burst=2.0, min_spacing_s=2.0)
         _default_governor = g
     return _default_governor
 
