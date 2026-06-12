@@ -63,3 +63,28 @@
 - **GATE F2 = VERDE.** Siguiente: F3 (workflows átomo DESCUBRIR→SCRAPEAR→RECETA→API→BORRAR;
   banco de pruebas = AutoScout24.es, abierto + JSON-LD dealer).
 
+## 2026-06-12 — F3 WORKFLOWS ÁTOMO — primer vertical DESCUBRIR cerrado
+- **Mejora de método (autorizada):** pipeline de PRODUCCIÓN = código Python determinista
+  (`pipeline/`), barato y escalable; la herramienta Workflow (agentes) se reserva para
+  caza de receta Tier-1 + verificación adversarial. Diseño átomo de las 6 fases en
+  `docs/workflows/README.md`.
+- **Arquitectura `pipeline/`:** `sources/base.py` (contrato SourceAdapter→DiscoveredEntity),
+  `sources/dgt_cat.py` (adaptador DGT CATV), `geo.py` (resolución nombre→código INE,
+  alias + tokens ordenados), `ids.py` (ULID), `verify.py` (VAM count quorum →
+  verification_verdict), `discover.py` (FASE 1). Anti-stub: scrape/recipe/evict se crean
+  al implementarse.
+- **DESCUBRIR ejecutado sobre DGT CATV (desguaces) — REAL, VERIFICADO:**
+  **1.292 desguaces** ingeridos con geo + cdp_code inmutable + provenance. **VAM
+  TRUSTWORTHY** (declared 1292 = fetched 1292 = db 1292, divergencia 0). Idempotente
+  (re-run new=0). Resolución provincia 100%, municipio 92,8% (1199; los 93 restantes =
+  variantes valencianas, ingeridas con muni NULL, no perdidas).
+- **Corroboración 3-vías:** Barcelona 76 desguaces = exacto vs evidencia DGT del censo F1.
+- **2 hallazgos de causa raíz (anti-alucinación):** (1) campo DGT `COD_INE` DESALINEADO
+  (dice 9→Tarragona, 11→Sevilla, 19→Madrid) — descartado, resuelvo por nombre; (2) la
+  clave nombre+municipio fusionaba 2 sitios físicos de la misma empresa → añadida la
+  dirección a la clave (2 centros CAT = 2 puntos de venta distintos, correcto).
+- **API sirve el segmento:** /health=1292 entidades, /geo/08/entities=76 (Barcelona).
+- **Estado vivo:** cardeep-pg :5433 con 1.292 entidades reales (segmento desguace 100%
+  del registro oficial DGT). Siguiente: más adaptadores DESCUBRIR (AEDRA, OEM JSON,
+  Páginas Amarillas, OSM/FSQ) + fases SCRAPEAR/RECETA sobre AutoScout24.es.
+

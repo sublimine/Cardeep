@@ -31,21 +31,30 @@ def _base32(digest: bytes, length: int = 8) -> str:
 
 
 def canonical_key(*, domain: str | None = None, cif: str | None = None,
-                  name: str | None = None, municipality_code: str | None = None) -> str:
+                  name: str | None = None, municipality_code: str | None = None,
+                  province_code: str | None = None, address: str | None = None) -> str:
     if domain:
         d = domain.lower().strip()
         d = re.sub(r"^https?://", "", d)
         d = re.sub(r"^www\.", "", d).split("/")[0]
-        return f"domain:{d}"
+        if d:
+            return f"domain:{d}"
     if cif:
         return f"cif:{cif.upper().strip()}"
+    # A physical point of sale without domain/cif is identified by name + location +
+    # address (two sites of the same company in one town are distinct POS, not dupes).
+    addr = f"|{_normalize(address)}" if address else ""
     if name and municipality_code:
-        return f"name:{_normalize(name)}|{municipality_code}"
-    raise ValueError("need domain, cif, or (name + municipality_code) to mint a cdp_code")
+        return f"name:{_normalize(name)}|{municipality_code}{addr}"
+    if name and province_code:
+        return f"name:{_normalize(name)}|p{province_code}{addr}"
+    raise ValueError("need domain, cif, (name + municipality_code) or (name + province_code)")
 
 
 def cdp_code(*, province_code: str, domain: str | None = None, cif: str | None = None,
-             name: str | None = None, municipality_code: str | None = None) -> str:
-    key = canonical_key(domain=domain, cif=cif, name=name, municipality_code=municipality_code)
+             name: str | None = None, municipality_code: str | None = None,
+             address: str | None = None) -> str:
+    key = canonical_key(domain=domain, cif=cif, name=name, municipality_code=municipality_code,
+                        province_code=province_code, address=address)
     digest = hashlib.sha256(key.encode("utf-8")).digest()
     return f"CDP-ES-{province_code}-{_base32(digest)}"
