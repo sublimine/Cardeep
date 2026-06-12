@@ -17,3 +17,4 @@ __pycache__/
 node_modules/
 .pytest_cache/
 .backups/
+scratch/
