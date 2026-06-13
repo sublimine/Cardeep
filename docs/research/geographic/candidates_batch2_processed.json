@@ -1,0 +1,778 @@
+[
+ {
+  "name": "Tumasa",
+  "kind": "compraventa",
+  "province": "Huesca",
+  "municipality": "Huesca",
+  "website": "tumasa.com",
+  "source_ref": "geo:huesca",
+  "host": "tumasa.com",
+  "probe": {
+   "domain": "tumasa.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 64,
+   "best_slug": "/vehiculos",
+   "final_home": "https://tumasa.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-22-SKXQE460",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Automóviles JFZ",
+  "kind": "compraventa",
+  "province": "Zamora",
+  "municipality": "Zamora",
+  "website": "automovilesjfz.com",
+  "source_ref": "geo:zamora",
+  "host": "automovilesjfz.com",
+  "dedup": "host_known"
+ },
+ {
+  "name": "Automóviles José de Dios",
+  "kind": "compraventa",
+  "province": "Zamora",
+  "municipality": "Zamora",
+  "website": "automovilesjosededios.es",
+  "source_ref": "geo:zamora",
+  "host": "automovilesjosededios.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Aupasa Ocasión",
+  "kind": "compraventa",
+  "province": "Palencia",
+  "municipality": "Palencia",
+  "website": "aupasaocasion.es",
+  "source_ref": "geo:palencia",
+  "host": "aupasaocasion.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "GB Store",
+  "kind": "compraventa",
+  "province": "Palencia",
+  "municipality": "Palencia",
+  "website": "gbstore.es",
+  "source_ref": "geo:palencia",
+  "host": "gbstore.es",
+  "probe": {
+   "domain": "gbstore.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 16,
+   "best_slug": "/",
+   "final_home": "https://www.gbstore.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-34-AW290GC4",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "KM100 Segovia",
+  "kind": "compraventa",
+  "province": "Segovia",
+  "municipality": "Segovia",
+  "website": "km100segovia.es",
+  "source_ref": "geo:segovia",
+  "host": "km100segovia.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Coches CompraVenta",
+  "kind": "compraventa",
+  "province": "Guadalajara",
+  "municipality": "Brihuega",
+  "website": "coches-compraventa.com",
+  "source_ref": "geo:guadalajara",
+  "host": "coches-compraventa.com",
+  "probe": {
+   "domain": "coches-compraventa.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null,
+   "error": "DNSError"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-19-DMAXQ0X0",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Motorsan",
+  "kind": "compraventa",
+  "province": "Guadalajara",
+  "municipality": "Guadalajara",
+  "website": "motorsan.com",
+  "source_ref": "geo:guadalajara",
+  "host": "motorsan.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "RR Sports",
+  "kind": "compraventa",
+  "province": "La Rioja",
+  "municipality": "Logroño",
+  "website": "rrsports.es",
+  "source_ref": "geo:larioja",
+  "host": "rrsports.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Automóviles Jose Mari",
+  "kind": "compraventa",
+  "province": "La Rioja",
+  "municipality": "Logroño",
+  "website": "automovilesjosemari.com",
+  "source_ref": "geo:larioja",
+  "host": "automovilesjosemari.com",
+  "probe": {
+   "domain": "automovilesjosemari.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 38,
+   "best_slug": "/vo",
+   "final_home": "https://automovilesjosemari.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-26-JZ1926NQ",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Mundomóvil",
+  "kind": "compraventa",
+  "province": "La Rioja",
+  "municipality": "Logroño",
+  "website": "mundomovil.com",
+  "source_ref": "geo:larioja",
+  "host": "mundomovil.com",
+  "probe": {
+   "domain": "mundomovil.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-26-00YXVZTX",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Autos Javi",
+  "kind": "compraventa",
+  "province": "La Rioja",
+  "municipality": "Logroño",
+  "website": "autosjavi.es",
+  "source_ref": "geo:larioja",
+  "host": "autosjavi.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "JMC Vehículos de Ocasión",
+  "kind": "compraventa",
+  "province": "La Rioja",
+  "municipality": "Logroño",
+  "website": "jmcvehiculosdeocasion.com",
+  "source_ref": "geo:larioja",
+  "host": "jmcvehiculosdeocasion.com",
+  "probe": {
+   "domain": "jmcvehiculosdeocasion.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 16,
+   "best_slug": "/",
+   "final_home": "https://jmcvehiculosdeocasion.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-26-814PC52R",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Expocoches 4º Puente",
+  "kind": "compraventa",
+  "province": "La Rioja",
+  "municipality": "Logroño",
+  "website": "expocoches4puente.com",
+  "source_ref": "geo:larioja",
+  "host": "expocoches4puente.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Valenza",
+  "kind": "compraventa",
+  "province": "Jaén",
+  "municipality": "Jaén",
+  "website": "valenza.es",
+  "source_ref": "geo:jaen",
+  "host": "valenza.es",
+  "probe": {
+   "domain": "valenza.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 56,
+   "best_slug": "/vehiculos",
+   "final_home": "https://valenza.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-23-HZAC8M63",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Espejo Motor",
+  "kind": "compraventa",
+  "province": "Jaén",
+  "municipality": "Alcaudete",
+  "website": "espejomotor.es",
+  "source_ref": "geo:jaen",
+  "host": "espejomotor.es",
+  "probe": {
+   "domain": "espejomotor.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-23-ZB7PYRPJ",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Automotor10",
+  "kind": "compraventa",
+  "province": "Jaén",
+  "municipality": "Jaén",
+  "website": "automotor10.com",
+  "source_ref": "geo:jaen",
+  "host": "automotor10.com",
+  "probe": {
+   "domain": "automotor10.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 132,
+   "best_slug": "/coches",
+   "final_home": "https://automotor10.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-23-HQCPR8HS",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Terry Ocasión",
+  "kind": "compraventa",
+  "province": "Jaén",
+  "municipality": "Jaén",
+  "website": "terryocasion.com",
+  "source_ref": "geo:jaen",
+  "host": "terryocasion.com",
+  "probe": {
+   "domain": "terryocasion.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 52,
+   "best_slug": "/",
+   "final_home": "https://terryocasion.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-23-NE3FH3FZ",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Automóviles PlayCar",
+  "kind": "compraventa",
+  "province": "Almería",
+  "municipality": "Almería",
+  "website": "automovilesplaycar.com",
+  "source_ref": "geo:almeria",
+  "host": "automovilesplaycar.com",
+  "probe": {
+   "domain": "automovilesplaycar.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 188,
+   "best_slug": "/km0",
+   "final_home": "https://www.automovilesplaycar.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-04-GFGPMETP",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Indaocasion",
+  "kind": "compraventa",
+  "province": "Almería",
+  "municipality": "Almería",
+  "website": "indaocasion.com",
+  "source_ref": "geo:almeria",
+  "host": "indaocasion.com",
+  "probe": {
+   "domain": "indaocasion.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-04-P4YXVW98",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Driveris",
+  "kind": "compraventa",
+  "province": "Almería",
+  "municipality": "Almería",
+  "website": "driveris.es",
+  "source_ref": "geo:almeria",
+  "host": "driveris.es",
+  "probe": {
+   "domain": "driveris.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-04-F024EJA8",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Lleidamòbil AutoStar",
+  "kind": "compraventa",
+  "province": "Lleida",
+  "municipality": "Lleida",
+  "website": "lleidamobil.com",
+  "source_ref": "geo:lleida",
+  "host": "lleidamobil.com",
+  "probe": {
+   "domain": "lleidamobil.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 47,
+   "best_slug": "/coches",
+   "final_home": "https://www.lleidamobil.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-25-5JHXDHJ3",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Auto 3000 Ocasión",
+  "kind": "compraventa",
+  "province": "Lleida",
+  "municipality": "Lleida",
+  "website": "auto3000ocasion.com",
+  "source_ref": "geo:lleida",
+  "host": "auto3000ocasion.com",
+  "probe": {
+   "domain": "auto3000ocasion.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 61,
+   "best_slug": "/vo",
+   "final_home": "https://www.auto3000ocasion.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-25-G8QJTHHB",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "ASTER Autos",
+  "kind": "compraventa",
+  "province": "Lleida",
+  "municipality": "Lleida",
+  "website": "asterautos.com",
+  "source_ref": "geo:lleida",
+  "host": "asterautos.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Coches Internet",
+  "kind": "compraventa",
+  "province": "Lleida",
+  "municipality": "Lleida",
+  "website": "cochesinternet.net",
+  "source_ref": "geo:lleida",
+  "host": "cochesinternet.net",
+  "dedup": "host_known"
+ },
+ {
+  "name": "SYRSA",
+  "kind": "compraventa",
+  "province": "Huelva",
+  "municipality": "Huelva",
+  "website": "syrsa.com",
+  "source_ref": "geo:huelva",
+  "host": "syrsa.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Huelva Wagen",
+  "kind": "concesionario_oficial",
+  "province": "Huelva",
+  "municipality": "Huelva",
+  "website": "huelvawagen.es",
+  "source_ref": "geo:huelva",
+  "host": "huelvawagen.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos J del Paso",
+  "kind": "compraventa",
+  "province": "Cádiz",
+  "municipality": "Cádiz",
+  "website": "autosjdelpaso.es",
+  "source_ref": "geo:cadiz",
+  "host": "autosjdelpaso.es",
+  "probe": {
+   "domain": "autosjdelpaso.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 92,
+   "best_slug": "/",
+   "final_home": "https://autosjdelpaso.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-11-93J617A6",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "TuppCars",
+  "kind": "compraventa",
+  "province": "Cádiz",
+  "municipality": "Cádiz",
+  "website": "tuppcars.com",
+  "source_ref": "geo:cadiz",
+  "host": "tuppcars.com",
+  "probe": {
+   "domain": "tuppcars.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 3,
+   "best_slug": "/",
+   "final_home": "https://tuppcars.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-11-3MZFTJ4D",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "CochesCadiz",
+  "kind": "compraventa",
+  "province": "Cádiz",
+  "municipality": "Cádiz",
+  "website": "cochescadiz.com",
+  "source_ref": "geo:cadiz",
+  "host": "cochescadiz.com",
+  "probe": {
+   "domain": "cochescadiz.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 19,
+   "best_slug": "/",
+   "final_home": "https://www.cochescadiz.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-11-H8EZCG1Q",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Willys Autos",
+  "kind": "compraventa",
+  "province": "Córdoba",
+  "municipality": "Córdoba",
+  "website": "willysautos.es",
+  "source_ref": "geo:cordoba",
+  "host": "willysautos.es",
+  "probe": {
+   "domain": "willysautos.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-14-S02ZPQ9T",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Grupo Tecsa",
+  "kind": "compraventa",
+  "province": "Córdoba",
+  "municipality": "Córdoba",
+  "website": "tecsagrupo.com",
+  "source_ref": "geo:cordoba",
+  "host": "tecsagrupo.com",
+  "probe": {
+   "domain": "tecsagrupo.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-14-36CBM2JX",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Automóviles Fergar",
+  "kind": "compraventa",
+  "province": "Córdoba",
+  "municipality": "Peñarroya-Pueblonuevo",
+  "website": "automovilesfergar.es",
+  "source_ref": "geo:cordoba",
+  "host": "automovilesfergar.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "CJ Automoción",
+  "kind": "compraventa",
+  "province": "Córdoba",
+  "municipality": "Córdoba",
+  "website": "cjautomocion.es",
+  "source_ref": "geo:cordoba",
+  "host": "cjautomocion.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Innocar",
+  "kind": "compraventa",
+  "province": "Córdoba",
+  "municipality": "Córdoba",
+  "website": "innocar.es",
+  "source_ref": "geo:cordoba",
+  "host": "innocar.es",
+  "probe": {
+   "domain": "innocar.es",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://innocar.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-14-4EH9Z9AJ",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "TuOcasión",
+  "kind": "compraventa",
+  "province": "Castellón",
+  "municipality": "Castellón de la Plana",
+  "website": "tuocasion.es",
+  "source_ref": "geo:castellon",
+  "host": "tuocasion.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "ClickAutos",
+  "kind": "compraventa",
+  "province": "Castellón",
+  "municipality": "Castellón de la Plana",
+  "website": "clickautos.es",
+  "source_ref": "geo:castellon",
+  "host": "clickautos.es",
+  "dedup": "host_known"
+ },
+ {
+  "name": "Horizont Auto",
+  "kind": "compraventa",
+  "province": "Castellón",
+  "municipality": "Castellón de la Plana",
+  "website": "horizontauto.com",
+  "source_ref": "geo:castellon",
+  "host": "horizontauto.com",
+  "probe": {
+   "domain": "horizontauto.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://www.horizontauto.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-12-NMZ41WQB",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "MCS Mobility",
+  "kind": "compraventa",
+  "province": "Castellón",
+  "municipality": "Castellón de la Plana",
+  "website": "mcsmobility.es",
+  "source_ref": "geo:castellon",
+  "host": "mcsmobility.es",
+  "probe": {
+   "domain": "mcsmobility.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 58,
+   "best_slug": "/coches",
+   "final_home": "https://mcsmobility.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-12-0D6PHTZF",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Gestió Gama 23",
+  "kind": "compraventa",
+  "province": "Tarragona",
+  "municipality": "Tarragona",
+  "website": "gestiogama23.es",
+  "source_ref": "geo:tarragona",
+  "host": "gestiogama23.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Area Autoexpo",
+  "kind": "compraventa",
+  "province": "Tarragona",
+  "municipality": "Tarragona",
+  "website": "areaautoexpo.com",
+  "source_ref": "geo:tarragona",
+  "host": "areaautoexpo.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Grup Jobacar",
+  "kind": "compraventa",
+  "province": "Tarragona",
+  "municipality": "Tarragona",
+  "website": "grupjobacar.cat",
+  "source_ref": "geo:tarragona",
+  "host": "grupjobacar.cat",
+  "probe": {
+   "domain": "grupjobacar.cat",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 131,
+   "best_slug": "/",
+   "final_home": "https://www.grupjobacar.cat/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-43-5B2HD9CK",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Grup Autoxandri",
+  "kind": "compraventa",
+  "province": "Tarragona",
+  "municipality": "Tarragona",
+  "website": "autoxandri.com",
+  "source_ref": "geo:tarragona",
+  "host": "autoxandri.com",
+  "dedup": "host_known"
+ },
+ {
+  "name": "Luis Cars",
+  "kind": "compraventa",
+  "province": "Burgos",
+  "municipality": "Burgos",
+  "website": "luiscars.es",
+  "source_ref": "geo:burgos",
+  "host": "luiscars.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Motorserver",
+  "kind": "compraventa",
+  "province": "Burgos",
+  "municipality": "Villagonzalo Pedernales",
+  "website": "motorserver.com",
+  "source_ref": "geo:burgos",
+  "host": "motorserver.com",
+  "probe": {
+   "domain": "motorserver.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 64,
+   "best_slug": "/coches",
+   "final_home": "https://www.motorserver.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-09-HMGK9047",
+   "was_new": true
+  },
+  "dedup": "new"
+ }
+]

@@ -1,0 +1,412 @@
+[
+ {
+  "name": "Jemoya",
+  "kind": "compraventa",
+  "province": "Soria",
+  "municipality": "Soria",
+  "website": "jemoya.net",
+  "source_ref": "geo:soria",
+  "host": "jemoya.net",
+  "probe": {
+   "domain": "jemoya.net",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 45,
+   "best_slug": "/",
+   "final_home": "https://www.jemoya.net/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-42-0SWRPQH8",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Untoria Ocasión",
+  "kind": "compraventa",
+  "province": "Soria",
+  "municipality": "Soria",
+  "website": "untoriaocasion.com",
+  "source_ref": "geo:soria",
+  "host": "untoriaocasion.com",
+  "probe": {
+   "domain": "untoriaocasion.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 14,
+   "best_slug": "/coches",
+   "final_home": "https://untoriaocasion.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-42-N5FBCSH9",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Autokey Ocasión",
+  "kind": "compraventa",
+  "province": "Soria",
+  "municipality": "Soria",
+  "website": "autokeyocasion.com",
+  "source_ref": "geo:soria",
+  "host": "autokeyocasion.com",
+  "probe": {
+   "domain": "autokeyocasion.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 18,
+   "best_slug": "/coches",
+   "final_home": "https://autokeyocasion.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-42-Z89827KG",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Grupo de Santiago",
+  "kind": "compraventa",
+  "province": "Soria",
+  "municipality": "Soria",
+  "website": "grupodesantiago.es",
+  "source_ref": "geo:soria",
+  "host": "grupodesantiago.es",
+  "probe": {
+   "domain": "grupodesantiago.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-42-3GN4M5W3",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Teruel Car",
+  "kind": "compraventa",
+  "province": "Teruel",
+  "municipality": "Teruel",
+  "website": "teruelcar.es",
+  "source_ref": "geo:teruel",
+  "host": "teruelcar.es",
+  "probe": {
+   "domain": "teruelcar.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 43,
+   "best_slug": "/coches",
+   "final_home": "https://www.teruelcar.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-44-83X1VFT4",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Proa Ocasión",
+  "kind": "compraventa",
+  "province": "Teruel",
+  "municipality": "Teruel",
+  "website": "proaocasion.com",
+  "source_ref": "geo:teruel",
+  "host": "proaocasion.com",
+  "probe": {
+   "domain": "proaocasion.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://www.proaocasion.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-44-545CX50R",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "LiderAuto",
+  "kind": "compraventa",
+  "province": "Cuenca",
+  "municipality": "Cuenca",
+  "website": "liderauto.es",
+  "source_ref": "geo:cuenca",
+  "host": "liderauto.es",
+  "probe": {
+   "domain": "liderauto.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 6,
+   "best_slug": "/ocasion",
+   "final_home": "https://liderauto.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-16-XGX84ZRE",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "GVO Cuenca",
+  "kind": "compraventa",
+  "province": "Cuenca",
+  "municipality": "Cuenca",
+  "website": "gvocuenca.com",
+  "source_ref": "geo:cuenca",
+  "host": "gvocuenca.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Roberto",
+  "kind": "compraventa",
+  "province": "Ávila",
+  "municipality": "Arévalo",
+  "website": "autosroberto.es",
+  "source_ref": "geo:avila",
+  "host": "autosroberto.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "C+C Coches",
+  "kind": "compraventa",
+  "province": "Ávila",
+  "municipality": "Ávila",
+  "website": "cmasccoches.com",
+  "source_ref": "geo:avila",
+  "host": "cmasccoches.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Taller Carrera Motor",
+  "kind": "garaje",
+  "province": "Ávila",
+  "municipality": "Ávila",
+  "website": "tallercarreramotor.es",
+  "source_ref": "geo:avila",
+  "host": "tallercarreramotor.es",
+  "probe": {
+   "domain": "tallercarreramotor.es",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://tallercarreramotor.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-05-0VSXQ23N",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Movity",
+  "kind": "compraventa",
+  "province": "Lugo",
+  "municipality": "Lugo",
+  "website": "movity.es",
+  "source_ref": "geo:lugo",
+  "host": "movity.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Bernardo",
+  "kind": "compraventa",
+  "province": "Lugo",
+  "municipality": "Lugo",
+  "website": "autosbernardo.com",
+  "source_ref": "geo:lugo",
+  "host": "autosbernardo.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Grupo Roixal",
+  "kind": "compraventa",
+  "province": "Lugo",
+  "municipality": "Lugo",
+  "website": "gruporoixal.com",
+  "source_ref": "geo:lugo",
+  "host": "gruporoixal.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Sibuscascoche",
+  "kind": "compraventa",
+  "province": "Lugo",
+  "municipality": "Lugo",
+  "website": "sibuscascoche.com",
+  "source_ref": "geo:lugo",
+  "host": "sibuscascoche.com",
+  "probe": {
+   "domain": "sibuscascoche.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 11,
+   "best_slug": "/",
+   "final_home": "https://www.sibuscascoche.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-27-YWVREJGV",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "IS Cars",
+  "kind": "compraventa",
+  "province": "Ourense",
+  "municipality": "Ourense",
+  "website": "iscars.es",
+  "source_ref": "geo:ourense",
+  "host": "iscars.es",
+  "probe": {
+   "domain": "iscars.es",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 1,
+   "best_slug": "/vo",
+   "final_home": "https://iscars.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-32-AK447JA7",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "MM Cars Badajoz",
+  "kind": "compraventa",
+  "province": "Badajoz",
+  "municipality": "Badajoz",
+  "website": "mmcarsbadajoz.es",
+  "source_ref": "geo:badajoz",
+  "host": "mmcarsbadajoz.es",
+  "probe": {
+   "domain": "mmcarsbadajoz.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-06-H67FNH0S",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Marsu Cars",
+  "kind": "compraventa",
+  "province": "Badajoz",
+  "municipality": "Badajoz",
+  "website": "marsucars.com",
+  "source_ref": "geo:badajoz",
+  "host": "marsucars.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Barrón",
+  "kind": "compraventa",
+  "province": "Badajoz",
+  "municipality": "Badajoz",
+  "website": "autosbarron.es",
+  "source_ref": "geo:badajoz",
+  "host": "autosbarron.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Jaime Automóviles",
+  "kind": "compraventa",
+  "province": "Albacete",
+  "municipality": "Albacete",
+  "website": "jaimeautomoviles.es",
+  "source_ref": "geo:albacete",
+  "host": "jaimeautomoviles.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Albacoches",
+  "kind": "compraventa",
+  "province": "Albacete",
+  "municipality": "Albacete",
+  "website": "albacoches.com",
+  "source_ref": "geo:albacete",
+  "host": "albacoches.com",
+  "dedup": "host_known"
+ },
+ {
+  "name": "Pinar Automecánica Hellín",
+  "kind": "compraventa",
+  "province": "Albacete",
+  "municipality": "Hellín",
+  "website": "pinarautomecanica.com",
+  "source_ref": "geo:albacete",
+  "host": "pinarautomecanica.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "AutoRasiga",
+  "kind": "compraventa",
+  "province": "Albacete",
+  "municipality": "Albacete",
+  "website": "autorasiga.com",
+  "source_ref": "geo:albacete",
+  "host": "autorasiga.com",
+  "probe": {
+   "domain": "autorasiga.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-02-NH52K5E1",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "MM Selection Cars",
+  "kind": "compraventa",
+  "province": "Albacete",
+  "municipality": "Albacete",
+  "website": "mmselectioncars.com",
+  "source_ref": "geo:albacete",
+  "host": "mmselectioncars.com",
+  "probe": {
+   "domain": "mmselectioncars.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null,
+   "error": "DNSError"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-02-E4X5980N",
+   "was_new": true
+  },
+  "dedup": "new"
+ }
+]

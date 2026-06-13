@@ -1,0 +1,431 @@
+[
+ {
+  "name": "Grupo M Gallego",
+  "kind": "compraventa",
+  "province": "Murcia",
+  "municipality": "Lorca",
+  "website": "grupomgallego.com",
+  "source_ref": "geo:murcia",
+  "host": "grupomgallego.com",
+  "probe": {
+   "domain": "grupomgallego.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 22,
+   "best_slug": "/coches-segunda-mano",
+   "final_home": "https://grupomgallego.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-30-WWV6MGYQ",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Mercedes-Benz Dimovil",
+  "kind": "concesionario_oficial",
+  "province": "Murcia",
+  "municipality": "Murcia",
+  "website": "mercedes-benzdimovil.com",
+  "source_ref": "geo:murcia",
+  "host": "mercedes-benzdimovil.com",
+  "probe": {
+   "domain": "mercedes-benzdimovil.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 264,
+   "best_slug": "/vehiculos",
+   "final_home": "https://www.mercedes-benzdimovil.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-30-A8MGMMQG",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Desguace Malvarrosa",
+  "kind": "desguace",
+  "province": "Valencia",
+  "municipality": "Valencia",
+  "website": "desguacemalvarrosa.es",
+  "source_ref": "geo:desguace",
+  "host": "desguacemalvarrosa.es",
+  "probe": {
+   "domain": "desguacemalvarrosa.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 5,
+   "best_slug": "/",
+   "final_home": "https://desguacemalvarrosa.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-46-ZB1HHZBM",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Desguasax",
+  "kind": "desguace",
+  "province": "Alicante",
+  "municipality": "Sax",
+  "website": "desguasax.com",
+  "source_ref": "geo:desguace",
+  "host": "desguasax.com",
+  "probe": {
+   "domain": "desguasax.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 2,
+   "best_slug": "/ocasion",
+   "final_home": "https://www.desguasax.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-03-73SYW1XR",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Recambios Europiezas",
+  "kind": "desguace",
+  "province": "Valencia",
+  "municipality": "Valencia",
+  "website": "recambioseuropiezas.com",
+  "source_ref": "geo:desguace",
+  "host": "recambioseuropiezas.com",
+  "probe": {
+   "domain": "recambioseuropiezas.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://www.recambioseuropiezas.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-46-WHBJVVBB",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Desguaces Valencia",
+  "kind": "desguace",
+  "province": "Valencia",
+  "municipality": "Valencia",
+  "website": "desguacesvalencia.com",
+  "source_ref": "geo:desguace",
+  "host": "desguacesvalencia.com",
+  "probe": {
+   "domain": "desguacesvalencia.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://www.desguacesvalencia.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-46-6ED617TB",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Auto Desguace Valencia",
+  "kind": "desguace",
+  "province": "Valencia",
+  "municipality": "Valencia",
+  "website": "autodesguacevalencia.com",
+  "source_ref": "geo:desguace",
+  "host": "autodesguacevalencia.com",
+  "probe": {
+   "domain": "autodesguacevalencia.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://www.autodesguacevalencia.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-46-P2A37NP1",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Autodesguaces Alicante",
+  "kind": "desguace",
+  "province": "Alicante",
+  "municipality": "Alicante",
+  "website": "autodesguacesalicante.com",
+  "source_ref": "geo:desguace",
+  "host": "autodesguacesalicante.com",
+  "probe": {
+   "domain": "autodesguacesalicante.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 10,
+   "best_slug": "/",
+   "final_home": "https://www.autodesguacesalicante.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-03-9KT4K6SY",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Desguace Alegre",
+  "kind": "desguace",
+  "province": "Valencia",
+  "municipality": "Valencia",
+  "website": "desguacealegre.es",
+  "source_ref": "geo:desguace",
+  "host": "desguacealegre.es",
+  "probe": {
+   "domain": "desguacealegre.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 6,
+   "best_slug": "/",
+   "final_home": "https://desguacealegre.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-46-6VH2C1TH",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Integral Motion",
+  "kind": "compraventa",
+  "province": "Pontevedra",
+  "municipality": "Pontevedra",
+  "website": "integralmotion.es",
+  "source_ref": "geo:pontevedra",
+  "host": "integralmotion.es",
+  "dedup": "host_known"
+ },
+ {
+  "name": "Autos Mapi",
+  "kind": "compraventa",
+  "province": "Pontevedra",
+  "municipality": "Vigo",
+  "website": "autosmapi.es",
+  "source_ref": "geo:pontevedra",
+  "host": "autosmapi.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Rivada",
+  "kind": "compraventa",
+  "province": "Pontevedra",
+  "municipality": "Vigo",
+  "website": "autosrivada.com",
+  "source_ref": "geo:pontevedra",
+  "host": "autosrivada.com",
+  "probe": {
+   "domain": "autosrivada.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-36-GHF13F9X",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "ICAR Automóviles",
+  "kind": "compraventa",
+  "province": "Cantabria",
+  "municipality": "Torrelavega",
+  "website": "icarautomoviles.com",
+  "source_ref": "geo:cantabria",
+  "host": "icarautomoviles.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Mas Motor Cantabria",
+  "kind": "compraventa",
+  "province": "Cantabria",
+  "municipality": "Torrelavega",
+  "website": "automovilesmasmotor.com",
+  "source_ref": "geo:cantabria",
+  "host": "automovilesmasmotor.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Transfer",
+  "kind": "compraventa",
+  "province": "Toledo",
+  "municipality": "Talavera de la Reina",
+  "website": "autostransfer.es",
+  "source_ref": "geo:toledo",
+  "host": "autostransfer.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Sercar Motor",
+  "kind": "compraventa",
+  "province": "Toledo",
+  "municipality": "Talavera de la Reina",
+  "website": "sercarmotor.es",
+  "source_ref": "geo:toledo",
+  "host": "sercarmotor.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Car Brothers",
+  "kind": "compraventa",
+  "province": "Toledo",
+  "municipality": "Talavera de la Reina",
+  "website": "carbrothers.es",
+  "source_ref": "geo:toledo",
+  "host": "carbrothers.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Automotor Coches de Ocasión",
+  "kind": "compraventa",
+  "province": "Ciudad Real",
+  "municipality": "Puertollano",
+  "website": "automotorcochesdeocasion.es",
+  "source_ref": "geo:ciudadreal",
+  "host": "automotorcochesdeocasion.es",
+  "probe": {
+   "domain": "automotorcochesdeocasion.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-13-5MVJ1JYE",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "BestCars Ciudad Real",
+  "kind": "compraventa",
+  "province": "Ciudad Real",
+  "municipality": "Miguelturra",
+  "website": "bestcarsciudadreal.es",
+  "source_ref": "geo:ciudadreal",
+  "host": "bestcarsciudadreal.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Jimecar",
+  "kind": "compraventa",
+  "province": "Ciudad Real",
+  "municipality": "Ciudad Real",
+  "website": "autosjimecar.com",
+  "source_ref": "geo:ciudadreal",
+  "host": "autosjimecar.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Leomotor",
+  "kind": "compraventa",
+  "province": "León",
+  "municipality": "Ponferrada",
+  "website": "leomotor.net",
+  "source_ref": "geo:leon",
+  "host": "leomotor.net",
+  "probe": {
+   "domain": "leomotor.net",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-24-MDKBBENW",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "StockAuto",
+  "kind": "compraventa",
+  "province": "Navarra",
+  "municipality": "Tudela",
+  "website": "stock-auto.es",
+  "source_ref": "geo:navarra",
+  "host": "stock-auto.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Munain Motors",
+  "kind": "compraventa",
+  "province": "Álava",
+  "municipality": "Vitoria-Gasteiz",
+  "website": "munainmotors.com",
+  "source_ref": "geo:alava",
+  "host": "munainmotors.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Gasteiz",
+  "kind": "compraventa",
+  "province": "Álava",
+  "municipality": "Vitoria-Gasteiz",
+  "website": "autosgasteiz.com",
+  "source_ref": "geo:alava",
+  "host": "autosgasteiz.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Auto Reparaciones Gamarra",
+  "kind": "compraventa",
+  "province": "Álava",
+  "municipality": "Vitoria-Gasteiz",
+  "website": "argamarra.com",
+  "source_ref": "geo:alava",
+  "host": "argamarra.com",
+  "probe": {
+   "domain": "argamarra.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 14,
+   "best_slug": "/coches",
+   "final_home": "https://www.argamarra.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-01-R2PVB5BM",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Central Seminuevos Km0",
+  "kind": "compraventa",
+  "province": "Álava",
+  "municipality": "Vitoria-Gasteiz",
+  "website": "central-seminuevoskm0.com",
+  "source_ref": "geo:alava",
+  "host": "central-seminuevoskm0.com",
+  "dedup": "namemuni_known"
+ }
+]

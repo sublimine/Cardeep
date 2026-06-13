@@ -1,0 +1,779 @@
+[
+ {
+  "cdp": "CDP-ES-22-ZP5B4ZRR",
+  "name": "ARAGONESA DE AUTOMOVILES (HUESCA)",
+  "kind": "concesionario_oficial",
+  "website": "https://www.aramovil.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-KXA84PZ2",
+  "name": "AUTO9TY-FIVE (AUTO 95)",
+  "kind": "concesionario_oficial",
+  "website": "https://www.quadisauto95.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-06-NN8Z8VQD",
+  "name": "AUTOCIBA, S.L.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.autociba.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-25-5J4HH276",
+  "name": "AUTODILER 3000, S.L.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.autodiler3000.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-46-N7RR32WX",
+  "name": "AUTOINTER, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.autointer.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-Z0DZDHPP",
+  "name": "AUTOLEBEN  MOTOR, S.L.U.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.autoleben.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-41-S1ATT6FN",
+  "name": "AUTOMARES, S.L.",
+  "kind": "concesionario_oficial",
+  "website": "https://automares.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-HS00GV22",
+  "name": "AUTOMOCIO BADALONA CRC 3, S. L.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.drivim.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-48-SD1TT9AZ",
+  "name": "AUTOMOCION AGROMOTOR, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.grupoagromotor.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-46-GBH02401",
+  "name": "AUTOMOVILES DINAMICOS, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.autodisavalencia.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-31-5295PYG1",
+  "name": "AUTOMOVILES TORREGROSA, S.L.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.automovilestorregrosa.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-28-ND1J01Z8",
+  "name": "AUTOS VELASCO SLU",
+  "kind": "concesionario_oficial",
+  "website": "https://www.grupovelasco.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-32-RX11MPFH",
+  "name": "BETULA CARS, S.L. (Ourense)",
+  "kind": "concesionario_oficial",
+  "website": "https://www.betulacars.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-20-TSRESVGF",
+  "name": "CARZA GUIPUZKOANA MOTOR, S.L.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.carzagipuzkoa.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-14-MZ4VD9CC",
+  "name": "CORDOBESA DE SERVICIOS, SAU",
+  "kind": "concesionario_oficial",
+  "website": "https://www.eticalidad.com/leapmotor-cosersa/",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-G1CN8W3Q",
+  "name": "DANIEL ROVIRA S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.danielrovira.net/",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-15-JHBYF1G3",
+  "name": "DIMOLK AUTOMOCIÓN, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.grupodimolk.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-48-SM8Y8J92",
+  "name": "ECHEVARRI TURISMOS, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.echevarriturismos.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-14-X8BADYZ7",
+  "name": "EL ARCANGEL MOTOR, S.L.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.elarcangelmotor.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-37-HPABCT2P",
+  "name": "ESLAUTO AUTOMOCIÓN, S.L.U. (LEON)",
+  "kind": "concesionario_oficial",
+  "website": "https://www.hervimotor.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-28-YREQFFF5",
+  "name": "FERCIAUTO, SL.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.ferciauto.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-46-BV71W9WQ",
+  "name": "FERTO, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.ferto.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-07-E4M48XMG",
+  "name": "INCA CENTRO AUTO,S.A",
+  "kind": "concesionario_oficial",
+  "website": "https://www.incacentroauto.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-ZMA1Y500",
+  "name": "JOUNOU, S. A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.jounou.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-12-F9W6WQSE",
+  "name": "LEONAUTO, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.quadisleonauto.es/",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-4N1F97Z9",
+  "name": "MAAS EXCLUSIVAS PONT S.A.U.",
+  "kind": "concesionario_oficial",
+  "website": "https://maas.es/leapmotor",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-28-AYZBSMAZ",
+  "name": "MOMENTUM MARKET MADRID, SRL",
+  "kind": "concesionario_oficial",
+  "website": "https://www.momentummarket.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-NE1KWFVJ",
+  "name": "MOTORES AUTOMOVILES Y VEHICULOS",
+  "kind": "concesionario_oficial",
+  "website": "https://www.mavisa.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-02-RKRWKNS0",
+  "name": "PROVECAR, S.L.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.provecar.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-1MG26C81",
+  "name": "S.A. DE RECAMBIOS Y AUTOMOCIÓN (SARAUTO)",
+  "kind": "concesionario_oficial",
+  "website": "https://www.sarauto.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-46-46NCKCZK",
+  "name": "SETABENSES AUTOMOCIÓN, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.setabenses.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-45-W4JC25PV",
+  "name": "TALAVERA DE AUTOMOCION S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.talaveradeautomocion.com",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-W23CY8RX",
+  "name": "TALLERES AUTOTRACTOR, S.A. (SOC)",
+  "kind": "concesionario_oficial",
+  "website": "https://www.autotractor.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-08-YYYR613A",
+  "name": "TURYCAR, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://www.turycar.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-33-V4E27ASS",
+  "name": "VALGISA",
+  "kind": "concesionario_oficial",
+  "website": "https://www.grupovalgisa.es",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-01-M49ER47S",
+  "name": "VITORIANA DE INMUEBLES, S.A.",
+  "kind": "concesionario_oficial",
+  "website": "https://opelvitoria.es/",
+  "src": "aecs"
+ },
+ {
+  "cdp": "CDP-ES-13-WN0W7419",
+  "name": "APROVECHAUTO",
+  "kind": "desguace",
+  "website": "http://www.aprovechauto.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-38-CPXH2K5R",
+  "name": "Autodesguace Geneto",
+  "kind": "desguace",
+  "website": "http://www.autosdesguaces-geneto.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-29-6DSXKZTZ",
+  "name": "Autodesguace Hnos. González S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacehnosgonzalez.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-1APDMQBX",
+  "name": "Autodesguaces de Blas",
+  "kind": "desguace",
+  "website": "http://www.autodesguacesdeblas.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-39-ZQBFWFJB",
+  "name": "Automóviles Miguel Ángel",
+  "kind": "desguace",
+  "website": "http://www.amiguelangel.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-31-P444VNPK",
+  "name": "AUTORECICLAJE TUDELA S.L.",
+  "kind": "desguace",
+  "website": "http://www.autoreciclajetudela.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-96W2DQB1",
+  "name": "Auto-Recycling Teo Martín S.A",
+  "kind": "desguace",
+  "website": "http://www.teomartin.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-36-4BAWNHKA",
+  "name": "Autosiniestros Roy S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesroy.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-30-VH0BD9VV",
+  "name": "Autos Lacarcel S.L.",
+  "kind": "desguace",
+  "website": "http://www.autodesguacelacarcel.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-38-XG99E21V",
+  "name": "Carmelo E. Ramos García",
+  "kind": "desguace",
+  "website": "http://www.drtrepuestos.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-20-A0A00FX9",
+  "name": "Carrocerías San Ignacio C.B.",
+  "kind": "desguace",
+  "website": "http://gerar@desguacesdeusto.e.telefonica.net",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-05-4V2KE1FS",
+  "name": "Cesvirecambios (Cesvimap S.A)",
+  "kind": "desguace",
+  "website": "http://www.cesvirecambios.com%20%20www.cesvimap.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-32-MBX5WZTC",
+  "name": "Chatarras y Desguaces Sandias",
+  "kind": "desguace",
+  "website": "http://www.desguaces-sandias.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-41-V25Y4KQ3",
+  "name": "David de Augusto Rodríguez",
+  "kind": "desguace",
+  "website": "http://www.daviddeaugusto.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-45-M44W8JNA",
+  "name": "Desaguace Ferri S.L.",
+  "kind": "desguace",
+  "website": "http://administracion@desguacesferri.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-48-ZVNS1S4C",
+  "name": "Desguace Bizkaia-Reciclaje de Automoviles Bizkaia S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacebizkaia.net",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-27-F9YFEAZ8",
+  "name": "Desguace Ceao S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesceao.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-6QY1KDYC",
+  "name": "Desguace Cotrade S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguaceslaunion.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-15-KPSTN6HS",
+  "name": "Desguace de Paz Galicia S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesdepaz.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-45-9JJ4M4DT",
+  "name": "Desguace D.L.I, S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesdli.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-46-S2XF33HN",
+  "name": "DESGUACE EL ALEMAN",
+  "kind": "desguace",
+  "website": "http://www.desguaceselaleman.es",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-46-2TGR8W2A",
+  "name": "Desguace El Cordobés S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguaceselcordobes.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-45-2E75VAH8",
+  "name": "Desguace El Rubio S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguaceselrubio.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-32-NWPWT3JR",
+  "name": "Desguace Gómez Alen S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesgomezalen.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-25-W2H3C9D5",
+  "name": "Desguace Gualda S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacegualda.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-27-MXBW9W93",
+  "name": "Desguace Herbon",
+  "kind": "desguace",
+  "website": "http://www.desguacesherbon.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-YA6JCK7Z",
+  "name": "Desguace Jabonero y Moraleda S.L.",
+  "kind": "desguace",
+  "website": "http://catv@desguacelossantos4x4.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-03-W2WHVZZJ",
+  "name": "Desguace Javier Úbeda Albors",
+  "kind": "desguace",
+  "website": "http://www.reciclajeubeda.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-12-N2AXAM1E",
+  "name": "Desguace La Magdalena",
+  "kind": "desguace",
+  "website": "http://www.desguaceslamagdalena.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-YH0A3QA3",
+  "name": "Desguace Mayoral S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesmayoral.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-03-1PVNT66V",
+  "name": "Desguace Mora S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesmora.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-41-S1MYK1NR",
+  "name": "Desguace Olivares",
+  "kind": "desguace",
+  "website": "http://www.desguacees-olivares.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-10-PCFXXFTF",
+  "name": "DESGUACE PACO",
+  "kind": "desguace",
+  "website": "http://www.desgiacepaco.es%20",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-48-CJP3BFG1",
+  "name": "Desguace Pilastra",
+  "kind": "desguace",
+  "website": "http://www.desguacespilastra.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-35-FBHF6MQ8",
+  "name": "Desguace Pozo Izquierdo",
+  "kind": "desguace",
+  "website": "http://www.maximinoojeda.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-36-MWS4VSWD",
+  "name": "Desguace Rolan",
+  "kind": "desguace",
+  "website": "http://www.desguacesrolan.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-49-P5JZ1A66",
+  "name": "Desguace San Cristóbal S.L.U",
+  "kind": "desguace",
+  "website": "http://www.desguacescasquero.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-41-E7H6CNSJ",
+  "name": "Desguace San José S.L.",
+  "kind": "desguace",
+  "website": "http://www.autodesguacesanjose.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-15-PKP2282C",
+  "name": "Desguaces Armonía S.L",
+  "kind": "desguace",
+  "website": "http://www.desguacesarmonia.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-NDN7S6E1",
+  "name": "Desguaces El Choque S.L",
+  "kind": "desguace",
+  "website": "http://www.elchoque.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-36-R6070XH2",
+  "name": "DESGUACES FILGUEIRA",
+  "kind": "desguace",
+  "website": "http://www.desguacesfilgueira.es",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-03-G6WVB52P",
+  "name": "DESGUACES HURTADO,  S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguadesyrecambioshurtado.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-01-0VB7ZT3F",
+  "name": "DESGUACES LOGROÑO SLL",
+  "kind": "desguace",
+  "website": "http://www.desguaceslogroño.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-45-7K7C3S4X",
+  "name": "Desguaces Lorenzo C.B.",
+  "kind": "desguace",
+  "website": "http://www.desguaceslorenzo.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-29-XK4HGE2N",
+  "name": "DESGUACES MARTIN",
+  "kind": "desguace",
+  "website": "http://www.desguacehnosmartin.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-30-4182XAJQ",
+  "name": "Desguaces Monteagudo Renauto",
+  "kind": "desguace",
+  "website": "http://www.renauto.es%20",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-27-1Y3Z0AW3",
+  "name": "Desguaces San Martín",
+  "kind": "desguace",
+  "website": "http://www.desguacesanmartin.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-18-HX0ZTYJ9",
+  "name": "Desguace Supiero del Moro",
+  "kind": "desguace",
+  "website": "http://www.desguacesuspiro.es",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-39-XGTHYS97",
+  "name": "Desguaces Velarde",
+  "kind": "desguace",
+  "website": "http://www.desguacevelarde.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-25-6VSFBA1V",
+  "name": "Desguaces y Chatarras Pedros, S.A",
+  "kind": "desguace",
+  "website": "http://www.pedros-sa.es",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-38-GXDW3SE3",
+  "name": "Desguace Tenerife S.A",
+  "kind": "desguace",
+  "website": "http://www.desguacestenerife.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-30-Y9WMJBZC",
+  "name": "Desguace Tony S.L.",
+  "kind": "desguace",
+  "website": "http://www.autodesguaces.es",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-37-3ZKMJ2HB",
+  "name": "Desguace Villanueva",
+  "kind": "desguace",
+  "website": "http://www.desguacesvillanueva.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-49-ZJHBG3T9",
+  "name": "Desguace Vinagre",
+  "kind": "desguace",
+  "website": "http://www.desguacesvinagre.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-06-J45SH743",
+  "name": "DESGUACE Y RECUPERACIONES J. TAPIA E HIJOS S.L.",
+  "kind": "desguace",
+  "website": "http://www.recuperacionesjtapia.es",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-46-PSWJ816N",
+  "name": "Europa 2000",
+  "kind": "desguace",
+  "website": "http://www.desguaceeuropa2000.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-43-HH08ZB34",
+  "name": "Gallardo Gallardo C.B, Desgu. Reus",
+  "kind": "desguace",
+  "website": "http://www.desguacesreus.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-10-CT9T501J",
+  "name": "G.P. Recuperaciones y Reciclados S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesgp.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-48-3JJKZXC9",
+  "name": "Grúas y Desguaces Jon Meabe S.L.",
+  "kind": "desguace",
+  "website": "http://www.gruasydesguaesjon.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-17-BWGJ0P91",
+  "name": "Grupo Auto Grúas Nadal, S.L.",
+  "kind": "desguace",
+  "website": "http://www.grupo-autogruas-nadal.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-50-R2NNZ1EK",
+  "name": "Grupo Reciclarte",
+  "kind": "desguace",
+  "website": "http://carlos%20648706830",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-30-WZ618HGV",
+  "name": "Guillen Martínez Cayetano",
+  "kind": "desguace",
+  "website": "http://autoguimar@autoguimar.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-43-G9MD56Z2",
+  "name": "Hierros Altadill S.L.",
+  "kind": "desguace",
+  "website": "http://www.hierrrosaltadill.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-40-6JR2J5DA",
+  "name": "Hijos de Plácido Hernández S.L.",
+  "kind": "desguace",
+  "website": "http://www.hijosdeplacido.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-D49AWFBR",
+  "name": "Motostion, S.L.",
+  "kind": "desguace",
+  "website": "http://www.motostion.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-28-90K2VC9C",
+  "name": "Pablo e Hijos",
+  "kind": "desguace",
+  "website": "http://www.desguacepabloehijos.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-14-RVG2R6C3",
+  "name": "Provaluta España Recilaje de Metales S.L.",
+  "kind": "desguace",
+  "website": "http://gomez@provaluta.eu",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-30-VKT69FMN",
+  "name": "Reciclados Agumar S.L.",
+  "kind": "desguace",
+  "website": "http://www.agumarsl.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-17-56PJPNQC",
+  "name": "Recuperaciones Marcel Navarro I Fills",
+  "kind": "desguace",
+  "website": "http://contabilidad@recuperacionsnavarro.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-26-T05HCZ25",
+  "name": "Recuperaciones Riojanas S.A",
+  "kind": "desguace",
+  "website": "http://www.recirsa.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-35-8EM3NMBJ",
+  "name": "Recuperadora Canarias de Chatarra y Metales S.L.",
+  "kind": "desguace",
+  "website": "http://www.recuperadoracanaria.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-31-1NSE3CGF",
+  "name": "Talleres Luis y Óscar S.L.",
+  "kind": "desguace",
+  "website": "http://www.desguacesluisyoscar.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-30-GA1W1Q8S",
+  "name": "Talleres Ruiz Rojo S.L.",
+  "kind": "desguace",
+  "website": "http://www.gruasruizrojo.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-15-VZNH7YWB",
+  "name": "Troncomovil (Car Arcoiris S.L.)",
+  "kind": "desguace",
+  "website": "http://www.troncomovil.com",
+  "src": "aedra"
+ },
+ {
+  "cdp": "CDP-ES-46-ZX0NDDYH",
+  "name": "Uvi de Automóvil S.L.",
+  "kind": "desguace",
+  "website": "http://www.uvidesguace.com",
+  "src": "aedra"
+ }
+]

@@ -1,0 +1,372 @@
+[
+ {
+  "name": "ALCALA 534, S.L.",
+  "province": "MADRID",
+  "website": "https://www.alcala534.com"
+ },
+ {
+  "name": "ARAGONESA DE AUTOMOVILES (HUESCA)",
+  "province": "HUESCA",
+  "website": "https://www.aramovil.es"
+ },
+ {
+  "name": "ARAGONESA DE AUTOMOVILES (ZARAGOZA)",
+  "province": "ZARAGOZA",
+  "website": "https://www.aramovil.es"
+ },
+ {
+  "name": "AUSOL 2009. S.L.",
+  "province": "MALAGA",
+  "website": "https://www.peugeot-ausol.es"
+ },
+ {
+  "name": "AUTO PALAS, S.A.",
+  "province": "CANTABRIA",
+  "website": "https://www.autopalas.com"
+ },
+ {
+  "name": "AUTO-DENIA MOTORS, S.L.",
+  "province": "ALICANTE",
+  "website": "https://www.autodeniamotors.com"
+ },
+ {
+  "name": "AUTO9TY-FIVE (AUTO 95)",
+  "province": "BARCELONA",
+  "website": "https://www.quadisauto95.com"
+ },
+ {
+  "name": "AUTOCIBA, S.L.",
+  "province": "BADAJOZ",
+  "website": "https://www.autociba.es"
+ },
+ {
+  "name": "AUTOCOMERCIAL MAAM, S.L.",
+  "province": "BARCELONA",
+  "website": "https://www.dimoauto.com"
+ },
+ {
+  "name": "AUTODILER 3000, S.L.",
+  "province": "LLEIDA",
+  "website": "https://www.autodiler3000.com"
+ },
+ {
+  "name": "AUTOINTER, S.A.",
+  "province": "VALENCIA",
+  "website": "https://www.autointer.es"
+ },
+ {
+  "name": "AUTOLEBEN  MOTOR, S.L.U.",
+  "province": "BARCELONA",
+  "website": "https://www.autoleben.es"
+ },
+ {
+  "name": "AUTOMARES, S.L.",
+  "province": "SEVILLA",
+  "website": "https://automares.es"
+ },
+ {
+  "name": "AUTOMOCIO BADALONA CRC 3, S. L.",
+  "province": "BARCELONA",
+  "website": "https://www.drivim.com"
+ },
+ {
+  "name": "AUTOMOCION AGROMOTOR, S.A.",
+  "province": "VIZCAYA",
+  "website": "https://www.grupoagromotor.com"
+ },
+ {
+  "name": "AUTOMOBILITY CORDOBA Y SERVICIOS",
+  "province": "CORDOBA",
+  "website": "https://redoficial.opel.es/automobility-cordoba/"
+ },
+ {
+  "name": "AUTOMOVILES CERVERA, S.A.",
+  "province": "AVILA",
+  "website": "https://www.grupocervera.com"
+ },
+ {
+  "name": "AUTOMOVILES DINAMICOS, S.A.",
+  "province": "VALENCIA",
+  "website": "https://www.autodisavalencia.es"
+ },
+ {
+  "name": "AUTOMOVILES JUAN GINER,S.A.",
+  "province": "VALENCIA",
+  "website": "https://www.juanginer.es"
+ },
+ {
+  "name": "AUTOMOVILES MARCO, S.A.",
+  "province": "NAVARRA",
+  "website": "https://www.marco.es"
+ },
+ {
+  "name": "AUTOMOVILES MOSANCAR, S.A.",
+  "province": "MADRID",
+  "website": "https://www.mosancar.com"
+ },
+ {
+  "name": "AUTOMOVILES SAGUNTO",
+  "province": "VALENCIA",
+  "website": "https://automovilessagunto.es"
+ },
+ {
+  "name": "AUTOMOVILES TORREGROSA, S.L.",
+  "province": "NAVARRA",
+  "website": "https://www.automovilestorregrosa.es"
+ },
+ {
+  "name": "AUTOMOVILES VICAUTO, S.A.",
+  "province": "BARCELONA",
+  "website": "https://redcomercial.peugeot.es/vicauto/"
+ },
+ {
+  "name": "AUTOS MARCOS (MURCIA)",
+  "province": "MURCIA",
+  "website": "https://www.marcosautomocion.es"
+ },
+ {
+  "name": "AUTOS MARCOS, S.A. (ORLANDO)",
+  "province": "ALICANTE",
+  "website": "https://www.marcosautomocion.es"
+ },
+ {
+  "name": "AUTOS VELASCO SLU",
+  "province": "MADRID",
+  "website": "https://www.grupovelasco.es"
+ },
+ {
+  "name": "BETULA CARS, S.L. (Ourense)",
+  "province": "ORENSE",
+  "website": "https://www.betulacars.es"
+ },
+ {
+  "name": "BORJAMOTOR, S.A.",
+  "province": "ALICANTE",
+  "website": "https://opelborjamotor.com"
+ },
+ {
+  "name": "BORRAS Y BALLESTEROS, S.A.",
+  "province": "CEUTA",
+  "website": "https://redcomercial.peugeot.es/borrasyballesteros/"
+ },
+ {
+  "name": "CAETANO MOTORS  MALAGA, S.L. (IBERICAR)",
+  "province": "MALAGA",
+  "website": "https://www.caetanoretail.es/peugeot/caetano-motors-malaga/"
+ },
+ {
+  "name": "CAETANO MOTORS CADIZ, S.L. (IBERICAR)",
+  "province": "CADIZ",
+  "website": "https://www.caetanoretail.es/peugeot/caetano-motors-cadiz/"
+ },
+ {
+  "name": "CARZA GUIPUZKOANA MOTOR, S.L.",
+  "province": "GUIPUZCOA",
+  "website": "https://www.carzagipuzkoa.com"
+ },
+ {
+  "name": "CARZA, S.A.",
+  "province": "ZARAGOZA",
+  "website": "https://www.carza-zaragoza.es"
+ },
+ {
+  "name": "CIUDAUTO, S.L.",
+  "province": "CIUDAD REAL",
+  "website": "https://www.ciudauto.com"
+ },
+ {
+  "name": "CORDOBESA DE SERVICIOS, SAU",
+  "province": "CORDOBA",
+  "website": "https://www.eticalidad.com/leapmotor-cosersa/"
+ },
+ {
+  "name": "DANIEL ROVIRA S.A.",
+  "province": "BARCELONA",
+  "website": "https://www.danielrovira.net/"
+ },
+ {
+  "name": "DIMOLK AUTOMOCIÓN, S.A.",
+  "province": "A CORUÑA",
+  "website": "https://www.grupodimolk.com"
+ },
+ {
+  "name": "ECHEVARRI TURISMOS, S.A.",
+  "province": "VIZCAYA",
+  "website": "https://www.echevarriturismos.es"
+ },
+ {
+  "name": "EDAUTO, S.A.",
+  "province": "VALENCIA",
+  "website": "https://www.edauto.es"
+ },
+ {
+  "name": "EL ARCANGEL MOTOR, S.L.",
+  "province": "CORDOBA",
+  "website": "https://www.elarcangelmotor.com"
+ },
+ {
+  "name": "ESLAUTO AUTOMOCIÓN, S.L.U. (LEON)",
+  "province": "SALAMANCA",
+  "website": "https://www.hervimotor.com"
+ },
+ {
+  "name": "ESLAUTO AUTOMOCIÓN, S.L.U. (SALAMANCA)",
+  "province": "ZAMORA",
+  "website": "https://www.hervimotor.com"
+ },
+ {
+  "name": "EUTRASA",
+  "province": "BARCELONA",
+  "website": "https://www.eutrasa.com"
+ },
+ {
+  "name": "EXTRECAR, S.L.",
+  "province": "CACERES",
+  "website": "https://www.extrecar.es"
+ },
+ {
+  "name": "FERCIAUTO, SL.",
+  "province": "MADRID",
+  "website": "https://www.ferciauto.com"
+ },
+ {
+  "name": "FERTO, S.A.",
+  "province": "VALENCIA",
+  "website": "https://www.ferto.es"
+ },
+ {
+  "name": "HERMANOS VIÑARAS TOLEDO, S.A.",
+  "province": "TOLEDO",
+  "website": "https://www.hermanosvinaras.com"
+ },
+ {
+  "name": "INCA CENTRO AUTO,S.A",
+  "province": "BALEARES",
+  "website": "https://www.incacentroauto.com"
+ },
+ {
+  "name": "ISLEÑA DE MOTORES, S.L.",
+  "province": "BALEARES",
+  "website": "https://www.islenademotores.com"
+ },
+ {
+  "name": "JOAQUIN OLIVA, S.A.",
+  "province": "TARRAGONA",
+  "website": "https://www.joaquinoliva.com"
+ },
+ {
+  "name": "JOUNOU, S. A.",
+  "province": "BARCELONA",
+  "website": "https://www.jounou.com"
+ },
+ {
+  "name": "KAREALDE. S.A.",
+  "province": "VIZCAYA",
+  "website": "https://www.karealde.com"
+ },
+ {
+  "name": "LEONAUTO, S.A.",
+  "province": "CASTELLON",
+  "website": "https://www.quadisleonauto.es/"
+ },
+ {
+  "name": "LOZAUTO, S.A.",
+  "province": "ASTURIAS",
+  "website": "https://www.lozauto.com"
+ },
+ {
+  "name": "MAAS EXCLUSIVAS PONT S.A.U.",
+  "province": "BARCELONA",
+  "website": "https://maas.es/leapmotor"
+ },
+ {
+  "name": "MOMENTUM MARKET MADRID, SRL",
+  "province": "MADRID",
+  "website": "https://www.momentummarket.es"
+ },
+ {
+  "name": "MOTOR TRESCANTOS, S.A.",
+  "province": "MADRID",
+  "website": "https://www.motortrescantos.es"
+ },
+ {
+  "name": "MOTORCAR NORTE, S.L.",
+  "province": "MADRID",
+  "website": "https://www.motorcarnorte.com"
+ },
+ {
+  "name": "MOTORES AUTOMOVILES Y VEHICULOS",
+  "province": "BARCELONA",
+  "website": "https://www.mavisa.es"
+ },
+ {
+  "name": "ORVECAME, TENERIFE, S.L.",
+  "province": "TENERIFE",
+  "website": "https://www.orvecame.com"
+ },
+ {
+  "name": "PEUMOVIL, S.L.",
+  "province": "ALICANTE",
+  "website": "https://www.peumovil.com"
+ },
+ {
+  "name": "PROVECAR, S.L.",
+  "province": "ALBACETE",
+  "website": "https://www.provecar.es"
+ },
+ {
+  "name": "QUADIS ANDREU, S.L.",
+  "province": "GIRONA",
+  "website": "https://www.quadis.es"
+ },
+ {
+  "name": "RIOJANA DE AUTOMOCION, S.A.",
+  "province": "LA RIOJA",
+  "website": "https://www.grupoagromotor.com/"
+ },
+ {
+  "name": "RUGAUTO, S.A.U.",
+  "province": "BURGOS",
+  "website": "https://www.rugauto.es"
+ },
+ {
+  "name": "S.A. DE RECAMBIOS Y AUTOMOCIÓN (SARAUTO)",
+  "province": "BARCELONA",
+  "website": "https://www.sarauto.es"
+ },
+ {
+  "name": "SETABENSES AUTOMOCIÓN, S.A.",
+  "province": "VALENCIA",
+  "website": "https://www.setabenses.com"
+ },
+ {
+  "name": "TALAVERA DE AUTOMOCION S.A.",
+  "province": "TOLEDO",
+  "website": "https://www.talaveradeautomocion.com"
+ },
+ {
+  "name": "TALLERES AUTOTRACTOR, S.A. (SOC)",
+  "province": "BARCELONA",
+  "website": "https://www.autotractor.es"
+ },
+ {
+  "name": "TURYCAR, S.A.",
+  "province": "BARCELONA",
+  "website": "https://www.turycar.es"
+ },
+ {
+  "name": "URKIOLA MOTOR, S.L.U",
+  "province": "VIZCAYA",
+  "website": "https://www.urkiolamotor.com"
+ },
+ {
+  "name": "VALGISA",
+  "province": "ASTURIAS",
+  "website": "https://www.grupovalgisa.es"
+ },
+ {
+  "name": "VITORIANA DE INMUEBLES, S.A.",
+  "province": "ÁLAVA",
+  "website": "https://opelvitoria.es/"
+ }
+]

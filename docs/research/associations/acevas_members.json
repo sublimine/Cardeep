@@ -1,0 +1,1479 @@
+[
+ {
+  "name": "ALDAUTO MOTOR",
+  "address_raw": "Ctra Madrid-Colmenar Viejo, km 28  COLMENAR VIEJO,  MADRID 28770",
+  "zip": "28770",
+  "province": "MADRID",
+  "lat": "40.6626481",
+  "lon": "-3.7710457",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "ALECAR",
+  "address_raw": "Calle Jardín nº5  OVIEDO,  ASTURIAS 33011",
+  "zip": "33011",
+  "province": "ASTURIAS",
+  "lat": "43.3846274",
+  "lon": "-5.8272985",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "ALZAGA MOTOR",
+  "address_raw": "CTRA. BILBAO GALDACANO, KM 108 - 28 (EDIF. AUDI BARRIO BOLUETA)  BILBAO,  VIZCAYA 48004",
+  "zip": "48004",
+  "province": "VIZCAYA",
+  "lat": "43.2531794",
+  "lon": "-2.8970584",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "APERSA",
+  "address_raw": "CTRA. MADRID, KM. 231  SAN CIPRIAN DE VIÑAS,  ORENSE 32915",
+  "zip": "32915",
+  "province": "ORENSE",
+  "lat": "40.4167279",
+  "lon": "-3.7032905",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "ARAGON WAGEN",
+  "address_raw": "AVDA. DE NAVARRA, 135  ZARAGOZA,  ZARAGOZA 50017",
+  "zip": "50017",
+  "province": "ZARAGOZA",
+  "lat": "41.6571736",
+  "lon": "-0.9149814",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "ARROJO",
+  "address_raw": "AVDA. DAS MARIÑAS, 285  PERILLO OLEIROS,  LA CORUÑA 15172",
+  "zip": "15172",
+  "province": "LA CORUÑA",
+  "lat": "43.3272244",
+  "lon": "-8.3648131",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "ASTURIAS PÉREZ RUMBAO",
+  "address_raw": "AVDA. DE GIJON, S/N  LUGONES,  ASTURIAS 33420",
+  "zip": "33420",
+  "province": "ASTURIAS",
+  "lat": "43.4067175",
+  "lon": "-5.8053873",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "AUTOGANDARA",
+  "address_raw": "AV. DE NICASIO PEREZ, 17  FERROL,  LA CORUÑA 15407",
+  "zip": "15407",
+  "province": "LA CORUÑA",
+  "lat": "43.4878009",
+  "lon": "-8.2048518",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "AUTOMOBILS AUTOCAM",
+  "address_raw": "AVDA. TARRAGONA 104  BARCELONA,  BARCELONA 08720",
+  "zip": "08720",
+  "province": "BARCELONA",
+  "lat": "41.3368876",
+  "lon": "1.6865794",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "AUTOMOTORES M.S. CONDE",
+  "address_raw": "Pº DE LA ESPERANZA, 1-2  MADRID,  MADRID 28005",
+  "zip": "28005",
+  "province": "MADRID",
+  "lat": "40.4037381",
+  "lon": "-3.7061956",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "AUTOMOVILES CABRERO",
+  "address_raw": "POLIGONO SEPES 57  HUESCA,  HUESCA 22006",
+  "zip": "22006",
+  "province": "HUESCA",
+  "lat": "42.1474906",
+  "lon": "-0.3938963",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "AUTOPODIUM",
+  "address_raw": "CTRA. STA COLOMA FARNES, 59  GIRONA,  GIRONA 17005",
+  "zip": "17005",
+  "province": "GIRONA",
+  "lat": "41.9644804",
+  "lon": "2.8071530",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "AUTOS MISTALIA",
+  "address_raw": "GREMIO BONETEROS, 23  MALLORCA,  ISLAS BALEARES 07009",
+  "zip": "07009",
+  "province": "ISLAS BALEARES",
+  "lat": "39.6037641",
+  "lon": "2.6689063",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "AUTOS ORTASA",
+  "address_raw": "PGNO INDUSTRIAL FÁTIMA, S/N  ERANDIO,  VIZCAYA 48950",
+  "zip": "48950",
+  "province": "VIZCAYA",
+  "lat": "43.3028593",
+  "lon": "-2.9756534",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "AUTOS SAFAMAR",
+  "address_raw": "CALLE JUAN DE LA CIERVA, nº2  MARBELLA,  MALAGA 29600",
+  "zip": "29600",
+  "province": "MALAGA",
+  "lat": "36.5089048",
+  "lon": "-4.8696422",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "AUTOWAG",
+  "address_raw": "CTRA. NACIONAL-I, KM 419  BEASAIN,  GUIPUZCOA 20200",
+  "zip": "20200",
+  "province": "GUIPUZCOA",
+  "lat": "43.0447714",
+  "lon": "-2.1996575",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen"
+  ]
+ },
+ {
+  "name": "AUTOWAG TOLOSA",
+  "address_raw": "POL. IND. USABAL S/N  TOLOSA,  GUIPUZCOA 20400",
+  "zip": "20400",
+  "province": "GUIPUZCOA",
+  "lat": "43.1261667",
+  "lon": "-2.0818419",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "AVISA",
+  "address_raw": "C/ ALHAMI, 2 - 4  SEVILLA,  SEVILLA 41020",
+  "zip": "41020",
+  "province": "SEVILLA",
+  "lat": "37.4082293",
+  "lon": "-5.9436956",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "AVISA CÓRDOBA",
+  "address_raw": "C/ SIMÓN CARPINTERO 81 B  CÓRDOBA,  CÓRDOBA 14014",
+  "zip": "14014",
+  "province": "CÓRDOBA",
+  "lat": "37.9029745",
+  "lon": "-4.7238246",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "AVISA EXTREMADURA",
+  "address_raw": "C/ REAL,48,  FUENTE DE CANTOS,  BADAJOZ 06240",
+  "zip": "06240",
+  "province": "BADAJOZ",
+  "lat": "38.2463842",
+  "lon": "-6.2993807",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "AWAUTO",
+  "address_raw": "AVDA. 16 DE JULIO Nº 79  PALMA DE MALLORCA,  MALLORCA 07009",
+  "zip": "07009",
+  "province": "MALLORCA",
+  "lat": "39.6056802",
+  "lon": "2.6735412",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "BAHIA AUTOMOCIÓN",
+  "address_raw": "C/ PEÑA BEJO, 2  SANTANDER,  CANTABRIA 39011",
+  "zip": "39011",
+  "province": "CANTABRIA",
+  "lat": "43.4468095",
+  "lon": "-3.8333731",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "BARIAUTO SERVEIS PER L´AUTOMOBIL",
+  "address_raw": "CTRA. VALENCIA, Km. 248, S/N  TARRAGONA,  TARRAGONA 43006",
+  "zip": "43006",
+  "province": "TARRAGONA",
+  "lat": "41.1161324",
+  "lon": "1.2303099",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "BELABIA MOTOR",
+  "address_raw": "C/ ALTO DE ARMENTIA 8B1  VITORIA GASTEIZ,  ÁLAVA 01007",
+  "zip": "01007",
+  "province": "ÁLAVA",
+  "lat": "42.8358318",
+  "lon": "-2.7035835",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "BONAVAL MOVIL",
+  "address_raw": "VÍA ISAAC PERAL 8-10, POL. DEL TAMBRE  SANTIAGO DE COMPOSTELA,  CORUÑA 15890",
+  "zip": "15890",
+  "province": "CORUÑA",
+  "lat": "42.9103640",
+  "lon": "-8.5099640",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "BONAVAL PREMIUM",
+  "address_raw": "RUA DO CRUCEIRO DA CORUÑA 103  SANTIAGO DE COMPOSTELA,  CORUÑA 15705",
+  "zip": "15705",
+  "province": "CORUÑA",
+  "lat": "42.9016082",
+  "lon": "-8.5228144",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "CADENA AUTOMOCION",
+  "address_raw": "CARRETERA DE MURCIA, S/N  VERA,  ALMERIA 04620",
+  "zip": "04620",
+  "province": "ALMERIA",
+  "lat": "37.2291388",
+  "lon": "-1.8611011",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "CARHAUS",
+  "address_raw": "CTRA. STA. CREU DE CALAFELL, 15  SANT BOI DE LLOBREGAT,  BARCELONA 08830",
+  "zip": "08830",
+  "province": "BARCELONA",
+  "lat": "41.3382783",
+  "lon": "2.0466613",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "CEAO MOTOR",
+  "address_raw": "AVDA. BENIGNO RIVERA S/N. POL. IND. O CEAO  LUGONES,  LUGO 27003",
+  "zip": "27003",
+  "province": "LUGO",
+  "lat": "43.0477954",
+  "lon": "-7.5681369",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "CENTROWAGEN",
+  "address_raw": "CTRA. MADRID-LISBOA, KM. 398  BADAJOZ,  BADAJOZ 06008",
+  "zip": "06008",
+  "province": "BADAJOZ",
+  "lat": "38.8843776",
+  "lon": "-6.9320384",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "COLLADO BARCENILLA",
+  "address_raw": "C/ ANDALUCIA P4 Y P8  PALENCIA,  PALENCIA 34004",
+  "zip": "34004",
+  "province": "PALENCIA",
+  "lat": "42.0096857",
+  "lon": "-4.5288016",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi"
+  ]
+ },
+ {
+  "name": "COMATRASA",
+  "address_raw": "C/ ERATOSTENES, 13  GETAFE,  MADRID 28906",
+  "zip": "28906",
+  "province": "MADRID",
+  "lat": "40.2953634",
+  "lon": "-3.6961260",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "DALMAU MOTOR",
+  "address_raw": "AVDA. DEL EJERCITO, 44  LLEIDA,  LLEIDA 25194",
+  "zip": "25194",
+  "province": "LLEIDA",
+  "lat": "41.5921644",
+  "lon": "0.5943697",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi"
+  ]
+ },
+ {
+  "name": "DISMOAUTO",
+  "address_raw": "AVDA. DE VELAZQUEZ, 216  MALAGA,  MALAGA 29004",
+  "zip": "29004",
+  "province": "MALAGA",
+  "lat": "36.6819838",
+  "lon": "-4.4693815",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "ESPAWAGEN",
+  "address_raw": "C/ ORTEGA NIETO, 7 POLG OLIVARES  JAEN,  JAEN 23009",
+  "zip": "23009",
+  "province": "JAEN",
+  "lat": "37.7958184",
+  "lon": "-3.7823120",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "F. TOME",
+  "address_raw": "C/ TAURO, 27  MADRID,  MADRID 28042",
+  "zip": "28042",
+  "province": "MADRID",
+  "lat": "40.4504319",
+  "lon": "-3.5679105",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "GADASA",
+  "address_raw": "Carretera de Vigo 26  QUINTELA DE CANEDO,  ORENSE 32005",
+  "zip": "32005",
+  "province": "ORENSE",
+  "lat": "42.3196586",
+  "lon": "-7.8800643",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "GILAUTO",
+  "address_raw": "Carretera de Jaén Km 12  PULIANAS,  GRANADA 18197",
+  "zip": "18197",
+  "province": "GRANADA",
+  "lat": "37.1995747",
+  "lon": "-3.6129047",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen"
+  ]
+ },
+ {
+  "name": "HELMÁNTICA",
+  "address_raw": "CALLE CALZADA DE TORO 37-45. POL. IND. LOS VILLARES  SALAMANCA,  SALAMANCA 37184",
+  "zip": "37184",
+  "province": "SALAMANCA",
+  "lat": "40.9933837",
+  "lon": "-5.6335552",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "HERCOS PARAYAS",
+  "address_raw": "AVDA. DE PARAYAS, 11-13  SANTANDER,  CANTABRIA 39011",
+  "zip": "39011",
+  "province": "CANTABRIA",
+  "lat": "43.4181269",
+  "lon": "-3.8386842",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "HUERTAS MOTOR CARTAGENA",
+  "address_raw": "AVDA. JUAN CARLOS I, 92  CARTAGENA,  MURCIA 30310",
+  "zip": "30310",
+  "province": "MURCIA",
+  "lat": "37.6285377",
+  "lon": "-1.0021330",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "HUERTAS MOTOR MURCIA",
+  "address_raw": "AVDA. JUAN CARLOS I, 45  ESPINARDO,  MURCIA 30100",
+  "zip": "30100",
+  "province": "MURCIA",
+  "lat": "38.0053539",
+  "lon": "-1.1442629",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "IRUMOVIL",
+  "address_raw": "Parque Empresarial La Muga, 2-10  ORKOIEN,  NAVARRA 31160",
+  "zip": "31160",
+  "province": "NAVARRA",
+  "lat": "42.8198207",
+  "lon": "-1.6898729",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "IRUÑAMOVIL",
+  "address_raw": "PARQUE EMPRESARIAL LA MUGA, S/N  ORKOIEN,  NAVARRA 31610",
+  "zip": "31610",
+  "province": "NAVARRA",
+  "lat": "42.8200992",
+  "lon": "-1.6898823",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "J.S. SEALCO AUTOMOCION",
+  "address_raw": "AVDA SAN MARTIN DE VALDEIGLESIAS 32  ALCORCON,  MADRID 28922",
+  "zip": "28922",
+  "province": "MADRID",
+  "lat": "40.3579339",
+  "lon": "-3.8384326",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "JARMAUTO",
+  "address_raw": "GTA. STA. Mª DE LA CABEZA, 4  MADRID,  MADRID 28045",
+  "zip": "28045",
+  "province": "MADRID",
+  "lat": "40.4167279",
+  "lon": "-3.7032905",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "JORRO IMPORT",
+  "address_raw": "Avda. Europa , 11  BENISSA,  ALICANTE 03720",
+  "zip": "03720",
+  "province": "ALICANTE",
+  "lat": "38.7184861",
+  "lon": "0.0604584",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "JR VALLE MOTOR",
+  "address_raw": "ISLAS CANARIAS, 72  VALENCIA,  VALENCIA 46023",
+  "zip": "46023",
+  "province": "VALENCIA",
+  "lat": "39.4653861",
+  "lon": "-0.3520862",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "LAMPIS AUTOMOCIÓ",
+  "address_raw": "CTRA. SANTA CREU CALAFELL, 1  BARCELONA,  BARCELONA 08830",
+  "zip": "08830",
+  "province": "BARCELONA",
+  "lat": "41.3366027",
+  "lon": "2.0458156",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "M. CONDE",
+  "address_raw": "C/ AGUACATE, 33  MADRID,  MADRID 28054",
+  "zip": "28054",
+  "province": "MADRID",
+  "lat": "40.3698125",
+  "lon": "-3.7437470",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "M. CONDE PREMIUM",
+  "address_raw": "C/ AGUACATE, 45  MADRID,  MADRID 28054",
+  "zip": "28054",
+  "province": "MADRID",
+  "lat": "40.3687650",
+  "lon": "-3.7416841",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "MEDEA MOTOR",
+  "address_raw": "Avda. General Luque, 444  INCA,  BALEARES 07300",
+  "zip": "07300",
+  "province": "BALEARES",
+  "lat": "39.7103464",
+  "lon": "2.9022084",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "MENABI",
+  "address_raw": "Pº. TXINGURRI, 26 (BARRIO DE HERRERA)  SAN SEBASTIAN,  GUIPUZCOA 20017",
+  "zip": "20017",
+  "province": "GUIPUZCOA",
+  "lat": "43.3166947",
+  "lon": "-1.9416136",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MENAI",
+  "address_raw": "P. DUQUE DE MANDAS, 3  SAN SEBASTIAN,  GUIPUZCOA 20012",
+  "zip": "20012",
+  "province": "GUIPUZCOA",
+  "lat": "43.3200908",
+  "lon": "-1.9740096",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "MERKAMOTOR-TORTOSA",
+  "address_raw": "CTRA C-42, KM 10  TORTOSA,  TARRAGONA 43500",
+  "zip": "43500",
+  "province": "TARRAGONA",
+  "lat": "40.7983295",
+  "lon": "0.5203133",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "MOGADEALER",
+  "address_raw": "C/ ARAGÓN, 602  BARCELONA,  BARCELONA 08018",
+  "zip": "08018",
+  "province": "BARCELONA",
+  "lat": "41.4089784",
+  "lon": "2.1878163",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MOGAUTO",
+  "address_raw": "RBLA. GUIPUZCOA, 91-93  BARCELONA,  BARCELONA 08020",
+  "zip": "08020",
+  "province": "BARCELONA",
+  "lat": "41.4191648",
+  "lon": "2.2004216",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi"
+  ]
+ },
+ {
+  "name": "MOTOR INSULAR",
+  "address_raw": "CALLE OLIVERISTES, 44 POLG. IND. MANACOR  BALEARES,  BALEARES 07500",
+  "zip": "07500",
+  "province": "BALEARES",
+  "lat": "39.5707139",
+  "lon": "3.1845879",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MOTOR PACIFICO",
+  "address_raw": "AVD. DOCTOR ESQUERDO, 118  MADRID,  MADRID 28007",
+  "zip": "28007",
+  "province": "MADRID",
+  "lat": "40.4080285",
+  "lon": "-3.6703508",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "MOTOR PACÍFICO PREMIUM",
+  "address_raw": "CTRA. N-332 Nº 40  POLG. N,  SAN JUAN DE ALICANTE",
+  "zip": null,
+  "province": "SAN JUAN DE ALICANTE",
+  "lat": "38.3975862",
+  "lon": "-0.4291629",
+  "phone": "03550",
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "MOTOR TOME",
+  "address_raw": "Calle Tauro, 27  MADRID,  MADRID 28042",
+  "zip": "28042",
+  "province": "MADRID",
+  "lat": "40.4504319",
+  "lon": "-3.5679105",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MOTORSAN",
+  "address_raw": "POLIG BALCONCILLO PAR 1-2 S/N  GUADALAJARA,  SPAIN 19004",
+  "zip": "19004",
+  "province": "SPAIN",
+  "lat": "40.7744912",
+  "lon": "-2.9943192",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "MOURENTE MOTOR AUTOMOCION",
+  "address_raw": "AVENIDA DE MADRID 131  VIGO,  PONTEVEDRA 36214",
+  "zip": "36214",
+  "province": "PONTEVEDRA",
+  "lat": "42.2213320",
+  "lon": "-8.7063917",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MOVENTO SARSA MOTOR",
+  "address_raw": "C/ Pare Rodamilans 30  SABADELL,  BARCELONA 08205",
+  "zip": "08205",
+  "province": "BARCELONA",
+  "lat": "41.5439608",
+  "lon": "2.0992476",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MOVENTO SARSA VALLÉS",
+  "address_raw": "Ctra. Sabadell a Castellar, km. 6,4  CASTELLAR DEL VALLÉS,  BARCELONA 08211",
+  "zip": "08211",
+  "province": "BARCELONA",
+  "lat": "41.6144782",
+  "lon": "2.0883448",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "MOVILMAOR",
+  "address_raw": "AVENIDA GREGORIO ARCOS 41, POL. IND. CAMPOLLANO  ALBACETE,  ALBACETE 02007",
+  "zip": "02007",
+  "province": "ALBACETE",
+  "lat": "39.0159778",
+  "lon": "-1.8819204",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MOVILRIA",
+  "address_raw": "AV. DEL MAR, 152  NARÓN,  LA CORUÑA 15570",
+  "zip": "15570",
+  "province": "LA CORUÑA",
+  "lat": "43.4887294",
+  "lon": "-8.1997491",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "MOVILSAN VEHICULOS",
+  "address_raw": "C/ FRANCISCO ARITIO, 117  GUADALAJARA,  GUADALAJARA 19004",
+  "zip": "19004",
+  "province": "GUADALAJARA",
+  "lat": "40.6277317",
+  "lon": "-3.1963368",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "NUÑEZ AUTOMOCION",
+  "address_raw": "AV. DE SEGOVIA, 1 (POLIG. INDUSTRIAL DE HONTORIA)  HONTORIA,  SEGOVIA 40195",
+  "zip": "40195",
+  "province": "SEGOVIA",
+  "lat": "40.9087757",
+  "lon": "-4.1084795",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "OLIVAUTO",
+  "address_raw": "C/ Beatriz Núñez, s/n  JAEN,  JAEN 23009",
+  "zip": "23009",
+  "province": "JAEN",
+  "lat": "37.8211875",
+  "lon": "-3.7764977",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "PARTE AUTOMOVILES",
+  "address_raw": "C/ CAMPUZANO, 399 A  TORRELAVEGA,  CANTABRIA 39300",
+  "zip": "39300",
+  "province": "CANTABRIA",
+  "lat": "43.2613886",
+  "lon": "-4.0673822",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "QUADIS MARZA",
+  "address_raw": "AVDA. LAIRÓN, 60. CIUDAD DEL TRANSPORTE  CASTELLON,  CASTELLON 12006",
+  "zip": "12006",
+  "province": "CASTELLON",
+  "lat": "39.9722277",
+  "lon": "-0.0735088",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "QUADIS MOTORSOL",
+  "address_raw": "C/ Comte d´Urgel, 135  BARCELONA,  BARCELONA 08036",
+  "zip": "08036",
+  "province": "BARCELONA",
+  "lat": "41.3861085",
+  "lon": "2.1527847",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "QUADIS MOTORSOL IMPORT",
+  "address_raw": "CTRA. DEL PRAT DE LLOBREGAT 3  SANT BOI DE LLOBREGAT,  BARCELONA 08830",
+  "zip": "08830",
+  "province": "BARCELONA",
+  "lat": "41.3348255",
+  "lon": "2.0489077",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Audi"
+  ]
+ },
+ {
+  "name": "RIOJA MOTOR",
+  "address_raw": "AVDA. DEL PUNTIDO, 22 - POL. LAS CAÑAS  LOGROÑO,  LA RIOJA 26009",
+  "zip": "26009",
+  "province": "LA RIOJA",
+  "lat": "42.4810225",
+  "lon": "-2.4356960",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SAFAMOTOR",
+  "address_raw": "AVDA. NUESTRO PADRE JESUS CAUTIVO, S/N  FUENGIROLA,  MALAGA 29640",
+  "zip": "29640",
+  "province": "MALAGA",
+  "lat": "36.5530575",
+  "lon": "-4.6157280",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SAGAMOVIL",
+  "address_raw": "PQ. EMPRESARIAL LA MUGA, 02-10  ORKOIEN,  NAVARRA 31160",
+  "zip": "31160",
+  "province": "NAVARRA",
+  "lat": "42.8211949",
+  "lon": "-1.6886923",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SALA HERMANOS",
+  "address_raw": "AVDA. DE DENIA, 147  ALICANTE,  ALICANTE 03015",
+  "zip": "03015",
+  "province": "ALICANTE",
+  "lat": "38.3748927",
+  "lon": "-0.4555496",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SANTANO AUTOMOCION",
+  "address_raw": "POLG. LAS CAPELLANIAS, TRAV. A, 19  CÁCERES,  CACERES 10005",
+  "zip": "10005",
+  "province": "CACERES",
+  "lat": "39.4755328",
+  "lon": "-6.3734664",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SAVEAUTO",
+  "address_raw": "Ctra. N-340, Km. 446,5 Huercal de Almería  ALMERÍA,  ALMERÍA 04230",
+  "zip": "04230",
+  "province": "ALMERÍA",
+  "lat": "37.9752423",
+  "lon": "-1.2369962",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "SEALCO MOTOR",
+  "address_raw": "AVDA SAN MARTIN DE VALDEIGLESIAS 32  ALCORCON,  MADRID 28922",
+  "zip": "28922",
+  "province": "MADRID",
+  "lat": "40.3579339",
+  "lon": "-3.8384326",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SERRAIMPORT",
+  "address_raw": "C/ HOSPITALET DE LLOBREGAT, 10  ELCHE,  ALICANTE 03203",
+  "zip": "03203",
+  "province": "ALICANTE",
+  "lat": "38.2654561",
+  "lon": "-0.6965161",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "SERRAMOVIL",
+  "address_raw": "C/ HOSPITALET DE LLOBREGAT, 3  ELCHE,  ALICANTE 03203",
+  "zip": "03203",
+  "province": "ALICANTE",
+  "lat": "38.2654561",
+  "lon": "-0.6965161",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SKOMOVIL CENTER AUTOMOCIÓN",
+  "address_raw": "CTRA. DE MADRID, KM. 389  MURCIA,  MURCIA 30100",
+  "zip": "30100",
+  "province": "MURCIA",
+  "lat": "38.0222379",
+  "lon": "-1.1629753",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "SOLERA MOTOR",
+  "address_raw": "CTRA. N-IV MADRID-CADIZ, KM. 635  JEREZ DE LA FRONTERA,  CADIZ 11407",
+  "zip": "11407",
+  "province": "CADIZ",
+  "lat": "36.6850064",
+  "lon": "-6.1260744",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "SUPERWAGEN",
+  "address_raw": "C/ RAIMON CASELLAS, 130  SABADELL,  BARCELONA 08205",
+  "zip": "08205",
+  "province": "BARCELONA",
+  "lat": "41.5301619",
+  "lon": "2.1030594",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "TALLERES AUTO FFAM",
+  "address_raw": "C/ ANDALUCÍA, 31  PALENCIA,  PALENCIA 34004",
+  "zip": "34004",
+  "province": "PALENCIA",
+  "lat": "42.0048266",
+  "lon": "-4.5141850",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ },
+ {
+  "name": "TALLERES MANCHEGOS",
+  "address_raw": "POLIGONO ALCES PARCELA, 35  ALCAZAR DE SAN JUAN,  CIUDAD REAL 13600",
+  "zip": "13600",
+  "province": "CIUDAD REAL",
+  "lat": "39.4007912",
+  "lon": "-3.2197991",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "TELENAUTO",
+  "address_raw": "C/ ENCRUCIJADA, S/N (APARTADO DE CORREO Nº 41)  SAN JUSTO DE LA VEGA,  LEON 24710",
+  "zip": "24710",
+  "province": "LEON",
+  "lat": "42.4533447",
+  "lon": "-6.0163146",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "URAL MOTOR",
+  "address_raw": "CTRA. MADRID, 10  BURGOS,  BURGOS 09001",
+  "zip": "09001",
+  "province": "BURGOS",
+  "lat": "42.2901495",
+  "lon": "-3.7048022",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda",
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "UTREWAL",
+  "address_raw": "C/ ECIJA-JEREZ, 15  UTRERA,  SEVILLA 41710",
+  "zip": "41710",
+  "province": "SEVILLA",
+  "lat": "37.1769144",
+  "lon": "-5.7740072",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "VASA",
+  "address_raw": "AVDA. DE TOLOSA 182  SAN SEBASTIAN,  GUIPUZCOA 20009",
+  "zip": "20009",
+  "province": "GUIPUZCOA",
+  "lat": "43.3005986",
+  "lon": "-2.0029733",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "VEPERSA",
+  "address_raw": "C/ CASAS NOVAS, 26  MOURENTE,  PONTEVEDRA 36164",
+  "zip": "36164",
+  "province": "PONTEVEDRA",
+  "lat": "42.4399493",
+  "lon": "-8.6181608",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "VERA IMPORT",
+  "address_raw": "CTRA. ALMERIA MURCIA, S/N  VERA,  ALMERIA 04620",
+  "zip": "04620",
+  "province": "ALMERIA",
+  "lat": "37.9922399",
+  "lon": "-1.1306544",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "VILAMOBIL MOTOR",
+  "address_raw": "Avda. Tarragona, 135  VILAFRANCA DEL PENEDES,  BARCELONA 08720",
+  "zip": "08720",
+  "province": "BARCELONA",
+  "lat": "41.3367886",
+  "lon": "1.6884460",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "VOLCENTER VALENCIA",
+  "address_raw": "AVDA. DEL MEDITERRÁNEO nº 6 (Sedaví)  VALENCIA,  VALENCIA 46910",
+  "zip": "46910",
+  "province": "VALENCIA",
+  "lat": "39.4255925",
+  "lon": "-0.3737980",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "WAGEN MOTORS",
+  "address_raw": "Parque Empresarial Campollano, c/ B, 63  ALBACETE,  ALBACETE 02007",
+  "zip": "02007",
+  "province": "ALBACETE",
+  "lat": "39.0230054",
+  "lon": "-1.8879850",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "Audi",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "YAÑEZ",
+  "address_raw": "Viaducto da Rocha 30  SANTIAGO DE COMPOSTELA,  LA CORUÑA 15899",
+  "zip": "15899",
+  "province": "LA CORUÑA",
+  "lat": "42.8572744",
+  "lon": "-8.5718870",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Volkswagen",
+   "VW_Industriales"
+  ]
+ },
+ {
+  "name": "ZARATECNO",
+  "address_raw": "AVDA. CATALUÑA, 105  Zaragoza,  Zaragoza 50014",
+  "zip": "50014",
+  "province": "Zaragoza",
+  "lat": "41.6651483",
+  "lon": "-0.8608044",
+  "phone": null,
+  "email": null,
+  "website": null,
+  "brands": [
+   "Skoda"
+  ]
+ }
+]

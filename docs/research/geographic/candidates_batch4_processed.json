@@ -1,0 +1,524 @@
+[
+ {
+  "name": "VO Asturias",
+  "kind": "compraventa",
+  "province": "Asturias",
+  "municipality": "Oviedo",
+  "website": "voasturias.com",
+  "source_ref": "geo:asturias",
+  "host": "voasturias.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Astur Ocasión del Automóvil",
+  "kind": "compraventa",
+  "province": "Asturias",
+  "municipality": "Oviedo",
+  "website": "asturocasion.es",
+  "source_ref": "geo:asturias",
+  "host": "asturocasion.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "BazCars",
+  "kind": "compraventa",
+  "province": "Asturias",
+  "municipality": "Gijón",
+  "website": "bazcars.com",
+  "source_ref": "geo:asturias",
+  "host": "bazcars.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autocyl",
+  "kind": "compraventa",
+  "province": "Valladolid",
+  "municipality": "Valladolid",
+  "website": "autocyl.es",
+  "source_ref": "geo:valladolid",
+  "host": "autocyl.es",
+  "probe": {
+   "domain": "autocyl.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-47-EMZYZQVW",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "XMotor Vehículos de Ocasión",
+  "kind": "compraventa",
+  "province": "Valladolid",
+  "municipality": "Valladolid",
+  "website": "xmotor.es",
+  "source_ref": "geo:valladolid",
+  "host": "xmotor.es",
+  "probe": {
+   "domain": "xmotor.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 48,
+   "best_slug": "/",
+   "final_home": "https://xmotor.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-47-QB4HBQRV",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Vasa Arroyo",
+  "kind": "compraventa",
+  "province": "Valladolid",
+  "municipality": "Arroyo de la Encomienda",
+  "website": "vasaarroyo.com",
+  "source_ref": "geo:valladolid",
+  "host": "vasaarroyo.com",
+  "probe": {
+   "domain": "vasaarroyo.com",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-47-4BA4ZHN5",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Autocentro Txingudi",
+  "kind": "compraventa",
+  "province": "Gipuzkoa",
+  "municipality": "Irun",
+  "website": "autocentrotxingudi.com",
+  "source_ref": "geo:gipuzkoa",
+  "host": "autocentrotxingudi.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Expocasion",
+  "kind": "compraventa",
+  "province": "Gipuzkoa",
+  "municipality": "Lasarte-Oria",
+  "website": "expocasion.eus",
+  "source_ref": "geo:gipuzkoa",
+  "host": "expocasion.eus",
+  "probe": {
+   "domain": "expocasion.eus",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 40,
+   "best_slug": "/vehiculos",
+   "final_home": "https://expocasion.eus/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-20-ZHYYSTVE",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Motor Cars Granada",
+  "kind": "compraventa",
+  "province": "Granada",
+  "municipality": "Granada",
+  "website": "motorcarsgranada.es",
+  "source_ref": "geo:granada",
+  "host": "motorcarsgranada.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Enrique Martín Fuentes",
+  "kind": "compraventa",
+  "province": "Granada",
+  "municipality": "Granada",
+  "website": "granadacochesocasion.es",
+  "source_ref": "geo:granada",
+  "host": "granadacochesocasion.es",
+  "probe": {
+   "domain": "granadacochesocasion.es",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 3,
+   "best_slug": "/",
+   "final_home": "https://granadacochesocasion.es/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-18-Q1DQXX3V",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Mallorca Motor",
+  "kind": "compraventa",
+  "province": "Balears",
+  "municipality": "Palma de Mallorca",
+  "website": "autocasionmallorca.com",
+  "source_ref": "geo:baleares",
+  "host": "autocasionmallorca.com",
+  "probe": {
+   "domain": "autocasionmallorca.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 1,
+   "best_slug": null,
+   "final_home": "https://www.autocasionmallorca.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-07-PA39W852",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Original Cars Palma",
+  "kind": "compraventa",
+  "province": "Balears",
+  "municipality": "Palma de Mallorca",
+  "website": "originalcarspalma.com",
+  "source_ref": "geo:baleares",
+  "host": "originalcarspalma.com",
+  "probe": {
+   "domain": "originalcarspalma.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 18,
+   "best_slug": "/",
+   "final_home": "https://www.originalcarspalma.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-07-4A76S181",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Comprar Coche en Baleares",
+  "kind": "compraventa",
+  "province": "Balears",
+  "municipality": "Palma de Mallorca",
+  "website": "comprarcocheenbaleares.com",
+  "source_ref": "geo:baleares",
+  "host": "comprarcocheenbaleares.com",
+  "probe": {
+   "domain": "comprarcocheenbaleares.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 148,
+   "best_slug": "/",
+   "final_home": "https://www.comprarcocheenbaleares.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-07-AV1E9VQ2",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Grupo Compostela",
+  "kind": "compraventa",
+  "province": "A Coruña",
+  "municipality": "Santiago de Compostela",
+  "website": "grupocompostela.com",
+  "source_ref": "geo:acoruna",
+  "host": "grupocompostela.com",
+  "probe": {
+   "domain": "grupocompostela.com",
+   "reachable": true,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": "https://www.grupocompostela.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-15-8XFE2FB5",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Breogán Ocasión",
+  "kind": "compraventa",
+  "province": "A Coruña",
+  "municipality": "A Coruña",
+  "website": "breoganocasion.com",
+  "source_ref": "geo:acoruna",
+  "host": "breoganocasion.com",
+  "probe": {
+   "domain": "breoganocasion.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 61,
+   "best_slug": "/coches",
+   "final_home": "https://www.breoganocasion.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-15-VTP83NGC",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Gesticar Bilbao",
+  "kind": "compraventa",
+  "province": "Bizkaia",
+  "municipality": "Bilbao",
+  "website": "gesticarbilbao.com",
+  "source_ref": "geo:bizkaia",
+  "host": "gesticarbilbao.com",
+  "probe": {
+   "domain": "gesticarbilbao.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 27,
+   "best_slug": "/vehiculos",
+   "final_home": "https://www.gesticarbilbao.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-48-58BW2HF8",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Autoselección Bilbao",
+  "kind": "compraventa",
+  "province": "Bizkaia",
+  "municipality": "Bilbao",
+  "website": "autoseleccionbilbao.com",
+  "source_ref": "geo:bizkaia",
+  "host": "autoseleccionbilbao.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Allende",
+  "kind": "compraventa",
+  "province": "Bizkaia",
+  "municipality": "Bilbao",
+  "website": "autosallende.com",
+  "source_ref": "geo:bizkaia",
+  "host": "autosallende.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Bilbao",
+  "kind": "compraventa",
+  "province": "Bizkaia",
+  "municipality": "Bilbao",
+  "website": "autosbilbao.com",
+  "source_ref": "geo:bizkaia",
+  "host": "autosbilbao.com",
+  "probe": {
+   "domain": "autosbilbao.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 246,
+   "best_slug": "/coches",
+   "final_home": "https://autosbilbao.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-48-8AN7F240",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Igarri Motor",
+  "kind": "compraventa",
+  "province": "Bizkaia",
+  "municipality": "Bilbao",
+  "website": "igarrimotor.com",
+  "source_ref": "geo:bizkaia",
+  "host": "igarrimotor.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Autos Sarriko",
+  "kind": "compraventa",
+  "province": "Bizkaia",
+  "municipality": "Bilbao",
+  "website": "autossarriko.com",
+  "source_ref": "geo:bizkaia",
+  "host": "autossarriko.com",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Evocars Canarias",
+  "kind": "compraventa",
+  "province": "Las Palmas",
+  "municipality": "Las Palmas de Gran Canaria",
+  "website": "evocarscanarias.es",
+  "source_ref": "geo:laspalmas",
+  "host": "evocarscanarias.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Avant Car",
+  "kind": "compraventa",
+  "province": "Las Palmas",
+  "municipality": "Las Palmas de Gran Canaria",
+  "website": "avantcar.es",
+  "source_ref": "geo:laspalmas",
+  "host": "avantcar.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Ariocasion",
+  "kind": "compraventa",
+  "province": "Las Palmas",
+  "municipality": "Las Palmas de Gran Canaria",
+  "website": "ariocasion.com",
+  "source_ref": "geo:laspalmas",
+  "host": "ariocasion.com",
+  "probe": {
+   "domain": "ariocasion.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 27,
+   "best_slug": "/coches-ocasion",
+   "final_home": "https://ariocasion.com/",
+   "error": "TooManyRedirects"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-35-P070K2W7",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Autos Toni",
+  "kind": "compraventa",
+  "province": "Las Palmas",
+  "municipality": "Telde",
+  "website": "automovilestoni.com",
+  "source_ref": "geo:laspalmas",
+  "host": "automovilestoni.com",
+  "probe": {
+   "domain": "automovilestoni.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 14,
+   "best_slug": "/coches-ocasion",
+   "final_home": "https://www.automovilestoni.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-35-PRHX1PQT",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Lorenzo González Autos",
+  "kind": "compraventa",
+  "province": "Las Palmas",
+  "municipality": "Telde",
+  "website": "lorenzogonzalezautos.com",
+  "source_ref": "geo:laspalmas",
+  "host": "lorenzogonzalezautos.com",
+  "probe": {
+   "domain": "lorenzogonzalezautos.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 40,
+   "best_slug": "/coches-segunda-mano",
+   "final_home": "https://lorenzogonzalezautos.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-35-N62XR10D",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Ahura Motor",
+  "kind": "compraventa",
+  "province": "Santa Cruz de Tenerife",
+  "municipality": "San Isidro",
+  "website": "ahuramotor.com",
+  "source_ref": "geo:tenerife",
+  "host": "ahuramotor.com",
+  "probe": {
+   "domain": "ahuramotor.com",
+   "reachable": true,
+   "harvestable": true,
+   "best_price_tokens": 24,
+   "best_slug": "/coches",
+   "final_home": "https://ahuramotor.com/"
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-38-7HEN3EQF",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Castro GT",
+  "kind": "compraventa",
+  "province": "Málaga",
+  "municipality": "Málaga",
+  "website": "castrogt.es",
+  "source_ref": "geo:malaga",
+  "host": "castrogt.es",
+  "probe": {
+   "domain": "castrogt.es",
+   "reachable": false,
+   "harvestable": false,
+   "best_price_tokens": 0,
+   "best_slug": null,
+   "final_home": null
+  },
+  "upsert": {
+   "status": "upserted",
+   "cdp_code": "CDP-ES-29-BR48XAR5",
+   "was_new": true
+  },
+  "dedup": "new"
+ },
+ {
+  "name": "Autos Moliere",
+  "kind": "compraventa",
+  "province": "Málaga",
+  "municipality": "Málaga",
+  "website": "autosmoliere.es",
+  "source_ref": "geo:malaga",
+  "host": "autosmoliere.es",
+  "dedup": "namemuni_known"
+ },
+ {
+  "name": "Solo Car Sales",
+  "kind": "compraventa",
+  "province": "Málaga",
+  "municipality": "Marbella",
+  "website": "solocarsales.com",
+  "source_ref": "geo:malaga",
+  "host": "solocarsales.com",
+  "dedup": "namemuni_known"
+ }
+]

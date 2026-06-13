@@ -1,0 +1,546 @@
+[
+ {
+  "cdp_code": "CDP-ES-01-R2PVB5BM",
+  "name": "Auto Reparaciones Gamarra",
+  "kind": "compraventa",
+  "prov": "01",
+  "muni": "01059",
+  "website": "https://argamarra.com"
+ },
+ {
+  "cdp_code": "CDP-ES-02-NH52K5E1",
+  "name": "AutoRasiga",
+  "kind": "compraventa",
+  "prov": "02",
+  "muni": "02003",
+  "website": "https://autorasiga.com"
+ },
+ {
+  "cdp_code": "CDP-ES-02-E4X5980N",
+  "name": "MM Selection Cars",
+  "kind": "compraventa",
+  "prov": "02",
+  "muni": "02003",
+  "website": "https://mmselectioncars.com"
+ },
+ {
+  "cdp_code": "CDP-ES-03-9KT4K6SY",
+  "name": "Autodesguaces Alicante",
+  "kind": "desguace",
+  "prov": "03",
+  "muni": "03014",
+  "website": "https://autodesguacesalicante.com"
+ },
+ {
+  "cdp_code": "CDP-ES-03-73SYW1XR",
+  "name": "Desguasax",
+  "kind": "desguace",
+  "prov": "03",
+  "muni": "03123",
+  "website": "https://desguasax.com"
+ },
+ {
+  "cdp_code": "CDP-ES-04-GFGPMETP",
+  "name": "Automóviles PlayCar",
+  "kind": "compraventa",
+  "prov": "04",
+  "muni": "04013",
+  "website": "https://automovilesplaycar.com"
+ },
+ {
+  "cdp_code": "CDP-ES-04-F024EJA8",
+  "name": "Driveris",
+  "kind": "compraventa",
+  "prov": "04",
+  "muni": "04013",
+  "website": "https://driveris.es"
+ },
+ {
+  "cdp_code": "CDP-ES-04-P4YXVW98",
+  "name": "Indaocasion",
+  "kind": "compraventa",
+  "prov": "04",
+  "muni": "04013",
+  "website": "https://indaocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-05-0VSXQ23N",
+  "name": "Taller Carrera Motor",
+  "kind": "garaje",
+  "prov": "05",
+  "muni": "05019",
+  "website": "https://tallercarreramotor.es"
+ },
+ {
+  "cdp_code": "CDP-ES-06-H67FNH0S",
+  "name": "MM Cars Badajoz",
+  "kind": "compraventa",
+  "prov": "06",
+  "muni": "06015",
+  "website": "https://mmcarsbadajoz.es"
+ },
+ {
+  "cdp_code": "CDP-ES-07-AV1E9VQ2",
+  "name": "Comprar Coche en Baleares",
+  "kind": "compraventa",
+  "prov": "07",
+  "muni": null,
+  "website": "https://comprarcocheenbaleares.com"
+ },
+ {
+  "cdp_code": "CDP-ES-07-PA39W852",
+  "name": "Mallorca Motor",
+  "kind": "compraventa",
+  "prov": "07",
+  "muni": null,
+  "website": "https://autocasionmallorca.com"
+ },
+ {
+  "cdp_code": "CDP-ES-07-4A76S181",
+  "name": "Original Cars Palma",
+  "kind": "compraventa",
+  "prov": "07",
+  "muni": null,
+  "website": "https://originalcarspalma.com"
+ },
+ {
+  "cdp_code": "CDP-ES-09-HMGK9047",
+  "name": "Motorserver",
+  "kind": "compraventa",
+  "prov": "09",
+  "muni": "09434",
+  "website": "https://motorserver.com"
+ },
+ {
+  "cdp_code": "CDP-ES-11-93J617A6",
+  "name": "Autos J del Paso",
+  "kind": "compraventa",
+  "prov": "11",
+  "muni": "11012",
+  "website": "https://autosjdelpaso.es"
+ },
+ {
+  "cdp_code": "CDP-ES-11-H8EZCG1Q",
+  "name": "CochesCadiz",
+  "kind": "compraventa",
+  "prov": "11",
+  "muni": "11012",
+  "website": "https://cochescadiz.com"
+ },
+ {
+  "cdp_code": "CDP-ES-11-3MZFTJ4D",
+  "name": "TuppCars",
+  "kind": "compraventa",
+  "prov": "11",
+  "muni": "11012",
+  "website": "https://tuppcars.com"
+ },
+ {
+  "cdp_code": "CDP-ES-12-NMZ41WQB",
+  "name": "Horizont Auto",
+  "kind": "compraventa",
+  "prov": "12",
+  "muni": "12040",
+  "website": "https://horizontauto.com"
+ },
+ {
+  "cdp_code": "CDP-ES-12-0D6PHTZF",
+  "name": "MCS Mobility",
+  "kind": "compraventa",
+  "prov": "12",
+  "muni": "12040",
+  "website": "https://mcsmobility.es"
+ },
+ {
+  "cdp_code": "CDP-ES-13-5MVJ1JYE",
+  "name": "Automotor Coches de Ocasión",
+  "kind": "compraventa",
+  "prov": "13",
+  "muni": "13071",
+  "website": "https://automotorcochesdeocasion.es"
+ },
+ {
+  "cdp_code": "CDP-ES-14-36CBM2JX",
+  "name": "Grupo Tecsa",
+  "kind": "compraventa",
+  "prov": "14",
+  "muni": "14021",
+  "website": "https://tecsagrupo.com"
+ },
+ {
+  "cdp_code": "CDP-ES-14-4EH9Z9AJ",
+  "name": "Innocar",
+  "kind": "compraventa",
+  "prov": "14",
+  "muni": "14021",
+  "website": "https://innocar.es"
+ },
+ {
+  "cdp_code": "CDP-ES-14-S02ZPQ9T",
+  "name": "Willys Autos",
+  "kind": "compraventa",
+  "prov": "14",
+  "muni": "14021",
+  "website": "https://willysautos.es"
+ },
+ {
+  "cdp_code": "CDP-ES-15-VTP83NGC",
+  "name": "Breogán Ocasión",
+  "kind": "compraventa",
+  "prov": "15",
+  "muni": "15030",
+  "website": "https://breoganocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-15-8XFE2FB5",
+  "name": "Grupo Compostela",
+  "kind": "compraventa",
+  "prov": "15",
+  "muni": "15078",
+  "website": "https://grupocompostela.com"
+ },
+ {
+  "cdp_code": "CDP-ES-16-XGX84ZRE",
+  "name": "LiderAuto",
+  "kind": "compraventa",
+  "prov": "16",
+  "muni": "16078",
+  "website": "https://liderauto.es"
+ },
+ {
+  "cdp_code": "CDP-ES-18-Q1DQXX3V",
+  "name": "Enrique Martín Fuentes",
+  "kind": "compraventa",
+  "prov": "18",
+  "muni": "18087",
+  "website": "https://granadacochesocasion.es"
+ },
+ {
+  "cdp_code": "CDP-ES-19-DMAXQ0X0",
+  "name": "Coches CompraVenta",
+  "kind": "compraventa",
+  "prov": "19",
+  "muni": "19053",
+  "website": "https://coches-compraventa.com"
+ },
+ {
+  "cdp_code": "CDP-ES-20-ZHYYSTVE",
+  "name": "Expocasion",
+  "kind": "compraventa",
+  "prov": "20",
+  "muni": "20902",
+  "website": "https://expocasion.eus"
+ },
+ {
+  "cdp_code": "CDP-ES-22-SKXQE460",
+  "name": "Tumasa",
+  "kind": "compraventa",
+  "prov": "22",
+  "muni": "22125",
+  "website": "https://tumasa.com"
+ },
+ {
+  "cdp_code": "CDP-ES-23-HQCPR8HS",
+  "name": "Automotor10",
+  "kind": "compraventa",
+  "prov": "23",
+  "muni": "23050",
+  "website": "https://automotor10.com"
+ },
+ {
+  "cdp_code": "CDP-ES-23-ZB7PYRPJ",
+  "name": "Espejo Motor",
+  "kind": "compraventa",
+  "prov": "23",
+  "muni": "23003",
+  "website": "https://espejomotor.es"
+ },
+ {
+  "cdp_code": "CDP-ES-23-NE3FH3FZ",
+  "name": "Terry Ocasión",
+  "kind": "compraventa",
+  "prov": "23",
+  "muni": "23050",
+  "website": "https://terryocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-23-HZAC8M63",
+  "name": "Valenza",
+  "kind": "compraventa",
+  "prov": "23",
+  "muni": "23050",
+  "website": "https://valenza.es"
+ },
+ {
+  "cdp_code": "CDP-ES-24-MDKBBENW",
+  "name": "Leomotor",
+  "kind": "compraventa",
+  "prov": "24",
+  "muni": "24115",
+  "website": "https://leomotor.net"
+ },
+ {
+  "cdp_code": "CDP-ES-25-G8QJTHHB",
+  "name": "Auto 3000 Ocasión",
+  "kind": "compraventa",
+  "prov": "25",
+  "muni": "25120",
+  "website": "https://auto3000ocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-25-5JHXDHJ3",
+  "name": "Lleidamòbil AutoStar",
+  "kind": "compraventa",
+  "prov": "25",
+  "muni": "25120",
+  "website": "https://lleidamobil.com"
+ },
+ {
+  "cdp_code": "CDP-ES-26-JZ1926NQ",
+  "name": "Automóviles Jose Mari",
+  "kind": "compraventa",
+  "prov": "26",
+  "muni": "26089",
+  "website": "https://automovilesjosemari.com"
+ },
+ {
+  "cdp_code": "CDP-ES-26-814PC52R",
+  "name": "JMC Vehículos de Ocasión",
+  "kind": "compraventa",
+  "prov": "26",
+  "muni": "26089",
+  "website": "https://jmcvehiculosdeocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-26-00YXVZTX",
+  "name": "Mundomóvil",
+  "kind": "compraventa",
+  "prov": "26",
+  "muni": "26089",
+  "website": "https://mundomovil.com"
+ },
+ {
+  "cdp_code": "CDP-ES-27-YWVREJGV",
+  "name": "Sibuscascoche",
+  "kind": "compraventa",
+  "prov": "27",
+  "muni": "27028",
+  "website": "https://sibuscascoche.com"
+ },
+ {
+  "cdp_code": "CDP-ES-29-BR48XAR5",
+  "name": "Castro GT",
+  "kind": "compraventa",
+  "prov": "29",
+  "muni": "29067",
+  "website": "https://castrogt.es"
+ },
+ {
+  "cdp_code": "CDP-ES-30-WWV6MGYQ",
+  "name": "Grupo M Gallego",
+  "kind": "compraventa",
+  "prov": "30",
+  "muni": "30024",
+  "website": "https://grupomgallego.com"
+ },
+ {
+  "cdp_code": "CDP-ES-30-A8MGMMQG",
+  "name": "Mercedes-Benz Dimovil",
+  "kind": "concesionario_oficial",
+  "prov": "30",
+  "muni": "30030",
+  "website": "https://mercedes-benzdimovil.com"
+ },
+ {
+  "cdp_code": "CDP-ES-32-AK447JA7",
+  "name": "IS Cars",
+  "kind": "compraventa",
+  "prov": "32",
+  "muni": "32054",
+  "website": "https://iscars.es"
+ },
+ {
+  "cdp_code": "CDP-ES-34-AW290GC4",
+  "name": "GB Store",
+  "kind": "compraventa",
+  "prov": "34",
+  "muni": "34120",
+  "website": "https://gbstore.es"
+ },
+ {
+  "cdp_code": "CDP-ES-35-P070K2W7",
+  "name": "Ariocasion",
+  "kind": "compraventa",
+  "prov": "35",
+  "muni": "35016",
+  "website": "https://ariocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-35-PRHX1PQT",
+  "name": "Autos Toni",
+  "kind": "compraventa",
+  "prov": "35",
+  "muni": "35026",
+  "website": "https://automovilestoni.com"
+ },
+ {
+  "cdp_code": "CDP-ES-35-N62XR10D",
+  "name": "Lorenzo González Autos",
+  "kind": "compraventa",
+  "prov": "35",
+  "muni": "35026",
+  "website": "https://lorenzogonzalezautos.com"
+ },
+ {
+  "cdp_code": "CDP-ES-36-GHF13F9X",
+  "name": "Autos Rivada",
+  "kind": "compraventa",
+  "prov": "36",
+  "muni": "36057",
+  "website": "https://autosrivada.com"
+ },
+ {
+  "cdp_code": "CDP-ES-38-7HEN3EQF",
+  "name": "Ahura Motor",
+  "kind": "compraventa",
+  "prov": "38",
+  "muni": null,
+  "website": "https://ahuramotor.com"
+ },
+ {
+  "cdp_code": "CDP-ES-42-Z89827KG",
+  "name": "Autokey Ocasión",
+  "kind": "compraventa",
+  "prov": "42",
+  "muni": "42173",
+  "website": "https://autokeyocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-42-3GN4M5W3",
+  "name": "Grupo de Santiago",
+  "kind": "compraventa",
+  "prov": "42",
+  "muni": "42173",
+  "website": "https://grupodesantiago.es"
+ },
+ {
+  "cdp_code": "CDP-ES-42-0SWRPQH8",
+  "name": "Jemoya",
+  "kind": "compraventa",
+  "prov": "42",
+  "muni": "42173",
+  "website": "https://jemoya.net"
+ },
+ {
+  "cdp_code": "CDP-ES-42-N5FBCSH9",
+  "name": "Untoria Ocasión",
+  "kind": "compraventa",
+  "prov": "42",
+  "muni": "42173",
+  "website": "https://untoriaocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-43-5B2HD9CK",
+  "name": "Grup Jobacar",
+  "kind": "compraventa",
+  "prov": "43",
+  "muni": "43148",
+  "website": "https://grupjobacar.cat"
+ },
+ {
+  "cdp_code": "CDP-ES-44-545CX50R",
+  "name": "Proa Ocasión",
+  "kind": "compraventa",
+  "prov": "44",
+  "muni": "44216",
+  "website": "https://proaocasion.com"
+ },
+ {
+  "cdp_code": "CDP-ES-44-83X1VFT4",
+  "name": "Teruel Car",
+  "kind": "compraventa",
+  "prov": "44",
+  "muni": "44216",
+  "website": "https://teruelcar.es"
+ },
+ {
+  "cdp_code": "CDP-ES-46-P2A37NP1",
+  "name": "Auto Desguace Valencia",
+  "kind": "desguace",
+  "prov": "46",
+  "muni": "46250",
+  "website": "https://autodesguacevalencia.com"
+ },
+ {
+  "cdp_code": "CDP-ES-46-6VH2C1TH",
+  "name": "Desguace Alegre",
+  "kind": "desguace",
+  "prov": "46",
+  "muni": "46250",
+  "website": "https://desguacealegre.es"
+ },
+ {
+  "cdp_code": "CDP-ES-46-ZB1HHZBM",
+  "name": "Desguace Malvarrosa",
+  "kind": "desguace",
+  "prov": "46",
+  "muni": "46250",
+  "website": "https://desguacemalvarrosa.es"
+ },
+ {
+  "cdp_code": "CDP-ES-46-6ED617TB",
+  "name": "Desguaces Valencia",
+  "kind": "desguace",
+  "prov": "46",
+  "muni": "46250",
+  "website": "https://desguacesvalencia.com"
+ },
+ {
+  "cdp_code": "CDP-ES-46-WHBJVVBB",
+  "name": "Recambios Europiezas",
+  "kind": "desguace",
+  "prov": "46",
+  "muni": "46250",
+  "website": "https://recambioseuropiezas.com"
+ },
+ {
+  "cdp_code": "CDP-ES-47-EMZYZQVW",
+  "name": "Autocyl",
+  "kind": "compraventa",
+  "prov": "47",
+  "muni": "47186",
+  "website": "https://autocyl.es"
+ },
+ {
+  "cdp_code": "CDP-ES-47-4BA4ZHN5",
+  "name": "Vasa Arroyo",
+  "kind": "compraventa",
+  "prov": "47",
+  "muni": "47010",
+  "website": "https://vasaarroyo.com"
+ },
+ {
+  "cdp_code": "CDP-ES-47-QB4HBQRV",
+  "name": "XMotor Vehículos de Ocasión",
+  "kind": "compraventa",
+  "prov": "47",
+  "muni": "47186",
+  "website": "https://xmotor.es"
+ },
+ {
+  "cdp_code": "CDP-ES-48-8AN7F240",
+  "name": "Autos Bilbao",
+  "kind": "compraventa",
+  "prov": "48",
+  "muni": "48020",
+  "website": "https://autosbilbao.com"
+ },
+ {
+  "cdp_code": "CDP-ES-48-58BW2HF8",
+  "name": "Gesticar Bilbao",
+  "kind": "compraventa",
+  "prov": "48",
+  "muni": "48020",
+  "website": "https://gesticarbilbao.com"
+ }
+]

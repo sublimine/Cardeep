@@ -1,0 +1,347 @@
+{
+ "front": "discover_associations",
+ "committed": true,
+ "sources": [
+  "aedra",
+  "acevas",
+  "aecs"
+ ],
+ "records_in": 788,
+ "stats": {
+  "new": 409,
+  "dup": 353,
+  "skip_no_province": 26
+ },
+ "new_by_kind": {
+  "desguace": 346,
+  "concesionario_oficial": 63
+ },
+ "dup_by_reason": {
+  "name+muni": 201,
+  "name+prov": 132,
+  "host": 20
+ },
+ "new_with_site": 111,
+ "examples": [
+  {
+   "name": "3-LEZAMAUTO",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "01",
+   "muni": "01002",
+   "website": null
+  },
+  {
+   "name": "A. Bienvenido",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "08",
+   "muni": "08125",
+   "website": null
+  },
+  {
+   "name": "Abril 2001 Desguaces, S.A.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "24",
+   "muni": "24105",
+   "website": null
+  },
+  {
+   "name": "AF-3 CHATARRAS S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "11",
+   "muni": null,
+   "website": null
+  },
+  {
+   "name": "APROVECHAUTO",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "13",
+   "muni": null,
+   "website": "http://www.aprovechauto.com"
+  },
+  {
+   "name": "ASBEL PRADAL",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "22",
+   "muni": null,
+   "website": null
+  },
+  {
+   "name": "Asistencia Costa Brava, S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "17",
+   "muni": "17117",
+   "website": null
+  },
+  {
+   "name": "Auto Desguace Alberca",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "29",
+   "muni": "29067",
+   "website": null
+  },
+  {
+   "name": "Auto Desguace Sentmenat",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "08",
+   "muni": "08267",
+   "website": null
+  },
+  {
+   "name": "Auto Desguaces El Valle S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "30",
+   "muni": null,
+   "website": null
+  },
+  {
+   "name": "Auto Desguaces Luque S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "03",
+   "muni": "03014",
+   "website": null
+  },
+  {
+   "name": "Auto Desguaces Quiroga S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "27",
+   "muni": "27050",
+   "website": null
+  },
+  {
+   "name": "Auto-Desguace Polinya, S.L",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "08",
+   "muni": "08167",
+   "website": null
+  },
+  {
+   "name": "Auto-Recycling Teo Martín S.A",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "28",
+   "muni": "28132",
+   "website": "http://www.teomartin.com"
+  },
+  {
+   "name": "Autodesguace Colchero",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "41",
+   "muni": "41075",
+   "website": null
+  },
+  {
+   "name": "Autodesguace El Golpe SRLL",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "28",
+   "muni": "28132",
+   "website": null
+  },
+  {
+   "name": "Autodesguace El Hojalatu",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "33",
+   "muni": "33017",
+   "website": null
+  },
+  {
+   "name": "Autodesguace El Poyo",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "41",
+   "muni": "41075",
+   "website": null
+  },
+  {
+   "name": "Autodesguace Geneto",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "38",
+   "muni": null,
+   "website": "http://www.autosdesguaces-geneto.com"
+  },
+  {
+   "name": "Autodesguace Hnos. González S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "29",
+   "muni": "29067",
+   "website": "http://www.desguacehnosgonzalez.com"
+  },
+  {
+   "name": "Autodesguace Iglesias",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "37",
+   "muni": "37092",
+   "website": null
+  },
+  {
+   "name": "Autodesguace La Zorrilla (Hnos. Felipe C.B)",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "02",
+   "muni": "02003",
+   "website": null
+  },
+  {
+   "name": "Autodesguace y Cat Norte",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "35",
+   "muni": "35009",
+   "website": null
+  },
+  {
+   "name": "Autodesguaces de Blas",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "28",
+   "muni": "28074",
+   "website": "http://www.autodesguacesdeblas.com"
+  },
+  {
+   "name": "Autodesguaces Hnos. Vargas, S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "29",
+   "muni": "29067",
+   "website": null
+  },
+  {
+   "name": "Autodesguaces Inter S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "29",
+   "muni": "29067",
+   "website": null
+  },
+  {
+   "name": "AUTODESGUACES LAGARTERA  ( TALLERES J. CORROCHANO, S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "45",
+   "muni": "45082",
+   "website": null
+  },
+  {
+   "name": "Automocion La Canonja, S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "43",
+   "muni": null,
+   "website": null
+  },
+  {
+   "name": "Automociones Junquera, S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "36",
+   "muni": null,
+   "website": null
+  },
+  {
+   "name": "Automóviles Miguel Ángel",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "39",
+   "muni": "39060",
+   "website": "http://www.amiguelangel.com"
+  },
+  {
+   "name": "AUTORECICLAJE TUDELA S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "31",
+   "muni": null,
+   "website": "http://www.autoreciclajetudela.com"
+  },
+  {
+   "name": "Autos Lacarcel S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "30",
+   "muni": null,
+   "website": "http://www.autodesguacelacarcel.com"
+  },
+  {
+   "name": "Autos Ramba, Hnos. Ramos S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "27",
+   "muni": "27066",
+   "website": null
+  },
+  {
+   "name": "Autosiniestros Roy S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "36",
+   "muni": null,
+   "website": "http://www.desguacesroy.com"
+  },
+  {
+   "name": "Avantides, S.L. &#8211; Desguace Doval",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "36",
+   "muni": "36057",
+   "website": null
+  },
+  {
+   "name": "Bañezauto",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "24",
+   "muni": "24089",
+   "website": null
+  },
+  {
+   "name": "BSCAT DESG. Y DE VEHICULOS S.L.",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "07",
+   "muni": null,
+   "website": null
+  },
+  {
+   "name": "C.A.T. Zulueta",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "31",
+   "muni": null,
+   "website": null
+  },
+  {
+   "name": "Card Tierra de Barros",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "06",
+   "muni": "06149",
+   "website": null
+  },
+  {
+   "name": "Carmelo E. Ramos García",
+   "kind": "desguace",
+   "source": "aedra",
+   "prov": "38",
+   "muni": "38022",
+   "website": "http://www.drtrepuestos.com"
+  }
+ ]
+}
