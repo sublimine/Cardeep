@@ -1,0 +1,28 @@
+# Cardeep extraction recipe — CDP-ES-00-TSJFC4J2
+# Reusable; re-scrape without raw crude.
+version: 1
+source: miclasico.com
+scope: platform-wholesale (DJ-Classifieds listing grid + per-car PDP)
+engine: curl_cffi+chrome131_impersonate+html_parse
+access: OPEN SSR HTML (chrome131; no proxy, no browser, no WAF — defense_tier t0_open)
+data_surface: sitemap
+surface_intent: html_listing_grid+pdp
+endpoint: GET https://www.miclasico.com/anuncios?se=1,p1&se_cats=1,p1&start=N
+request:
+  headers: Accept text/html, Accept-Language es-ES
+  pagination: start=N in steps of 9 (DJ-Classifieds); ~990 cars / 9 = ~110 pages
+enumeration: start=0,9,18,...; stop on the first empty page (last populated start ~981)
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE
+dual_membership: vehicle.entity_ulid=per-province compraventa BUCKET; platform_listing edge=platform<->vehicle
+caging: no stable per-seller id on either surface -> per-province 'compraventa' bucket (canonical_key 'name:compraventas clasicos miclasico|p{province}', '00' national fallback); owner order: classic marketplace MERGED as compraventa, no new type
+field_map:
+  deep_link: card href (/anuncios/ad/{make}/{slug}-{id})
+  listing_ref: ad id (the trailing -{id})
+  make: href make slug / title first token
+  model: title minus make
+  title: card <h3> / PDP <h1>
+  price: card span.price_val ('.' thousands sep -> EUR)
+  year: card description 'de {YYYY}' (when present)
+  transmission: card description MANUAL/AUTOMATICO (when present)
+  photo_url: PDP first gallery image
+  location: PDP 'Ubicación' panel name -> province; map {lat,lng} captured

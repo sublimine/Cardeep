@@ -369,6 +369,23 @@ def governor() -> RateGovernor:
         # gateway, so it stays in the STEALTH family: paced conservatively below an unmeasured ceiling
         # (like dasweltauto/coches.com), human-shaped. The breaker is the safety net.
         g.configure_host("www.ocasionplus.com", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
+        # Car & Classic (classic/collector marketplace, source_group=marketplace_motor) —
+        # www.carandclassic.com is a Laravel+Inertia+Vue SSR site whose data surface is the
+        # Inertia page payload embedded in each /es/buscar?...&page=N render. Public site is
+        # Cloudflare-fronted (is_tier1=TRUE) but SERVES cleanly to chrome131 (defense_tier
+        # t1_soft, no JS challenge). It is an HTML/SSR surface, NOT a JSON gateway, so it stays
+        # in the STEALTH family: paced conservatively below an unmeasured ceiling (like
+        # ocasionplus/dasweltauto), human-shaped. The ES surface is small (~11 pages) so a
+        # conservative pace fully drains it in seconds. The breaker is the safety net.
+        g.configure_host("www.carandclassic.com", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
+        # Miclasico (Spanish classic-car classifieds, source_group=marketplace_motor) —
+        # www.miclasico.com is DJ-Classifieds/Joomla SSR HTML with NO WAF challenge to chrome131
+        # (defense_tier t0_open). The drain is PDP-per-car (~990 PDP GETs), so it is request-bound;
+        # an HTML surface (not a JSON gateway) stays in the STEALTH family but is paced a touch
+        # higher than a fragile Tier-1 host because it is measured-open — 2 req/s keeps the ~990
+        # PDP drain practical while staying human-shaped and well below any ban rate. The breaker
+        # is the safety net (a throttle trips it and we revert).
+        g.configure_host("www.miclasico.com", rate_per_sec=2.0, burst=4.0, min_spacing_s=0.4)
 
         # --- JSON_API class (fast, built-for-traffic first-party gateways) -----------
         # Apply the JSON-API rate class to every host registered in _HOST_RATE_CLASSES.
