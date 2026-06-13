@@ -138,6 +138,13 @@ _HOST_RATE_CLASSES: dict[str, dict] = {
     # with zero 429/throttle from one IP. A first-party JSON gateway, not an HTML/stealth surface ->
     # JSON_API pacing. The breaker remains the safety net.
     "api-carmarket.ayvens.com": _JSON_API_PROFILE,
+    # milanuncios facet gateway (Tier-1 marketplace_generalist) — searchapi.gw.milanuncios.com is the
+    # first-party JSON search API behind www.milanuncios.com (Adevinta SPA/mobile backend). It served
+    # the full 52-province × price facet drain (259k cars) to chrome131 with no proxy/captcha/tenant
+    # header (defense_tier=t1_soft). Built for the site's whole user base -> JSON_API pacing. BUGFIX:
+    # milanuncios_wholesale.py's docstring claimed this class, but the host was MISSING from this table,
+    # so it silently inherited STEALTH 0.7 req/s (~17x slower). Registered so future drains run correctly.
+    "searchapi.gw.milanuncios.com": _JSON_API_PROFILE,
 }
 
 
