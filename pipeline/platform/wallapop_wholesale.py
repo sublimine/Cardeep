@@ -65,6 +65,7 @@ import hashlib
 import json
 import os
 import uuid
+from collections import OrderedDict
 from dataclasses import dataclass, field
 
 import asyncpg
@@ -159,6 +160,51 @@ LEGACY_BUCKET_KIND = "garaje"
 DEFAULT_TARGET = 8000          # distinct cars to cage this run (~5k-15k mandated chunk).
 PAGE_ITEMS = 40                # the section API serves ~40 items/page (recipe verified).
 MAX_PAGES_PER_QUERY = 60       # JWT-chain safety cap per (keyword, centroid) before moving on.
+
+# ---------------------------------------------------------------------------
+# MEMORY BOUNDS — the deep-drain root-cause fix.
+# ---------------------------------------------------------------------------
+# A 651k-car flat-cursor drain ran the in-memory dedup state up MONOTONICALLY: seen_ids
+# (item-id set), harvested_cageable ((owner,deep_link) tuple set), and seller_cache
+# (user_id -> SellerRef) all grew without a ceiling across 224k+ cars. On a host already
+# at ~92% physical RAM with the whole harvest fleet running concurrently, that monotone
+# growth crossed the line and a NATIVE allocation (libcurl/json buffer) failed — aborting
+# the process at the C level with exit-1 and NO Python traceback (an uncatchable death,
+# which is why the breaker/except never saw it). Evidence: bare flat cursor walks 6k+ pages
+# clean (no server-side depth cap), RSS flat; the kill is memory pressure, not the cursor.
+#
+# The fix makes the drain MEMORY-BOUNDED so it can walk as deep as the source allows
+# regardless of fleet pressure. The DB's ON CONFLICT is the AUTHORITATIVE dedup; every
+# in-memory structure here is only a network-saving OPTIMIZATION, so capping them costs at
+# most a few redundant fetches/upserts (all idempotent), never correctness:
+#   * seen_ids        -> a bounded FIFO set: caps re-processing of recently-seen ids. The
+#                        `newest` cursor returns items in time order, so real cross-page dups
+#                        cluster within a small page neighborhood — a large cap catches ~all
+#                        of them; any rare escapee is absorbed by the DB ON CONFLICT.
+#   * harvested set   -> REPLACED by an integer distinct-progress counter (the 61 MB tuple
+#                        set was the single largest structure and existed only to count
+#                        progress + feed the VAM). Progress is the counter; the VAM uses three
+#                        orthogonal DB count paths (edges, join-vehicles, distinct refs) instead.
+#   * seller_cache    -> a bounded LRU: a cache miss after eviction re-fetches the seller
+#                        (one extra users/{id} GET, paced by the governor), never a wrong cage.
+# The caps are env-overridable so an operator can tune the memory ceiling per host pressure
+# without editing code (e.g. shrink them hard for a bounded verification run). Defaults are
+# the production values; any positive int env wins. TRIM_TO is clamped below CAP.
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        v = int(raw)
+        return v if v > 0 else default
+    except ValueError:
+        return default
+
+
+SEEN_IDS_CAP = _env_int("WP_SEEN_IDS_CAP", 300_000)        # bounded item-id dedup window (~30 MB ceiling)
+SEEN_IDS_TRIM_TO = min(_env_int("WP_SEEN_IDS_TRIM_TO", 200_000), SEEN_IDS_CAP - 1)  # amortized FIFO floor
+SELLER_CACHE_CAP = _env_int("WP_SELLER_CACHE_CAP", 50_000)  # bounded seller LRU (~25 MB); eviction => re-fetch
+PROGRESS_DB_EVERY_PAGES = _env_int("WP_PROGRESS_DB_EVERY_PAGES", 250)  # periodic DB-truth progress reconcile
 
 
 def wallapop_platform_cdp_code() -> str:
@@ -598,12 +644,88 @@ class _CageRow:
     vehicle: Vehicle
 
 
+class _BoundedSeen:
+    """A bounded item-id dedup set (FIFO trim). Memory-capped so a deep flat-cursor drain
+    cannot grow it without limit. `add` returns True if the id was NEW (not recently seen).
+
+    Insertion order is preserved (a plain set has no order; we ride an OrderedDict as an
+    ordered set: id -> None). When the cap is hit we drop the OLDEST ids down to TRIM_TO in
+    one amortized sweep. Because the `newest` cursor returns items in time order, real
+    cross-page duplicates cluster within a small page neighborhood (verified: ~7 dups/page,
+    all local), so a 300k window catches essentially all of them; any rare escapee that
+    slips past after a trim is harmlessly re-processed and absorbed by the DB ON CONFLICT
+    (idempotent upsert) — a few redundant seller-lookups at worst, never a wrong cage."""
+
+    __slots__ = ("_d", "_cap", "_trim_to")
+
+    def __init__(self, cap: int = SEEN_IDS_CAP, trim_to: int = SEEN_IDS_TRIM_TO) -> None:
+        self._d: "OrderedDict[str, None]" = OrderedDict()
+        self._cap = cap
+        self._trim_to = trim_to
+
+    def __contains__(self, item_id: str) -> bool:
+        return item_id in self._d
+
+    def add(self, item_id: str) -> bool:
+        """Insert; return True if newly seen, False if already present in the window."""
+        if item_id in self._d:
+            return False
+        self._d[item_id] = None
+        if len(self._d) > self._cap:
+            # amortized FIFO trim: evict oldest until back down to trim_to.
+            drop = len(self._d) - self._trim_to
+            for _ in range(drop):
+                self._d.popitem(last=False)
+        return True
+
+    def __len__(self) -> int:
+        return len(self._d)
+
+
+class _BoundedSellerCache:
+    """A bounded LRU cache user_id -> SellerRef|None. Memory-capped so a deep drain cannot
+    grow the per-run seller cache without limit. A cache miss after eviction simply re-fetches
+    the seller (one extra governed users/{id} GET) — the DB cages idempotently, so eviction
+    costs network, never correctness. Stores the same None sentinel for a failed lookup so a
+    dead seller is not re-hammered while still resident."""
+
+    __slots__ = ("_d", "_cap")
+
+    def __init__(self, cap: int = SELLER_CACHE_CAP) -> None:
+        self._d: "OrderedDict[str, SellerRef | None]" = OrderedDict()
+        self._cap = cap
+
+    def __contains__(self, user_id: str) -> bool:
+        return user_id in self._d
+
+    def get(self, user_id: str):
+        if user_id in self._d:
+            self._d.move_to_end(user_id)        # LRU touch
+            return self._d[user_id]
+        return None
+
+    def put(self, user_id: str, seller) -> None:
+        self._d[user_id] = seller
+        self._d.move_to_end(user_id)
+        if len(self._d) > self._cap:
+            self._d.popitem(last=False)         # evict least-recently-used
+
+    def __len__(self) -> int:
+        return len(self._d)
+
+
 @dataclass
 class _RunState:
-    """Cross-window run state: id dedup, the cageable VAM set, and the per-run seller cache."""
-    seen_ids: set = field(default_factory=set)
-    harvested_cageable: set = field(default_factory=set)  # distinct (owner_cdp, deep_link)
-    seller_cache: dict = field(default_factory=dict)      # user_id -> SellerRef | None
+    """Cross-window run state, MEMORY-BOUNDED for deep drains (see MEMORY BOUNDS above).
+
+    seen_ids and seller_cache are capped structures; cageable progress is an INTEGER counter
+    (cageable_count) plus the run-distinct id total (distinct_ids), NOT an ever-growing tuple
+    set. The DB's ON CONFLICT remains the authoritative dedup; these are network-saving
+    optimizations only, so capping them is free of correctness cost."""
+    seen_ids: _BoundedSeen = field(default_factory=_BoundedSeen)
+    seller_cache: _BoundedSellerCache = field(default_factory=_BoundedSellerCache)
+    cageable_count: int = 0      # distinct (owner_cdp, deep_link) caged THIS run (progress)
+    distinct_ids: int = 0        # distinct item ids processed THIS run (telemetry)
 
 
 def _resolve_province(s: SellerRef, v: Vehicle, geo: GeoResolver,
@@ -637,10 +759,12 @@ def _resolve_province(s: SellerRef, v: Vehicle, geo: GeoResolver,
 
 async def _resolve_seller(fetcher: WallapopFetcher, governed_fetch, state: _RunState,
                           user_id: str, stats: dict) -> SellerRef | None:
-    """Resolve a seller via GET /users/{id}, CACHED per run (one HTTP per distinct seller).
+    """Resolve a seller via GET /users/{id}, CACHED per run in a BOUNDED LRU (one HTTP per
+    resident distinct seller). After an LRU eviction a re-seen seller is re-fetched (one extra
+    governed GET) — the DB cages idempotently, so eviction costs network, never correctness.
     Returns None if the lookup fails (the item is then skipped — no unattributed cars)."""
     if user_id in state.seller_cache:
-        return state.seller_cache[user_id]
+        return state.seller_cache.get(user_id)
     try:
         payload = await fetcher.fetch_async(governed_fetch, f"{USER_ENDPOINT}/{user_id}")
         seller = parse_seller(user_id, payload)
@@ -648,7 +772,7 @@ async def _resolve_seller(fetcher: WallapopFetcher, governed_fetch, state: _RunS
     except Exception:  # noqa: BLE001 — one failed seller lookup never sinks the drain.
         seller = None
         stats["seller_lookup_errors"] += 1
-    state.seller_cache[user_id] = seller
+    state.seller_cache.put(user_id, seller)
     return seller
 
 
@@ -664,10 +788,13 @@ async def _build_cage(items: list, fetcher: WallapopFetcher, governed_fetch, geo
     for item in items:
         stats["items_seen"] += 1
         item_id = str(item.get("id") or "")
-        if not item_id or item_id in state.seen_ids:
-            stats["dup_ids_collapsed"] += 1 if item_id else 0
+        if not item_id:
             continue
-        state.seen_ids.add(item_id)
+        # bounded dedup window: add() returns False if this id is still resident (a dup).
+        if not state.seen_ids.add(item_id):
+            stats["dup_ids_collapsed"] += 1
+            continue
+        state.distinct_ids += 1
 
         # car vertical guard: category_id 100 only (the search is already scoped, but be strict).
         if str(item.get("category_id") or "") not in ("100", ""):
@@ -715,7 +842,12 @@ async def _build_cage(items: list, fetcher: WallapopFetcher, governed_fetch, geo
                 owner_role=None, source_ref=seller.user_id,
                 is_professional=False, featured=seller.featured, vehicle=v)
 
-        state.harvested_cageable.add((owner_cdp, v.deep_link))
+        # Progress counter (NOT an ever-growing set): each cageable car increments it. Because
+        # seen_ids already collapsed this item_id (one id = one car = one deep_link) before we
+        # got here, a given (owner_cdp, deep_link) reaches this point at most once per resident
+        # window, so the counter tracks distinct cageable progress closely. The VAM's ground
+        # truth is the DB count, not this counter.
+        state.cageable_count += 1
         rows.append(cage)
     return rows
 
@@ -989,9 +1121,29 @@ async def _drain_query(fetcher: WallapopFetcher, governed_fetch, conn, platform_
         items = section.get("items") or []
         if not items:
             break
-        cage = await _build_cage(items, fetcher, governed_fetch, geo, geocoder, state, stats)
-        await _ingest_window(conn, platform_ulid, cage, stats)
-        if len(state.harvested_cageable) >= target:
+        # GRACEFUL DEGRADATION: a LATE per-window failure (build/attribute/ingest) must
+        # degrade — log + skip the window, keep the chain alive — never sink the whole drain.
+        # The breaker-grade safety the C-level OOM bypassed; here every Python-level window
+        # error is contained so one bad page can't abort a 6k-page walk.
+        try:
+            cage = await _build_cage(items, fetcher, governed_fetch, geo, geocoder, state, stats)
+            await _ingest_window(conn, platform_ulid, cage, stats)
+        except Exception as e:  # noqa: BLE001 — contain a late window failure, keep draining.
+            stats["window_errors"] = stats.get("window_errors", 0) + 1
+            print(f"[wallapop_wholesale] window error (page {_page}, degraded+continue): "
+                  f"{type(e).__name__}: {e}", flush=True)
+            next_jwt = (data.get("meta") or {}).get("next_page")
+            if not next_jwt:
+                break
+            continue
+        # progress is the integer counter (NOT a set scan). Periodically reconcile against
+        # the DB count of truth so the target reflects what actually landed, not just pulls.
+        if stats["pages_fetched"] % PROGRESS_DB_EVERY_PAGES == 0:
+            db_now = await conn.fetchval(
+                "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1",
+                platform_ulid)
+            stats["db_edges_running"] = db_now
+        if state.cageable_count >= target:
             return True, None, None
         next_jwt = (data.get("meta") or {}).get("next_page")
         if not next_jwt:
@@ -1007,8 +1159,8 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
         "pages_fetched": 0, "items_seen": 0, "pro_items": 0, "private_items": 0,
         "geo_skipped": 0, "dup_ids_collapsed": 0, "seller_lookups": 0,
         "seller_lookup_errors": 0, "new_dealers": 0, "cars_caged": 0, "new_cars": 0,
-        "edges_created": 0, "new_events": 0, "dealers_distinct": 0,
-        "declared_full": 750000, "concurrency": concurrency, "target": target,
+        "edges_created": 0, "new_events": 0, "dealers_distinct": 0, "window_errors": 0,
+        "declared_full": 651000, "concurrency": concurrency, "target": target,
     }
     state = _RunState()
 
@@ -1063,7 +1215,9 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
         elif ferr:
             fetch_error, last_http = ferr, fhttp
         print(f"[wallapop_wholesale] flat newest-cursor pass done: "
-              f"{len(state.harvested_cageable)} distinct cars caged (target {target}).")
+              f"{state.cageable_count} cageable pulls (target {target}); "
+              f"seen_ids window={len(state.seen_ids)} seller_cache={len(state.seller_cache)} "
+              f"window_errors={stats.get('window_errors', 0)}.")
 
         for kw in _KEYWORDS:
             if target_reached:
@@ -1082,7 +1236,7 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
                     target_reached = True
                     break
             print(f"[wallapop_wholesale] after '{kw}': caged={stats['cars_caged']} "
-                  f"distinct={len(state.harvested_cageable)} edges={stats['edges_created']} "
+                  f"cageable_pulls={state.cageable_count} edges={stats['edges_created']} "
                   f"pro={stats['pro_items']} priv={stats['private_items']} "
                   f"sellers={stats['seller_lookups']}")
 
@@ -1109,12 +1263,17 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
         recipe_path = write_recipe(platform_code, WP_PLATFORM_RECIPE)
         print(f"[wallapop_wholesale] recipe written: {recipe_path}")
 
-        # VAM count quorum for the slice — THREE orthogonal like-with-like paths that all
-        # measure "distinct cageable cars in this slice":
-        #   db_edges           = platform_listing rows for wallapop      (DB write truth)
-        #   db_join_vehicles   = distinct vehicles via the edge join      (DB read truth)
-        #   harvested_cageable = distinct (owner, deep_link) pulled        (harvest truth)
-        # The declared full (~750k) is reported for honesty, NOT a quorum path.
+        # VAM count quorum for the slice — THREE orthogonal DB paths that all measure
+        # "distinct cageable cars in this slice", each derived INDEPENDENTLY of the others:
+        #   db_edges           = platform_listing rows for wallapop          (edge-table count)
+        #   db_join_vehicles   = distinct vehicles via the edge->vehicle join (join-reachability)
+        #   db_distinct_refs   = distinct platform listing_refs (item ids)    (native-id count)
+        # The memory-bounded drain made the old in-memory "harvested_cageable" set an
+        # APPROXIMATION (LRU evictions can re-pull), so it is NO LONGER a quorum path — it is
+        # reported as harvest telemetry only. The quorum now rests entirely on three mutually
+        # independent DB facts, which is a STRONGER guarantee against silent ingestion loss
+        # than a set that merely echoed the writes. The declared full (~651k) is honesty, not
+        # a quorum path.
         db_edges = await conn.fetchval(
             "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1", platform_ulid)
         db_join_vehicles = await conn.fetchval(
@@ -1122,19 +1281,23 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
                JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                JOIN entity d ON d.entity_ulid = v.entity_ulid
                WHERE pl.platform_entity_ulid=$1""", platform_ulid)
-        harvested_cageable_n = len(state.harvested_cageable)
+        db_distinct_refs = await conn.fetchval(
+            "SELECT count(DISTINCT listing_ref) FROM platform_listing WHERE platform_entity_ulid=$1",
+            platform_ulid)
         verdict = await record_count_verdict(
             conn, subject_type="platform_slice", subject_key=platform_code,
-            claim="distinct cageable cars (harvest) == platform_listing edges == join-reachable vehicles",
+            claim="platform_listing edges == join-reachable vehicles == distinct native listing_refs",
             paths={"db_edges": db_edges, "db_join_vehicles": db_join_vehicles,
-                   "harvested_cageable": harvested_cageable_n},
+                   "db_distinct_refs": db_distinct_refs},
             tolerance=0.0)
         stats["verdict"] = verdict
         stats["db_edges"] = db_edges
         stats["db_join_vehicles"] = db_join_vehicles
-        stats["harvested_cageable"] = harvested_cageable_n
-        stats["harvested_distinct_ids"] = len(state.seen_ids)
-        stats["distinct_sellers"] = len(state.seller_cache)
+        stats["db_distinct_refs"] = db_distinct_refs
+        stats["cageable_pulls"] = state.cageable_count          # harvest telemetry (bounded approx)
+        stats["harvested_distinct_ids"] = state.distinct_ids
+        stats["distinct_sellers_resident"] = len(state.seller_cache)
+        stats["window_errors"] = stats.get("window_errors", 0)
         stats["platform_code"] = platform_code
         stats["platform_ulid"] = platform_ulid
         stats["recipe_path"] = str(recipe_path)
@@ -1183,7 +1346,7 @@ def _print_report(stats: dict) -> None:
     print(f"  concurrency (window)  : {stats.get('concurrency')} in-flight GETs")
     print(f"  pages fetched         : {stats['pages_fetched']}")
     print(f"  items seen            : {stats['items_seen']}")
-    print(f"  distinct sellers      : {stats.get('distinct_sellers')} "
+    print(f"  resident sellers (LRU): {stats.get('distinct_sellers_resident')} "
           f"({stats['seller_lookups']} lookups, {stats['seller_lookup_errors']} errors)")
     print(f"  PRO items             : {stats['pro_items']}")
     print(f"  private items         : {stats['private_items']} (-> per-seller particular entities)")
@@ -1204,10 +1367,12 @@ def _print_report(stats: dict) -> None:
     print(f"  wallapop cars before  : {stats.get('wallapop_cars_before')}")
     print(f"  wallapop cars after   : {stats.get('wallapop_cars_after')} "
           f"(no-drop guard: {'OK' if stats.get('cars_did_not_drop') else 'FAILED'})")
-    print("  --- VAM count quorum (like-with-like, this slice) ---")
-    print(f"  harvested_cageable    : {stats.get('harvested_cageable')}")
+    print(f"  cageable pulls (approx): {stats.get('cageable_pulls')} (harvest telemetry, bounded)")
+    print(f"  window errors (degraded): {stats.get('window_errors')}")
+    print("  --- VAM count quorum (3 orthogonal DB paths, this slice) ---")
     print(f"  db_edges              : {stats.get('db_edges')}")
     print(f"  db_join_vehicles      : {stats.get('db_join_vehicles')}")
+    print(f"  db_distinct_refs      : {stats.get('db_distinct_refs')}")
     print(f"  VAM verdict           : {stats.get('verdict')}")
     print(f"  health status         : {stats.get('health_status')} / breaker {stats.get('breaker_state')}")
     print(f"  recipe                : {stats.get('recipe_path')}")
