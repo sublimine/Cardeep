@@ -613,11 +613,14 @@ async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:
     """Mint the dealer's immutable cdp_code via the canonical generator.
 
-    milanuncios dealers have no bare domain on this surface -> identity = name + location +
-    the stable authorId (passed via `address` so two distinct authors that happen to share a
-    name in one municipality never collapse to one entity)."""
+    milanuncios dealers have no bare domain on this surface -> identity is name + location
+    (name + municipality_code), mirroring the conservative rule used for mercedes_benz /
+    das_weltauto.  The authorId is intentionally excluded: it is per-listing-session
+    unstable (the same physical dealer appears under N different authorIds across crawl
+    windows), so including it would fragment one physical dealer into N CARDEEP entities.
+    The authorId is preserved as source_ref in entity_source for traceability only."""
     return cdp_code(province_code=d.province_code, domain=None, name=d.name,
-                    municipality_code=muni, address=f"mnauthor:{d.author_id}")
+                    municipality_code=muni)
 
 
 def cdp_code_particular(p: ParticularRef) -> str:

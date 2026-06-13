@@ -90,6 +90,12 @@ la que lo generó.
 - **Hallazgo de FK [VERIFICADO]:** `entity.cdp_code` tiene solo UNIQUE INDEX (no constraint) →
   **una FK a `cdp_code` falla**. FK por `entity.entity_ulid` (PK) y resuelve `cdp_code` por JOIN.
   `verification_verdict.id` SÍ es PK bigint → FK válida.
+- **Higiene de locks [aprendido 2026-06-14]:** NUNCA `DROP TABLE ... CASCADE` en transacción sobre
+  una tabla que un job concurrente usa — encola un `AccessExclusiveLock` y atasca toda la cola de
+  queries (incluidas las del job). Los jobs/agentes DEBEN cerrar su conexión PG al terminar:
+  conexiones idle huérfanas retienen `AccessShareLock` y bloquean a otros. Si un job se cuelga,
+  diagnostica con `pg_stat_activity` (wait_event=Lock) y libera con `pg_terminate_backend`.
+  Para probar reversibilidad de una migración, usa un schema/DB desechable, no un DROP en vivo.
 
 ## 5. El plan — 6 bloques (cada uno con gate binario verificable en DB)
 
