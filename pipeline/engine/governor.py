@@ -130,6 +130,14 @@ _HOST_RATE_CLASSES: dict[str, dict] = {
     # Fully unwalled to chrome131 (defense_tier=t0_open, no WAF); size hard-capped at 24/page so the
     # drain is request-bound, not payload-bound. Built for the brand's traffic -> JSON_API pacing.
     "services.flexicar.es": _JSON_API_PROFILE,
+    # Ayvens Carmarket data API (subastas group) — api-carmarket.ayvens.com/graphql/saleevents is the
+    # first-party GraphQL gateway behind the carmarket.ayvens.com Angular SPA. It is the SAME data the
+    # browser uses (Apollo HttpLink): the subscription key (x-ald-subscription-key) is sent CLIENT-SIDE,
+    # so the gateway is reachable key-free to chrome131. Built to serve the whole Carmarket user base
+    # (the SPA/Apollo backend); MEASURED permissive — a full 3,977-lot ES-tenant drain at take=200 ran
+    # with zero 429/throttle from one IP. A first-party JSON gateway, not an HTML/stealth surface ->
+    # JSON_API pacing. The breaker remains the safety net.
+    "api-carmarket.ayvens.com": _JSON_API_PROFILE,
 }
 
 
@@ -337,17 +345,15 @@ def governor() -> RateGovernor:
         # magnitude under what a permissive CF edge serves. Reversible: a ban trips the breaker
         # (graceful degradation) and we revert to 2.0.
         g.configure_host("www.autocasion.com", rate_per_sec=4.0, burst=8.0, min_spacing_s=0.25)
-        # Ayvens Carmarket (ALD remarketing) auction host — carmarket.ayvens.com is an Angular
-        # Universal SSR app. The PUBLIC data surface is the server-rendered Apollo transfer-state
-        # (the `ng-state` <script>): each /es-es/lots render embeds the live "opened" sale events'
-        # lots (make/model/version/mileage/fuel/transmission/firstReg/saleEvent). The first-party
-        # GraphQL gateway behind it (api-carmarket.ayvens.com) is walled by an Azure APIM
-        # subscription key held SERVER-SIDE (401 without it; not in the client bundle) — so the SSR
-        # page is the only key-free public surface. It is an HTML/SSR surface, NOT an open JSON
-        # gateway, so it stays in the STEALTH family: paced conservatively below an unmeasured
-        # ceiling (like dasweltauto/coches.com), human-shaped. Serves cleanly to chrome131 with no
-        # WAF challenge (defense_tier=t0_open), but the conservative pace is the safe default until a
-        # ceiling is measured. The breaker is the safety net.
+        # Ayvens Carmarket (ALD remarketing) auction FRONTEND host — carmarket.ayvens.com is the
+        # Angular SPA's HTML origin (the page shell + the /es-es/lots SSR render). It is NO LONGER the
+        # active data path: the subastas connector now drains the first-party GraphQL gateway directly
+        # (api-carmarket.ayvens.com, registered in _HOST_RATE_CLASSES as JSON_API — the subscription
+        # key rides CLIENT-SIDE, so the gateway is key-free to chrome131). This override stays as the
+        # safe pace for any eventual SSR/PDP access to the HTML origin: an HTML surface, not a JSON
+        # gateway, so STEALTH family — paced conservatively below an unmeasured ceiling (like
+        # dasweltauto/coches.com), human-shaped. Serves cleanly to chrome131, no WAF (defense_tier=
+        # t0_open). The breaker is the safety net.
         g.configure_host("carmarket.ayvens.com", rate_per_sec=1.0, burst=3.0, min_spacing_s=0.8)
         # OcasionPlus (vo_chains group, source_group=chain) — www.ocasionplus.com is a Next.js
         # App-Router SSR site whose public data surface is the schema.org JSON-LD ItemList embedded

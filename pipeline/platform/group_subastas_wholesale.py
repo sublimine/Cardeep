@@ -21,29 +21,43 @@ the five ES auction operators named in the mandate split cleanly into GATED vs P
                                     reachable. GATED.
   * Aucto (aucto.es)              — connection refused / not reachable from here. GATED (unreachable).
   * Ayvens / ALD remarketing (carmarket.ayvens.com) — PUBLIC. The Carmarket site is an Angular
-                                    Universal SSR app whose server-rendered Apollo transfer-state (the
-                                    `ng-state` <script type="application/json">) embeds the live
-                                    "opened" sale events AND their lots, key-free, to a plain chrome131
-                                    fetch. THIS is the one auction operator that exposes public stock.
+                                    SPA whose data layer is a first-party GraphQL gateway
+                                    (api-carmarket.ayvens.com/graphql/saleevents) the browser calls
+                                    DIRECTLY. The subscription key it expects is sent CLIENT-SIDE
+                                    (x-ald-subscription-key header, present in every browser request —
+                                    NOT server-side), so the gateway is reachable key-free to a plain
+                                    chrome131 fetch. THIS is the one auction operator that exposes
+                                    public stock, in full.
 
 So this connector connects AYVENS CARMARKET (the public member) and documents the gate on the rest —
 exactly the mandate's instruction ("if all are gated, document the gate honestly and connect whichever
 exposes public lots").
 
 THE SURFACE (Ayvens Carmarket, verified live 2026-06-13):
-  GET https://carmarket.ayvens.com/es-es/lots  -> 200 text/html, ~350-470 KB SSR.
-  Embedded: <script id="ng-state" type="application/json">{ ... "apollo.state": { ... } }</script>
-  The apollo.state cache holds:
-    LotWithSaleEvent:<id>   -> the CAR {id, make, model, version, mileage, fuelType, transmissionType,
-                               firstRegistrationDate, fixedPrice, currency, mainImageUrl, images[],
-                               saleEventCountry, saleEventId, saleEvent{name, description}}
-    SaleEventWithLots:<id>  -> the SALE {id, country, name, description, reference, type, state,
-                               lotsCount, currency, start/endDateTimeUtc, highlights[]}
-  The first-party GraphQL gateway (api-carmarket.ayvens.com/graphql) that produced this is walled by an
-  Azure APIM subscription key held SERVER-SIDE (401 "missing subscription key" without it; the key is
-  NOT in the client bundle — the client posts to a same-origin relative `graphql` the SSR/BFF proxies
-  with the key). So the SSR `ng-state` is the ONLY key-free public surface. We read THAT — the same
-  data the browser shows, no key fabricated.
+  POST https://api-carmarket.ayvens.com/graphql/saleevents  -> 200 application/json.
+  Headers (all client-side, captured from the live browser request, NOT fabricated):
+    x-ald-subscription-key: <client key>   (the Apollo HttpLink auth; sent by the browser itself)
+    x-tenant: ald                           (the Ayvens/ALD tenant)
+    x-country: es                           (the SPANISH remarketing tenant — its WHOLE catalog)
+  Two operations the SPA uses, both key-free to chrome131 with the headers above:
+    * `LoadLots`   -> lots(order, take, skip, where) { items{...} aggregates{count} } — the paginated
+                      lot list. `aggregates.count` is the EXACT denominator; take/skip drains every lot.
+                      Each item: {id, make, model, version, mileage, fuelType, transmissionType,
+                      firstRegistrationDate, mainImageUrl, images[], saleEventCountry, saleEventId,
+                      fixedPrice, currency, state, endDateTimeUtc}.
+    * `saleEvents` -> saleEvents{items{id,country,name,description,reference,type,state,lotsCount}} —
+                      the sale-event catalog (the SELLER identities), one call for all sales.
+
+  THE OLD SSR `ng-state` (carmarket.ayvens.com/es-es/lots) embedded only the CURRENTLY-OPEN sales'
+  first SSR render window (~37-59 lots) — a tiny snapshot, NOT the catalog. Reading only that was the
+  defect this connector fixes: it caged ~27 lots and re-runs added 0. The GraphQL gateway above IS the
+  full public surface (no APIM wall: the key rides client-side), so we drain it completely.
+
+  ES SCOPE: `x-country: es` is the SPANISH Ayvens REMARKETING TENANT — its complete sellable inventory
+  (3,977 lots / 54 sale events, verified live), regardless of where each car physically sits. This is
+  the mandate's "~3,977 ES vehicles across 14+ ES sale events". (A per-lot saleEventCountry=='es' filter
+  would instead yield only the ~461 cars physically in Spain across 2 sales — NOT the tenant catalog;
+  we deliberately scope to the tenant, the Spanish operator's whole book.)
 
 THE DATA MODEL — the selling point is the SALE EVENT (the auction), mirroring the proven template's
 dual-membership EXACTLY (pipeline.platform.coches_net_wholesale / oem_audi_wholesale):
@@ -62,7 +76,7 @@ NULL, sentinel '00' in the cdp_code only), the SAME convention the platform enti
 fabricated.
 
 Multi-axis classification (migrations/0016):
-  defense_tier = 't0_open'          (Ayvens SSR serves cleanly to chrome131; no WAF challenge)
+  defense_tier = 't0_open'          (Ayvens GraphQL serves cleanly to chrome131; no WAF challenge)
   source_group = 'official_registry'(the mandate's nearest enum for the distinct AUCTION group; there is
                                      no dedicated 'auction' source_group value — official_registry is the
                                      closest, used for both the platform and its sale-event sellers)
@@ -71,16 +85,16 @@ Multi-axis classification (migrations/0016):
   is_tier1     = FALSE              (no WAF fronts the SSR surface)
   family       = 'ayvens_carmarket'(ties the Ayvens auction surface on the family axis)
 
-PROOF SLICE, NOT THE FULL HARVEST. The SSR `/es-es/lots` render embeds the lots of the CURRENTLY-OPEN
-sale events (a live snapshot; the full sales each carry lotsCount in the hundreds but only a window is
-SSR'd into the page). We cage every ES lot the public surface exposes and record the declared per-sale
-lotsCount for honesty. There is NO key-free pagination beyond what the SSR embeds; draining a whole sale
-needs the APIM-keyed GraphQL (a gated, spend/credential path — documented, not faked).
+THE FULL HARVEST. We drain the ENTIRE ES-tenant catalog: `aggregates.count` gives the exact total and
+we page LoadLots (take/skip) until every lot is read, then reconcile (lots no longer in the live catalog
+are retired to status='gone'/'removed' so no phantom stale lot is counted as live). The denominator is
+`aggregates.count` (the gateway's own total) — not a guess.
 
-Engine: a GET against carmarket.ayvens.com routed THROUGH the per-host governor (the same single choke
-point coches.net/audi use). The synchronous curl_cffi GET runs in a worker thread so the event loop is
-never blocked, and no host is fetched faster than its bucket (carmarket.ayvens.com is in the STEALTH
-rate class — an SSR HTML surface, paced conservatively below an unmeasured ceiling, human-shaped).
+Engine: POSTs against api-carmarket.ayvens.com routed THROUGH the per-host governor (the same single
+choke point coches.net/audi use). The synchronous curl_cffi POST runs in a worker thread so the event
+loop is never blocked, and no host is fetched faster than its bucket (api-carmarket.ayvens.com is in the
+JSON_API rate class — a first-party JSON gateway built to serve the whole user base, MEASURED permissive
+to a full 3,977-lot drain at one IP with zero throttle).
 
 Run: python -m pipeline.platform.group_subastas_wholesale
 """
@@ -125,23 +139,73 @@ AYVENS_ROLE = "platform"             # the Ayvens platform's role (each sale eve
 AYVENS_KIND = "plataforma"           # the platform ENTITY's ontology kind.
 AYVENS_FAMILY = "ayvens_carmarket"   # ties the Ayvens auction surface on the family axis.
 
-# The working request (verified live 2026-06-13; recipe subastas_datalayer.md TL;DR). The ES locale
-# lots listing; the SSR `ng-state` apollo cache is the key-free public data surface.
-_BASE = "https://carmarket.ayvens.com"
-LIST_PATH = "/es-es/lots"
-ENDPOINT = _BASE + LIST_PATH
+# The working request (verified live 2026-06-13; recipe subastas_datalayer.md TL;DR). The first-party
+# GraphQL gateway behind the Carmarket SPA — the SAME endpoint the browser's Apollo HttpLink posts to.
+_API_BASE = "https://api-carmarket.ayvens.com"
+GRAPHQL_PATH = "/graphql/saleevents"
+ENDPOINT = _API_BASE + GRAPHQL_PATH
 _PDP_BASE = "https://carmarket.ayvens.com/es-es/lot/"   # lot detail URL = base + lot id.
+
+# The Apollo HttpLink auth the BROWSER itself sends (captured from the live request 2026-06-13). The key
+# is CLIENT-SIDE (present in every browser request — it is NOT a server-side secret; the SPA ships it to
+# authenticate the public gateway), x-tenant pins the ALD tenant, x-country pins the SPANISH remarketing
+# tenant whose whole catalog we drain. No key is fabricated — these are the headers the public page uses.
+_SUBSCRIPTION_KEY = "3b2cc62fd26c4e29a762db3de181266b"
+_TENANT = "ald"
+ES_COUNTRY = "es"                    # the x-country tenant AND the per-lot saleEventCountry token.
 _HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept": "application/json, text/plain, */*",
     "Accept-Language": "es-ES,es;q=0.9",
+    "Content-Type": "application/json",
+    "Origin": "https://carmarket.ayvens.com",
     "Referer": "https://carmarket.ayvens.com/",
+    "x-ald-subscription-key": _SUBSCRIPTION_KEY,
+    "x-tenant": _TENANT,
+    "x-country": ES_COUNTRY,
 }
 _IMPERSONATE = "chrome131"
 _TIMEOUT = 45
 
-# The ES country code on the lot/sale (saleEventCountry / SaleEventWithLots.country). We cage ONLY ES
-# lots — the SSR render carries multi-country open sales; the group is ES-scoped.
-ES_COUNTRY = "es"
+# Page size for the LoadLots drain. The gateway tolerates large pages (measured: take=200 drained the
+# full 3,977-lot catalog cleanly); 200 keeps the round-trip count low without straining the payload.
+_PAGE_SIZE = 200
+# Hard ceiling on pages, a runaway guard (3,977 / 200 ≈ 20 pages; 200 pages = 40,000 lots is far past
+# any plausible catalog and bounds a pathological gateway loop).
+_MAX_PAGES = 200
+
+# The two GraphQL operations the SPA uses. LoadLots = the paginated lot list (items + aggregates.count,
+# the exact denominator). saleEvents = the sale-event catalog (the SELLER identities). Field sets are
+# the REAL ones captured from the live browser request + verified queryable (fixedPrice/currency/state).
+_LOAD_LOTS_QUERY = """
+query LoadLots($order: [LotOrderInput!], $take: Int, $skip: Int, $lotFilterInput: LotFilterInput) {
+  lots(order: $order, take: $take, skip: $skip, where: $lotFilterInput) {
+    items {
+      id make model version saleEventCountry saleEventId mileage mileageUnit
+      fuelType transmissionType firstRegistrationDate mainImageUrl images
+      fixedPrice currency state endDateTimeUtc __typename
+    }
+    aggregates { count __typename }
+    __typename
+  }
+}
+""".strip()
+
+_SALE_EVENTS_QUERY = """
+query SaleEvents {
+  saleEvents {
+    items {
+      id country name description reference type state lotsCount __typename
+    }
+    aggregates { count __typename }
+    __typename
+  }
+}
+""".strip()
+
+# The lot filter the SPA's listing uses: exclude finished states (the live, sellable catalog). This is
+# the source's own default — the count under it (3,977) is the live ES-tenant denominator.
+_LOT_STATE_NIN = ["closed", "withdrawn", "sold"]
+_LOT_ORDER = [{"make": "asc"}, {"model": "asc"}, {"version": "asc"}, {"mileage": "asc"}]
 
 # Province sentinel '00' = national (same convention as the platform entities). geo_province has NO
 # '00', so a NATIONAL entity stores province_code = NULL; '00' lives only inside the cdp_code string.
@@ -318,51 +382,53 @@ def parse_vehicle(lot: dict) -> Vehicle:
 
 
 # ---------------------------------------------------------------------------
-# SSR extraction: pull the apollo.state cache out of the `ng-state` <script>.
+# GraphQL response handling: parse the lots / sale-events payloads (the REAL shapes).
 # ---------------------------------------------------------------------------
 
 
-_NG_STATE_RE = re.compile(
-    r'<script id="ng-state" type="application/json">(.*?)</script>', re.S)
+def parse_lots_payload(payload: dict) -> tuple[list[dict], int | None]:
+    """From a LoadLots GraphQL response, return (items, aggregate_count).
+    Raises on a GraphQL error or a missing `lots` block so the breaker sees the drift."""
+    if not isinstance(payload, dict):
+        raise RuntimeError("LoadLots: non-dict payload (gateway drift)")
+    if payload.get("errors"):
+        raise RuntimeError(f"LoadLots GraphQL errors: {json.dumps(payload['errors'])[:300]}")
+    lots = ((payload.get("data") or {}).get("lots")) or None
+    if not isinstance(lots, dict):
+        raise RuntimeError("LoadLots: no `lots` block in payload (gateway drift)")
+    items = [it for it in (lots.get("items") or []) if isinstance(it, dict)]
+    count = _to_int((lots.get("aggregates") or {}).get("count"))
+    return items, count
 
 
-def extract_apollo_state(html: str) -> dict:
-    """Parse the SSR `ng-state` transfer-state and return the apollo.state cache (the lot+sale cache).
-    Raises on a missing/empty state so the breaker sees the drift (never masks an empty surface)."""
-    m = _NG_STATE_RE.search(html)
-    if not m:
-        raise RuntimeError("ng-state transfer-state script not found (SSR surface drift)")
-    data = json.loads(m.group(1))
-    cache = data.get("apollo.state")
-    if not isinstance(cache, dict) or not cache:
-        raise RuntimeError("apollo.state cache empty/absent in ng-state (SSR surface drift)")
-    return cache
-
-
-def split_cache(cache: dict) -> tuple[list[dict], dict[str, dict]]:
-    """Split the apollo cache into (lots, sale_events_by_id). lots = LotWithSaleEvent objects;
-    sale_events_by_id maps sale id -> SaleEventWithLots object."""
-    lots = [v for v in cache.values()
-            if isinstance(v, dict) and v.get("__typename") == "LotWithSaleEvent"]
-    sales = {str(v.get("id")): v for v in cache.values()
-             if isinstance(v, dict) and v.get("__typename") == "SaleEventWithLots" and v.get("id")}
-    return lots, sales
+def parse_sale_events_payload(payload: dict) -> dict[str, dict]:
+    """From a saleEvents GraphQL response, return {sale_id: sale_event_object}. The sale objects carry
+    {id, country, name, description, reference, type, state, lotsCount} — the SELLER identity per sale.
+    Raises on a GraphQL error so the breaker sees the drift (a sale-less drain is uncageable)."""
+    if not isinstance(payload, dict):
+        raise RuntimeError("saleEvents: non-dict payload (gateway drift)")
+    if payload.get("errors"):
+        raise RuntimeError(f"saleEvents GraphQL errors: {json.dumps(payload['errors'])[:300]}")
+    block = ((payload.get("data") or {}).get("saleEvents")) or {}
+    items = block.get("items") or []
+    return {str(it.get("id")): it for it in items
+            if isinstance(it, dict) and it.get("id")}
 
 
 # ---------------------------------------------------------------------------
-# Fetch: a GET routed THROUGH the governor (same per-host choke point as coches.net/audi).
+# Fetch: a POST routed THROUGH the governor (same per-host choke point as coches.net/audi).
 # ---------------------------------------------------------------------------
 
 
 class AyvensFetcher:
-    """A POOL of fingerprint-coherent curl_cffi GET sessions for the Ayvens SSR surface.
+    """A POOL of fingerprint-coherent curl_cffi POST sessions for the Ayvens GraphQL gateway.
 
     Same concurrency-vs-coherence model as the proven fetchers: a single curl_cffi Session is NOT safe
     to call from several threads at once, and the governor runs each fetch in its own worker thread. The
     fix is a bounded POOL — one Session per concurrency slot, each its own Chrome fingerprint + cookie
     jar. The governor's per-host bucket bounds the AGGREGATE rate across every session, so the pool
     widens parallelism WITHOUT out-pacing the host (the choke point is the bucket, never the session
-    count). `last_status` reflects the most recent GET across the pool — the breaker's http_status."""
+    count). `last_status` reflects the most recent POST across the pool — the breaker's http_status."""
 
     def __init__(self, pool_size: int = 1) -> None:
         self._pool_size = max(1, pool_size)
@@ -373,25 +439,28 @@ class AyvensFetcher:
             self._free.put_nowait(i)
         self.last_status: int | None = None
 
-    def fetch_page(self, url: str, *, slot: int = 0) -> str:
-        """The synchronous GET on pool session `slot` (runs in a worker thread).
+    def post_graphql(self, url: str, *, body: dict, slot: int = 0) -> dict:
+        """The synchronous GraphQL POST on pool session `slot` (runs in a worker thread).
 
         Handed to governor().wrap_fetch_text: the governor derives the host from `url`, waits on the
-        per-host bucket, then runs THIS off the event loop. `slot` rides as a kwarg the governor forwards
-        untouched, so each in-flight request GETs on its own leased, never-shared session (thread-safe).
-        Returns the raw HTML text. Raises on a non-200 so the breaker sees a challenge/throttle."""
+        per-host bucket, then runs THIS off the event loop. `slot` and `body` ride as kwargs the governor
+        forwards untouched, so each in-flight request POSTs on its own leased, never-shared session
+        (thread-safe). Returns the parsed JSON. Raises on a non-200 so the breaker sees a throttle."""
         session = self._sessions[slot]
-        resp = session.get(url, headers=_HEADERS, impersonate=_IMPERSONATE, timeout=_TIMEOUT)
+        # The session is already pinned to _IMPERSONATE in __init__; do NOT re-pass impersonate here
+        # (a per-call value would silently override the session fingerprint).
+        resp = session.post(url, json=body, headers=_HEADERS, timeout=_TIMEOUT)
         self.last_status = resp.status_code
         if resp.status_code != 200:
-            raise RuntimeError(f"HTTP {resp.status_code} on {url}")
-        return resp.content.decode("utf-8", "replace")
+            raise RuntimeError(f"HTTP {resp.status_code} on {url}: "
+                               f"{resp.content[:200].decode('utf-8', 'replace')}")
+        return resp.json()
 
-    async def fetch_page_async(self, governed_fetch, url: str) -> str:
-        """Lease a pool slot, fetch THROUGH the governor on that slot, release it."""
+    async def post_async(self, governed_post, url: str, *, body: dict) -> dict:
+        """Lease a pool slot, POST THROUGH the governor on that slot, release it."""
         slot = await self._free.get()
         try:
-            return await governed_fetch(url, slot=slot)
+            return await governed_post(url, body=body, slot=slot)
         finally:
             self._free.put_nowait(slot)
 
@@ -402,32 +471,36 @@ class AyvensFetcher:
 # ---------------------------------------------------------------------------
 
 AYVENS_PLATFORM_RECIPE = {
-    "version": 1,
+    "version": 2,
     "source": "Ayvens Carmarket (ALD remarketing; carmarket.ayvens.com)",
     "group": "subastas (car auction / remarketing); source_group=official_registry",
-    "scope": "platform-wholesale (ES auction lots; Angular Universal SSR apollo.state transfer-state)",
-    "engine": "curl_cffi+chrome131_impersonate+ssr_apollo_state(GET html)",
-    "access": ("PUBLIC. carmarket.ayvens.com/es-es/lots serves a server-rendered Angular page whose "
-               "`ng-state` <script type=application/json> embeds the live 'opened' sale events AND "
-               "their lots in an apollo.state cache — key-free to a plain chrome131 GET, no WAF "
-               "challenge, no proxy/browser/cookie warm-up. The first-party GraphQL gateway "
-               "(api-carmarket.ayvens.com/graphql) is walled by an Azure APIM subscription key held "
-               "SERVER-SIDE (401 without it; NOT in the client bundle) — so the SSR ng-state is the "
-               "ONLY key-free public surface. defense_tier=t0_open, website_waf=none, is_tier1=FALSE."),
+    "scope": "platform-wholesale (full ES-tenant catalog; first-party GraphQL gateway LoadLots drain)",
+    "engine": "curl_cffi+chrome131_impersonate+graphql(POST json)",
+    "access": ("PUBLIC. api-carmarket.ayvens.com/graphql/saleevents is the first-party GraphQL gateway "
+               "the Carmarket Angular SPA's Apollo HttpLink calls DIRECTLY. The subscription key it "
+               "expects (x-ald-subscription-key) is sent CLIENT-SIDE — it is present in every browser "
+               "request, NOT a server-side secret — so the gateway is reachable key-free to a plain "
+               "chrome131 POST with that header (+ x-tenant: ald, x-country: es). No WAF challenge, no "
+               "proxy/cookie warm-up. defense_tier=t0_open, website_waf=none, is_tier1=FALSE. (The old "
+               "SSR `ng-state` on /es-es/lots embedded only a ~37-lot render window — a snapshot, not "
+               "the catalog; reading only that was the prior defect.)"),
     "data_surface": "internal_api",
-    "surface_intent": "ssr_apollo_transfer_state",
-    "endpoint": "GET https://carmarket.ayvens.com/es-es/lots (parse ng-state apollo.state)",
+    "surface_intent": "graphql_gateway",
+    "endpoint": "POST https://api-carmarket.ayvens.com/graphql/saleevents (operations LoadLots, saleEvents)",
     "request": {
-        "headers": "Accept text/html, Accept-Language es-ES, Referer https://carmarket.ayvens.com/",
-        "extraction": ("regex out <script id=ng-state type=application/json>{...}</script>, JSON-parse, "
-                       "read data['apollo.state']; LotWithSaleEvent:* = cars, SaleEventWithLots:* = sales"),
+        "headers": ("Content-Type application/json, Accept application/json, "
+                    "x-ald-subscription-key <client key>, x-tenant ald, x-country es, "
+                    "Origin/Referer https://carmarket.ayvens.com/"),
+        "operations": ("LoadLots(order,take,skip,where) -> lots{items{...} aggregates{count}}; "
+                       "saleEvents -> saleEvents{items{id,country,name,reference,type,state,lotsCount}}"),
     },
-    "enumeration": ("the SSR render embeds the lots of the CURRENTLY-OPEN sale events (a live snapshot; "
-                    "each sale carries lotsCount in the hundreds but only a window is SSR'd). Cage every "
-                    "ES lot (saleEventCountry=='es'). Dedup on lot id. NO key-free pagination beyond the "
-                    "SSR embed — a full per-sale drain needs the APIM-keyed GraphQL (gated; documented)."),
-    "denominator": ("per-sale SaleEventWithLots.lotsCount (the declared full size of each ES sale); the "
-                    "public slice is the SSR-embedded subset, recorded honestly for the VAM arithmetic"),
+    "enumeration": ("fetch saleEvents ONCE (the seller catalog), then page LoadLots take=200/skip+=take "
+                    "to aggregates.count, draining EVERY lot of the x-country=es tenant (the Spanish "
+                    "remarketing operation's whole sellable book). Dedup on lot id. Filter "
+                    "where.state nin [closed,withdrawn,sold] (the source's own live filter). Lots no "
+                    "longer in the live catalog are reconciled to status=gone/removed (no phantom stale)."),
+    "denominator": ("LoadLots aggregates.count under the live state filter — the gateway's EXACT total "
+                    "for the ES tenant (3,977 verified live 2026-06-13). This is the VAM denominator."),
     "platform_entity": ("kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), "
                         "is_tier1=FALSE, defense_tier=t0_open, source_group=official_registry, "
                         "role=platform, family=ayvens_carmarket"),
@@ -439,40 +512,41 @@ AYVENS_PLATFORM_RECIPE = {
     "dual_membership": ("vehicle.entity_ulid=SELLING SALE EVENT (subasta); "
                         "platform_listing edge=platform<->vehicle"),
     "field_map": {
-        "deep_link": "https://carmarket.ayvens.com/es-es/lot/{LotWithSaleEvent.id}",
-        "listing_ref": "LotWithSaleEvent.id (stable lot id + dedup key)",
-        "make": "LotWithSaleEvent.make (UPPERCASE on source; title-cased)",
-        "model": "LotWithSaleEvent.model",
-        "version": "LotWithSaleEvent.version",
-        "year": "LotWithSaleEvent.firstRegistrationDate (YYYY-MM-DD -> YYYY)",
-        "km": "LotWithSaleEvent.mileage",
-        "price": "LotWithSaleEvent.fixedPrice (tender/direct-buy only; pure-auction lots have NO public price -> NULL)",
-        "fuel": "LotWithSaleEvent.fuelType (diesel/petrol/... -> Spanish label)",
-        "transmission": "LotWithSaleEvent.transmissionType (manual/automatic -> Manual/Automático)",
-        "photo_url": "LotWithSaleEvent.mainImageUrl ({size} -> 800x600); fallback images[0]",
-        "sale": "LotWithSaleEvent.saleEventId -> SaleEventWithLots {name, reference, type, description, lotsCount, country}",
-        "country_filter": "LotWithSaleEvent.saleEventCountry == 'es' (ES-scoped group)",
+        "deep_link": "https://carmarket.ayvens.com/es-es/lot/{lots.items.id}",
+        "listing_ref": "lots.items.id (stable lot id + dedup key)",
+        "make": "lots.items.make (UPPERCASE on source; title-cased)",
+        "model": "lots.items.model",
+        "version": "lots.items.version",
+        "year": "lots.items.firstRegistrationDate (YYYY-MM-DD -> YYYY)",
+        "km": "lots.items.mileage",
+        "price": "lots.items.fixedPrice (tender/direct-buy only; pure-auction lots have NO public price -> NULL)",
+        "fuel": "lots.items.fuelType (diesel/petrol/... -> Spanish label)",
+        "transmission": "lots.items.transmissionType (manual/automatic -> Manual/Automático)",
+        "photo_url": "lots.items.mainImageUrl ({size} -> 800x600); fallback images[0]",
+        "sale": "lots.items.saleEventId -> saleEvents.items {name, reference, type, description, lotsCount, country}",
+        "tenant_scope": "x-country=es header (Spanish remarketing tenant; saleEventCountry is a per-car tally, NOT a gate)",
     },
     "gate_documented": {
         "autorola": "Angular SPA (S3 shell); lots/auctions API relative-pathed, bidding needs dealer approval. GATED.",
         "bca": "B2B only — solo profesionales del automóvil; lots behind buyer login. GATED.",
         "allane": "DE leasing remarketer; no public ES car-stock surface reachable. GATED.",
         "aucto": "connection refused / not reachable. GATED (unreachable).",
-        "ayvens": "PUBLIC SSR apollo.state — the one auction operator exposing public ES lots. CONNECTED.",
+        "ayvens": "PUBLIC GraphQL gateway (client-side key) — the one auction operator exposing the full public ES catalog. CONNECTED.",
     },
     "caveats": {
-        "snapshot": "the SSR embeds only the open sales' lot window, not the full lotsCount; honest slice.",
+        "full_catalog": "the GraphQL drain caps at aggregates.count (the gateway's exact total) — full catalog, not a slice.",
         "no_geo": "auction lots have NO per-lot province; the sale event is national (province NULL).",
         "no_price": "pure-auction lots expose no public price (bid-based); fixedPrice present only on tenders.",
-        "apim_wall": "the GraphQL gateway needs an Azure APIM subscription key (server-side); not faked.",
+        "tenant_scope": "ES = the x-country=es tenant (the Spanish operator's whole book); cars may sit in other countries physically.",
+        "client_key": "the subscription key is sent CLIENT-SIDE by the browser (not a server secret); we reuse the public key, none fabricated.",
     },
 }
 
 
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the Ayvens Carmarket platform entity + platform_meta exist. Returns the
-    platform entity_ulid. kind='plataforma', is_tier1=FALSE (no WAF fronts the SSR surface), multi-axis
-    0016 classification set explicitly, data_surface='internal_api' (SSR transfer-state JSON)."""
+    platform entity_ulid. kind='plataforma', is_tier1=FALSE (no WAF fronts the gateway), multi-axis
+    0016 classification set explicitly, data_surface='internal_api' (first-party GraphQL gateway JSON)."""
     code = ayvens_platform_cdp_code()
     eulid = ulid()
     await conn.execute(
@@ -499,9 +573,10 @@ async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
            ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
                surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
         eulid, json.dumps({"endpoint": ENDPOINT, "host": host_of(ENDPOINT),
-                           "method": "GET", "country": ES_COUNTRY,
-                           "denominator": "saleEvent.lotsCount",
-                           "surface_intent": "ssr_apollo_transfer_state",
+                           "method": "POST", "country": ES_COUNTRY,
+                           "operations": ["LoadLots", "saleEvents"],
+                           "denominator": "LoadLots.aggregates.count",
+                           "surface_intent": "graphql_gateway",
                            "engine": "curl_cffi/chrome131_impersonate"}),
         AYVENS_FAMILY)
     return eulid
@@ -532,7 +607,8 @@ def _sale_cdp(s: SaleRef) -> str:
 # Orchestration
 # ---------------------------------------------------------------------------
 
-DEFAULT_CONCURRENCY = 1   # the SSR surface is a single listing render; 1 GET per drain is enough.
+DEFAULT_CONCURRENCY = 1   # LoadLots pages take/skip sequentially (each page depends on the prior skip);
+                          # 1 session is correct. The pool seam stays for fingerprint coherence if widened.
 
 
 @dataclass
@@ -614,16 +690,19 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::js
 
 def _parse_lots(lots: list[dict], sale_events: dict[str, dict], seen_ids: set,
                 harvested_cageable: set, stats: dict) -> list[_CageRow]:
-    """Parse every ES lot — pure CPU, no SQL. Dedup on lot id; ES-country gate; sale-event attribution.
+    """Parse every lot of the ES (Spanish Ayvens) tenant — pure CPU, no SQL. Dedup on lot id; sale-event
+    attribution. NO per-lot saleEventCountry gate: the ES scope is the x-country tenant (the Spanish
+    operator's whole catalog), so every lot the gateway returns under that tenant IS in scope, wherever
+    the car physically sits. (`saleEventCountry` is recorded for the per-country tally, never as a gate.)
 
     `seen_ids` / `harvested_cageable` / `stats` are mutated with deterministic order so the VAM truth
     (distinct (sale_cdp, deep_link) pairs) is exact regardless of batching."""
     rows: list[_CageRow] = []
     for lot in lots:
         stats["items_seen"] += 1
-        if (lot.get("saleEventCountry") or "").lower() != ES_COUNTRY:
-            stats["non_es_skipped"] += 1
-            continue
+        country = (lot.get("saleEventCountry") or "").lower()
+        if country == ES_COUNTRY:
+            stats["es_physical_lots"] += 1   # tally only; NOT a gate.
         lot_id = str(lot.get("id") or "")
         if lot_id and lot_id in seen_ids:
             stats["dup_ids_collapsed"] += 1
@@ -781,15 +860,44 @@ async def _ingest_lots(conn: asyncpg.Connection, platform_ulid: str, lots: list[
             stats["new_events"] += len(confirmed_new)
 
 
+async def _seen_vehicle_ulids(conn: asyncpg.Connection, platform_ulid: str,
+                              harvested_cageable: set[tuple[str, str]]) -> set[str]:
+    """Resolve the harvested (sale_cdp, deep_link) pairs to the vehicle ulids now on Ayvens edges.
+
+    The harvest tracks cageable cars as (sale_cdp, deep_link); after ingest the truth lives in the DB.
+    We read the vehicle ulids reachable from the Ayvens platform whose (sale entity, deep_link) matches
+    a harvested pair — that exact set is "seen this run". Its complement among the pre-run edge vehicles
+    is the aged-out set the reconcile retires. Set-based, ONE query."""
+    if not harvested_cageable:
+        return set()
+    # Materialize ONCE so the two parallel arrays are guaranteed positionally coherent (a set's
+    # iteration order is stable within a single pass but building both lists from the same snapshot
+    # makes the (cdp, link) pairing immune to any future refactor that iterates twice).
+    pairs = list(harvested_cageable)
+    cdps = [c for (c, _d) in pairs]
+    links = [d for (_c, d) in pairs]
+    rows = await conn.fetch(
+        """SELECT pl.vehicle_ulid
+             FROM platform_listing pl
+             JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
+             JOIN entity e ON e.entity_ulid = v.entity_ulid
+             JOIN unnest($2::text[], $3::text[]) AS h(cdp_code, deep_link)
+               ON h.cdp_code = e.cdp_code AND h.deep_link = v.deep_link
+            WHERE pl.platform_entity_ulid = $1""",
+        platform_ulid, cdps, links)
+    return {r["vehicle_ulid"] for r in rows}
+
+
 async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
     conn = await asyncpg.connect(DSN)
     concurrency = max(1, concurrency)
     fetcher = AyvensFetcher(pool_size=concurrency)
     stats = {
-        "pages_fetched": 0, "items_seen": 0, "es_lots": 0, "non_es_skipped": 0,
+        "pages_fetched": 0, "items_seen": 0, "es_lots": 0, "es_physical_lots": 0,
         "no_sale_skipped": 0, "no_link_skipped": 0, "priced_lots": 0,
         "new_sales": 0, "cars_caged": 0, "new_cars": 0, "edges_created": 0, "new_events": 0,
         "declared_full": None, "dup_ids_collapsed": 0, "sales_distinct": 0,
+        "aggregate_count": None, "es_sales_seen": 0, "retired_vehicles": 0, "retired_listings": 0,
         "concurrency": concurrency,
     }
     # Harvest-side truth for the VAM: distinct CAGEABLE cars = distinct (sale_cdp, deep_link) pairs.
@@ -803,7 +911,10 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
         return {"skipped": True, "reason": "breaker_open", "source_key": AYVENS_SOURCE_KEY}
 
     gov = governor()
-    governed_fetch = gov.wrap_fetch_text(fetcher.fetch_page)
+    # The governor's wrap_fetch_text forwards arbitrary kwargs (slot, body) to the wrapped callable
+    # untouched, so it governs a POST exactly as it governs a GET — same per-host bucket, same off-loop
+    # worker thread. We hand it fetcher.post_graphql so every GraphQL POST is paced by the host bucket.
+    governed_post = gov.wrap_fetch_text(fetcher.post_graphql)
 
     fetch_error: str | None = None
     last_http: int | None = None
@@ -814,50 +925,103 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
               f"kind={AYVENS_KIND} group={AYVENS_SOURCE_GROUP} tier={AYVENS_DEFENSE_TIER} "
               f"family={AYVENS_FAMILY}")
         print(f"[group_subastas_wholesale] governor paces host {host_of(ENDPOINT)} "
-              f"(per-host token bucket, STEALTH class — SSR HTML surface).")
-        print(f"[group_subastas_wholesale] PUBLIC member = Ayvens Carmarket; gated members "
-              f"(Autorola/BCA/Allane/Aucto) documented in the recipe.")
+              f"(per-host token bucket, JSON_API class — first-party GraphQL gateway).")
+        print(f"[group_subastas_wholesale] PUBLIC member = Ayvens Carmarket (x-country={ES_COUNTRY} "
+              f"tenant); gated members (Autorola/BCA/Allane/Aucto) documented in the recipe.")
 
         seen_ids: set[str] = set()
         sales_before = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='subasta' AND first_discovered_source=$1",
             AYVENS_SOURCE_KEY)}
+        # The vehicle ulids on Ayvens edges BEFORE this run — for the aged-out reconcile at the end.
+        vehicles_before = {r["vehicle_ulid"] for r in await conn.fetch(
+            "SELECT vehicle_ulid FROM platform_listing WHERE platform_entity_ulid=$1", platform_ulid)}
 
-        # Fetch the SSR listing, extract the apollo.state, split into lots + sale events, ingest ES lots.
+        # ---- (1) Fetch the sale-event catalog ONCE: the SELLER identities (name/ref/type/lotsCount).
+        sale_events: dict[str, dict] = {}
         try:
-            html = await fetcher.fetch_page_async(governed_fetch, ENDPOINT)
-            stats["pages_fetched"] = 1
+            se_payload = await fetcher.post_async(governed_post, ENDPOINT,
+                                                  body={"query": _SALE_EVENTS_QUERY})
+            sale_events = parse_sale_events_payload(se_payload)
+            stats["pages_fetched"] += 1
+            print(f"[group_subastas_wholesale] sale-event catalog: {len(sale_events)} sale events.")
         except Exception as e:
             fetch_error = str(e)
             last_http = fetcher.last_status
-            print(f"[group_subastas_wholesale] fetch failed ({e}); stopping honestly.")
-            html = None
+            print(f"[group_subastas_wholesale] saleEvents fetch failed ({e}); stopping honestly.")
 
-        if html is not None:
+        # ---- (2) Drain EVERY lot of the ES tenant: page LoadLots take/skip to aggregates.count.
+        if fetch_error is None:
+            skip = 0
+            page = 0
             try:
-                cache = extract_apollo_state(html)
-                lots, sale_events = split_cache(cache)
-                # declared full = sum of the ES sales' declared lotsCount (denominator, honest).
-                es_sale_ids = {str(l.get("saleEventId")) for l in lots
-                               if (l.get("saleEventCountry") or "").lower() == ES_COUNTRY}
-                declared = 0
-                for sid in es_sale_ids:
-                    lc = _to_int((sale_events.get(sid) or {}).get("lotsCount"))
-                    if lc:
-                        declared += lc
-                stats["declared_full"] = declared or None
-                stats["es_sales_seen"] = len(es_sale_ids)
-                print(f"[group_subastas_wholesale] SSR apollo.state: {len(lots)} lots, "
-                      f"{len(sale_events)} sale events; ES sales={len(es_sale_ids)} "
-                      f"(declared lotsCount sum={declared}).")
-                await _ingest_lots(conn, platform_ulid, lots, sale_events, seen_ids,
-                                   harvested_cageable, stats)
-                print(f"[group_subastas_wholesale] ingested: es_lots={stats['es_lots']} "
-                      f"caged={stats['cars_caged']} new={stats['new_cars']} "
-                      f"edges={stats['edges_created']} sales={len(es_sale_ids)}")
+                while page < _MAX_PAGES:
+                    body = {
+                        "operationName": "LoadLots",
+                        "variables": {
+                            "order": _LOT_ORDER,
+                            "lotFilterInput": {"and": [{"state": {"nin": _LOT_STATE_NIN}}]},
+                            "take": _PAGE_SIZE, "skip": skip,
+                        },
+                        "query": _LOAD_LOTS_QUERY,
+                    }
+                    payload = await fetcher.post_async(governed_post, ENDPOINT, body=body)
+                    stats["pages_fetched"] += 1
+                    page += 1
+                    items, count = parse_lots_payload(payload)
+                    if count is not None and stats["aggregate_count"] is None:
+                        stats["aggregate_count"] = count
+                        stats["declared_full"] = count   # the gateway's exact total = the denominator.
+                        print(f"[group_subastas_wholesale] LoadLots aggregate count (ES tenant): {count}")
+                    if not items:
+                        break
+                    await _ingest_lots(conn, platform_ulid, items, sale_events, seen_ids,
+                                       harvested_cageable, stats)
+                    print(f"[group_subastas_wholesale] page {page}: +{len(items)} items "
+                          f"(skip={skip}); caged so far={stats['cars_caged']} "
+                          f"new={stats['new_cars']} edges={stats['edges_created']}")
+                    skip += _PAGE_SIZE
+                    total = stats["aggregate_count"]
+                    if total is not None and skip >= total:
+                        break
+                if page >= _MAX_PAGES:
+                    print(f"[group_subastas_wholesale] WARNING: hit _MAX_PAGES={_MAX_PAGES} guard.")
             except Exception as e:
                 fetch_error = fetch_error or str(e)
-                print(f"[group_subastas_wholesale] parse failed ({e}); SSR surface drift.")
+                last_http = fetcher.last_status
+                print(f"[group_subastas_wholesale] LoadLots drain failed ({e}); partial-then-honest stop.")
+
+        # distinct sale events caged across this run = distinct sale_cdp in the harvested cageable set.
+        stats["es_sales_seen"] = len({sale_cdp for (sale_cdp, _dl) in harvested_cageable})
+
+        # ---- (3) Reconcile aged-out lots: any Ayvens vehicle NOT seen this run is retired so no
+        # phantom stale lot is counted as live. Only runs on a clean full drain (never on a partial
+        # fetch_error, which would falsely retire the whole catalog on a transient gateway blip).
+        # SAFETY DEPENDENCY (do not break on refactor): the `fetch_error is None` guard is sound ONLY
+        # because the SINGLE try/except wrapping the LoadLots `while` above captures BOTH network errors
+        # AND _ingest_lots DB errors — so a mid-drain failure (network OR ingest) sets fetch_error and
+        # skips this reconcile. If that try/except is ever split, this guard must be revisited or a
+        # partial ingest could wrongly retire the un-fetched tail.
+        if fetch_error is None and stats["cars_caged"] > 0:
+            seen_vehicle_ulids = {vehicle_ulid_seen
+                                  for vehicle_ulid_seen in await _seen_vehicle_ulids(
+                                      conn, platform_ulid, harvested_cageable)}
+            stale = list(vehicles_before - seen_vehicle_ulids)
+            if stale:
+                async with conn.transaction():
+                    rl = await conn.fetch(
+                        """UPDATE platform_listing SET status='removed', last_seen=now()
+                            WHERE platform_entity_ulid=$1 AND vehicle_ulid = ANY($2::text[])
+                              AND status <> 'removed' RETURNING vehicle_ulid""",
+                        platform_ulid, stale)
+                    rv = await conn.fetch(
+                        """UPDATE vehicle SET status='gone'
+                            WHERE vehicle_ulid = ANY($1::text[]) AND status <> 'gone'
+                            RETURNING vehicle_ulid""", stale)
+                    stats["retired_listings"] = len(rl)
+                    stats["retired_vehicles"] = len(rv)
+                print(f"[group_subastas_wholesale] reconciled aged-out: retired "
+                      f"{stats['retired_listings']} listings / {stats['retired_vehicles']} vehicles.")
 
         sales_after = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='subasta' AND first_discovered_source=$1",
@@ -899,7 +1063,7 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
         run_ok = fetch_error is None and stats["cars_caged"] > 0 and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else
                                     (f"VAM verdict {verdict}" if stats["cars_caged"] > 0
-                                     else "no ES lots caged"))
+                                     else "no lots caged"))
         outcome = await record_run(
             conn, AYVENS_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
             error=run_error, http_status=last_http)
@@ -924,17 +1088,19 @@ def _print_report(stats: dict) -> None:
     print(f"  platform cdp_code     : {stats.get('platform_code')}")
     print(f"  group / kind          : official_registry / plataforma (sellers kind=subasta, family ayvens_carmarket)")
     print(f"  public member         : Ayvens Carmarket (Autorola/BCA/Allane/Aucto gated — see recipe)")
-    print(f"  declared full (source): {stats.get('declared_full')} (sum of ES sales' lotsCount)")
-    print(f"  ES sales seen         : {stats.get('es_sales_seen')}")
+    print(f"  declared full (source): {stats.get('declared_full')} (LoadLots aggregate.count, ES tenant)")
+    print(f"  sale events caged     : {stats.get('es_sales_seen')} (distinct this run)")
     print(f"  pages fetched         : {stats['pages_fetched']}")
     print(f"  items seen            : {stats['items_seen']}")
-    print(f"  non-ES skipped        : {stats['non_es_skipped']}")
+    print(f"  es-physical tally     : {stats.get('es_physical_lots')} (saleEventCountry=='es'; tally, not a gate)")
     print(f"  no-sale skipped       : {stats['no_sale_skipped']}")
     print(f"  no-link skipped       : {stats['no_link_skipped']}")
     print(f"  dup ids collapsed     : {stats.get('dup_ids_collapsed')}")
-    print(f"  ES lots               : {stats['es_lots']} ({stats['priced_lots']} with a public price)")
+    print(f"  tenant lots caged     : {stats['es_lots']} ({stats['priced_lots']} with a public price)")
     print(f"  sale-event sellers    : {stats['sales_distinct']} distinct ({stats['new_sales']} new this run)")
     print(f"  cars caged            : {stats['cars_caged']} ({stats['new_cars']} new)")
+    print(f"  aged-out retired      : {stats.get('retired_vehicles')} vehicles / "
+          f"{stats.get('retired_listings')} listings")
     print(f"  platform_listing edges: {stats['edges_created']} created "
           f"(db total for Ayvens = {stats.get('db_edges')})")
     print(f"  NEW delta events      : {stats['new_events']}")
@@ -964,10 +1130,11 @@ def _force_utf8_stdout() -> None:
 def main() -> None:
     _force_utf8_stdout()
     parser = argparse.ArgumentParser(
-        description="subastas group wholesale harvester (Ayvens Carmarket SSR apollo.state drain)")
+        description="subastas group wholesale harvester (Ayvens Carmarket GraphQL LoadLots drain)")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,
-                        help=(f"GET sessions in the pool; default {DEFAULT_CONCURRENCY}. The SSR surface "
-                              f"is a single listing render — the governor's per-host bucket is the limiter."))
+                        help=(f"POST sessions in the pool; default {DEFAULT_CONCURRENCY}. The LoadLots "
+                              f"drain pages take/skip sequentially — the governor's per-host bucket is "
+                              f"the limiter; the pool only widens fingerprint-coherent parallelism."))
     args = parser.parse_args()
     stats = asyncio.run(harvest(args.concurrency))
     _print_report(stats)

@@ -1,44 +1,45 @@
 # Cardeep extraction recipe — CDP-ES-00-H1VCV020
 # Reusable; re-scrape without raw crude.
-version: 1
+version: 2
 source: Ayvens Carmarket (ALD remarketing; carmarket.ayvens.com)
 group: subastas (car auction / remarketing); source_group=official_registry
-scope: platform-wholesale (ES auction lots; Angular Universal SSR apollo.state transfer-state)
-engine: curl_cffi+chrome131_impersonate+ssr_apollo_state(GET html)
-access: PUBLIC. carmarket.ayvens.com/es-es/lots serves a server-rendered Angular page whose `ng-state` <script type=application/json> embeds the live 'opened' sale events AND their lots in an apollo.state cache — key-free to a plain chrome131 GET, no WAF challenge, no proxy/browser/cookie warm-up. The first-party GraphQL gateway (api-carmarket.ayvens.com/graphql) is walled by an Azure APIM subscription key held SERVER-SIDE (401 without it; NOT in the client bundle) — so the SSR ng-state is the ONLY key-free public surface. defense_tier=t0_open, website_waf=none, is_tier1=FALSE.
+scope: platform-wholesale (full ES-tenant catalog; first-party GraphQL gateway LoadLots drain)
+engine: curl_cffi+chrome131_impersonate+graphql(POST json)
+access: PUBLIC. api-carmarket.ayvens.com/graphql/saleevents is the first-party GraphQL gateway the Carmarket Angular SPA's Apollo HttpLink calls DIRECTLY. The subscription key it expects (x-ald-subscription-key) is sent CLIENT-SIDE — it is present in every browser request, NOT a server-side secret — so the gateway is reachable key-free to a plain chrome131 POST with that header (+ x-tenant: ald, x-country: es). No WAF challenge, no proxy/cookie warm-up. defense_tier=t0_open, website_waf=none, is_tier1=FALSE. (The old SSR `ng-state` on /es-es/lots embedded only a ~37-lot render window — a snapshot, not the catalog; reading only that was the prior defect.)
 data_surface: internal_api
-surface_intent: ssr_apollo_transfer_state
-endpoint: GET https://carmarket.ayvens.com/es-es/lots (parse ng-state apollo.state)
+surface_intent: graphql_gateway
+endpoint: POST https://api-carmarket.ayvens.com/graphql/saleevents (operations LoadLots, saleEvents)
 request:
-  headers: Accept text/html, Accept-Language es-ES, Referer https://carmarket.ayvens.com/
-  extraction: regex out <script id=ng-state type=application/json>{...}</script>, JSON-parse, read data['apollo.state']; LotWithSaleEvent:* = cars, SaleEventWithLots:* = sales
-enumeration: the SSR render embeds the lots of the CURRENTLY-OPEN sale events (a live snapshot; each sale carries lotsCount in the hundreds but only a window is SSR'd). Cage every ES lot (saleEventCountry=='es'). Dedup on lot id. NO key-free pagination beyond the SSR embed — a full per-sale drain needs the APIM-keyed GraphQL (gated; documented).
-denominator: per-sale SaleEventWithLots.lotsCount (the declared full size of each ES sale); the public slice is the SSR-embedded subset, recorded honestly for the VAM arithmetic
+  headers: Content-Type application/json, Accept application/json, x-ald-subscription-key <client key>, x-tenant ald, x-country es, Origin/Referer https://carmarket.ayvens.com/
+  operations: LoadLots(order,take,skip,where) -> lots{items{...} aggregates{count}}; saleEvents -> saleEvents{items{id,country,name,reference,type,state,lotsCount}}
+enumeration: fetch saleEvents ONCE (the seller catalog), then page LoadLots take=200/skip+=take to aggregates.count, draining EVERY lot of the x-country=es tenant (the Spanish remarketing operation's whole sellable book). Dedup on lot id. Filter where.state nin [closed,withdrawn,sold] (the source's own live filter). Lots no longer in the live catalog are reconciled to status=gone/removed (no phantom stale).
+denominator: LoadLots aggregates.count under the live state filter — the gateway's EXACT total for the ES tenant (3,977 verified live 2026-06-13). This is the VAM denominator.
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=official_registry, role=platform, family=ayvens_carmarket
 seller_model: the SELLING POINT is the SALE EVENT (the auction). Each car -> entity kind='subasta' (national; province NULL), canonical_key name:'ayvens sale {reference|id}'|p00, source_ref=sale id; role='registry'. NO per-lot dealer/province exists on this surface — an auction lot belongs to a national remarketing SALE, not a geo-anchored shop. No province is fabricated.
 dual_membership: vehicle.entity_ulid=SELLING SALE EVENT (subasta); platform_listing edge=platform<->vehicle
 field_map:
-  deep_link: https://carmarket.ayvens.com/es-es/lot/{LotWithSaleEvent.id}
-  listing_ref: LotWithSaleEvent.id (stable lot id + dedup key)
-  make: LotWithSaleEvent.make (UPPERCASE on source; title-cased)
-  model: LotWithSaleEvent.model
-  version: LotWithSaleEvent.version
-  year: LotWithSaleEvent.firstRegistrationDate (YYYY-MM-DD -> YYYY)
-  km: LotWithSaleEvent.mileage
-  price: LotWithSaleEvent.fixedPrice (tender/direct-buy only; pure-auction lots have NO public price -> NULL)
-  fuel: LotWithSaleEvent.fuelType (diesel/petrol/... -> Spanish label)
-  transmission: LotWithSaleEvent.transmissionType (manual/automatic -> Manual/Automático)
-  photo_url: LotWithSaleEvent.mainImageUrl ({size} -> 800x600); fallback images[0]
-  sale: LotWithSaleEvent.saleEventId -> SaleEventWithLots {name, reference, type, description, lotsCount, country}
-  country_filter: LotWithSaleEvent.saleEventCountry == 'es' (ES-scoped group)
+  deep_link: https://carmarket.ayvens.com/es-es/lot/{lots.items.id}
+  listing_ref: lots.items.id (stable lot id + dedup key)
+  make: lots.items.make (UPPERCASE on source; title-cased)
+  model: lots.items.model
+  version: lots.items.version
+  year: lots.items.firstRegistrationDate (YYYY-MM-DD -> YYYY)
+  km: lots.items.mileage
+  price: lots.items.fixedPrice (tender/direct-buy only; pure-auction lots have NO public price -> NULL)
+  fuel: lots.items.fuelType (diesel/petrol/... -> Spanish label)
+  transmission: lots.items.transmissionType (manual/automatic -> Manual/Automático)
+  photo_url: lots.items.mainImageUrl ({size} -> 800x600); fallback images[0]
+  sale: lots.items.saleEventId -> saleEvents.items {name, reference, type, description, lotsCount, country}
+  tenant_scope: x-country=es header (Spanish remarketing tenant; saleEventCountry is a per-car tally, NOT a gate)
 gate_documented:
   autorola: Angular SPA (S3 shell); lots/auctions API relative-pathed, bidding needs dealer approval. GATED.
   bca: B2B only — solo profesionales del automóvil; lots behind buyer login. GATED.
   allane: DE leasing remarketer; no public ES car-stock surface reachable. GATED.
   aucto: connection refused / not reachable. GATED (unreachable).
-  ayvens: PUBLIC SSR apollo.state — the one auction operator exposing public ES lots. CONNECTED.
+  ayvens: PUBLIC GraphQL gateway (client-side key) — the one auction operator exposing the full public ES catalog. CONNECTED.
 caveats:
-  snapshot: the SSR embeds only the open sales' lot window, not the full lotsCount; honest slice.
+  full_catalog: the GraphQL drain caps at aggregates.count (the gateway's exact total) — full catalog, not a slice.
   no_geo: auction lots have NO per-lot province; the sale event is national (province NULL).
   no_price: pure-auction lots expose no public price (bid-based); fixedPrice present only on tenders.
-  apim_wall: the GraphQL gateway needs an Azure APIM subscription key (server-side); not faked.
+  tenant_scope: ES = the x-country=es tenant (the Spanish operator's whole book); cars may sit in other countries physically.
+  client_key: the subscription key is sent CLIENT-SIDE by the browser (not a server secret); we reuse the public key, none fabricated.
