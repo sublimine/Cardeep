@@ -65,4 +65,6 @@ nissan, kia, seat_cupra, renew, ford). 18 tests verdes. Forward-fix; lo históri
 ## Log
 - 2026-06-14 — Reconocimiento B1 cerrado (4 vías). Raíz explosión OEM-VO confirmada. Plan de campaña sellado.
 - 2026-06-14 — Fable 5 sin acceso (Mythos restringido). Routing efectivo de la campaña: **Sonnet construye, Opus dirige y verifica**.
-- 2026-06-14 — B1.0 CERRADO: `mercedes_benz` + `das_weltauto` arreglados (clave `name+municipio`); 11 conectores OEM-VO restantes auditados sanos; 18 tests verdes. Siguiente: B1.1 (dedup drain milanuncios) → B1.2 (`entity_cluster`).
+- 2026-06-14 — B1.0 CERRADO: `mercedes_benz` + `das_weltauto` arreglados (clave `name+municipio`); 11 conectores OEM-VO restantes auditados sanos; 18 tests verdes.
+- 2026-06-14 — MISSION.md sellado (super-prompt maestro, asignado como /goal). Splink 4.0.16 instalado y verificado (importa con pandas 3.0.3).
+- 2026-06-14 — B1.2: migración `0020_entity_cluster` aplicada y verificada (overlay no-destructivo `entity_cluster` + `entity_cluster_run` + vista `v_canonical`; FK por `entity_ulid` porque `cdp_code` solo tiene unique index; `vam_verdict_id`→`verification_verdict(id)`). Falso positivo descartado: `migrate.py` está limpio (no tiene el NameError que un agente reportó). Siguiente: B1.3 (job Splink sobre el overlay) → B1.1 (dedup drain milanuncios).
