@@ -1,0 +1,38 @@
+# Cardeep extraction recipe — CDP-ES-00-HFR3D62Y
+# Reusable; re-scrape without raw crude.
+version: 1
+source: LocalizaVO (Localiza V.O.; subastas de coches para profesionales; localizavo.es)
+group: subastas (B2B car auction / remarketing); source_group=official_registry
+scope: platform-wholesale (full public lot catalog; SSR auction-event pages, nReg=0 drain)
+engine: curl_cffi+chrome131_impersonate+ssr_html_lot_cards
+access: PUBLIC. The per-lot catalog is server-rendered HTML visible to an anonymous chrome131 GET with NO login. The homepage + /subastas_listado.aspx link the live auction events as public anchors `subastas?idSubasta=<id>`; each event page renders every lot card and drains in ONE request via `&nReg=0` ('Todos'). A free professional registration gates BIDDING and the PRICE field only ('Precio visible solo para Usuarios Registrados'); the VEHICLE stock itself (make/model/version/fuel/km/year/photo/consigning company) is fully public. defense_tier=t0_open, website_waf=none, is_tier1=FALSE.
+data_surface: next_data
+surface_intent: ssr_html_lot_cards
+data_surface_label: the platform_meta.data_surface CHECK has no 'ssr_html'/'html_scrape' literal; stored as 'next_data' (the closest schema-valid first-party-render literal, the same choice the Clicars SSR-HTML member of group_vo_chains makes) with the precise surface_intent='ssr_html_lot_cards' kept in surface_detail.
+endpoint: GET https://www.localizavo.es/ (+ /subastas_listado.aspx) for the event index; GET https://www.localizavo.es/subastas?idSubasta=<id>&nReg=0 for the full lot list
+enumeration: collect every idSubasta linked on the public index pages; for each event GET ?idSubasta=<id>&nReg=0 ('Todos') to render ALL lots in one page; split on `<div class="fichavo subasta" id="subasta_<ref>">`; dedup on the native lot Ref; aged-out lots (a LocalizaVO edge not seen this run) -> status=gone/removed.
+denominator: the live public auction events' total lot count (sum of lots rendered by nReg=0 across every public idSubasta) — the EXACT denominator, not a guess. VAM denominator.
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=official_registry, role=platform, family=localizavo
+seller_model: LocalizaVO publishes DISCRETE auction EVENTS (idSubasta), so the selling point is the sale EVENT: ONE entity kind='subasta' (province NULL, national) PER event, role='registry' — identical to the Ayvens Carmarket / Autorola sale events. Each lot is owned by its event. The lot's consigning company (alt of the lot's company logo) is preserved as lot metadata; it is NOT turned into a geo-anchored dealer (the public lot has no per-lot address/province), so no province is fabricated.
+dual_membership: vehicle.entity_ulid=sale-event seller (subasta); platform_listing edge=platform<->vehicle
+price_gate: bid/registration gated: 'Precio visible solo para Usuarios Registrados' -> price=NULL (honest), exactly like the Ayvens/BCA/Autorola auction lots already caged.
+field_map:
+  deep_link: the lot detail URL (slug ending in -<ref>)
+  listing_ref: the native lot Ref (id="subasta_<ref>"; stable per-car id + dedup key)
+  make: <span class="marca">
+  model: <div class="modelo"> head after the make
+  year: Matriculación MM/YYYY -> YYYY
+  km: <div class="modelo"> segment ending in 'Kms.'
+  fuel: <div class="modelo"> 2nd '/'-segment (-> Spanish label)
+  photo_url: <div class="info"> first <img src>
+  seller_company: <div class="empresa"> logo <img alt> (consigning company; lot metadata)
+  price: WITHHELD from anonymous users -> NULL (bid/registration gated)
+gate_documented:
+  carcollect: GATED. www.carcollect.com is a HubSpot CMS MARKETING site (821-URL sitemap, ZERO per-lot detail pages; '8.154 en vivo' is a marketing counter). The trading app trade.carcollect.com is a Next.js SPA that 308->/login, and every /api/* path (auctions/vehicles/search) 307->/login for an anonymous client. B2B-only (account + verification + €82/car seller fee); NO anonymous public lot data layer. Verified live 2026-06-13. Not faked.
+  manheim_es: GATED (no credentials). B2B remarketer; catalog behind a buyer login. With no credentials available this is a REAL gated blocker, declared honestly — never fabricated. (Recorded gated in the sibling b2b_extra_auctions census.)
+  localizavo: PUBLIC SSR lot cards (price bid-gated -> NULL) — the b2b_auctions census target that exposes full public lot stock free. CONNECTED by this connector.
+caveats:
+  full_catalog: the drain caps at the live events' own total lot count — full public catalog, not a slice.
+  no_geo: auction lots have no per-lot province; the sale-event seller is national (province NULL).
+  per_event_seller: one kind='subasta' seller PER discrete auction event (idSubasta), not one global house.
+  price_null: price is bid/registration gated and withheld from anonymous users -> stored NULL (honest).

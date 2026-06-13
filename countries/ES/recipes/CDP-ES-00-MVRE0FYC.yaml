@@ -1,0 +1,27 @@
+# Cardeep extraction recipe — CDP-ES-00-MVRE0FYC
+# Reusable; re-scrape without raw crude.
+version: 1
+source: modrive.com
+group: importador
+scope: importador wholesale (MODRIVE SSR JSON-LD ItemList of Vehicle, own-site surface)
+engine: curl_cffi+chrome131_impersonate+ssr_jsonld_itemlist(GET)
+access: OPEN server-rendered HTML carrying schema.org JSON-LD (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). No WAF -> defense_tier t0_open.
+data_surface: json_ld
+surface_intent: ssr_jsonld_itemlist
+endpoint: GET https://www.modrive.com/coches-segunda-mano/
+enumeration: the SSR JSON-LD ItemList is a FIXED featured block of 19 Vehicle objects; page/N/ returns the SAME id-set (verified live) — the full catalog paginates ONLY in the AutoUncle widget, not the SSR JSON-LD. The harvester reads the own-site ItemList and stops when the next page adds no new ids.
+platform_entity: kind=importador, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=long_tail_web, role=standalone_pos, family=modrive
+ownership: IMPORTER-AS-OWNER: the SSR listing does not attribute a car to a physical branch, so the importer OWNS every car (vehicle.entity_ulid=importer). platform_listing edge=importer<->vehicle. owner entity == platform entity.
+field_map:
+  deep_link: ItemList.itemListElement[].item.url (per-car PDP)
+  listing_ref: deep-link numeric tail before trailing '/' (native stock id)
+  make: Vehicle.name first token
+  model: Vehicle.name remainder
+  title: Vehicle.name
+  price: Vehicle.offers.price (EUR)
+  photo_url: Vehicle.image[0]
+  declared_full: page-level Product.offers(AggregateOffer).offerCount
+caveats:
+  own_surface_only: MODRIVE's OWN SSR JSON-LD ItemList is harvested (the operator's first-party surface). The visual grid declares 2021 cars total, but that FULL catalog is rendered by an AutoUncle THIRD-PARTY widget (assets.autouncle.com GraphQL) on a different host — NOT the operator's own surface; harvesting it would scrape AutoUncle's shared multi-dealer feed, not MODRIVE's own stock. Recorded honestly as the deeper future surface, not silently scraped.
+  missing_fields: year/km/fuel/transmission are NOT in the JSON-LD ItemList (the operator omits them); they are left NULL, never fabricated. A per-PDP pass could enrich them later.
+  data_surface_label: schema enum has 'json_ld'; surface_intent 'ssr_jsonld_itemlist' is precise.

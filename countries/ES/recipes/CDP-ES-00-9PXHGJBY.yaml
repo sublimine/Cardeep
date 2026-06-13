@@ -1,0 +1,34 @@
+# Cardeep extraction recipe — CDP-ES-00-9PXHGJBY
+# Reusable; re-scrape without raw crude.
+version: 1
+source: faciliteacoches.com
+group: marketplace_motor
+scope: VO aggregator wholesale (Facilitea Coches; sitemap-index PDP drain; Next.js RSC car object)
+engine: curl_cffi+chrome131_impersonate+sitemap_index+rsc_car_object(GET)
+access: OPEN server-rendered Next.js App Router on Vercel (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). No WAF challenge -> defense_tier t0_open.
+data_surface: next_data
+surface_intent: sitemap_index_pdp_rsc
+endpoint: GET sitemap /peninsula-baleares/sitemap/coches-ficha.xml -> per-car PDP /es/es/ficha/{slug}-{id_mf}
+enumeration: the SRP /coches/ocasion/compra resolves results through a DEFERRED RSC server promise (?page=N ignored; browser pages via a Next.js server action, not header-reachable). CANONICAL full index = sitemap coches-ficha.xml (21,989 PDP URLs live). Drain PDP-by-PDP: each PDP re-emits the RSC car object with full attribution.
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=marketplace_motor, role=platform, family=faciliteacoches
+ownership: PER-SHOP: each car attributes to its REAL physical selling shop (shopData: name+cp(INE prov)+city), parented by dealerData group. vehicle.entity_ulid=shop; platform_listing edge=platform<->vehicle. A car whose shop/dealer geo cannot be resolved cages under the platform bucket (never dropped, never fabricated).
+field_map:
+  deep_link: https://www.faciliteacoches.com/es/es/ficha/{car.slug}
+  listing_ref: car.id_mf (Facilitea native stock id == PDP slug tail)
+  make: car.make
+  model: car.model
+  version: car.version
+  title: car.name
+  year: car.registrationDate||car.year
+  km: car.km
+  price: car.price
+  prev_price: car.prevPrice (price-drop delta)
+  fuel: car.fuel (clean ES label)
+  transmission: car.gearbox (automatico->Automático / else Manual)
+  photo_url: car.imgs[0].src
+  shop: car.shopData {id_mf,name,province,region,cp,city}  (the PHYSICAL selling point)
+  dealer_group: car.dealerData {id_mf,name,slug,province,cp,city}  (the parent OEM/dealer group)
+caveats:
+  rsc_pagination: the SRP returns the SAME first ~39 cars for every ?page/path variant — its results are a deferred RSC promise; full enumeration MUST use the ficha sitemap.
+  shop_vs_dealer: shopData.cp is the car's real location (varies per car); dealerData.cp is the dealer-group HQ (constant across a group's cars) — anchor geo to the SHOP first.
+  data_surface_label: schema CHECK has no 'sitemap_index' literal; stored as 'next_data' (the RSC car object we parse) with surface_intent precise.

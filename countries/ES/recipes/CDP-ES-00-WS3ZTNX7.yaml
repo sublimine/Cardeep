@@ -1,0 +1,31 @@
+# Cardeep extraction recipe — CDP-ES-00-WS3ZTNX7
+# Reusable; re-scrape without raw crude.
+version: 1
+source: carandclassic.com
+scope: platform-wholesale (Inertia searchResults JSON in SSR HTML)
+engine: curl_cffi+chrome131_impersonate+inertia_json
+access: OPEN SSR HTML (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). Public site Cloudflare-fronted -> is_tier1=true; serves to chrome131 unwalled (defense_tier t1_soft).
+data_surface: next_data
+surface_intent: inertia_json
+endpoint: GET https://www.carandclassic.com/es/buscar?vehicle_type=cars&country=ES&page=N
+request:
+  headers: Accept text/html, Accept-Language es-ES
+  surface: <script data-page='app' type='application/json'> Inertia payload; props.searchResults.data[] = per-car record
+enumeration: page=1..N; props.searchResults.pagination.total/last_page drive the full drain (ES=618, 11 pages)
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE
+dual_membership: vehicle.entity_ulid=per-province compraventa BUCKET; platform_listing edge=platform<->vehicle
+caging: source anonymises the dealer (clientId/businessName null even on PDP), so NO stable per-dealer id -> per-province 'compraventa' bucket (canonical_key 'name:compraventas clasicos car&classic|p{province}', '00' national fallback); owner order: classic marketplace MERGED as compraventa, no new type. car+edge+delta caged
+field_map:
+  deep_link: item.url (prefixed with https://www.carandclassic.com)
+  listing_ref: item.id (native ad id)
+  title: item.title ('{year} {make} {model}')
+  make: item.make
+  model: derived from title (strip year+make)
+  year: item.year
+  km: item.attributes.mileage.value
+  price: item.price.value / 100 (minor units -> EUR)
+  fuel: item.attributes.fuelType (en->es)
+  transmission: item.attributes.transmissionType (en->es)
+  photo_url: item.images[0].url (prefixed with https://assets.carandclassic.com)
+  location: item.location {countryCode=ES, town}
+  sold_filter: item.isSold -> skipped

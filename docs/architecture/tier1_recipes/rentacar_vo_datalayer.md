@@ -100,13 +100,39 @@ in the recipe so no branch identity is invented now.
 
 ---
 
-## Further members (same architecture, to be added)
+## Member 2 — Centauro (DRAINED 2026-06-13)
 
-| Company | Surface | Notes |
-|---|---|---|
-| Centauro | `centauro.net/comprar-coche-segunda-mano/disponibilidad/` | Next.js app; needs an XHR probe to find the JSON endpoint |
-| Record Go | `recordgoocasion.es/coches/segunda-mano/` | WordPress dealer-CMS; sitemap (`stock_listing_0-sitemap.xml`) + SSR PDP; ~18 live cars, per-car city in the URL (`/{city}/{brand}/{model}/…`) |
-| Sixt / Europcar / Goldcar | TBD | Probe each used-stock surface; cage under the same `rentacar_vo` group, one company entity each |
+| Field | Value |
+|---|---|
+| Domain / website | `centauro.net` |
+| `cdp_code` | `CDP-ES-03-BMPR08V3` |
+| HQ province / muni | `03` Alicante / `03014` |
+| Surface | `https://ventas.centauro.net/coches-ocasion/?pagina=N` (fully SSR; NOT the React `centauro.net/comprar-coche…/disponibilidad` app, which loads from `content-api.centauro.net` client-side) |
+| Card data | per-card `<form>` hidden inputs: `precio`, `precioNuevo` (factory-new → ex-fleet discount delta), `kilometros`, `marcaVehiculo`, `modeloVehiculo`, `mesesAntiguedad` (→ year); version from the ficha URL slug; photo `images.motorflash.com`/`media.staticmf.com` |
+| Enumeration | `?pagina=1..N`, 12 cars/page, declares `28 coches`. Pages past the last CLAMP-REPEAT (re-serve the tail), so the drain stops on a window with 0 new distinct cars |
+| Caveat | fuel/transmission only on the PDP → left NULL (never faked). Year derived from age-in-months (current_year − round(months/12)); month/day not claimed |
+| Harvest | **28 cars caged = 28 edges = 28 join-vehicles = 28 NEW events. VAM TRUSTWORTHY.** Re-run: 0 new |
 
-Each member is one more company entity (`kind=rent_a_car_vo`, `source_group=rentacar_vo`) flowing
-through the ONE wholesale architecture — not a fork of it.
+## Member 3 — Record Go (DRAINED 2026-06-13)
+
+| Field | Value |
+|---|---|
+| Domain / website | `recordgoocasion.es` |
+| `cdp_code` | `CDP-ES-12-H26EC1KD` |
+| HQ province / muni | `12` Castellón / `12040` (Castelló de la Plana) |
+| Surface | `https://www.recordgoocasion.es/coches/segunda-mano/?page=N` (DealerK/MotorK WordPress, `cdn.dealerk.es`, `vcard-*` classes — the SAME CMS family `family_dealerk_wholesale` harvests; its `parse_cards` reads it byte-for-byte) |
+| Enumeration | `?page=1..N` (15/page then 3 on page 2 = 18; page 3 empties → clean boundary). The Yoast `stock_listing_0-sitemap.xml` is EMPTY → harvest the listing page, not the sitemap. `/page/2/` 404s; `?pagina=` is ignored — only `?page=` paginates |
+| Per-car URL | `/coches/segunda-mano/{city}/{brand}/{model}/{fuel}/{trim}/{id}/` |
+| Harvest | **18 cars caged = 18 edges = 18 join-vehicles = 18 NEW events. VAM TRUSTWORTHY.** Re-run: 0 new |
+
+## Gaps — confessed, NOT fabricated (probed live 2026-06-13)
+
+| Company | Verdict |
+|---|---|
+| Sixt ES | NO Spanish used-car storefront. `sixt.es` sitemaps = ride/magazine only; `/coches-ocasion`,`/gw` 404. Sixt's used-car ("GW") business is DE-only (`sixt.de`). No ES surface to harvest. |
+| Europcar ES | Ex-fleet ("2nd Move") sold ONLY via the registration-gated B2B platform `2ndmove.es → b2b.2ndmove.eu` (`/es/register`, professionals only; `/es/vehicles`,`/es/search` 404). `europcar.es/servicios/coches-segunda-mano` 404s. Its marketplace presence (`motorflash/coches.net europcar-second-hand`) is already covered by the marketplace connectors → caging it from there would double-count. |
+| Goldcar | Europcar-group rental brand; sitemap (4,699 URLs) is ALL rental-location/app pages, zero used-car path. Ex-fleet sold via the same B2B 2ndMove platform. No public own-site surface. |
+
+Each harvestable member is one more company entity (`kind=rent_a_car_vo`, `source_group=rentacar_vo`)
+flowing through the ONE wholesale architecture — not a fork of it. Connector now multi-member:
+`python -m pipeline.platform.group_rentacar_vo_wholesale --member {all|okmobility|centauro|recordgo}`.

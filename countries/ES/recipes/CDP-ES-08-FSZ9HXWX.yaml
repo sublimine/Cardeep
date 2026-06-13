@@ -3,21 +3,30 @@
 version: 1
 source: athloncaroutlet.es
 group: rentacar_vo
-scope: rentacar_vo wholesale (Athlon Car Outlet ex-renting used-stock; Angular IRT SPA)
-engine: camoufox/playwright_hydrate+dom_card_parse (DEFERRED; not curl_cffi-reachable)
-access: Angular SPA (occasions.services.athlon.com) fed by the Athlon IRT API (services.athlon.com/api/irt/secured/employee/athloncaroutletes/{facets,search}). 'facets' GET is unauth and declares 114; the 'search' POST uses an undocumented query DSL and the listing HTML is client-rendered (absent from raw curl). -> browser hydrate required. t2_js_challenge.
-endpoint: GET https://www.athloncaroutlet.es/buscar-coches/ (hydrate, parse .cardetail)
-enumeration: single hydrated page; facets declare 114 cars.
-deep_link: https://www.athloncaroutlet.es/buscar-coches/{make}/{model}/{licensePlate}
+subtype: renting_vo
+scope: renting_vo wholesale (Athlon Car Outlet operational-leasing ex-fleet used-stock; Angular SPA whose listing ROOT is server-rendered with static card markup)
+engine: curl_cffi+chrome131_impersonate+ssr_html_cardetail_markup(GET)
+access: OPEN server-rendered HTML (Chrome TLS fingerprint; no proxy/browser/cookie). The Angular app at occasions.services.athlon.com prerenders the first ~52 cars as static <div.cardetail> markup in the index HTML -> reachable WITHOUT a browser. The deeper stock loads via an in-app POST to the Athlon IRT 'search' DSL (undocumented; HTTP 500 to every probed body) -> that full drain is a future IRT-search pass. t1_soft.
+endpoint: GET https://occasions.services.athlon.com/es/
+enumeration: single SSR view (~52 cars in static markup). Full stock declared by the unauth IRT facets API GET https://services.athlon.com/api/irt/secured/employee/athloncaroutletes/facets (sum of fuel facet counts = 114 live).
+ownership: Athlon (Mercedes-Benz Mobility) is an operational-LEASING operator selling its returned ex-fleet cars -> the company is the singular selling point and OWNS every car; platform_listing edge records the listing. owner entity == platform entity. HQ Santa Perpetua de Mogoda (Barcelona, 08); per-car location is the delivery depot.
+renting_vo_note: renting_vo = operational-leasing operators (Athlon/Arval/Alphabet/Northgate) selling ex-fleet cars, distinct from tourist rentacar (OK Mobility/Centauro). Stored under entity_kind=rent_a_car_vo + source_group=rentacar_vo because the enums carry no 'renting_vo' literal; the distinction lives in family/subtype.
 field_map:
-  listing_ref: license plate (e.g. 5294LYB) in the deep-link path
-  make_model_version: .cardetail text + img alt
-  year: MM-YYYY reg line
-  km: 'NN.NNN Km' line
-  energy_label: ECO/C/cero line
-  fuel: Diesel/Gasolina line
-  transmission: AUT7/Manual line
-  location: depot line
-  price: 'NN.NNN €' line
-  photo_url: media.services.irt.athlon.com AssetId
-status: DEFERRED — entity caged; stock drain pending camoufox hydrate pass.
+  deep_link: a href './{make}/{model}/{plate}' (absolutised against /es/)
+  listing_ref: license plate (e.g. 5294LYB) = trailing path segment
+  make: h3.brand span.make
+  model: h3.brand span.model
+  version: h3.brand span.type
+  year: dl.specs dd[0] 'MM-YYYY' -> YYYY
+  km: dl.specs dd[1] 'NN.NNN Km'
+  energy_label: dl.specs dd[2] (ECO/C/cero; sometimes empty)
+  fuel: dl.specs dd[3]
+  transmission: dl.specs dd[4].full-width (AUT7/Manual)
+  location: dl.specs dd[5].full-width (delivery depot)
+  price: div.price 'NN.NNN €'
+  photo_url: img src (media.services.irt.athlon.com)
+caveats:
+  ssr_slice: the SSR HTML renders a fixed ~52-card window regardless of ?page/?makes params; the remaining cars (114 declared - ~52 SSR) require the IRT 'search' POST DSL (undocumented, 500 on every probed body) -> deferred to a future pass, declared.
+  dd_order: dl.specs is a FIXED 6-slot list [reg, km, energyLabel, fuel, transmission, location]; slot 2 (energyLabel) is sometimes empty but never reordered, so positional parsing is stable.
+  alphabet_gap: Alphabet (the sibling renting_vo operator) has NO free public ES storefront: alphabet-used-cars.es does not resolve, and Alphabet ex-fleet stock is sold through the registration-gated BCA 'Exclusive Alphabet Auction' (es.bca-europe.com) -> already covered by group_subastas_bca; re-caging would double-count, so it is NOT connected here.
+  dedup: Arval AutoSelect and Northgate Ocasión (the other renting_vo operators) are already connected as live members of this same connector; only Athlon was previously DEFERRED (0 edges) and is promoted here. cdp_code mints from 'domain:athloncaroutlet.es'+HQ province 08, identical to the existing caged entity -> reused, never duplicated.

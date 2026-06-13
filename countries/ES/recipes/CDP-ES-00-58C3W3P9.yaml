@@ -1,0 +1,31 @@
+# Cardeep extraction recipe — CDP-ES-00-58C3W3P9
+# Reusable; re-scrape without raw crude.
+version: 1
+source: cochesocasion.racc.es
+group: association
+scope: auto-club VO portal wholesale (RACC; ?pg=N SRP card drain + PDP JSON-LD seller enrich)
+engine: curl_cffi+chrome131_impersonate+ssr_html_cards+pdp_jsonld_seller(GET)
+access: OPEN server-rendered WordPress HTML (Apache/PHP 8.3; Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). No WAF -> defense_tier t0_open.
+data_surface: json_ld
+surface_intent: ssr_html_cards_plus_pdp_jsonld
+endpoint: GET https://cochesocasion.racc.es/coches-ocasion/vehiculos-de-ocasion/?pg=N
+enumeration: ?pg=1..N paginates SERVER-side (disjoint card sets per page; 12 cards/page). The SRP pagination declares total_pages ('de 79'); admin-ajax get_search_result declares total=939 live. Per-car PDP GET resolves seller + VIN.
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=association, role=platform, family=racc
+ownership: PER-DEALER-BY-NAME: the card carries the car but not the seller; the PDP JSON-LD offers.seller (Organization name) IS the dealer. The portal exposes NO per-car province/address (national inventory aggregation), so the dealer is anchored national (province NULL). vehicle.entity_ulid=dealer; platform_listing edge=portal<->vehicle. A car whose PDP has no seller cages under the portal bucket (never dropped).
+field_map:
+  card_id: addToCompare({id}) / <div id=wrapper-{id}> (native compare id)
+  deep_link: card <a href> .../vehiculos-de-ocasion/{slug}/
+  listing_ref: PDP vehicleIdentificationNumber (VIN; stable) — falls back to card id
+  make/model: h5.car-card__title (Make Model)
+  version: h6.car-card__subtitle
+  year: card 'Matriculación: {YYYY}'
+  km: card 'Kilometraje: {n}'
+  price: card .car-card__title.mb-0 '{n}€'
+  fuel: card .card-icon-grid__label (fuel set)
+  transmission: card .card-icon-grid__label (Automático/Manual)
+  photo_url: card img.car-card__image src
+  seller: PDP @type:Car offers.seller.name (Organization) -> per-dealer owner
+caveats:
+  no_surface_geo: the SRP and PDP expose NO per-car province/address; the dealer is anchored national (province NULL). Per-branch geo would need a deeper concessionaire map probe (concessionarie-map-item) — never fabricated here.
+  page_param: ?pg=N is the working server-side page param; ?page/?pagina/path/N are ignored.
+  ajax_total: admin-ajax.php action=get_search_result returns total/total_pages (939 / 79 live).
