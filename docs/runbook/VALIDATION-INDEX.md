@@ -155,6 +155,30 @@
 
 ---
 
+## Verificación territorial (censo-anclado · F8 · sin verdict VAM-slice)
+
+> Fase **F8 SELLO**: medición de cobertura contra denominador autoritativo (INE DIRCE registro
+> legal + Overture POI ortogonal), no `platform_slice`. Por eso **no lleva `verdict id` propio**
+> (mismo criterio que DESCUBRIR): su prueba es el par denominador-fuente + query DB nombrada,
+> reproducible. Detalle, escalera de confianza y trampas en [04-TERRITORIAL.md](04-TERRITORIAL.md).
+> Cada cifra `[VERIFIED]` leída en vivo (INE Tempus3 fetch o SQL nombrada) esta sesión.
+
+| Unidad | verdict | valor | método/prueba | fecha |
+|---|---|---|---|---|
+| cobertura nacional VENTAS (registral) | censo-anclado | **94,3 %** (21.759 / 23.085 locales INE 451) | INE tabla 294/301 + SQL `entity kind∈(compraventa,concesionario_oficial)` | 2026-06-13 |
+| desguace (censo legal SELLADO) | censo-anclado exacto | **100,5 %** (1.299 / 1.292 CAT) | DGT-CAT censo + SQL `kind='desguace'` | 2026-06-13 |
+| CCAA × locales 451 (capa portante) | censo-anclado | 19 CCAA, Σ = 23.085 == nacional | INE `ine_cnae4511_by_province.json` (integridad chequeada) | 2026-06-13 |
+| denominador POI Overture (ortogonal) | denominador aterrizado | 19.727 POI · **6.523 cruzados DB** · 13.204 leads ⏳ | Overture `2026-05-20.0` + dedup 3-claves vs `entity` | 2026-06-13 |
+
+> `[VERIFICADO]`: el nacional registral 94,3 % cuadra por dos caminos INE (div-45×share ==
+> grupo-total = 23.085). El POI Overture **cierra el hueco #11** que `TERRITORIAL_COVERAGE.md §4.11`
+> dejó `INCOMPLETE`. Los **13.204 candidatos NO son cobertura**: son superficie de leads
+> (nuestra DB de 33.690 negocios supera ~1,7× el set ES de Overture); su validación queda
+> PENDIENTE → [NOT-VALIDATED.md](NOT-VALIDATED.md). Gaps CCAA genuinos: Ceuta 19,2 % · Melilla
+> 25,0 % · Canarias 59,4 %.
+
+---
+
 ## Resumen del ledger
 
 | Bloque | unidades-conector | verdict ids |

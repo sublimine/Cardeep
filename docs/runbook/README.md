@@ -16,6 +16,7 @@ docs/runbook/
 │                              · cdp_code · VAM · S-HEALTH · API · dedup watermark
 ├── 02-GROUP-SEPARATION.md   ← la lógica que separa Tier-1 / OEM-VO / cadenas / rentacar / subastas / long-tail
 ├── 03-DISCOVERY.md          ← fase DESCUBRIR: arneses de hallazgo de puntos de venta (association-mining · geo-sweep)
+├── 04-TERRITORIAL.md        ← fase F8 SELLO: censo vs cobertura (INE DIRCE + Overture POI ortogonal), gap-map honesto
 ├── groups/<grupo>.md        ← un capítulo por GRUPO (resumen + tabla de sus miembros validados)
 ├── platforms/<slug>.md      ← un fichero por CONECTOR validado (plantilla §3, uniforme)
 ├── VALIDATION-INDEX.md      ← LEDGER vivo: unidad → verdict id → count → CLI → fecha

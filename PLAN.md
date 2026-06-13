@@ -32,7 +32,7 @@ tiempo real. Las recetas la mantienen, el motor la late, la API la sirve.
 | **F5 TIER-1** | Caza de receta por plataforma (Camoufox + arsenal), una a una, separadas del resto | Por plataforma: conteo 2-vías + muestra ciega verificada campo a campo |
 | **F6 DELTA + HISTORIAL** | Motor de eventos: SEEN/GONE/Δprecio/Δfoto (hash perceptual), retención completa | Delta demostrado en dealer y en plataforma con evidencia re-derivada |
 | **F7 RESILIENCIA** | Health por fuente, alertas origen-exacto, auto-repair (re-receta automática), watchdogs | Fallo inyectado → alerta correcta + reparación sin caída del sistema |
-| **F8 SELLO 100%** | Cierre por provincia: censo vs cobertura, capture-recapture, parte honesto | 50/50 provincias selladas o gap declarado con causa exacta |
+| **F8 SELLO 100%** [ANCLADO] | Cierre por provincia: censo vs cobertura, capture-recapture, parte honesto | Censo-anclado VERIFIED: nacional ventas **94,3 %** (21.759/23.085 INE 451) · desguace **100,5 %** sellado · 19 CCAA exacto · POI Overture ortogonal aterrizado (cierra hueco #11). **Residual declarado:** Ceuta/Melilla/Canarias gap genuino, geocode-gap 32,5 %, 13.204 leads POI ⏳ validar. Runbook [04-TERRITORIAL.md](docs/runbook/04-TERRITORIAL.md) |
 
 F4 y F5 corren en paralelo tras F3; F6-F7 se cablean en cuanto F3 produce datos vivos.
 

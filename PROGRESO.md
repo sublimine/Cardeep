@@ -227,3 +227,21 @@
   - **Cazado inflado:** coches.com NO 200k → **92.259 PDPs reales** en sitemap (200k era el contador web).
   - Siguen de agente (browser, no re-derivados por mí): milanuncios ~667k · spoticar ~50k · motor.es ~51k.
 - **Estructura multi-eje (0016) clasificando lo vivo:** defense_tier × source_group × role × family.
+
+## 2026-06-13 — F8 VERIFICACIÓN TERRITORIAL: denominador POI Overture aterrizado (cierra hueco #11)
+- **Contexto:** PROGRESO quedó congelado el 2026-06-12; el trabajo del 13 (olas 2ª-7ª + cierre del
+  vector gratuito ~1,36M vehículos) vive en `CIERRE_FINAL.md`, `SCOREBOARD.md` y `docs/runbook/`.
+  Esta entrada retoma la bitácora con la última acción: el SELLO territorial (F8).
+- **F8 censo-anclado [VERIFICADO]:** cobertura nacional VENTAS = **94,3 %** registral-ortogonal
+  (21.759 / 23.085 locales INE CNAE-451); desguace **100,5 %** sellado contra DGT-CAT (1.299/1.292);
+  19 CCAA exacto (Σ=23.085 == nacional); vs registro de empresas 234,5 % = saturación, no hueco.
+  Gaps genuinos: Ceuta 19,2 % · Melilla 25,0 % · Canarias 59,4 % + geocode-gap 32,5 % (13.741 sin muni).
+- **Overture POI aterrizado (última tarea background `bwavcc5h1`, exit 0):** cierra el `INCOMPLETE`
+  del §4.11 de `TERRITORIAL_COVERAGE.md`. 19.727 POI ES (Overture `2026-05-20.0`, CDLA-Permissive),
+  dedup 3-claves contra DB → **6.523 cruzados · 13.204 candidatos nuevos · 0 closed**. Ortogonal (no
+  circular como OSM). Ficheros: `docs/research/territorial/poi_*.json`.
+- **Anti-alucinación:** el 13.204 NO es cobertura faltante — la DB (33.690 negocios) supera ~1,7× el
+  set ES de Overture; es superficie de leads (variantes de nombre, no-dealers, cerrados) PENDIENTE de
+  validar antes de contar una sola fila como dealer nuevo. Confesado en runbook + NOT-VALIDATED.
+- **Registrado:** `docs/runbook/04-TERRITORIAL.md` (sección canónica nueva) + árbol del README del
+  runbook + `VALIDATION-INDEX.md` (bloque territorial censo-anclado) + F8 marcado `[ANCLADO]` en PLAN.md.

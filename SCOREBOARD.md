@@ -1,18 +1,25 @@
-# CARDEEP — MARCADOR VERIFICADO FINAL (cierre 2026-06-13, 4ª ola LANDED)
+# CARDEEP — MARCADOR VERIFICADO FINAL (cierre 2026-06-13, 7ª ola Δ-CANALES LANDED)
 > Cada número contado por el Director a mano con psql directo contra la DB viva (cardeep-pg :5433), VAM ≥2 caminos.
 > DB en INGESTA VIVA: los absolutos suben entre snapshots. El bloque Tier-1 es de un snapshot único congelado.
-> Parte de entrega honesto completo: `CIERRE_FINAL.md` (§8 = esta 4ª ola, cierre definitivo). Sin git commit.
+> Parte de entrega honesto completo: `CIERRE_FINAL.md` (§8 = 4ª ola; §9 = 5ª ola descubrimiento/expansión). Sin git commit.
 
 ## Globales (snapshot vivo único REPEATABLE READ)
-| Métrica | 2ª ola (§6) | 3ª ola (§7) | **4ª ola (LANDED, actual)** |
+| Métrica | 4ª ola (§8) | 5ª ola (DESCUBRIMIENTO) | **7ª ola (Δ-CANALES, actual)** |
 |---|---|---|---|
-| vehicle (total) | 1.332.617 | 1.336.553 | **1.353.104** |
-| vehicle available (+gone 1.375 == count*) | 1.331.242 | 1.335.178 | **1.351.729** |
-| entity (puntos de venta + plataformas) | 309.147 | 309.214 | **315.270** |
-| platform_listing (aristas) | 1.286.413 | 1.290.349 | **1.306.900** |
-| vehicle_event (delta/historial) | 1.335.715 | 1.339.652 | **1.356.203** |
-| provincias / municipios con entidades | 52/52 · 4.712 | 52/52 · 4.712 | **52/52 · 4.757** |
-| plataformas (`platform`) | 22 | 24 | **24** (Autorola/BCA/Ayvens subastas vivas) |
+| vehicle (total) | 1.353.104 | 1.492.160 | **1.495.710** |
+| vehicle available (+gone 1.375 == count*) | 1.351.729 | 1.490.785 | **1.494.335** |
+| entity (puntos de venta + plataformas) | 315.270 | 368.811 | **369.383** |
+| platform_listing (aristas) | 1.306.900 | 1.445.469 | **1.449.019** |
+| vehicle_event (delta/historial) | 1.356.203 | 1.495.282 | **1.498.858** |
+| provincias / municipios con entidades | 52/52 · 4.757 | 52/52 · 5.025 | **52/52 · 4.974** |
+| plataformas (`kind='plataforma'`) | 24† | 24† | **18 (kind='plataforma' estricto; +5 esta ola)** |
+| **dealers distintos con own-site** (no-edge, no-plataforma) | — | 332 | **332** |
+| **coches own-site** (no-edge, no-plataforma) | — | 46.691 | **46.691** |
+| entidades con `website` poblado | — | 1.884 | **1.890** |
+
+> † Las columnas previas contaban `platform` de forma laxa (24/27). El conteo estricto
+> `kind='plataforma'` HOY es **18**, tras sumar 5 esta ola (Facilitea Coches, RACC, LocalizaVO,
+> Car & Classic, Miclásico) sobre las 13 del censo por segmentos (6ª ola). Cifra re-contada en vivo.
 
 > **Reconcile autoritativo (certificación, snapshot único 06:49:13 UTC):** vehicle_total=1.332.986
 > (available 1.331.611 + gone 1.375 == count*); entity_total=1.332.986→**309.148** por 3 caminos idénticos
@@ -115,6 +122,17 @@ kia · renew · das_weltauto · ford · bmw_premium_selection · mercedes_benz �
 
 ---
 
+## 5ª ola — DESCUBRIMIENTO / EXPANSIÓN (detalle en CIERRE_FINAL.md §9)
+> El "garaje perdido": puntos de venta ausentes de todo conector previo. +488 entidades commiteadas (DB-verificadas).
+| Frente | Resultado | VAM | Columna |
+|---|---|---|---|
+| **discover_associations** | **+409 entidades / +327 coches** (`source_group='association'`; 0 dup, 0 huérfanos, 0 sin-provincia) | ✅ 2 caminos directos en DB | descubrimiento |
+| **discover_geographic** | **+68 entidades / +0 coches** (`geo_sweep`; 68/68 con web, 36/52 provincias, 0 colisión host) | ✅ DB tally + `entity_source` | descubrimiento |
+| **discover_directories** | **+0 entidades** (HONESTO: nada commiteado, cosecha nacional aún corriendo; test Álava stale rehusado) | ✅ `count(entity_source)`=0 | descubrimiento — NO commit |
+| **chains_more** | **+2 entidades / +1.882 coches** (Clicars 1.470 distinct + Carplus 412) | ✅ 3 caminos (edges==join==owned) | descubrimiento |
+| **rentacar_more** | **+2 entidades / +46 coches** (Centauro 28 + Record Go 18) | ✅ edges==join==harvested EXACTO | descubrimiento |
+| **drain_all_ownsites** | **+7 entidades / +487 coches** (309 dominios, 7 family_slice @ 0,0 divergencia) | ✅ 7 veredictos firmados | descubrimiento |
+
 ## 2ª/3ª/4ª ola — frentes post-cierre (detalle en CIERRE_FINAL.md §6/§7/§8)
 | Frente | Resultado | VAM | Columna |
 |---|---|---|---|
@@ -131,7 +149,80 @@ kia · renew · das_weltauto · ford · bmw_premium_selection · mercedes_benz �
 | dedup cross-plataforma | ≥**134.027** excedentes (14,36%) | ✅ SQL==Python 0,0% | calidad-de-datos |
 | S-HEALTH battle-test | 25/25 PASS, cascada E2E | ✅ 2 caminos | (1) gratis |
 
-## "100%" honesto (cierre definitivo 4ª ola)
+## 6ª ola — CENSO POR SEGMENTOS (segment-census campaign, 2026-06-13)
+> Taxonomía completa keyword→canal→operador en `docs/research/SEGMENT_TAXONOMY.md` (consolida los 5 fronts).
+> 5 operadores NUEVOS conectados sobre 4 fronts; cada cifra re-contada por query directa a la DB viva HOY.
+> Redes sociales (Facebook Marketplace/IG) DIFERIDAS por mandato del owner.
+
+| Front | Operador NUEVO conectado | Net coches | VAM | Columna |
+|---|---|---|---|---|
+| `marketplaces_extra` | **Motorflash** (`CDP-ES-00-WN1DMGRN`, marketplace_motor) | +44 slice (187 aristas vivas; drain ~50k gobernado P1) | ✅ TRUSTWORTHY (3 caminos) | (1) gratis |
+| `oem_new_stock` | **seat_cupra_new** (`CDP-ES-00-5R30HVA7`, oem_dealer_network, segment=new) | +2.229 (Seat 1145 + CUPRA 1063 + 21 sort-rotation; DB-wide new 6.151→**8.380**) | ✅ TRUSTWORTHY | (1) gratis (t0_open) |
+| `leasing_rentacar_exfleet` | **Arval AutoSelect** (`CDP-ES-28-CVV4S3CJ`) + **Northgate Ocasión** (`CDP-ES-28-4XKXNTSY`) | +1.280 (1.172 + 108; Athlon `CDP-ES-08-FSZ9HXWX` enjaulado, drain 114 DIFERIDO browser-required) | ✅ TRUSTWORTHY | (1) gratis |
+| `b2b_extra_auctions` | **Subastacar** (`CDP-ES-00-S3K8PK50`, official_registry) | +233 (100% completitud campo: make/year/km/price/fuel/trans/VIN/foto 233/233) | ✅ TRUSTWORTHY (233 vs 238) | (1) gratis (t0_open) |
+| `keyword_census` | — (pasada de mapeo) | +0 | — | mapa |
+
+- ✅ **plataformas (`kind='plataforma'`) 10 → 13** (Motorflash + Subastacar + seat_cupra_new) — verificado en vivo.
+- ✅ **`rentacar_vo` miembros 3 → 6** (Arval + Northgate + Athlon sobre OK Mobility/Centauro/Record Go) — verificado.
+- ✅ **`segment=new` aristas 6.151 → 8.380** (primer canal OEM-oficial de coche NUEVO; antes solo el slice de coches.net).
+- ✅→ **TIPOS revelados — Δ RESUELTO en la 7ª ola (ver abajo):** lo que aquí estaba SIN poblar ya se cerró:
+  `kind='importador'` **0 → 11 entidades / 187 coches** (MODRIVE + TrendCars/Carismatic reclasificados);
+  **classic_marketplace** plegado al marketplace (Car & Classic 585 + Miclásico 693 aristas);
+  **faciliteacoches.com** **CONECTADO** (788 coches) + **RACC ocasión** **CONECTADO** (96 coches).
+  Pendientes-no-cerrados de este lote (declarado honesto): Raceocasion/Europa Automotive/ImportyGarage/DeutscheCars
+  (importadores reachable aún sin caular).
+- ❌ **Huecos honestos B2B GATED** (login profesional, sin vector gratis): AUTO1, OPENLANE/Adesa, Manheim ES,
+  Alcopa, 2ndMove, Tartiere, CarOnSale, AutoProff, Autobid, Northgate Trade, Copart (salvage). **UNREACHABLE
+  (DNS muerto/no-operador):** Aucto, Ucars, EpicAuctions, Carmen. **OUT OF SCOPE:** Reezocar (import francés).
+- ❌ **Ex-flota UNREACHABLE-free:** Ayvens B2C (count:0), Alphabet (pro-auction), LeasePlan/CarNext (cerrado 2021),
+  Hertz (tel/email), Sixt (DE-only), Europcar/Goldcar (2ndmove pro-gate), Enterprise/Alamo/Avis (sin superficie ES).
+- ⚠️ **OEM new-stock reachable-MISSING** (one-time XHR discovery, €0 cada uno): VW-ES, Audi (~4.000), Škoda,
+  Renault Webstore (~4.000), Toyota/Lexus NSC, Stellantis, Hyundai, Kia, Ford.
+
+## 7ª ola — Δ-CANALES: tipos vacíos POBLADOS + operadores del Δ-list conectados (2026-06-13)
+> Ejecuta el Δ-list de `SEGMENT_TAXONOMY.md §8` + los tipos vacíos/sin-slot de §5. Detalle: §10 de la taxonomía.
+> Cada cifra re-contada por mis propias ≥2 (importador, faciliteacoches: 3) consultas DB que CONCUERDAN exacto HOY.
+
+| Front | Operador NUEVO conectado | Net coches | Entidades | VAM | Columna |
+|---|---|---|---|---|---|
+| `importador` (§5.1 tipo VACÍO → POBLADO) | **MODRIVE** + TrendCars/Carismatic reclasificados | **+187** | **11** (`kind='importador'` 0→11) | ✅ TRUSTWORTHY (vehicles_owned=187 == edge_join=187; MODRIVE 19=19=19) | (1) gratis |
+| `faciliteacoches_racc` (§5.3+§5.4 → CONECTADO) | **Facilitea Coches** (CaixaBank VO, `CDP-ES-00-9PXHGJBY`) + **RACC** (`CDP-ES-00-58C3W3P9`) | **+884** (788+96) | **251** (248 dealers + RACC + 2 plataformas) | ✅ TRUSTWORTHY (ambos: edges==join==harvested; 788=788=788, 96=96=96) | (1) gratis |
+| `b2b_auctions` (§7 → CONECTADO) | **LocalizaVO** (`CDP-ES-00-HFR3D62Y`, official_registry) | **+318** | **3** | ✅ TRUSTWORTHY | (1) gratis |
+| `renting_vo` (§6 Athlon DIFERIDO → DRENADO) | **Athlon Car Outlet** (`CDP-ES-08-FSZ9HXWX`, rentacar_vo) | **+52** (era 0, drain browser-required) | **1** | ✅ TRUSTWORTHY | (1) gratis |
+
+- ✅ **`kind='importador'` 0 → 11 entidades / 187 coches** — el tipo vacío de §5.1 queda POBLADO
+  (MODRIVE conectado + TrendCars/Carismatic reclasificados, como anticipaba el plan §5.1).
+- ✅ **`kind='plataforma'` 13 → 18** — +5 (Facilitea Coches, RACC, LocalizaVO, Car & Classic, Miclásico).
+- ✅ **`kind='subasta'` 95 → 97** · **`platform_listing segment='used'` 1.432.777 → 1.436.153** — verificado en vivo.
+- ✅ **Classic-marketplace (§5.2 sin-slot) RESUELTO** — Car & Classic (585 aristas) + Miclásico (693
+  aristas) enjaulados como `plataforma`/`marketplace_motor`, plegando el tipo al frente marketplace.
+- ✅ **Net esta ola: 187 + 884 + 318 + 52 = 1.441 coches** (sin contar el slice classic), todos VAM TRUSTWORTHY, 0 fabricados.
+
+## F8 — SELLO TERRITORIAL: censo vs cobertura (2026-06-13, censo-anclado)
+> Cobertura medida contra denominador autoritativo (INE DIRCE registro legal + Overture POI ortogonal),
+> NO estimación. Detalle: `docs/runbook/04-TERRITORIAL.md` + `docs/research/territorial/{TERRITORIAL_COVERAGE,GAP_MAP}.md`.
+
+| Marco | Nuestro | Denominador | Cobertura | Tag |
+|---|--:|--:|--:|:--|
+| **Ventas (registral-ortogonal)** | 21.759 | 23.085 locales INE 451 | **94,3 %** | `[VERIFIED]` |
+| Ventas bruto (C2C-inflado 35,2 %) | 33.611 | 23.085 | 145,6 % | `[count real, ratio inflado]` |
+| vs registro de empresas | 33.690 | 14.367 empresas 451 | 234,5 % | `[VERIFIED, suelo = saturación]` |
+| **Desguace (censo legal)** | 1.299 | 1.292 DGT-CAT | **100,5 %** | `[VERIFIED exacto — SELLADO]` |
+
+- ✅ **POI Overture ortogonal ATERRIZADO** (cierra el hueco #11 `INCOMPLETE` de TERRITORIAL_COVERAGE §4.11):
+  19.727 POI ES · **6.523 cruzados DB** · 13.204 candidatos · 0 closed. Sustituye el OSM circular por fuente independiente.
+- ⏳ **13.204 candidatos = superficie de LEADS, NO cobertura faltante** (DB 33.690 negocios > ~1,7× el set ES de Overture): validación PENDIENTE antes de contar una sola fila.
+- ❌ **Gaps CCAA genuinos:** Ceuta 19,2 % · Melilla 25,0 % · Canarias 59,4 %. Geocode-gap 32,5 % (13.741 entidades con provincia sin municipio).
+- ⚠️ **Provincia × 451 = MODELED** (INE no publica bajo CCAA por secreto estadístico); el % por municipio no es censo-verificable.
+
+## "100%" honesto (cierre definitivo 4ª ola + descubrimiento 5ª ola)
+- ✅ **5ª ola DESCUBRIMIENTO LANDED**: +488 entidades de "garaje perdido" commiteadas y DB-verificadas
+  (asociaciones +409, geo +68, cadenas +2, rent-a-car +2, own-site drain +7), con ~2.742 coches nuevos
+  sobre esos rosters. Censo own-site = **332 dealers / 46.691 coches** fuera de marketplace. `discover_directories`
+  = **0 honesto** (cosecha nacional aún corriendo). GAPS genuinos con evidencia: asociaciones WALLED
+  (Faconauto/GANVAM/ANCOVE/ANCOPEL/AECS-zona, sin lista pública), long-tail geo sin censo exhaustivo (suelo
+  ~44k exige dumps Foursquare/Overture + PA por rubro), ~211 dominios WP/generic sin receta, Google Places
+  excluido por ToS (camino legal sustituido).
 - ✅ **100% del STOCK del vector GRATUITO**: cerrado y verificado. Tres verjas declaradas (coches.net
   Imperva, subastas Autorola+BCA stock **escalado a 2.808**, hrmotor `unreachable`) **derribadas gratis**.
   6 Tier-1, core partición limpia, API + S-HEALTH E2E. Cada cifra contada AHORA por ≥2 caminos.
