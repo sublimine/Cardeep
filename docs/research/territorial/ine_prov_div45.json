@@ -1,0 +1,314 @@
+{
+ "01": {
+  "province": "Araba/Álava",
+  "ine_geo": "Álava",
+  "ine_local_units_div45": 471,
+  "anyo": 2025
+ },
+ "02": {
+  "province": "Albacete",
+  "ine_geo": "Albacete",
+  "ine_local_units_div45": 815,
+  "anyo": 2025
+ },
+ "03": {
+  "province": "Alicante/Alacant",
+  "ine_geo": "Alicante/Alacant",
+  "ine_local_units_div45": 4109,
+  "anyo": 2025
+ },
+ "04": {
+  "province": "Almería",
+  "ine_geo": "Almería",
+  "ine_local_units_div45": 1520,
+  "anyo": 2025
+ },
+ "05": {
+  "province": "Ávila",
+  "ine_geo": "Ávila",
+  "ine_local_units_div45": 342,
+  "anyo": 2025
+ },
+ "06": {
+  "province": "Badajoz",
+  "ine_geo": "Badajoz",
+  "ine_local_units_div45": 1743,
+  "anyo": 2025
+ },
+ "07": {
+  "province": "Balears, Illes",
+  "ine_geo": "Balears (Illes)",
+  "ine_local_units_div45": 1938,
+  "anyo": 2025
+ },
+ "08": {
+  "province": "Barcelona",
+  "ine_geo": "Barcelona",
+  "ine_local_units_div45": 8622,
+  "anyo": 2025
+ },
+ "09": {
+  "province": "Burgos",
+  "ine_geo": "Burgos",
+  "ine_local_units_div45": 651,
+  "anyo": 2025
+ },
+ "10": {
+  "province": "Cáceres",
+  "ine_geo": "Cáceres",
+  "ine_local_units_div45": 883,
+  "anyo": 2025
+ },
+ "11": {
+  "province": "Cádiz",
+  "ine_geo": "Cádiz",
+  "ine_local_units_div45": 1852,
+  "anyo": 2025
+ },
+ "12": {
+  "province": "Castellón/Castelló",
+  "ine_geo": "Castellón/Castelló",
+  "ine_local_units_div45": 1126,
+  "anyo": 2025
+ },
+ "13": {
+  "province": "Ciudad Real",
+  "ine_geo": "Ciudad Real",
+  "ine_local_units_div45": 1100,
+  "anyo": 2025
+ },
+ "14": {
+  "province": "Córdoba",
+  "ine_geo": "Córdoba",
+  "ine_local_units_div45": 1681,
+  "anyo": 2025
+ },
+ "15": {
+  "province": "Coruña, A",
+  "ine_geo": "Coruña (A)",
+  "ine_local_units_div45": 2214,
+  "anyo": 2025
+ },
+ "16": {
+  "province": "Cuenca",
+  "ine_geo": "Cuenca",
+  "ine_local_units_div45": 516,
+  "anyo": 2025
+ },
+ "17": {
+  "province": "Girona",
+  "ine_geo": "Girona",
+  "ine_local_units_div45": 1610,
+  "anyo": 2025
+ },
+ "18": {
+  "province": "Granada",
+  "ine_geo": "Granada",
+  "ine_local_units_div45": 1849,
+  "anyo": 2025
+ },
+ "19": {
+  "province": "Guadalajara",
+  "ine_geo": "Guadalajara",
+  "ine_local_units_div45": 469,
+  "anyo": 2025
+ },
+ "20": {
+  "province": "Gipuzkoa",
+  "ine_geo": "Guipúzcoa",
+  "ine_local_units_div45": 939,
+  "anyo": 2025
+ },
+ "21": {
+  "province": "Huelva",
+  "ine_geo": "Huelva",
+  "ine_local_units_div45": 924,
+  "anyo": 2025
+ },
+ "22": {
+  "province": "Huesca",
+  "ine_geo": "Huesca",
+  "ine_local_units_div45": 442,
+  "anyo": 2025
+ },
+ "23": {
+  "province": "Jaén",
+  "ine_geo": "Jaén",
+  "ine_local_units_div45": 1314,
+  "anyo": 2025
+ },
+ "24": {
+  "province": "León",
+  "ine_geo": "León",
+  "ine_local_units_div45": 994,
+  "anyo": 2025
+ },
+ "25": {
+  "province": "Lleida",
+  "ine_geo": "Lleida",
+  "ine_local_units_div45": 1127,
+  "anyo": 2025
+ },
+ "26": {
+  "province": "Rioja, La",
+  "ine_geo": "Rioja (La)",
+  "ine_local_units_div45": 569,
+  "anyo": 2025
+ },
+ "27": {
+  "province": "Lugo",
+  "ine_geo": "Lugo",
+  "ine_local_units_div45": 870,
+  "anyo": 2025
+ },
+ "28": {
+  "province": "Madrid",
+  "ine_geo": "Madrid",
+  "ine_local_units_div45": 11832,
+  "anyo": 2025
+ },
+ "29": {
+  "province": "Málaga",
+  "ine_geo": "Málaga",
+  "ine_local_units_div45": 3687,
+  "anyo": 2025
+ },
+ "30": {
+  "province": "Murcia",
+  "ine_geo": "Murcia",
+  "ine_local_units_div45": 3150,
+  "anyo": 2025
+ },
+ "31": {
+  "province": "Navarra",
+  "ine_geo": "Navarra",
+  "ine_local_units_div45": 1237,
+  "anyo": 2025
+ },
+ "32": {
+  "province": "Ourense",
+  "ine_geo": "Ourense",
+  "ine_local_units_div45": 733,
+  "anyo": 2025
+ },
+ "33": {
+  "province": "Asturias",
+  "ine_geo": "Asturias",
+  "ine_local_units_div45": 1703,
+  "anyo": 2025
+ },
+ "34": {
+  "province": "Palencia",
+  "ine_geo": "Palencia",
+  "ine_local_units_div45": 289,
+  "anyo": 2025
+ },
+ "35": {
+  "province": "Palmas, Las",
+  "ine_geo": "Palmas (Las)",
+  "ine_local_units_div45": 2220,
+  "anyo": 2025
+ },
+ "36": {
+  "province": "Pontevedra",
+  "ine_geo": "Pontevedra",
+  "ine_local_units_div45": 1998,
+  "anyo": 2025
+ },
+ "37": {
+  "province": "Salamanca",
+  "ine_geo": "Salamanca",
+  "ine_local_units_div45": 671,
+  "anyo": 2025
+ },
+ "38": {
+  "province": "Santa Cruz de Tenerife",
+  "ine_geo": "Santa Cruz de Tenerife",
+  "ine_local_units_div45": 2241,
+  "anyo": 2025
+ },
+ "39": {
+  "province": "Cantabria",
+  "ine_geo": "Cantabria",
+  "ine_local_units_div45": 971,
+  "anyo": 2025
+ },
+ "40": {
+  "province": "Segovia",
+  "ine_geo": "Segovia",
+  "ine_local_units_div45": 313,
+  "anyo": 2025
+ },
+ "41": {
+  "province": "Sevilla",
+  "ine_geo": "Sevilla",
+  "ine_local_units_div45": 3916,
+  "anyo": 2025
+ },
+ "42": {
+  "province": "Soria",
+  "ine_geo": "Soria",
+  "ine_local_units_div45": 173,
+  "anyo": 2025
+ },
+ "43": {
+  "province": "Tarragona",
+  "ine_geo": "Tarragona",
+  "ine_local_units_div45": 1582,
+  "anyo": 2025
+ },
+ "44": {
+  "province": "Teruel",
+  "ine_geo": "Teruel",
+  "ine_local_units_div45": 298,
+  "anyo": 2025
+ },
+ "45": {
+  "province": "Toledo",
+  "ine_geo": "Toledo",
+  "ine_local_units_div45": 1778,
+  "anyo": 2025
+ },
+ "46": {
+  "province": "Valencia/València",
+  "ine_geo": "Valencia/València",
+  "ine_local_units_div45": 4795,
+  "anyo": 2025
+ },
+ "47": {
+  "province": "Valladolid",
+  "ine_geo": "Valladolid",
+  "ine_local_units_div45": 806,
+  "anyo": 2025
+ },
+ "48": {
+  "province": "Bizkaia",
+  "ine_geo": "Vizcaya",
+  "ine_local_units_div45": 1466,
+  "anyo": 2025
+ },
+ "49": {
+  "province": "Zamora",
+  "ine_geo": "Zamora",
+  "ine_local_units_div45": 381,
+  "anyo": 2025
+ },
+ "50": {
+  "province": "Zaragoza",
+  "ine_geo": "Zaragoza",
+  "ine_local_units_div45": 1432,
+  "anyo": 2025
+ },
+ "51": {
+  "province": "Ceuta",
+  "ine_geo": "Ceuta",
+  "ine_local_units_div45": 96,
+  "anyo": 2025
+ },
+ "52": {
+  "province": "Melilla",
+  "ine_geo": "Melilla",
+  "ine_local_units_div45": 163,
+  "anyo": 2025
+ }
+}

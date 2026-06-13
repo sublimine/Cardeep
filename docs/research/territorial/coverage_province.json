@@ -1,0 +1,480 @@
+{
+ "sales_share": 0.2604913056724704,
+ "national": {
+  "all": 33611,
+  "registral": 21759,
+  "ine451": 23085,
+  "covA": 1.4559670781893004,
+  "covB": 0.9425601039636128
+ },
+ "provinces": [
+  {
+   "code": "01",
+   "province": "Araba/Álava",
+   "ours_all": 219,
+   "ours_registral": 158,
+   "ine451_est": 123,
+   "covA": 1.7804878048780488,
+   "covB": 1.2845528455284554
+  },
+  {
+   "code": "02",
+   "province": "Albacete",
+   "ours_all": 269,
+   "ours_registral": 175,
+   "ine451_est": 212,
+   "covA": 1.2688679245283019,
+   "covB": 0.8254716981132075
+  },
+  {
+   "code": "03",
+   "province": "Alicante/Alacant",
+   "ours_all": 1405,
+   "ours_registral": 873,
+   "ine451_est": 1070,
+   "covA": 1.3130841121495327,
+   "covB": 0.8158878504672897
+  },
+  {
+   "code": "04",
+   "province": "Almería",
+   "ours_all": 329,
+   "ours_registral": 231,
+   "ine451_est": 396,
+   "covA": 0.8308080808080808,
+   "covB": 0.5833333333333334
+  },
+  {
+   "code": "05",
+   "province": "Ávila",
+   "ours_all": 82,
+   "ours_registral": 51,
+   "ine451_est": 89,
+   "covA": 0.9213483146067416,
+   "covB": 0.5730337078651685
+  },
+  {
+   "code": "06",
+   "province": "Badajoz",
+   "ours_all": 587,
+   "ours_registral": 389,
+   "ine451_est": 454,
+   "covA": 1.2929515418502202,
+   "covB": 0.8568281938325991
+  },
+  {
+   "code": "07",
+   "province": "Balears, Illes",
+   "ours_all": 585,
+   "ours_registral": 435,
+   "ine451_est": 505,
+   "covA": 1.1584158415841583,
+   "covB": 0.8613861386138614
+  },
+  {
+   "code": "08",
+   "province": "Barcelona",
+   "ours_all": 3764,
+   "ours_registral": 2351,
+   "ine451_est": 2246,
+   "covA": 1.6758682101513802,
+   "covB": 1.0467497773820125
+  },
+  {
+   "code": "09",
+   "province": "Burgos",
+   "ours_all": 308,
+   "ours_registral": 237,
+   "ine451_est": 170,
+   "covA": 1.811764705882353,
+   "covB": 1.3941176470588235
+  },
+  {
+   "code": "10",
+   "province": "Cáceres",
+   "ours_all": 221,
+   "ours_registral": 140,
+   "ine451_est": 230,
+   "covA": 0.9608695652173913,
+   "covB": 0.6086956521739131
+  },
+  {
+   "code": "11",
+   "province": "Cádiz",
+   "ours_all": 755,
+   "ours_registral": 547,
+   "ine451_est": 482,
+   "covA": 1.566390041493776,
+   "covB": 1.1348547717842323
+  },
+  {
+   "code": "12",
+   "province": "Castellón/Castelló",
+   "ours_all": 346,
+   "ours_registral": 223,
+   "ine451_est": 293,
+   "covA": 1.180887372013652,
+   "covB": 0.7610921501706485
+  },
+  {
+   "code": "13",
+   "province": "Ciudad Real",
+   "ours_all": 348,
+   "ours_registral": 216,
+   "ine451_est": 287,
+   "covA": 1.2125435540069687,
+   "covB": 0.7526132404181185
+  },
+  {
+   "code": "14",
+   "province": "Córdoba",
+   "ours_all": 437,
+   "ours_registral": 260,
+   "ine451_est": 438,
+   "covA": 0.997716894977169,
+   "covB": 0.593607305936073
+  },
+  {
+   "code": "15",
+   "province": "Coruña, A",
+   "ours_all": 817,
+   "ours_registral": 528,
+   "ine451_est": 577,
+   "covA": 1.415944540727903,
+   "covB": 0.9150779896013865
+  },
+  {
+   "code": "16",
+   "province": "Cuenca",
+   "ours_all": 124,
+   "ours_registral": 82,
+   "ine451_est": 134,
+   "covA": 0.9253731343283582,
+   "covB": 0.6119402985074627
+  },
+  {
+   "code": "17",
+   "province": "Girona",
+   "ours_all": 604,
+   "ours_registral": 388,
+   "ine451_est": 419,
+   "covA": 1.441527446300716,
+   "covB": 0.9260143198090692
+  },
+  {
+   "code": "18",
+   "province": "Granada",
+   "ours_all": 613,
+   "ours_registral": 400,
+   "ine451_est": 482,
+   "covA": 1.2717842323651452,
+   "covB": 0.8298755186721992
+  },
+  {
+   "code": "19",
+   "province": "Guadalajara",
+   "ours_all": 115,
+   "ours_registral": 69,
+   "ine451_est": 122,
+   "covA": 0.9426229508196722,
+   "covB": 0.5655737704918032
+  },
+  {
+   "code": "20",
+   "province": "Gipuzkoa",
+   "ours_all": 347,
+   "ours_registral": 246,
+   "ine451_est": 245,
+   "covA": 1.416326530612245,
+   "covB": 1.0040816326530613
+  },
+  {
+   "code": "21",
+   "province": "Huelva",
+   "ours_all": 224,
+   "ours_registral": 158,
+   "ine451_est": 241,
+   "covA": 0.9294605809128631,
+   "covB": 0.6556016597510373
+  },
+  {
+   "code": "22",
+   "province": "Huesca",
+   "ours_all": 168,
+   "ours_registral": 119,
+   "ine451_est": 115,
+   "covA": 1.4608695652173913,
+   "covB": 1.0347826086956522
+  },
+  {
+   "code": "23",
+   "province": "Jaén",
+   "ours_all": 644,
+   "ours_registral": 457,
+   "ine451_est": 342,
+   "covA": 1.8830409356725146,
+   "covB": 1.3362573099415205
+  },
+  {
+   "code": "24",
+   "province": "León",
+   "ours_all": 320,
+   "ours_registral": 244,
+   "ine451_est": 259,
+   "covA": 1.2355212355212355,
+   "covB": 0.9420849420849421
+  },
+  {
+   "code": "25",
+   "province": "Lleida",
+   "ours_all": 426,
+   "ours_registral": 273,
+   "ine451_est": 294,
+   "covA": 1.4489795918367347,
+   "covB": 0.9285714285714286
+  },
+  {
+   "code": "26",
+   "province": "Rioja, La",
+   "ours_all": 244,
+   "ours_registral": 169,
+   "ine451_est": 148,
+   "covA": 1.6486486486486487,
+   "covB": 1.1418918918918919
+  },
+  {
+   "code": "27",
+   "province": "Lugo",
+   "ours_all": 378,
+   "ours_registral": 265,
+   "ine451_est": 227,
+   "covA": 1.6651982378854626,
+   "covB": 1.1674008810572687
+  },
+  {
+   "code": "28",
+   "province": "Madrid",
+   "ours_all": 5762,
+   "ours_registral": 3648,
+   "ine451_est": 3082,
+   "covA": 1.8695652173913044,
+   "covB": 1.1836469824789098
+  },
+  {
+   "code": "29",
+   "province": "Málaga",
+   "ours_all": 1384,
+   "ours_registral": 868,
+   "ine451_est": 960,
+   "covA": 1.4416666666666667,
+   "covB": 0.9041666666666667
+  },
+  {
+   "code": "30",
+   "province": "Murcia",
+   "ours_all": 1148,
+   "ours_registral": 741,
+   "ine451_est": 821,
+   "covA": 1.3982947624847746,
+   "covB": 0.902557856272838
+  },
+  {
+   "code": "31",
+   "province": "Navarra",
+   "ours_all": 449,
+   "ours_registral": 299,
+   "ine451_est": 322,
+   "covA": 1.3944099378881987,
+   "covB": 0.9285714285714286
+  },
+  {
+   "code": "32",
+   "province": "Ourense",
+   "ours_all": 247,
+   "ours_registral": 148,
+   "ine451_est": 191,
+   "covA": 1.293193717277487,
+   "covB": 0.774869109947644
+  },
+  {
+   "code": "33",
+   "province": "Asturias",
+   "ours_all": 784,
+   "ours_registral": 546,
+   "ine451_est": 444,
+   "covA": 1.7657657657657657,
+   "covB": 1.2297297297297298
+  },
+  {
+   "code": "34",
+   "province": "Palencia",
+   "ours_all": 84,
+   "ours_registral": 61,
+   "ine451_est": 75,
+   "covA": 1.12,
+   "covB": 0.8133333333333334
+  },
+  {
+   "code": "35",
+   "province": "Palmas, Las",
+   "ours_all": 483,
+   "ours_registral": 306,
+   "ine451_est": 578,
+   "covA": 0.8356401384083045,
+   "covB": 0.5294117647058824
+  },
+  {
+   "code": "36",
+   "province": "Pontevedra",
+   "ours_all": 605,
+   "ours_registral": 368,
+   "ine451_est": 520,
+   "covA": 1.1634615384615385,
+   "covB": 0.7076923076923077
+  },
+  {
+   "code": "37",
+   "province": "Salamanca",
+   "ours_all": 395,
+   "ours_registral": 257,
+   "ine451_est": 175,
+   "covA": 2.257142857142857,
+   "covB": 1.4685714285714286
+  },
+  {
+   "code": "38",
+   "province": "Santa Cruz de Tenerife",
+   "ours_all": 469,
+   "ours_registral": 315,
+   "ine451_est": 584,
+   "covA": 0.803082191780822,
+   "covB": 0.5393835616438356
+  },
+  {
+   "code": "39",
+   "province": "Cantabria",
+   "ours_all": 431,
+   "ours_registral": 304,
+   "ine451_est": 253,
+   "covA": 1.7035573122529644,
+   "covB": 1.2015810276679841
+  },
+  {
+   "code": "40",
+   "province": "Segovia",
+   "ours_all": 83,
+   "ours_registral": 58,
+   "ine451_est": 82,
+   "covA": 1.0121951219512195,
+   "covB": 0.7073170731707317
+  },
+  {
+   "code": "41",
+   "province": "Sevilla",
+   "ours_all": 1481,
+   "ours_registral": 885,
+   "ine451_est": 1020,
+   "covA": 1.4519607843137254,
+   "covB": 0.8676470588235294
+  },
+  {
+   "code": "42",
+   "province": "Soria",
+   "ours_all": 62,
+   "ours_registral": 45,
+   "ine451_est": 45,
+   "covA": 1.3777777777777778,
+   "covB": 1.0
+  },
+  {
+   "code": "43",
+   "province": "Tarragona",
+   "ours_all": 631,
+   "ours_registral": 388,
+   "ine451_est": 412,
+   "covA": 1.5315533980582525,
+   "covB": 0.941747572815534
+  },
+  {
+   "code": "44",
+   "province": "Teruel",
+   "ours_all": 77,
+   "ours_registral": 57,
+   "ine451_est": 78,
+   "covA": 0.9871794871794872,
+   "covB": 0.7307692307692307
+  },
+  {
+   "code": "45",
+   "province": "Toledo",
+   "ours_all": 545,
+   "ours_registral": 329,
+   "ine451_est": 463,
+   "covA": 1.1771058315334773,
+   "covB": 0.7105831533477321
+  },
+  {
+   "code": "46",
+   "province": "Valencia/València",
+   "ours_all": 2066,
+   "ours_registral": 1296,
+   "ine451_est": 1249,
+   "covA": 1.6541232986389112,
+   "covB": 1.0376301040832665
+  },
+  {
+   "code": "47",
+   "province": "Valladolid",
+   "ours_all": 378,
+   "ours_registral": 264,
+   "ine451_est": 210,
+   "covA": 1.8,
+   "covB": 1.2571428571428571
+  },
+  {
+   "code": "48",
+   "province": "Bizkaia",
+   "ours_all": 719,
+   "ours_registral": 476,
+   "ine451_est": 382,
+   "covA": 1.882198952879581,
+   "covB": 1.2460732984293195
+  },
+  {
+   "code": "49",
+   "province": "Zamora",
+   "ours_all": 153,
+   "ours_registral": 104,
+   "ine451_est": 99,
+   "covA": 1.5454545454545454,
+   "covB": 1.0505050505050506
+  },
+  {
+   "code": "50",
+   "province": "Zaragoza",
+   "ours_all": 476,
+   "ours_registral": 296,
+   "ine451_est": 373,
+   "covA": 1.2761394101876675,
+   "covB": 0.7935656836461126
+  },
+  {
+   "code": "51",
+   "province": "Ceuta",
+   "ours_all": 6,
+   "ours_registral": 5,
+   "ine451_est": 25,
+   "covA": 0.24,
+   "covB": 0.2
+  },
+  {
+   "code": "52",
+   "province": "Melilla",
+   "ours_all": 14,
+   "ours_registral": 11,
+   "ine451_est": 42,
+   "covA": 0.3333333333333333,
+   "covB": 0.2619047619047619
+  }
+ ]
+}

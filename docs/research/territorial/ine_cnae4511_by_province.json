@@ -1,0 +1,242 @@
+{
+  "front": "ine_census_denominator",
+  "built_at_utc": "2026-06-13T20:07:51Z",
+  "source": {
+    "provider": "INE - Instituto Nacional de Estadistica",
+    "product": "DIRCE - Explotacion Estadistica del Directorio Central de Empresas",
+    "operation_id": 43,
+    "cod_ioe": 30203,
+    "api": "Tempus3 JSON API (servicios.ine.es/wstempus/js/ES)",
+    "tables_used": {
+      "39372": "Empresas por CCAA, actividad principal (grupos CNAE 2009) y estrato de asalariados",
+      "294": "Locales por CCAA, actividad principal (grupos CNAE 2009) y estrato de asalariados (cross-check)"
+    },
+    "reference_date": "2025-01-01 (DIRCE counts businesses active on 1 Jan)",
+    "data_status": "Definitivo"
+  },
+  "cnae": {
+    "level_published": "grupo 451 (3-digit)",
+    "cnae_value_id": 21930,
+    "label": "Venta de vehiculos de motor",
+    "comprises": [
+      "4511 Venta de automoviles y vehiculos de motor ligeros",
+      "4519 Venta de otros vehiculos de motor"
+    ],
+    "note": "DIRCE does NOT disaggregate empresa counts to 4-digit clase 4511/4519; the authoritative car-dealer business count is grupo 451 = 4511+4519 combined."
+  },
+  "geographic_resolution": {
+    "available": "CCAA (autonomous community)",
+    "province_cnae451": "NOT PUBLISHED - no DIRCE table crosses province x CNAE grupo 451 (verified across all 30 DIRCE tables). Province tables carry no CNAE; the only province x CNAE tables (301/304) are SECCION-level and count locales.",
+    "municipality_cnae451": "NOT PUBLISHED - table 4721 (Empresas por municipio y actividad principal) exposes CNAE only at broad SECCION depth (e.g. 'Comercio... reparacion de vehiculos... transporte... hosteleria'), not isolable to 451/4511. CONFIDENTIAL/AGGREGATED below CCAA."
+  },
+  "national": {
+    "empresas_cnae451": 14367,
+    "locales_cnae451": 23085,
+    "by_estrato_asalariados": {
+      "Total": 14367,
+      "Sin asalariados": 7579,
+      "De 1 a 2 asalariados": 4262,
+      "De 3 a 5 asalariados": 948,
+      "De 6 a 9 asalariados": 426,
+      "De 10 a 19 asalariados": 482,
+      "De 20 a 49 asalariados": 377,
+      "De 50 a 99 asalariados": 132,
+      "De 100 a 199 asalariados": 92,
+      "De 1000 a 4999 asalariados": 5,
+      "De 5000 o mas asalariados": 0
+    }
+  },
+  "by_ccaa": [
+    {
+      "ccaa": "Andalucia",
+      "ccaa_code": "01",
+      "empresas_cnae451": 2746,
+      "locales_cnae451": 4213,
+      "cardeep_business_dealers": 5871,
+      "coverage_pct_vs_dirce451": 213.8
+    },
+    {
+      "ccaa": "Madrid (Comunidad de)",
+      "ccaa_code": "13",
+      "empresas_cnae451": 2364,
+      "locales_cnae451": 4123,
+      "cardeep_business_dealers": 5776,
+      "coverage_pct_vs_dirce451": 244.3
+    },
+    {
+      "ccaa": "Cataluna",
+      "ccaa_code": "09",
+      "empresas_cnae451": 2133,
+      "locales_cnae451": 3509,
+      "cardeep_business_dealers": 5443,
+      "coverage_pct_vs_dirce451": 255.2
+    },
+    {
+      "ccaa": "Comunitat Valenciana",
+      "ccaa_code": "10",
+      "empresas_cnae451": 1659,
+      "locales_cnae451": 2574,
+      "cardeep_business_dealers": 3830,
+      "coverage_pct_vs_dirce451": 230.9
+    },
+    {
+      "ccaa": "Galicia",
+      "ccaa_code": "12",
+      "empresas_cnae451": 895,
+      "locales_cnae451": 1437,
+      "cardeep_business_dealers": 2053,
+      "coverage_pct_vs_dirce451": 229.4
+    },
+    {
+      "ccaa": "Castilla - La Mancha",
+      "ccaa_code": "08",
+      "empresas_cnae451": 746,
+      "locales_cnae451": 1117,
+      "cardeep_business_dealers": 1404,
+      "coverage_pct_vs_dirce451": 188.2
+    },
+    {
+      "ccaa": "Castilla y Leon",
+      "ccaa_code": "07",
+      "empresas_cnae451": 683,
+      "locales_cnae451": 1108,
+      "cardeep_business_dealers": 1868,
+      "coverage_pct_vs_dirce451": 273.5
+    },
+    {
+      "ccaa": "Canarias",
+      "ccaa_code": "05",
+      "empresas_cnae451": 586,
+      "locales_cnae451": 1046,
+      "cardeep_business_dealers": 952,
+      "coverage_pct_vs_dirce451": 162.5
+    },
+    {
+      "ccaa": "Murcia (Region de)",
+      "ccaa_code": "14",
+      "empresas_cnae451": 556,
+      "locales_cnae451": 816,
+      "cardeep_business_dealers": 1151,
+      "coverage_pct_vs_dirce451": 207.0
+    },
+    {
+      "ccaa": "Extremadura",
+      "ccaa_code": "11",
+      "empresas_cnae451": 399,
+      "locales_cnae451": 578,
+      "cardeep_business_dealers": 810,
+      "coverage_pct_vs_dirce451": 203.0
+    },
+    {
+      "ccaa": "Pais Vasco",
+      "ccaa_code": "16",
+      "empresas_cnae451": 398,
+      "locales_cnae451": 569,
+      "cardeep_business_dealers": 1289,
+      "coverage_pct_vs_dirce451": 323.9
+    },
+    {
+      "ccaa": "Asturias (Principado de)",
+      "ccaa_code": "03",
+      "empresas_cnae451": 259,
+      "locales_cnae451": 378,
+      "cardeep_business_dealers": 786,
+      "coverage_pct_vs_dirce451": 303.5
+    },
+    {
+      "ccaa": "Aragon",
+      "ccaa_code": "02",
+      "empresas_cnae451": 256,
+      "locales_cnae451": 454,
+      "cardeep_business_dealers": 723,
+      "coverage_pct_vs_dirce451": 282.4
+    },
+    {
+      "ccaa": "Balears (Illes)",
+      "ccaa_code": "04",
+      "empresas_cnae451": 227,
+      "locales_cnae451": 423,
+      "cardeep_business_dealers": 588,
+      "coverage_pct_vs_dirce451": 259.0
+    },
+    {
+      "ccaa": "Navarra (Comunidad Foral de)",
+      "ccaa_code": "15",
+      "empresas_cnae451": 205,
+      "locales_cnae451": 312,
+      "cardeep_business_dealers": 450,
+      "coverage_pct_vs_dirce451": 219.5
+    },
+    {
+      "ccaa": "Cantabria",
+      "ccaa_code": "06",
+      "empresas_cnae451": 135,
+      "locales_cnae451": 230,
+      "cardeep_business_dealers": 432,
+      "coverage_pct_vs_dirce451": 320.0
+    },
+    {
+      "ccaa": "Rioja (La)",
+      "ccaa_code": "17",
+      "empresas_cnae451": 72,
+      "locales_cnae451": 128,
+      "cardeep_business_dealers": 244,
+      "coverage_pct_vs_dirce451": 338.9
+    },
+    {
+      "ccaa": "Melilla",
+      "ccaa_code": "19",
+      "empresas_cnae451": 34,
+      "locales_cnae451": 44,
+      "cardeep_business_dealers": 14,
+      "coverage_pct_vs_dirce451": 41.2
+    },
+    {
+      "ccaa": "Ceuta",
+      "ccaa_code": "18",
+      "empresas_cnae451": 14,
+      "locales_cnae451": 26,
+      "cardeep_business_dealers": 6,
+      "coverage_pct_vs_dirce451": 42.9
+    }
+  ],
+  "integrity": {
+    "ccaa_count": 19,
+    "sum_of_ccaa_empresas": 14367,
+    "national_empresas": 14367,
+    "sum_matches_national": true
+  },
+  "historical_national_empresas_cnae451": [
+    {
+      "year": 2020,
+      "empresas": 16755
+    },
+    {
+      "year": 2021,
+      "empresas": 16505
+    },
+    {
+      "year": 2022,
+      "empresas": 16643
+    },
+    {
+      "year": 2023,
+      "empresas": 13748
+    },
+    {
+      "year": 2024,
+      "empresas": 13898
+    },
+    {
+      "year": 2025,
+      "empresas": 14367
+    }
+  ],
+  "cardeep_db_anchor": {
+    "query": "entity kinds in (compraventa,concesionario_oficial,cadena,importador,rent_a_car_vo,oem_vo_portal), status<>closed, joined geo_province->ccaa_code; excludes 326,637 'particular' private sellers and 'desguace' scrapyards (CNAE 4677, not 451)",
+    "cardeep_business_dealers_total": 33690,
+    "dirce_cnae451_empresas_total": 14367,
+    "coverage_pct_vs_dirce451": 234.5,
+    "interpretation": "Cardeep's discovered car-selling BUSINESS universe (33,690) exceeds the DIRCE-451 empresa count (14,367) ~2.3x. DIRCE counts only empresas whose PRINCIPAL activity is registered as 451; it undercounts autonomos, secondary-activity sellers, and informal points-of-sale. Therefore DIRCE-451 is a FLOOR/anchor, not a ceiling: it cannot serve as the sole capture-recapture denominator for the live retail universe. Coverage % >100% means saturation vs the formal registry, NOT a gap."
+  }
+}

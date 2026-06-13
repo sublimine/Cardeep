@@ -1,0 +1,184 @@
+{
+ "national": {
+  "ours_all": 33611,
+  "ours_registral": 21759,
+  "ine_locales451": 23085,
+  "ine_empresas451": 14367,
+  "covAll_locales": 1.4559670781893004,
+  "covReg_locales": 0.9425601039636128,
+  "covReg_empresas": 1.5145124243057007
+ },
+ "by_ccaa": [
+  {
+   "ccaa_code": "01",
+   "ccaa": "Andalucía",
+   "ours_all": 5867,
+   "ours_registral": 3806,
+   "ine_locales451": 4213,
+   "covAll": 1.3925943508188938,
+   "covReg": 0.9033942558746736
+  },
+  {
+   "ccaa_code": "02",
+   "ccaa": "Aragón",
+   "ours_all": 721,
+   "ours_registral": 472,
+   "ine_locales451": 454,
+   "covAll": 1.5881057268722467,
+   "covReg": 1.039647577092511
+  },
+  {
+   "ccaa_code": "03",
+   "ccaa": "Asturias, Principado de",
+   "ours_all": 784,
+   "ours_registral": 546,
+   "ine_locales451": 378,
+   "covAll": 2.074074074074074,
+   "covReg": 1.4444444444444444
+  },
+  {
+   "ccaa_code": "04",
+   "ccaa": "Balears, Illes",
+   "ours_all": 585,
+   "ours_registral": 435,
+   "ine_locales451": 423,
+   "covAll": 1.3829787234042554,
+   "covReg": 1.0283687943262412
+  },
+  {
+   "ccaa_code": "05",
+   "ccaa": "Canarias",
+   "ours_all": 952,
+   "ours_registral": 621,
+   "ine_locales451": 1046,
+   "covAll": 0.9101338432122371,
+   "covReg": 0.5936902485659655
+  },
+  {
+   "ccaa_code": "06",
+   "ccaa": "Cantabria",
+   "ours_all": 431,
+   "ours_registral": 304,
+   "ine_locales451": 230,
+   "covAll": 1.873913043478261,
+   "covReg": 1.3217391304347825
+  },
+  {
+   "ccaa_code": "07",
+   "ccaa": "Castilla y León",
+   "ours_all": 1865,
+   "ours_registral": 1321,
+   "ine_locales451": 1108,
+   "covAll": 1.6832129963898916,
+   "covReg": 1.1922382671480145
+  },
+  {
+   "ccaa_code": "08",
+   "ccaa": "Castilla-La Mancha",
+   "ours_all": 1401,
+   "ours_registral": 871,
+   "ine_locales451": 1117,
+   "covAll": 1.2542524619516562,
+   "covReg": 0.7797672336615935
+  },
+  {
+   "ccaa_code": "09",
+   "ccaa": "Cataluña",
+   "ours_all": 5425,
+   "ours_registral": 3400,
+   "ine_locales451": 3509,
+   "covAll": 1.5460245084069535,
+   "covReg": 0.968937019093759
+  },
+  {
+   "ccaa_code": "10",
+   "ccaa": "Comunitat Valenciana",
+   "ours_all": 3817,
+   "ours_registral": 2392,
+   "ine_locales451": 2574,
+   "covAll": 1.482905982905983,
+   "covReg": 0.9292929292929293
+  },
+  {
+   "ccaa_code": "11",
+   "ccaa": "Extremadura",
+   "ours_all": 808,
+   "ours_registral": 529,
+   "ine_locales451": 578,
+   "covAll": 1.397923875432526,
+   "covReg": 0.9152249134948097
+  },
+  {
+   "ccaa_code": "12",
+   "ccaa": "Galicia",
+   "ours_all": 2047,
+   "ours_registral": 1309,
+   "ine_locales451": 1437,
+   "covAll": 1.4244954766875435,
+   "covReg": 0.9109255393180237
+  },
+  {
+   "ccaa_code": "13",
+   "ccaa": "Madrid, Comunidad de",
+   "ours_all": 5762,
+   "ours_registral": 3648,
+   "ine_locales451": 4123,
+   "covAll": 1.3975260732476351,
+   "covReg": 0.8847926267281107
+  },
+  {
+   "ccaa_code": "14",
+   "ccaa": "Murcia, Región de",
+   "ours_all": 1148,
+   "ours_registral": 741,
+   "ine_locales451": 816,
+   "covAll": 1.4068627450980393,
+   "covReg": 0.9080882352941176
+  },
+  {
+   "ccaa_code": "15",
+   "ccaa": "Navarra, Comunidad Foral de",
+   "ours_all": 449,
+   "ours_registral": 299,
+   "ine_locales451": 312,
+   "covAll": 1.439102564102564,
+   "covReg": 0.9583333333333334
+  },
+  {
+   "ccaa_code": "16",
+   "ccaa": "País Vasco",
+   "ours_all": 1285,
+   "ours_registral": 880,
+   "ine_locales451": 569,
+   "covAll": 2.258347978910369,
+   "covReg": 1.546572934973638
+  },
+  {
+   "ccaa_code": "17",
+   "ccaa": "Rioja, La",
+   "ours_all": 244,
+   "ours_registral": 169,
+   "ine_locales451": 128,
+   "covAll": 1.90625,
+   "covReg": 1.3203125
+  },
+  {
+   "ccaa_code": "18",
+   "ccaa": "Ceuta",
+   "ours_all": 6,
+   "ours_registral": 5,
+   "ine_locales451": 26,
+   "covAll": 0.23076923076923078,
+   "covReg": 0.19230769230769232
+  },
+  {
+   "ccaa_code": "19",
+   "ccaa": "Melilla",
+   "ours_all": 14,
+   "ours_registral": 11,
+   "ine_locales451": 44,
+   "covAll": 0.3181818181818182,
+   "covReg": 0.25
+  }
+ ]
+}
