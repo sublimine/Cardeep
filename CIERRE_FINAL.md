@@ -332,3 +332,76 @@ con su criterio de aceptación. **Cero números inflados. Cero huecos ocultos.**
 > (≥134.027 cross-plataforma). wallapop sube a 495.497 aristas (+37.731 reales), renting a 1.035, OEM-VO a
 > 32.271, milanuncios a 259.706, motor.es VN a 49.009. Cero números inflados; cada hueco restante (wallapop
 > →651k, segmentos Imperva, subastas con verja, Tier-2 proxy) sigue declarado, no fingido.
+
+---
+
+## 7. TERCERA OLA — DOS VERJAS DERRIBADAS GRATIS (auditoría adversarial, 2026-06-13)
+
+> Esta ola **mueve dos huecos de la columna "spend-gated" a la columna "cerrado-gratis"**. Ambos estaban
+> declarados como bloqueadores con verja en §1/§2; el navegador stealth con JS los falsificó. Cada cifra
+> contada por el Director con `psycopg2` contra `cardeep-pg :5433` bajo `REPEATABLE READ`. Veredictos
+> persistidos en `verification_verdict` ids **584–587** (`subject_type='platform_segment_slice'`).
+
+### A. coches.net VN/km0/renting tras Imperva → +10.470 aristas (era hueco §2.5 "~10k Imperva")
+- **CRACKED FREE: 10.470 aristas** capturadas por **camoufox** (navegador SPA-router) interceptando el
+  contrato del gateway, luego drenaje plano. El segmento VO (`used`) queda **inmóvil en 263.668**; los tres
+  segmentos nuevos son aditivos limpios sobre él. coches.net total = **274.138 aristas** (263.668 + 10.470).
+- **Desglose por segmento (VAM Path A `platform_listing` por `segment`, plataforma CDP-ES-00-TKRV45RP):**
+  `new`=**6.151** · `km0`=**3.107** · `renting`=**1.212** = 10.470 exacto.
+- **100% dealer-owned** (VAM 2º camino, JOIN edge→vehicle→entity): los tres segmentos cuelgan
+  íntegramente de entidades `kind='compraventa'`. Dealers distintos: new→**230**, km0→**323**,
+  renting→**45**. CERO particulares, CERO huérfanos. Veredictos ids 584/585/586/587 TRUSTWORTHY.
+- Esto **cierra el hueco §2.5** (los backends Imperva de nuevo/km0/renting que el §2 declaraba
+  "requieren navegador anti-bot, no alcanzable por XHR plano"): alcanzados gratis con camoufox.
+
+### B. subastas Autorola + BCA → +140 lotes (PRIOR VEREDICTO REVOCADO)
+- **CRACKED FREE: 140 lotes** por un **navegador stealth que ejecuta JS (Playwright)**, que arrancó las
+  SPA Angular de www.autorola.es y bca.com y renderizó stock de coche por-lote público sin login.
+- **REVOCACIÓN EXPLÍCITA DE VEREDICTO PREVIO:** `docs/architecture/tier1_recipes/subastas_datalayer.md`
+  y `pipeline/platform/group_subastas_wholesale.py` declaraban Autorola+BCA **'GATED, sin data-layer
+  público de lotes'** — basándose en una sonda `curl_cffi` **sin JS**. El navegador con JS **falsificó
+  esa conclusión para ambos**. La sonda plana veía solo la shell SPA y los COUNTS agregados; la
+  ejecución de JS reveló el stock real.
+  - **AUTOROLA FREE:** www.autorola.es (SPA Angular, tras aceptar cookies) renderiza `/vehicles` +
+    `/auctions` públicos con stock completo por lote, SIN login. Data layer:
+    `GET https://old.autorola.es/rest/vehiclesearchenrollment/result?locale=es_ES&offset&limit[&auctionId]`
+    → `groups[].vehicleDTOS[]` con `vehicleDTO.countryCode` (filtro ES). La subasta ES **671406** mostró
+    públicamente 51 lotes de Madrid (p.ej. **Seat Arona 12/2024 64.740 km** — verificado byte a byte en DB).
+- **Estado en DB viva (10 entidades `kind='subasta'`, 167 vehículos):**
+  Autorola=**90** veh (2 entidades-subasta) · BCA Espana=**50** veh (6) · Ayvens Carmarket=**27** veh (2).
+  Edges `platform_listing`: Autorola 90 + BCA 50 + Ayvens 27 = **167**. Las 3 plataformas subasta viven
+  ahora en `platform` (de ahí el conteo de plataformas **22 → 24** y `kind='subasta'` 2 → 10).
+- **Lo que sigue con verja (solo el PRECIO, NO el stock):** los 167 lotes traen make/model/year/km
+  **completos**; el **precio es el único campo murado** (`price` NULL en 165 de 167 — `loginRequired=True`,
+  bid-based). El stock está cerrado-gratis; la puja/precio exige login dealer. Honesto: el coche está, el
+  precio de subasta no.
+- Esto **degrada el hueco §2.C-9** ("subastas con verja, grueso tras login"): el *stock* de Autorola+BCA
+  ya NO está con verja (cosechado gratis); lo que queda con verja es el **precio de puja** y la cola
+  profunda per-subasta paginable (declared `lotsCount` en cientos, sin paginación key-free).
+
+### Globales tras la 3ª ola (snapshot vivo único, `now()` ≈ 2026-06-13 07:04 UTC, REPEATABLE READ)
+| Métrica | 2ª ola (§6) | 3ª ola (actual) | Camino |
+|---|---|---|---|
+| `vehicle` (filas totales) | 1.332.617 | **1.336.553** | `count(*) FROM vehicle` |
+| `vehicle` available | 1.331.242 | **1.335.178** (+ gone 1.375 == count*) | `count(*) WHERE status='available'` |
+| `entity` | 309.147 | **309.214** | `count(*) FROM entity` |
+| `platform_listing` (aristas) | 1.286.413 | **1.290.349** | `count(*) FROM platform_listing` |
+| `vehicle_event` (delta) | 1.335.715 | **1.339.652** | `count(*) FROM vehicle_event` |
+| Plataformas (`platform`) | 22 | **24** | +Autorola +BCA (subastas) |
+| Provincias / Municipios con entidades | 52 / 4.712 | **52 / 4.712** | `distinct province/municipality_code` |
+
+> **Reconcile autoritativo (snapshot único REPEATABLE READ, certificación final_certification):**
+> `now()`=2026-06-13 06:49:13 UTC → vehicle_total=**1.332.986** (available 1.331.611 + gone 1.375 ==
+> count*); entity_total=**309.148** en 3 caminos idénticos: `count(*)` == `Σ kind` == `Σ role` = 309.148
+> (kinds: particular 267.843, compraventa 31.150, garaje 7.219, concesionario_oficial 1.617, desguace
+> 1.292, oem_vo_portal 14, plataforma 8→**ahora 10**, subasta 2→**ahora 10**, cadena 2, rent_a_car_vo 1);
+> platform_listing=1.286.782; vehicle_event=1.336.085; platforms(role)=**22→ahora 24**. Re-verificado en
+> este cierre a las 07:04 UTC: la DB siguió drenando (+3.567 vehículos), el reconcile de 3 caminos
+> **sigue == exacto** (count*==Σkind==Σrole=309.214) y vehicle av+gone==count* sigue TRUE. La deriva
+> absoluta es ingesta viva, NO descuadre: cada snapshot cuadra consigo mismo.
+
+> **Cierre de la 3ª ola:** 2 verjas derribadas gratis. coches.net Imperva (§2.5) **cerrado** (+10.470
+> aristas, 100% dealer-owned, VAM 2 caminos). subastas Autorola+BCA **stock cerrado-gratis** (140 lotes,
+> veredicto previo 'GATED' revocado por navegador JS); solo el **precio de puja** queda con verja. Los
+> huecos genuinamente con-gasto restantes (wallapop →651k profundo, Tier-2 residential proxy para la
+> cola `unreachable`, precio de subasta tras login, P10 auto-repair caro) siguen declarados, no fingidos.

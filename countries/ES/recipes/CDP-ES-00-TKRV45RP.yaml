@@ -29,3 +29,25 @@ field_map:
   photo_url: item.resources[type=IMAGE][0].url
   dealer: item.seller {name, contractId, isProfessional, ratings}
   location: item.location {mainProvinceId(=INE province code), cityLiteral}
+segments:
+  discovery: SPA gateway capture via camoufox: land homepage, client-side navigate (SPA router) to /nuevo//km-0//renting/ to avoid the 405 document GET, intercept the real /search XHR. The wrapped {pagination,sort,filters} body then works for plain curl_cffi.
+  endpoint: POST https://web.gw.coches.net/search (WRAPPED body)
+  filter: filters.offerTypeIds + filters.categories.category1Ids=[2500]
+  map:
+    new:
+      offerTypeIds:
+        - 1
+      literal: Nuevo
+    km0:
+      offerTypeIds:
+        - 2
+        - 3
+        - 4
+        - 5
+      literal: Km0
+    renting:
+      offerTypeIds:
+        - 10
+      literal: Subscription
+  edge_flag: platform_listing.segment in (new,km0,renting)
+  verified_live: 2026-06-13
