@@ -67,6 +67,17 @@ los que 5 concesionarios AECS DealerK aportaron **327 coches** own-site vía ver
 **barrido geográfico** (+68 dealers, 40 con web propia cosechable lista para receta per-dealer). Son
 candidatos de familia: una vez fingerprinteados caen en una de las 7 familias de arriba.
 
+## Canal `importador` (ola new-channels) — sin unidad validada
+
+El conector `pipeline/platform/group_importador_wholesale.py` se construyó para poblar el canal
+`kind='importador'` (operadores de importación alemana). De la censada, solo **MODRIVE** (`modrive.com`)
+exponía stock own-site curl_cffi-alcanzable (SSR JSON-LD ItemList). **Estado actual:** el verdict id 626
+selló 19 aristas, pero la DB viva tiene **0 listings y 0 platform row** para `CDP-ES-00-MVRE0FYC`
+(`[VERIFICADO]` esta sesión) → retirado, no registrable. Las entidades `kind='importador'` reclasificadas
+(Carismatic ×4, Trend Cars ×6) no tienen aristas propias cosechadas; el resto de candidatos son sitios
+WordPress lead-gen sin catálogo machine-readable. **Por eso NO existe `groups/importador.md`: no hay
+unidad validada que lo respalde.** Detalle y evidencia en [NOT-VALIDATED.md](../NOT-VALIDATED.md) §5.3.
+
 **Fuera del runbook:** 89 unreachable genuinamente muertas/walled (confirmadas por camoufox stealth),
 9.828 cars own-site sin familia asignada, builders sin superficie machine-readable. Ver
 [NOT-VALIDATED.md](../NOT-VALIDATED.md).

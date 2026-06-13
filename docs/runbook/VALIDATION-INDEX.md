@@ -2,12 +2,12 @@
 
 > LA bitácora. Cada unidad validada → `verification_verdict` id + count + CLI + fecha. **Regla
 > dura:** una fila existe aquí SOLO si su `verdict id` es TRUSTWORTHY y se confirmó en la DB
-> (`postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`) esta sesión. Las 55 ids citadas en
+> (`postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`) esta sesión. Las 62 ids citadas en
 > todo el runbook se cruzaron una a una contra la tabla viva: **todas existen, todos los
 > `primary_value` coinciden al dígito**. Lo REFUTED / no validado vive en
 > [NOT-VALIDATED.md](NOT-VALIDATED.md).
 >
-> Verificado **2026-06-13**. Ledger total vivo: **598 veredictos (588 TRUSTWORTHY, 10 REFUTED)**.
+> Verificado **2026-06-13**. Ledger total vivo: **614 veredictos (604 TRUSTWORTHY, 10 REFUTED)**.
 > Esta tabla lista las unidades-conector + las verdades de motor + las unidades de descubrimiento; el
 > ledger completo incluye además 370 `entity_inventory` por-entidad no enumerados aquí (uno por punto
 > de venta).
@@ -22,7 +22,7 @@
 | milanuncios | **554** | 259.706 | `python -m pipeline.platform.milanuncios_wholesale --pages 100` | 2026-06-13 |
 | wallapop | **592** | 565.128 | `python -m pipeline.platform.wallapop_wholesale --target 651000` | 2026-06-13 |
 | coches.com (VO) | **551** | 91.066 | `python -m pipeline.platform.coches_com_wholesale --all` | 2026-06-13 |
-| autocasion | **549** | 15.765 | `python -m pipeline.platform.autocasion_facet --makes all` | 2026-06-13 |
+| autocasion | **638** | 111.844 | `python -m pipeline.platform.autocasion_facet --makes all` | 2026-06-13 |
 | motor.es | **558** | 49.009 | `python -m pipeline.platform.motor_es_wholesale --full` | 2026-06-13 |
 
 ### Segmentos Tier-1 (`platform_segment_slice` / `platform_segment`)
@@ -34,6 +34,32 @@
 | coches.net renting | **587** | 1.212 | platform_segment_slice | 2026-06-13 |
 | coches.com renting | **564** | 1.034 | platform_segment | 2026-06-13 |
 | coches.com vn | **492** | 826 | platform_segment | 2026-06-13 |
+
+---
+
+## Nuevos canales · ola new-channels (6 · `platform_slice` / `platform`)
+
+> Canales genuinamente NUEVOS (count=0 en DB antes de la ola), cosechados y VAM-firmados esta sesión.
+> Cada `count` re-contado de la DB viva por los 3 caminos ortogonales (`db_edges == db_join_vehicles
+> == db_distinct_refs`, div 0.0). Clásicos (Car&Classic, Miclasico) MERGED como `compraventa` por
+> decisión de owner. Lo gateado/inalcanzable (CarCollect, Manheim, MODRIVE retirado, lead-gen
+> importador) → [NOT-VALIDATED.md](NOT-VALIDATED.md).
+
+| Unidad | cdp_code | verdict id | count | tipo | grupo | CLI | fecha |
+|---|---|---:|---:|---|---|---|---|
+| Car & Classic | CDP-ES-00-WS3ZTNX7 | **630** | 585 | platform_slice | clásicos→compraventa (Tier-1) | `python -m pipeline.platform.carandclassic_wholesale --pages 11` | 2026-06-13 |
+| Miclasico | CDP-ES-00-TSJFC4J2 | **637** | 959 | platform_slice | clásicos→compraventa (Tier-1) | `python -m pipeline.platform.miclasico_wholesale --pages 110` | 2026-06-13 |
+| Facilitea Coches | CDP-ES-00-9PXHGJBY | **633** | 788 | platform_slice | aggregator (Tier-1) | `python -m pipeline.platform.faciliteacoches_racc_wholesale --members faciliteacoches --pages 8` | 2026-06-13 |
+| RACC | CDP-ES-00-58C3W3P9 | **634** | 96 | platform_slice | aggregator (Tier-1) | `python -m pipeline.platform.faciliteacoches_racc_wholesale --members racc --pages 10` | 2026-06-13 |
+| LocalizaVO | CDP-ES-00-HFR3D62Y | **624** | 318 | platform | subastas (B2B, bid-gated) | `python -m pipeline.platform.localizavo_wholesale` | 2026-06-13 |
+| Motorflash ⚠ | CDP-ES-00-WN1DMGRN | **619** | 187 | platform_slice | aggregator (Tier-1) · DRENANDO (vivo 1.207+) | `python -m pipeline.platform.motorflash_wholesale` | 2026-06-13 |
+| **TOTAL ola** | — | **6/6** | **2.933 (sellado)** | — | facilitea+RACC=884; Motorflash drena hacia ~50k | — | — |
+
+> **Motorflash (id 619 = 187)** está en drenaje ACTIVO: la DB viva marca **1.207+ aristas y subiendo**
+> (`[VERIFICADO]`, creciendo durante el muestreo). El número avalado es el sellado (187); el vivo es
+> cross-check, la re-emisión VAM queda pendiente al cierre del drenaje (patrón sellado-vs-vivo, como
+> chains/subastas/global_count). Ver [platforms/motorflash.md](platforms/motorflash.md) y
+> [NOT-VALIDATED.md](NOT-VALIDATED.md) §2.
 
 ---
 
@@ -133,17 +159,19 @@
 
 | Bloque | unidades-conector | verdict ids |
 |---|---:|---|
-| Tier-1 (slices + segmentos) | 6 + 5 | 545, 554, 592, 551, 549, 558, 584, 585, 587, 564, 492 |
+| Tier-1 (slices + segmentos) | 6 + 5 | 545, 554, 592, 551, **638**, 558, 584, 585, 587, 564, 492 |
+| Nuevos canales (ola new-channels) | 6 | 630, 637, 633, 634, 624, 619 |
 | OEM-VO | 14 | 573, 515, 572, 482, 524, 569, 571, 566, 570, 567, 423, 527, 428, 488 |
 | Otros grupos | 3 | 541, 542, 543 |
 | Long-tail | 7 | 606, 598, 597, 596, 535, 525, 498 |
 | Motor (geo/api/dedup/global) | 10 | 581, 583, 577, 578, 579, 580, 582, 574, 559, 556 |
 | Descubrimiento | 3 | 609 (+ 2 harness re-verificados sin verdict propio) |
-| **TOTAL filas de este índice** | **45 unidades-conector + 10 de motor + 3 de descubrimiento = 56 verdict ids citados** | — |
+| **TOTAL filas de este índice** | **51 unidades-conector + 10 de motor + 3 de descubrimiento = 62 verdict ids citados** | — |
 
-Las **56 ids** citadas en este índice (55 previas + **609**) fueron confirmadas en la DB viva esta
-sesión (`SELECT … WHERE id = ANY(...)`): todas encontradas, cero faltantes, `primary_value`
-coincidente. El ledger completo contiene **588 TRUSTWORTHY + 10 REFUTED = 598** veredictos; los 370
-`entity_inventory` por-entidad y los 10 REFUTED no se enumeran aquí (los REFUTED están en
-[NOT-VALIDATED.md](NOT-VALIDATED.md)). Las dos unidades de descubrimiento sin verdict propio
+Las **62 ids** citadas en este índice (55 previas + 609 + el re-VAM **638** de autocasion + los 6 de la
+ola new-channels **630/637/633/634/624/619**; autocasion migró de 549 a 638) fueron confirmadas en la
+DB viva esta sesión (`SELECT … WHERE id = ANY(...)`): todas encontradas, cero faltantes,
+`primary_value` coincidente. El ledger completo contiene **604 TRUSTWORTHY + 10 REFUTED = 614**
+veredictos; los `entity_inventory` por-entidad y los 10 REFUTED no se enumeran aquí (los REFUTED están
+en [NOT-VALIDATED.md](NOT-VALIDATED.md)). Las dos unidades de descubrimiento sin verdict propio
 (association +409, geo-sweep +68) son conteos-censo re-verificados contra la DB, no VAM-slices.

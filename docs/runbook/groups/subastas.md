@@ -39,6 +39,19 @@ div 0.0. Ayvens drena por GraphQL gateway (curl_cffi, t0_open); BCA y Autorola p
 JS-executing** (Playwright/camoufox) que pasa el reto Cloudflare / arranca el SPA Angular — un
 `curl_cffi` plano no los alcanza.
 
+## Miembro B2B-auction añadido (ola new-channels)
+
+| Plataforma | cdp_code | verdict id | count | tipo | precio | Ficha |
+|---|---|---:|---:|---|---|---|
+| **LocalizaVO** (`localizavo.es`) | CDP-ES-00-HFR3D62Y | **624** | 318 | `platform` | NULL (bid-login-gated) | [localizavo](../platforms/localizavo.md) |
+
+> LocalizaVO es una subasta B2B FREE-PUBLIC: el catálogo per-lote es SSR HTML visible al cliente
+> anónimo (`&nReg=0` = "Todos"), solo el precio se gatea (registro profesional) → `price=NULL`
+> honesto, igual que Ayvens/BCA/Autorola. **verdict id=624 TRUSTWORTHY**, count=318, los 3 caminos DB
+> concuerdan al dígito (`[VERIFICADO]` esta sesión, delta 0). **Gated en la misma censada
+> (fuera del runbook):** CarCollect (`carcollect.com`, B2B-only, fee 82€/coche, todo `/api/*`→login) y
+> Manheim España (login de comprador, sin credenciales) → [NOT-VALIDATED.md](../NOT-VALIDATED.md) §5.3.
+
 > **Nota Autorola/BCA.** El doc viejo los listaba "GATED, sin capa de datos pública". Ese veredicto
 > quedó obsoleto: conducidos por stealth browser, ambos exponen el stock per-lote ES sin login (el
 > precio sigue gateado → NULL). El código (`scripts/cage_autorola_bca_subastas.py`) y la DB viva

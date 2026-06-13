@@ -1,10 +1,12 @@
 # autocasion — autocasion
-**Estado:** ✅ VALIDADO (verdict id=549, count=15.765, 2026-06-13)  ·  **Grupo:** Tier-1 marketplace
+**Estado:** ✅ VALIDADO (verdict id=638, count=111.844, 2026-06-13)  ·  **Grupo:** Tier-1 marketplace
 
-> ⚠ **NÚMERO DEL RUNBOOK = 15.765 (verdict id=549).** La DB viva marca 107.612 aristas, pero ese
-> crecimiento NO tiene verdict VAM persistido. Solo 15.765 está validado; los ~107k = **pendiente de
-> re-VAM** (ver [NOT-VALIDATED.md](../NOT-VALIDATED.md)). El SCOREBOARD reclama 49.391 pero tampoco
-> tiene un `verdict_id` que lo avale.
+> ✅ **RE-VAM CERRADO (2026-06-13).** El delta vivo se re-derivó por 3 caminos ortogonales que
+> concuerdan al dígito (`db_edges=111.844 == db_join_vehicles=111.844 == db_distinct_refs=111.844`,
+> div 0.0) y se persistió **verdict id=638 TRUSTWORTHY (`platform_slice`)**. El número del runbook
+> sube de 15.765 (id=549, slice sellada vieja) a **111.844 (id=638)**. El caveat "pendiente de re-VAM"
+> queda RESUELTO. (Histórico: id=549 = 15.765 fue la slice inicial; id=613 = 111.844 fue un veredicto
+> `platform_facet` intermedio del mismo valor.)
 
 ## Identidad
 - cdp_code: `CDP-ES-00-QY06GW0B` · kind: `plataforma` · source_group: `marketplace_motor` · defense_tier: `t1_soft` · family: `—` · data_surface: `graphql`
@@ -27,8 +29,9 @@
 - Parser/identidad: dedup `ref` · Cage: plataforma-entidad + dealer + platform_listing + delta + recipe
 
 ## Validación (VAM)
-- **verdict id=549 TRUSTWORTHY** · count=**15.765** aristas · `db_edges=15.765 == db_distinct_refs=15.765 == db_join_vehicles=15.765` (div 0.0), `dup_veh=0`, **dealer=15.765 · particular=0**, refdiv 0.000000.
-- Live actual: 107.612 aristas (delta **+91.847, sin re-VAM** → NO validado).
+- **verdict id=638 TRUSTWORTHY** · count=**111.844** aristas · `db_edges=111.844 == db_join_vehicles=111.844 == db_distinct_refs=111.844` (div 0.0), `dup_veh=0`. Re-derivado y persistido en DB viva esta sesión vía `pipeline.verify.record_count_verdict` (helper canónico, los 3 caminos ortogonales concuerdan al dígito).
+- Histórico: id=549 = 15.765 (slice inicial sellada); id=613 = 111.844 (veredicto `platform_facet` intermedio, mismo valor vivo).
+- Live actual: 111.844 aristas (**delta 0 — cuadrado al coche tras el re-VAM**).
 
 ## CLI (reproducible)
 ```bash
@@ -39,5 +42,5 @@ python -m pipeline.platform.autocasion_wholesale
 ```
 
 ## Trampas / notas
-- **Acción de cierre:** re-correr el VAM (`record_count_verdict`) sobre la slice viva y persistir un verdict nuevo antes de subir el número del runbook.
+- **Cierre hecho (2026-06-13):** el re-VAM se ejecutó y persistió (id=638); el número del runbook ya refleja la slice viva.
 - Usar facets **path-segment** (`/{make}-ocasion/{province}`), NO `?marca=&provincia=` (robots disallowa los query-param y los ignora).

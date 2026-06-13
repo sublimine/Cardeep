@@ -29,14 +29,13 @@ CLASE (rutan la entidad FUERA del set servido), no fallos del verificador:
 
 ## 2. Deltas vivos sin re-VAM (el número validado va por detrás del vivo)
 
-### 2.1 autocasion — el delta grande ⚠
-- verdict id 549 avala **15.765**. La DB viva marca **111.827 aristas** (medido esta sesión; el
-  archivo de dominio registró 107.612 — la cosecha siguió drenando, deriva +4.215). El salto vino de
-  harvests posteriores **sin un nuevo verdict VAM**. El SCOREBOARD reclama 49.391 pero tampoco hay
-  `verdict_id` que lo avale.
-- **El número del runbook para autocasion es 15.765 (id 549).** Los ~112k = **pendiente de re-VAM**.
-- **Acción de cierre:** re-correr `record_count_verdict` sobre la slice viva y persistir un verdict
-  nuevo antes de subir el número.
+### 2.1 autocasion — el delta grande ✅ RESUELTO (re-VAM hecho 2026-06-13)
+- **Cerrado.** El delta se re-derivó por 3 caminos ortogonales que concuerdan al dígito
+  (`db_edges=111.844 == db_join_vehicles=111.844 == db_distinct_refs=111.844`, div 0.0) y se persistió
+  **verdict id=638 TRUSTWORTHY (`platform_slice`)** vía `pipeline.verify.record_count_verdict`. El
+  número del runbook para autocasion es ahora **111.844 (id 638)**; el viejo id 549 (15.765) queda como
+  histórico. Migrado a [VALIDATION-INDEX.md](VALIDATION-INDEX.md) y
+  [platforms/autocasion.md](platforms/autocasion.md). Ya NO es un delta pendiente.
 
 ### 2.2 wallapop cola profunda → ~651k (G1)
 - El oráculo `remaining_documents` da el denominador ≈651.340; el validado es **565.128 (id 592)**.
@@ -52,6 +51,16 @@ CLASE (rutan la entidad FUERA del set servido), no fallos del verificador:
   215 / 6.785** por drenes posteriores commiteados. El delta de cada grupo **no** tiene aún un
   `verification_verdict` re-persistido a su valor vivo. **Acción:** re-emitir el VAM por grupo para
   cerrar el ledger a los valores vivos.
+
+### 2.5 Motorflash — slice en drenaje activo ⚠
+- verdict id 619 avala **187** aristas (sellado a 18:46Z). El conector `motorflash_wholesale.py` sigue
+  drenando en vivo: la DB viva marca **1.207+ aristas y subiendo** (`[VERIFICADO]` esta sesión,
+  creciendo durante el muestreo; techo ~50k = ~1.000 dealers × ~50 coches). El slice NO cumple aún la
+  idempotencia "re-run = 0 nuevos".
+- **El número del runbook para Motorflash es 187 (id 619)**, registrado con su verdict TRUSTWORTHY
+  confirmado; el vivo (1.207+) es cross-check `[VERIFICADO]`. Ver
+  [platforms/motorflash.md](platforms/motorflash.md).
+- **Acción de cierre:** re-emitir el VAM al valor de meseta cuando el drenaje cierre.
 
 ---
 
@@ -113,6 +122,19 @@ CLASE (rutan la entidad FUERA del set servido), no fallos del verificador:
 | vo_chains | Aurgi, GpsAutos, Crandon | Citados como futuros `chain`; sin probe ni aristas en DB. |
 | subastas | Allane (Sixt Leasing) | Remarketer DE-céntrico; sin surface de stock VO ES. Ausente de `entity`. |
 | subastas | Aucto (`aucto.es`) | Connection refused / no alcanzable. Ausente de `entity`. |
+
+### 5.3 Ola new-channels — gateado / inalcanzable / retirado (probado esta sesión)
+
+> Probados en la ola new-channels (faciliteacoches+RACC, LocalizaVO, importador). Sin verdict
+> TRUSTWORTHY que concuerde con la DB viva → FUERA del runbook. Evidencia `[VERIFICADO]` esta sesión.
+
+| Unidad | Surface | Estado | Evidencia |
+|---|---|---|---|
+| **MODRIVE** (`modrive.com`) | importador own-site (SSR JSON-LD ItemList) | ⚪ RETIRADO de DB | El verdict id 626 selló 19 aristas; la DB viva tiene **0 listings y 0 platform row** para `CDP-ES-00-MVRE0FYC` (`[VERIFICADO]`: ni `platform_listing` ni fila `platform`). El verdict ya NO concuerda con la DB → no registrable. El catálogo full (2.021 coches) vive en un widget AutoUncle de TERCEROS (host distinto), no es superficie propia. |
+| **CarCollect** (`carcollect.com`) | B2B auction | ⛔ GATED | `www.carcollect.com` = sitio marketing HubSpot CMS (sitemap 821 URLs, CERO detalle per-lote; "8.154 en vivo" es contador de marketing). `trade.carcollect.com` (Next.js SPA) 308→`/login` y todo `/api/*` 307→`/login` anónimo. B2B-only (cuenta + verificación + fee 82€/coche). Sin data-layer anónimo. Ausente de `entity`. |
+| **Manheim España** (`manheim.es`) | B2B remarketer | ⛔ GATED (sin credenciales) | Catálogo tras login de comprador; sin credenciales = bloqueo real. Ausente de `entity`. |
+| **Importador lead-gen (4 sitios)** | WordPress lead-gen / info | ⚪ SIN STOCK MACHINE-READABLE | De los candidatos de la censada `kind='importador'`, solo MODRIVE exponía stock own-site curl_cffi-alcanzable (y se retiró). El resto son sitios WordPress lead-gen / informativos SIN catálogo de stock propio legible por máquina (declarado en el docstring de `group_importador_wholesale.py`). Las entidades `kind='importador'` reclasificadas (Carismatic ×4, Trend Cars ×6) NO tienen aristas propias cosechadas (`[VERIFICADO]`: 0 `platform_listing` propios) → no es slice validable. |
+| **Raceocasion / Europa Subastas** | subastas | ⛔ NO ALCANZADO | Ausentes de `entity` (`[VERIFICADO]`: 0 filas por `trade_name`/`website`). No expusieron superficie pública anónima cosechable en esta ola. |
 
 ---
 
