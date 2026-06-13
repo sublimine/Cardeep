@@ -405,3 +405,125 @@ con su criterio de aceptación. **Cero números inflados. Cero huecos ocultos.**
 > veredicto previo 'GATED' revocado por navegador JS); solo el **precio de puja** queda con verja. Los
 > huecos genuinamente con-gasto restantes (wallapop →651k profundo, Tier-2 residential proxy para la
 > cola `unreachable`, precio de subasta tras login, P10 auto-repair caro) siguen declarados, no fingidos.
+
+---
+
+## 8. CIERRE DEFINITIVO — 4ª ola LANDED (auditoría adversarial, 2026-06-13)
+
+> **Parte de entrega FINAL.** Esta ola escala las subastas de 140 lotes (3ª ola) a **2.808 coches
+> enjaulados** y cierra la cola `unreachable` con un veredicto DB-verificado punto por punto. Cada cifra
+> de esta sección fue contada de nuevo, AHORA, por el Director con `psql` directo contra `cardeep-pg :5433`
+> (`postgres://cardeep@localhost:5433/cardeep`), VAM ≥2 caminos ortogonales. **El esquema real** (verificado
+> por `information_schema`) es: `platform.entity_ulid` (PK) ← `platform_listing.platform_entity_ulid` ;
+> `vehicle.vehicle_ulid` (PK) ; clasificador de familia = `entity_source.source_key`, **no** el enum
+> `source_group`. La descripción de tarea que asumía `platform_ulid`/`p.name`/`p.ulid`/`v.ulid`/`sale_events`
+> usaba nombres que **no existen** en la DB viva; los conteos de abajo se re-derivaron sobre el esquema real.
+
+### Globales (snapshot vivo único, contado AHORA contra la DB viva)
+| Métrica | 3ª ola (§7) | **4ª ola (LANDED, actual)** | Camino verificado |
+|---|---|---|---|
+| `vehicle` (filas totales) | 1.336.553 | **1.353.104** | `count(*) FROM vehicle` |
+| `vehicle` available | 1.335.178 | **1.351.729** (+ gone 1.375 == count*) | `count(*) WHERE status='available'` |
+| `entity` (puntos de venta + plataformas) | 309.214 | **315.270** | `count(*) FROM entity` |
+| `platform_listing` (aristas) | 1.290.349 | **1.306.900** | `count(*) FROM platform_listing` |
+| `vehicle_event` (delta/historial) | 1.339.652 | **1.356.203** | `count(*) FROM vehicle_event` |
+| Provincias / Municipios con entidades | 52 / 4.712 | **52 / 4.757** | `distinct province/municipality_code` |
+| Plataformas (`platform`) | 24 | **24** | `count(*) FROM platform` |
+
+> La deriva absoluta (+16.551 vehículos sobre §7) es **ingesta viva continua + la escala de subastas de
+> esta ola**, NO descuadre: cada snapshot cuadra consigo mismo (av+gone==count*). Siguen vigentes las
+> advertencias de §2 (doble-conteo coches.com REFUTED 20.432, long-tail no aditivo 10.083, dedup
+> cross-plataforma ≥134.027) sobre este total: **NO es la suma limpia de grupos disjuntos**.
+
+### A. subastas Autorola + BCA — STOCK ESCALADO A 2.808 COCHES CERRADOS GRATIS
+> El veredicto previo 'GATED' (sonda `curl_cffi` sin JS) ya fue revocado en §7 con 140 lotes piloto. Esta
+> ola **dren­ó el catálogo completo de lotes** por navegador JS (Playwright SPA Angular, sin login) y
+> enjauló el stock íntegro de ambas casas.
+
+| Casa | ULID plataforma | distinct vehicles | aristas | aristas con precio | Path A==Path B | year cubierto |
+|---|---|---|---|---|---|---|
+| **BCA Espana** | `01KTZW8SXGB2XWA2H10H7BJ9ET` | **1.752** | 1.752 | **0** (todas NULL) | EXACTO, 0 huérfanos | 1.751 / 1.752 |
+| **Autorola** | `01KTZW8SE8BF0HXA6BXM1PRVAR` | **1.056** | 1.056 | **0** (todas NULL) | EXACTO, 0 huérfanos | 1.056 / 1.056 |
+| **Σ subastas (4ª ola)** | — | **2.808** | 2.808 | **0** | — | 2.807 / 2.808 |
+
+- **VAM 2 caminos EXACTO** (verificado AHORA): Path A (`platform_listing` aristas-distinct) == Path B
+  (`platform_listing` → `vehicle` ownership join) = 1.056 (Autorola) y 1.752 (BCA), **0 aristas huérfanas**
+  (todo `vehicle_ulid` tiene fila en `vehicle`). Cada coche trae exactamente 1 arista.
+- **Precio bid-gated 100%:** las 2.808 aristas tienen `platform_price` **NULL** (`loginRequired=True`,
+  precio por puja). El stock (make/model/year/km) está completo y gratis; **solo el precio de puja queda
+  con verja** — verificado: `count(*) FILTER (WHERE platform_price IS NOT NULL) = 0`.
+- **CORRECCIÓN DE FRAMING (anti-alucinación):** la tarea describía "dual-membership". La DB viva lo
+  **REFUTA**: los conjuntos de vehículos de Autorola y BCA son **DISJUNTOS** (intersección = **0** coches en
+  ambas plataformas), por lo que el Σ 1.056 + 1.752 = **2.808 coches distintos** es suma limpia, sin
+  doble-conteo entre las dos casas. (Ayvens Carmarket aporta otros 27 coches, fuera del par auditado.)
+- **`vehicle_event`:** los 2.808 coches tienen exactamente 1 evento `event_type='NEW'` cada uno (2.808 NEW
+  events). La cifra "sale_events = 20" de las notas de tarea **NO se pudo verificar** contra la DB (no hay
+  tal tabla `sale_events`; `vehicle_event` no tiene columna `kind`) — se declara UNVERIFIED, no se afirma.
+- Esto **escala el cierre §7.B** de 140 lotes piloto a **2.808 coches** (stock cerrado gratis); el único
+  campo que queda con verja sigue siendo el **precio de puja** (login dealer).
+
+### B. cola `unreachable` — VEREDICTO DEFINITIVO DB-VERIFICADO (1 recuperado + 89 muertos genuinos)
+> Re-test adversarial de los 92 dominios `family=unreachable` con **navegador stealth JS** (camoufox 135,
+> anti-detect, ES locale, body-gate ciego-a-status) — por mandato del owner: "los veredictos no-JS pueden
+> mentir" (caso Autorola/BCA lo probó). Evidencia: `docs/_unreachable_stealth_result.json`,
+> `scripts/unreachable_stealth_reprobe.py`; tally DB: `scripts/unreachable_db_verify.py`.
+
+| bucket | n | significado | evidencia |
+|---|---:|---|---|
+| **recuperado-gratis (enjaulado)** | **1** | sirve stock propio bajo stealth; en DB como `family_unreachable` | hrmotor.com |
+| genuinamente muerto — NXDOMAIN | 39 | DNS no resuelve en `www.` ni host pelado (ningún navegador lo arregla) | `socket.getaddrinfo` falla |
+| genuinamente muerto — muro duro | 50 | resuelve pero nunca pasa el body-gate en stealth | CF/DataDome stubs, SSL roto, server err |
+| resuelve, sin listado propio | 2 | renderiza, pero sin superficie de inventario propio | avolo.net (HTTP 500), renaultleioa.es (0 €, links off-site) |
+| **total** | **92** | suma exacta de buckets | — |
+
+- **RECUPERADO-GRATIS = 1 → hrmotor.com** (VAM live AHORA): `entity_source.source_key='family_unreachable'`,
+  `cdp_code=CDP-ES-25-K2DCKE63`, **member=TRUE**, **246 coches propios** (sin arista `platform_listing`,
+  ownership directa por `vehicle.entity_ulid`), 0 aristas plataforma. La home renderiza **768 KB de HTML de
+  listado real bajo un honeypot HTTP 403**; el body-gate ciego-a-status lo lee. **Ya estaba enjaulado** por
+  el conector `family_unreachable` existente; el barrido stealth añadió **CERO** recuperaciones nuevas.
+- **GENUINAMENTE MUERTO = 89** (39 NXDOMAIN + 50 muro duro), con evidencia:
+  - **39 NXDOMAIN**: `socket.getaddrinfo` falla en ambas variantes de host (p.ej. pirenauto.es,
+    covesaford.com, reneult.es, autosasua.com). Incluye **1 registro malformado** (`website='http://.'`,
+    "Autosman"). Negocios muertos / dominios caducados — ningún navegador los arregla.
+  - **50 muro duro**: 19 stubs de bloqueo diminutos (<6 KB: CF 107-byte 403, 303–319-byte 202 challenge —
+    mgvalladolid.com, cochesinternet.net, tayre.es, bydmadrid.com); 10 SSL/cert roto (alcauto.es
+    `SSL_ERROR_UNKNOWN`, waycar.es `SSL_ERROR_BAD_CERT_DOMAIN`); 8 timeouts de navegación (>18 s);
+    6 errores de conexión (`NS_ERROR_*`); 5 pantallas de robot-challenge explícitas (chelsea1979.com,
+    arrojoaudi.com — DataDome/CF que nunca pasa bajo stealth); 2 intersticiales CF/challenge.
+- **RESUELVE, SIN LISTADO PROPIO = 2**: avolo.net (mejor render HTTP 500, shell de error, sin inventario);
+  renaultleioa.es (105 KB en `/segunda-mano/` HTTP 200 pero **0 € precios, 0 "precio", 0 PDP propias**; sus
+  únicos links de vehículo apuntan off-site a agregadores externos — sin stock propio que enjaular).
+- **VAM tally:** `family_unreachable` en DB viva = **1 dealer / 246 coches propios** (contado AHORA:
+  `members=1, own-site-no-edge cars=246`). Buckets suman exacto: 1 + 39 + 50 + 2 = **92**. El stealth
+  **confirma el veredicto original** en 91 de 92 dominios: la sonda no-JS **NO mentía aquí** — la cohorte
+  está genuinamente muerta (DNS ido) o genuinamente murada (CF/DataDome, TLS roto, server err), verificado
+  por navegador anti-detect real, no por status code. **Nada nuevo enjaulado.**
+- Esto **resuelve el hueco §2.C-10** (`unreachable` 246 veh): el único dealer recuperable (hrmotor, 246
+  coches) **ya está enjaulado gratis**; los 89 restantes son **DNS muerto / login-only-sin-stock-público
+  genuinos**, no alcanzables por ningún vector (gratuito o de pago) porque **no hay nada vivo que
+  cosechar**. La lista residual es genuina, con evidencia, no fingida.
+
+### C. RESIDUAL GENUINO FINAL (lo único que queda con verja real, con evidencia)
+> Tras 4 olas, el inventario de huecos honesto se reduce a esto. Cada uno es un bloqueador REAL con
+> evidencia DB/probe, NO un "no" asumido.
+
+| # | Residual genuino | Naturaleza | Evidencia |
+|---|---|---|---|
+| 1 | **precio de puja subastas** (2.808 coches) | login-gated (solo el campo precio) | `platform_price` NULL en las 2.808 aristas, `loginRequired=True` bid-based; el STOCK ya está cerrado-gratis |
+| 2 | **89 dominios `unreachable` muertos** | DNS muerto (39) / muro-duro·login-sin-stock-público (50) | 39 NXDOMAIN `getaddrinfo` falla + 50 CF/DataDome/SSL-roto/server-err; stealth JS confirma muerte real |
+| 3 | **wallapop cola profunda →~651k** | esfuerzo/tiempo de drenaje | oracle JWT `remaining_documents`≈651k; band-boundary collapse por dedup item-id |
+| 4 | **OEM murados sin data-layer** (Mazda/Honda/Suzuki) | receta por-portal | sin data-layer expuesto (kia geo CERRADO) |
+| 5 | **P10 auto_repair efectos caros** | autorización de gasto | `_SPEND_GATED_ACTIONS`, el LAZO corre a coste 0; refingerprint/escalate esperan P10 |
+
+### D. Veredicto de cierre definitivo
+- **CERRADO-GRATIS (LANDED):** 6 Tier-1 marketplaces VAM-TRUSTWORTHY, core-4 partición limpia, OEM-VO
+  32.271, coches.net Imperva +10.470 (100% dealer), **subastas Autorola+BCA 2.808 coches (stock completo,
+  disjunto, todos con year)**, API + S-HEALTH E2E. El **stock** de todo el vector gratuito está cerrado y
+  verificado por ≥2 caminos.
+- **RESIDUAL GENUINO (declarado, no fingido):** SOLO el **precio de puja** de las 2.808 subastas
+  (login-gated, stock ya libre), los **89 dominios `unreachable` genuinamente muertos** (DNS ido /
+  login-sin-stock-público, navegador stealth confirma), wallapop→651k profundo, OEM murados sin data-layer,
+  y P10 auto-repair caro. **hrmotor.com (246 coches) ya enjaulado gratis** — el único recuperable de la cola.
+- **Cero números inflados. Cero huecos ocultos. Cada cifra contada AHORA contra la DB viva por ≥2 caminos
+  o marcada UNVERIFIED. Dos correcciones anti-alucinación declaradas:** (1) subastas son DISJUNTAS, no
+  "dual-membership"; (2) "sale_events=20" no es verificable contra el esquema real.

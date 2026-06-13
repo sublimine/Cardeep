@@ -201,8 +201,18 @@ def parse_autorola(files: list[str]) -> tuple[dict, list[dict]]:
     return sales, list(lots.values())
 
 
+# BCA VehicleType values kept as "car" stock. CrossCountryVehicle (4x4/SUV) is a car;
+# Motorcycle and LightCommercialVehicle (vans) are the noise the contract drops.
+_BCA_CAR_TYPES = {"car", "crosscountryvehicle"}
+
+
 def parse_bca(files: list[str]) -> tuple[dict, list[dict]]:
-    """Return (sales_by_id, lots). The SALE EVENT is SaleInformation's sale name; lot owned by it."""
+    """Return (sales_by_id, lots), filtered to cars only.
+
+    The SALE EVENT is the BCA SaleId/SaleName (lot owned by it). Prefers the clean
+    structured fields (VehicleType, Mileage, FuelType, RegistrationDate, SaleId/SaleName)
+    from the live faceted-search slice, falling back to the legacy VehicleInfoColumn parse.
+    """
     sales: dict[str, dict] = {}
     lots: dict[str, dict] = {}
     for fn in files:
@@ -211,6 +221,10 @@ def parse_bca(files: list[str]) -> tuple[dict, list[dict]]:
         for v in rows:
             vid = str(v.get("id") or v.get("VehicleId") or "")
             if not vid:
+                continue
+            # vehicleType=car filter: drop the moto + van noise, keep cars + 4x4.
+            vtype = (v.get("VehicleType") or v.get("vehicleType") or "").strip().lower()
+            if vtype and vtype not in _BCA_CAR_TYPES:
                 continue
             make = v.get("make") or v.get("Make")
             model = v.get("model") or v.get("Model")
@@ -222,21 +236,30 @@ def parse_bca(files: list[str]) -> tuple[dict, list[dict]]:
             sale_info = v.get("sale") or v.get("SaleInformation") or ""
             loc = v.get("loc") or v.get("SaleLocation") or ""
             img = v.get("img") or v.get("ImageUrl") or ""
-            # sale event = the named sale within SaleInformation:
-            # "BCA Direct Multicentro (BCA Madrid), TOP QUALITY SECCION MARTILLO xBid, Final:..., Lote 53"
-            sale_name = None
-            seg = [s.strip() for s in sale_info.split(",")]
-            if len(seg) >= 2:
-                sale_name = seg[1]
+            # sale event: prefer the structured SaleId/SaleName; else parse SaleInformation.
+            sale_name = (v.get("SaleName") or "").strip() or None
+            if not sale_name:
+                seg = [s.strip() for s in sale_info.split(",")]
+                if len(seg) >= 2:
+                    sale_name = seg[1]
             sale_name = sale_name or (loc or "BCA Espana subasta")
-            sale_id = hashlib.sha256((sale_name + "|" + (loc or "")).encode("utf-8")).hexdigest()[:16]
+            structured_sale_id = (v.get("SaleId") or "").strip()
+            sale_id = (structured_sale_id[:16] if structured_sale_id
+                       else hashlib.sha256((sale_name + "|" + (loc or "")).encode("utf-8")).hexdigest()[:16])
             sales.setdefault(sale_id, {"sale_id": sale_id, "name": sale_name[:120]})
-            # year from headline "..., 2021" or c1 "Fecha Matriculacion 08/07/2021"
-            ym = re.search(r",\s*(\d{4})\s*$", headline) or re.search(r"/(\d{4})", c1)
+            # year: prefer RegistrationDate ISO; else headline "..., 2021" or c1 date.
+            reg_date = v.get("RegistrationDate") or ""
+            ym = (re.search(r"(\d{4})", reg_date) or re.search(r",\s*(\d{4})\s*$", headline)
+                  or re.search(r"/(\d{4})", c1))
             year = _year_ok(int(ym.group(1))) if ym else None
-            kmm = re.search(r"([\d.]+)\s*Kil", c1)
-            km = _km_range(_to_int(kmm.group(1).replace(".", "")) if kmm else None)
-            fuel = next((w for w in re.split(r"[@\s]+", c3) if w.lower() in _FUEL), None)
+            # km: prefer structured Mileage; else c1 "... Kilometraje".
+            km = _km_range(_to_int(v.get("Mileage")))
+            if km is None:
+                kmm = re.search(r"([\d.]+)\s*Kil", c1)
+                km = _km_range(_to_int(kmm.group(1).replace(".", "")) if kmm else None)
+            # fuel: prefer structured FuelType; else scan c3.
+            fuel = v.get("FuelType") or next(
+                (w for w in re.split(r"[@\s]+", c3) if w.lower() in _FUEL), None)
             trans = next((w for w in re.split(r"[@\s]+", c3)
                           if w.lower() in ("manual", "automatico", "automático", "auto")), None)
             img_url = ("https:" + img) if img.startswith("//") else (img or None)

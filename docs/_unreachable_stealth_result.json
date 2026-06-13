@@ -1,0 +1,3997 @@
+[
+ {
+  "domain": "pirenauto.es",
+  "name": "Opel Pirenauto",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "marcelipuigpiquer.com",
+  "name": "Marcel·lí Puigpiquer SL Venda i reparació de maquinària",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "ssangcarmotor.com",
+  "name": "Ssang Car Motor",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "abicars.net",
+  "name": "Abicars",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "autosjijona.com",
+  "name": "AUTOS JIJONA",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "dmautosvalencia.es",
+  "name": "Dm Autos",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "automovilesjoselopez.es",
+  "name": "AUTOMOVILES JOSE LOPEZ",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "kfjmotor.com",
+  "name": "KFJ Motor",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "yanez.es",
+  "name": "Gándara Motor",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "cochesseminuevosmarbella.com",
+  "name": "CSM MARBELLA PREMIUM CARS",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "covesaford.com",
+  "name": "Covesa",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "automovilespalma.es",
+  "name": "Palma Ocarsion",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "caravanaslorca.es",
+  "name": "Caravanas Lorca",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "automovilescapi.es",
+  "name": "Automóviles Capi",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "ibericarcadi.es",
+  "name": "Ibercar Cadí BMW",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "auracarcitroen.es",
+  "name": "Auracar",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "samautomoviles.com",
+  "name": "SAM Automóviles",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "reneult.es",
+  "name": "RENAULT BLAS SERNA",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "niant-uniquecars.com",
+  "name": "Niant Unique Cars",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "cochencars.com",
+  "name": "COHEN & CARS",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "videinsa.net",
+  "name": "Videinsa - Opel",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "autosgarena.es",
+  "name": "Autos Garena",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "talleresmercedesautosur.es",
+  "name": "Autosur, C.B.",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "buggyparadise.net",
+  "name": "Buggy Paradise",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "macrisancar.es",
+  "name": "Macrisán Helmántica. Vehículos de ocasión",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "teneauto.es",
+  "name": "Teneauto",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "imdicasa.com",
+  "name": "Imdicasa",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "servisimo.cat",
+  "name": "Servisimó",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "autosasua.com",
+  "name": "Automóviles Asua, S.A.",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "daservicio.com",
+  "name": "Domingo Alonso Servicio",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "cuatromocion.com",
+  "name": "Cuatromoción",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "cilindrauto.com",
+  "name": "Cilindrauto",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "garciapeugeot.com",
+  "name": "Tallers García (Kefren - Peugeot)",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "autoseber.com",
+  "name": "Automóviles Autoseber",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "jzabaletasport.com",
+  "name": "Joaquín Zabaleta Sport",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "automociontorrejon.com",
+  "name": "Citroën Automoción Torrejón",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "citroencuenca.com",
+  "name": "Garaje Las Flores",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "centroquiros.com",
+  "name": "Auvol - VW",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "automovilesjairo.com",
+  "name": "Automoviles JAIRO",
+  "prior_error": "DNSError",
+  "bucket": "dns_dead",
+  "evidence": "NXDOMAIN on www. and bare host"
+ },
+ {
+  "domain": "waycar.es",
+  "bucket": "hard_wall",
+  "host": "www.waycar.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.waycar.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.waycar.es",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.waycar.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "waycar.es",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": "hrmotor.com",
+  "bucket": "recovered",
+  "host": "www.hrmotor.com",
+  "best_path": "/",
+  "status": 403,
+  "bytes": 168386,
+  "prices": 0,
+  "dlinks": 161,
+  "wall": null,
+  "title": "Compra tu Coche de Segunda Mano como NUEVO - HR Motor",
+  "base": "https://www.hrmotor.com",
+  "evidence": "stealth render of / -> prices=0 dlinks=161 status=403",
+  "name": "HR Motor Madrid",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "alcauto.es",
+  "bucket": "hard_wall",
+  "host": "www.alcauto.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_UNKNOWN\\nCall log:\\nnavigating to \"https://www.alcauto.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.alcauto.es",
+    "error": "Error: Page.goto: SSL_ERROR_UNKNOWN\nCall log:\nnavigating to \"https://www.alcauto.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "ALCAUTO",
+  "prior_error": "HTTP 405"
+ },
+ {
+  "domain": "mgvalladolid.com",
+  "bucket": "hard_wall",
+  "host": "www.mgvalladolid.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "MG LevMotor Valladolid y Palencia",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "peugeoteslauto.com",
+  "bucket": "hard_wall",
+  "host": "www.peugeoteslauto.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\\nCall log:\\nnavigating to \"https://www.peugeoteslauto.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.peugeoteslauto.com",
+    "error": "Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\nCall log:\nnavigating to \"https://www.peugeoteslauto.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Eslauto",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": "varadequart.com",
+  "bucket": "hard_wall",
+  "host": "www.varadequart.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\\nCall log:\\nnavigating to \"https://www.varadequart.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.varadequart.com",
+    "error": "Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\nCall log:\nnavigating to \"https://www.varadequart.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Opel Vara de Quart",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": ".",
+  "bucket": "hard_wall",
+  "host": "www..",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_UNKNOWN_HOST\\nCall log:\\nnavigating to \"https://www../\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www..",
+    "error": "Error: Page.goto: NS_ERROR_UNKNOWN_HOST\nCall log:\nnavigating to \"https://www../\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Autosman",
+  "prior_error": "DNSError"
+ },
+ {
+  "domain": "sheltergarage.com",
+  "bucket": "hard_wall",
+  "host": "www.sheltergarage.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "SHELTER GARAGE",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "chelsea1979.com",
+  "bucket": "hard_wall",
+  "host": "www.chelsea1979.com",
+  "best_path": "/km0/",
+  "status": 202,
+  "bytes": 11834,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": "robot challenge screen",
+  "title": "Robot Challenge Screen",
+  "base": "https://www.chelsea1979.com",
+  "evidence": "resolves; persistent challenge/interstitial under stealth",
+  "swept": [
+   {
+    "path": "/",
+    "status": 202,
+    "bytes": 303,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 202,
+    "bytes": 11882,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 202,
+    "bytes": 11888,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches/",
+    "status": 202,
+    "bytes": 11843,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 202,
+    "bytes": 11852,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 202,
+    "bytes": 11876,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/ocasion/",
+    "status": 202,
+    "bytes": 11846,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 202,
+    "bytes": 333,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 202,
+    "bytes": 11840,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 202,
+    "bytes": 335,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 202,
+    "bytes": 11867,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/km0/",
+    "status": 202,
+    "bytes": 11834,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "McLaren Barcelona - Chelsea 1979",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "villenaautomocion.com",
+  "bucket": "hard_wall",
+  "host": "www.villenaautomocion.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.villenaautomocion.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.villenaautomocion.com",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.villenaautomocion.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Opel Villena Automoción",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "arrojoaudi.com",
+  "bucket": "hard_wall",
+  "host": "www.arrojoaudi.com",
+  "best_path": "/km0/",
+  "status": 202,
+  "bytes": 11833,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": "robot challenge screen",
+  "title": "Robot Challenge Screen",
+  "base": "https://www.arrojoaudi.com",
+  "evidence": "resolves; persistent challenge/interstitial under stealth",
+  "swept": [
+   {
+    "path": "/",
+    "status": 202,
+    "bytes": 11815,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 202,
+    "bytes": 11881,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 202,
+    "bytes": 11887,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches/",
+    "status": 202,
+    "bytes": 11842,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 202,
+    "bytes": 11851,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 202,
+    "bytes": 11875,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/ocasion/",
+    "status": 202,
+    "bytes": 11845,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 202,
+    "bytes": 11860,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/stock/",
+    "status": 202,
+    "bytes": 319,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 202,
+    "bytes": 11863,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 202,
+    "bytes": 11866,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/km0/",
+    "status": 202,
+    "bytes": 11833,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Audi",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "avolo.net",
+  "bucket": "no_listing",
+  "host": "www.avolo.net",
+  "best_path": "/km0/",
+  "status": 500,
+  "bytes": 39106,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": "The URL you requested has been blocked",
+  "base": "https://www.avolo.net",
+  "evidence": "home page renders under stealth, but no own-site car-listing signal found on home + canonical listing paths",
+  "swept": [
+   {
+    "path": "/",
+    "status": 500,
+    "bytes": 39102,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 500,
+    "bytes": 39122,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 500,
+    "bytes": 39122,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 500,
+    "bytes": 39109,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 500,
+    "bytes": 39112,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 500,
+    "bytes": 39120,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 500,
+    "bytes": 39110,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 500,
+    "bytes": 39115,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 500,
+    "bytes": 39108,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 500,
+    "bytes": 39116,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 500,
+    "bytes": 39117,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 500,
+    "bytes": 39106,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Seat Savoy Jaén",
+  "prior_error": "ConnectionError"
+ },
+ {
+  "domain": "accarvip.com",
+  "bucket": "hard_wall",
+  "host": "www.accarvip.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 402,
+    "bytes": 1653,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "AC GROUP",
+  "prior_error": "HTTP 402"
+ },
+ {
+  "domain": "cochesinternet.net",
+  "bucket": "hard_wall",
+  "host": "www.cochesinternet.net",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Nacar Centre Automoció SL",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "gasp.es",
+  "bucket": "hard_wall",
+  "host": "www.gasp.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Automòbils Pruna S.A.U",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "nuvimotor.com",
+  "bucket": "hard_wall",
+  "host": "www.nuvimotor.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.nuvimotor.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.nuvimotor.com",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.nuvimotor.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Nuvimotor",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "grupolmotor.com",
+  "bucket": "hard_wall",
+  "host": "www.grupolmotor.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.grupolmotor.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.grupolmotor.com",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.grupolmotor.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Grupo L-Motor",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "maralmotor.es",
+  "bucket": "hard_wall",
+  "host": "www.maralmotor.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "BYD Santiago",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "tayre.es",
+  "bucket": "hard_wall",
+  "host": "www.tayre.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "TAYRE AUTOMOCION- Concesionario Oficial",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "herreroylopez.com",
+  "bucket": "hard_wall",
+  "host": "www.herreroylopez.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.herreroylopez.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.herreroylopez.com",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.herreroylopez.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Herrero y López",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "norauto.es",
+  "bucket": "hard_wall",
+  "host": "www.norauto.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; persistent challenge/interstitial under stealth",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 1466,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 1488,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 1490,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 1475,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 1478,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 1486,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 1476,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 1481,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 1474,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "datadome"
+   },
+   {
+    "path": "/nuestro-stock/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Norauto",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "grupoautonieto.es",
+  "bucket": "hard_wall",
+  "host": "www.grupoautonieto.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.grupoautonieto.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.grupoautonieto.es",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.grupoautonieto.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Autonieto",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "bydmadrid.com",
+  "bucket": "hard_wall",
+  "host": "www.bydmadrid.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "BYD Concha Espina",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "byd-canarias.com",
+  "bucket": "hard_wall",
+  "host": "www.byd-canarias.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "BYD Gran Canaria",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "icicarauto.com",
+  "bucket": "hard_wall",
+  "host": "www.icicarauto.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; persistent challenge/interstitial under stealth",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 4295,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "attention required"
+   },
+   {
+    "path": "/km0/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Icicar Automoción",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "gracicar.com",
+  "bucket": "hard_wall",
+  "host": "www.gracicar.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Automóviles Gracicar",
+  "prior_error": "HTTP 200"
+ },
+ {
+  "domain": "nicolas-sa.es",
+  "bucket": "hard_wall",
+  "host": "www.nicolas-sa.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Ford Nicolás",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "sagamovil.com",
+  "bucket": "hard_wall",
+  "host": "www.sagamovil.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Volkswagen Sagamóvil",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "astonmartindealers.com",
+  "bucket": "hard_wall",
+  "host": "astonmartindealers.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_UNKNOWN_HOST\\nCall log:\\nnavigating to \"https://www.astonmartindealers.com/\", waiting until \"domcontentloaded\"\\n', 'TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://astonmartindealers.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.astonmartindealers.com",
+    "error": "Error: Page.goto: NS_ERROR_UNKNOWN_HOST\nCall log:\nnavigating to \"https://www.astonmartindealers.com/\", waiting until \"domcontentloaded\"\n"
+   },
+   {
+    "path": "/",
+    "host": "astonmartindealers.com",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://astonmartindealers.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Aston Martin Madrid",
+  "prior_error": "DNSError"
+ },
+ {
+  "domain": "astararetail.com",
+  "bucket": "hard_wall",
+  "host": "www.astararetail.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "BYD Astara Alcalá de Henares",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "hersamotor.es",
+  "bucket": "hard_wall",
+  "host": "www.hersamotor.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Hersamotor",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "omodacanarias.com",
+  "bucket": "hard_wall",
+  "host": "www.omodacanarias.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.omodacanarias.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.omodacanarias.com",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.omodacanarias.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Omoda Canarias",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "renaultros.com",
+  "bucket": "hard_wall",
+  "host": "www.renaultros.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Renault",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "soyelectrico.com",
+  "bucket": "hard_wall",
+  "host": "www.soyelectrico.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "status": 404,
+    "bytes": 790,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-segunda-mano/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Carrera ocasión",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "automotorcanarias.com",
+  "bucket": "hard_wall",
+  "host": "www.automotorcanarias.com",
+  "best_path": "/nuestro-stock/",
+  "status": 202,
+  "bytes": 99630,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": "Page Not Found | Peugeot Canarias",
+  "base": "https://www.automotorcanarias.com",
+  "evidence": "resolves; persistent challenge/interstitial under stealth",
+  "swept": [
+   {
+    "path": "/",
+    "status": 202,
+    "bytes": 11820,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 202,
+    "bytes": 99276,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 202,
+    "bytes": 99611,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 202,
+    "bytes": 99611,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 202,
+    "bytes": 11856,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 202,
+    "bytes": 99611,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 202,
+    "bytes": 11850,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 202,
+    "bytes": 99335,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 202,
+    "bytes": 99611,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 202,
+    "bytes": 99630,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Automotor GC",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "hatusa.com",
+  "bucket": "hard_wall",
+  "host": "www.hatusa.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.hatusa.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.hatusa.com",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.hatusa.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "HATUSA",
+  "prior_error": "ConnectionError"
+ },
+ {
+  "domain": "automovilesgalapagar.es",
+  "bucket": "hard_wall",
+  "host": "www.automovilesgalapagar.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 200,
+    "bytes": 39,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 404,
+    "bytes": 354,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Automóviles Galapagar",
+  "prior_error": "HTTP 200"
+ },
+ {
+  "domain": "autopicanya.com",
+  "bucket": "hard_wall",
+  "host": "www.autopicanya.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\\nCall log:\\nnavigating to \"https://www.autopicanya.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.autopicanya.com",
+    "error": "Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\nCall log:\nnavigating to \"https://www.autopicanya.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Ford",
+  "prior_error": "HTTP 503"
+ },
+ {
+  "domain": "autopistasur.es",
+  "bucket": "hard_wall",
+  "host": "www.autopistasur.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Kia Autopista Sur Pista de Silla",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "ramongonzalezyhermanos.com",
+  "bucket": "hard_wall",
+  "host": "www.ramongonzalezyhermanos.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\\nCall log:\\nnavigating to \"https://www.ramongonzalezyhermanos.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.ramongonzalezyhermanos.com",
+    "error": "Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\nCall log:\nnavigating to \"https://www.ramongonzalezyhermanos.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Ramón Gonzalez y Hermanos",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "renaultleioa.es",
+  "bucket": "no_listing",
+  "host": "www.renaultleioa.es",
+  "best_path": "/segunda-mano/",
+  "status": 200,
+  "bytes": 105480,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": "Grupo Leioa Berri - Concesionario oficial Renault Dacia",
+  "base": "https://www.renaultleioa.es",
+  "evidence": "home page renders under stealth, but no own-site car-listing signal found on home + canonical listing paths",
+  "swept": [
+   {
+    "path": "/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 200,
+    "bytes": 105480,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Leioa Berri Auto",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "hondarubio.com",
+  "bucket": "hard_wall",
+  "host": "www.hondarubio.com",
+  "best_path": "/coches-ocasion/",
+  "status": 202,
+  "bytes": 11866,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": "robot challenge screen",
+  "title": "Robot Challenge Screen",
+  "base": "https://www.hondarubio.com",
+  "evidence": "resolves; persistent challenge/interstitial under stealth",
+  "swept": [
+   {
+    "path": "/",
+    "status": 202,
+    "bytes": 11815,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 202,
+    "bytes": 221834,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 202,
+    "bytes": 11887,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches/",
+    "status": 202,
+    "bytes": 321,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 202,
+    "bytes": 11851,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 202,
+    "bytes": 1223,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 202,
+    "bytes": 11845,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 202,
+    "bytes": 11860,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/stock/",
+    "status": 202,
+    "bytes": 257011,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 202,
+    "bytes": 11863,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 202,
+    "bytes": 11866,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/km0/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Honda Rubio",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "avnautos.com",
+  "bucket": "hard_wall",
+  "host": "www.avnautos.com",
+  "best_path": "/nuestro-stock/",
+  "status": 202,
+  "bytes": 112906,
+  "prices": 0,
+  "dlinks": 1,
+  "wall": null,
+  "title": "Página no encontrada - AVN Autos",
+  "base": "https://www.avnautos.com",
+  "evidence": "resolves; persistent challenge/interstitial under stealth",
+  "swept": [
+   {
+    "path": "/",
+    "status": 202,
+    "bytes": 11813,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 202,
+    "bytes": 347,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 202,
+    "bytes": 113120,
+    "prices": 0,
+    "dlinks": 1,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 202,
+    "bytes": 11840,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 202,
+    "bytes": 327,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 202,
+    "bytes": 11873,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/ocasion/",
+    "status": 202,
+    "bytes": 11843,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": "robot challenge screen"
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 202,
+    "bytes": 113101,
+    "prices": 0,
+    "dlinks": 1,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 202,
+    "bytes": 113085,
+    "prices": 0,
+    "dlinks": 1,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 202,
+    "bytes": 112906,
+    "prices": 0,
+    "dlinks": 1,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 202,
+    "bytes": 337,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "AVN Autos",
+  "prior_error": "HTTP 202"
+ },
+ {
+  "domain": "mosancar.com",
+  "bucket": "hard_wall",
+  "host": "www.mosancar.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves; every rendered body sub-gate (server error/empty)",
+  "swept": [
+   {
+    "path": "/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/vehiculos-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/segunda-mano/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/nuestro-stock/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/coches-ocasion/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/km0/",
+    "status": 403,
+    "bytes": 107,
+    "prices": 0,
+    "dlinks": 0,
+    "wall": null
+   },
+   {
+    "path": "/seminuevos/",
+    "skipped": "domain budget exceeded"
+   }
+  ],
+  "name": "Citroën Mosancar",
+  "prior_error": "HTTP 403"
+ },
+ {
+  "domain": "premiumalmeria.com",
+  "bucket": "hard_wall",
+  "host": "www.premiumalmeria.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://www.premiumalmeria.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.premiumalmeria.com",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://www.premiumalmeria.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Premium Almería",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "tallereslitoral.com",
+  "bucket": "hard_wall",
+  "host": "www.tallereslitoral.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\\nCall log:\\nnavigating to \"https://www.tallereslitoral.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.tallereslitoral.com",
+    "error": "Error: Page.goto: SSL_ERROR_BAD_CERT_DOMAIN\nCall log:\nnavigating to \"https://www.tallereslitoral.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Peugeot Talleres Mecánicos del Litoral",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "automovilesrobe.com",
+  "bucket": "hard_wall",
+  "host": "www.automovilesrobe.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\\nCall log:\\nnavigating to \"https://www.automovilesrobe.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.automovilesrobe.com",
+    "error": "Error: Page.goto: NS_ERROR_CONNECTION_REFUSED\nCall log:\nnavigating to \"https://www.automovilesrobe.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "KIA Automoviles Robe",
+  "prior_error": "HTTP 404"
+ },
+ {
+  "domain": "motorgomez.com",
+  "bucket": "hard_wall",
+  "host": "motorgomez.com",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_UNKNOWN_HOST\\nCall log:\\nnavigating to \"https://www.motorgomez.com/\", waiting until \"domcontentloaded\"\\n', 'TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://motorgomez.com/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.motorgomez.com",
+    "error": "Error: Page.goto: NS_ERROR_UNKNOWN_HOST\nCall log:\nnavigating to \"https://www.motorgomez.com/\", waiting until \"domcontentloaded\"\n"
+   },
+   {
+    "path": "/",
+    "host": "motorgomez.com",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://motorgomez.com/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Audi Motor Gómez Premium",
+  "prior_error": "DNSError"
+ },
+ {
+  "domain": "concesionariobmw.es",
+  "bucket": "hard_wall",
+  "host": "concesionariobmw.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['Error: Page.goto: NS_ERROR_UNKNOWN_HOST\\nCall log:\\nnavigating to \"https://www.concesionariobmw.es/\", waiting until \"domcontentloaded\"\\n', 'TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://concesionariobmw.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.concesionariobmw.es",
+    "error": "Error: Page.goto: NS_ERROR_UNKNOWN_HOST\nCall log:\nnavigating to \"https://www.concesionariobmw.es/\", waiting until \"domcontentloaded\"\n"
+   },
+   {
+    "path": "/",
+    "host": "concesionariobmw.es",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://concesionariobmw.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Cartagena Premium",
+  "prior_error": "DNSError"
+ },
+ {
+  "domain": "bmwmadridfilial.es",
+  "bucket": "hard_wall",
+  "host": "www.bmwmadridfilial.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://www.bmwmadridfilial.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.bmwmadridfilial.es",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://www.bmwmadridfilial.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "BMW Madrid - Alcalá",
+  "prior_error": "Timeout"
+ },
+ {
+  "domain": "autofernandez.es",
+  "bucket": "hard_wall",
+  "host": "www.autofernandez.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://www.autofernandez.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.autofernandez.es",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://www.autofernandez.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "AUTO FERNANDEZ",
+  "prior_error": "Timeout"
+ },
+ {
+  "domain": "santogal.es",
+  "bucket": "hard_wall",
+  "host": "www.santogal.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://www.santogal.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.santogal.es",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://www.santogal.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Concesionario Peugeot",
+  "prior_error": "Timeout"
+ },
+ {
+  "domain": "rahn.es",
+  "bucket": "hard_wall",
+  "host": "www.rahn.es",
+  "best_path": null,
+  "status": null,
+  "bytes": 0,
+  "prices": 0,
+  "dlinks": 0,
+  "wall": null,
+  "title": null,
+  "evidence": "resolves (DNS) but home page un-navigable on all host variants under stealth: ['TimeoutError: Page.goto: Timeout 18000ms exceeded.\\nCall log:\\nnavigating to \"https://www.rahn.es/\", waiting until \"domcontentloaded\"\\n']",
+  "swept": [
+   {
+    "path": "/",
+    "host": "www.rahn.es",
+    "error": "TimeoutError: Page.goto: Timeout 18000ms exceeded.\nCall log:\nnavigating to \"https://www.rahn.es/\", waiting until \"domcontentloaded\"\n"
+   }
+  ],
+  "name": "Rahn",
+  "prior_error": "Timeout"
+ }
+]
