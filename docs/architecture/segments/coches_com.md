@@ -39,8 +39,12 @@ capture the 117,745 real distinct listings and DECLARE 230.000 as the site peg i
   the SRP root (`_SRP_SEGMENTS`) and the page-1 catalogue URL (`/km0/` uses `pageProps.brands`
   + `popularClassified` instead of `seoData`/`classifieds`; `extract_all_makes` /
   `extract_classifieds_any` absorb both). SMOKE proved the VO parser parses km0 cards with
-  ZERO changes (5/5). km0 deep_link is rooted at `/km0/coches-km0.htm?id={visibleId}` so a km0
-  and a VO listing can never collide on `(dealer, deep_link)`.
+  ZERO changes (5/5). A km0 car carries the SAME `visibleId` as its VO listing (it IS a used
+  car shown in both sections), so it is ONE vehicle: the `deep_link` identity is surface-stable
+  (`/coches-segunda-mano/coches-ocasion.htm?id={visibleId}` from any surface) and km0 is recorded
+  as a SEGMENT FLAG (event payload + edge `listing_url`), not a 2nd row. Folding the surface root
+  into the deep_link previously split one car into a VO row + a km0 row — 20,432 cross-surface
+  phantoms (refuted verdict id=548); fixed at the root in `canonical_deep_link`.
 - **VN/catalog + renting** have no per-car dealer → owned by the PLATFORM entity itself, caged
   via `_cage_platform_owned`. VN offer link = `/coches-nuevos/version/{versionId}` (distinct
   namespace); the PVP→price discount is captured as a `price_drop` so delta sees new-car promos

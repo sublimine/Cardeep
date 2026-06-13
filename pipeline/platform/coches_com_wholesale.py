@@ -248,6 +248,10 @@ class Vehicle:
     transmission: str | None
     photo_url: str | None
     price_drop: dict | None     # synthesized from price vs priceOffer (the "precio contado")
+    segment: str = SEGMENT_VO   # vo|km0|vn|renting — recorded as a FLAG on the ONE vehicle,
+    #                             NOT folded into deep_link (that split one car into 2 rows).
+    listing_url: str | None = None  # the REAL per-surface URL (informative edge URL; the
+    #                                 vehicle identity stays the stable slug-free deep_link).
 
 
 def _to_int(v):
@@ -311,21 +315,33 @@ def _card_image(card: dict) -> str | None:
 
 
 def canonical_deep_link(visible_id: str, segment: str = SEGMENT_VO) -> str:
-    """The CANONICAL, slug-free PDP deep link, keyed on visibleId AND segment.
+    """The CANONICAL, slug-free, SURFACE-STABLE PDP deep link, keyed on visibleId ALONE.
 
-    The car's stable identity on coches.com is its visibleId (== ?id= in the URL); the SEO
-    slug prefix is cosmetic and volatile. The SRP card does NOT ship the slug, so a slugged
-    link would drift from the sitemap-<loc> form the per-PDP path stored — splitting one car
-    into two rows under the (dealer, deep_link) key. This canonical form is identical from
-    ANY surface (PDP <loc>, SRP card, a future API), so re-runs and cross-surface harvests
-    converge on ONE key. Verified live: coches.com serves ?id={visibleId} (200) and redirects
+    The car's stable identity on coches.com is its visibleId (== ?id= in the URL); EVERYTHING
+    else in the URL — the SEO slug prefix AND the surface root (/coches-segunda-mano/ vs /km0/)
+    — is volatile presentation, not identity. A km0 car IS a used car that also appears in the
+    km0 section: the SAME visibleId, the SAME physical car, listed on two surfaces. Keying the
+    vehicle on the full per-surface URL caged it TWICE (one VO row + one km0 row) and also split
+    on slugged-vs-slugfree forms from the old per-PDP path — 20,432 cross-surface phantoms.
+
+    FIX (root cause): the deep_link is now IDENTICAL from any surface for a given visibleId, so
+    the (dealer, deep_link) vehicle key == (dealer, visibleId). VO and km0 of the same car, and
+    slugged and slug-free forms, all converge on ONE vehicle row; a re-run never re-creates the
+    phantom. The km0/VO distinction is preserved as a SEGMENT FLAG on the single vehicle (carried
+    into the NEW event payload + the edge listing_url), not as a second row. Verified live:
+    coches.com serves /coches-segunda-mano/coches-ocasion.htm?id={visibleId} (200) and redirects
     it to the full SEO PDP for that exact car — a stable, working link.
 
-    SEGMENT-AWARE: a km0 car carries the SAME visibleId namespace as VO but is a DISTINCT
-    physical offer (verified: a km0 visibleId 404s on the VO SRP). The km0 PDP lives under
-    /km0/, so its canonical link is rooted there — which also guarantees a km0 listing and a
-    VO listing never collide on the (dealer, deep_link) vehicle key. VO keeps its historical
-    /coches-segunda-mano/ root byte-for-byte (no migration of existing rows)."""
+    `segment` is accepted for signature stability but DELIBERATELY no longer steers the root:
+    folding it in is precisely what created the phantoms."""
+    visible = (visible_id or "").strip()
+    return f"{_SRP_ALL}?id={visible}" if visible else _SRP_ALL
+
+
+def surface_listing_url(visible_id: str, segment: str = SEGMENT_VO) -> str:
+    """The REAL per-surface listing URL for the platform_listing edge (informative only — NOT
+    the vehicle identity). Records WHERE on coches.com the car was seen (VO vs km0 section) so
+    the edge keeps surface provenance, while the vehicle row stays single + stable."""
     visible = (visible_id or "").strip()
     if segment == SEGMENT_KM0:
         base = "https://www.coches.com/km0/coches-km0.htm"
@@ -378,10 +394,11 @@ def parse_card_vehicle(card: dict, segment: str = SEGMENT_VO) -> Vehicle:
     version = _name(card.get("version"))
     title = " ".join(p for p in (make, model, version) if p) or None
 
+    visible_id = str(card.get("visibleId") or card.get("id") or "")
     return Vehicle(
-        deep_link=canonical_deep_link(
-            str(card.get("visibleId") or card.get("id") or ""), segment),
-        listing_ref=str(card.get("visibleId") or card.get("id") or ""),
+        # IDENTITY: stable, surface-independent (km0 and VO of the same id => ONE row).
+        deep_link=canonical_deep_link(visible_id, segment),
+        listing_ref=visible_id,
         title=title,
         make=make,
         model=model,
@@ -392,6 +409,8 @@ def parse_card_vehicle(card: dict, segment: str = SEGMENT_VO) -> Vehicle:
         transmission=_name(card.get("transmission")),  # "Automática" / "Manual"
         photo_url=_card_image(card),
         price_drop=price_drop,
+        segment=segment,                          # FLAG on the single vehicle (km0/vo/...).
+        listing_url=surface_listing_url(visible_id, segment),  # real per-surface edge URL.
     )
 
 
@@ -684,7 +703,9 @@ COCHES_PLATFORM_RECIPE = {
                "seoData[all-makes] 93-make MECE partition · classified card (dealer+geo)"),
         "km0": ("/km0/{make-slug}.htm?page=N · Σ /km0/ brands == popularClassified.total=15,630 "
                 "· STRUCTURAL TWIN of vo (same card, same per-make SRP, seoData[all-makes]) · "
-                "deep_link rooted at /km0/ so km0 and vo never collide on (dealer, deep_link)"),
+                "SAME visibleId as the VO row -> ONE vehicle (km0 recorded as a segment FLAG, "
+                "not a 2nd row); deep_link is surface-stable so km0∩vo converge, edge "
+                "listing_url keeps the real /km0/ surface for provenance"),
         "vn": ("/coches-nuevos/coches-nuevos.htm?page=N · search.total=826 · 20 version OFFERS"
                "/page (make/model/version, pvp, discount) · NO dealer -> owned by the PLATFORM "
                "entity · PVP->price discount captured as price_drop for delta"),
@@ -948,7 +969,9 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ul
     platform_listing semantics are preserved EXACTLY: same ON CONFLICT idempotency, same
     cageable truth, same NEW-event rule (emitted only for genuinely new vehicles), same
     price-drop capture. A re-run of an already-harvested window adds 0 rows and 0 events.
-    `segment` (vo|km0) only steers the deep_link namespace so VO and km0 never collide.
+    `segment` (vo|km0) is recorded as a FLAG on the single vehicle (event payload + edge
+    listing_url); the deep_link identity is surface-stable so VO and km0 of the same car
+    CONVERGE on ONE (dealer, deep_link) row instead of splitting into cross-surface phantoms.
     """
     cage = _parse_window(cards_in_order, geo, seen_ids, harvested_cageable, stats, segment)
     if not cage:
@@ -1054,9 +1077,11 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ul
         stats["cars_caged"] += len(car_keys)
         stats["new_cars"] += len(confirmed_new)
 
-        # ---- EDGES: one batched upsert; RETURNING (xmax=0) counts genuinely new edges.
+        # ---- EDGES: one batched upsert; RETURNING (xmax=0) counts genuinely new edges. The
+        # edge listing_url records the REAL per-surface URL (VO vs km0 section) for provenance;
+        # the vehicle identity (deep_link) stays the stable slug-free form so one car = one row.
         e_vehicles = [vehicle_ulid_for[k] for k in car_keys]
-        e_urls = [cars[k].vehicle.deep_link for k in car_keys]
+        e_urls = [cars[k].vehicle.listing_url or cars[k].vehicle.deep_link for k in car_keys]
         e_refs = [cars[k].vehicle.listing_ref for k in car_keys]
         e_prices = [cars[k].vehicle.price for k in car_keys]
         edge_rows = await conn.fetch(_BULK_UPSERT_EDGES, e_vehicles, e_urls, e_refs,
@@ -1068,7 +1093,8 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver, platform_ul
             ev_ulids, ev_vehicles, ev_entities, ev_payloads = [], [], [], []
             for k in confirmed_new:
                 v = cars[k].vehicle
-                payload = {"price": v.price, "title": v.title, "platform": COCHES_TRADE_NAME}
+                payload = {"price": v.price, "title": v.title, "platform": COCHES_TRADE_NAME,
+                           "segment": v.segment}  # km0/vo recorded as a FLAG, not a 2nd row
                 if v.price_drop:
                     payload["price_drop"] = v.price_drop
                 ev_ulids.append(ulid())
@@ -1429,7 +1455,8 @@ async def _cage_platform_owned(conn, platform_ulid, vehicles, stats, segment):
 
         edge_rows = await conn.fetch(
             _BULK_UPSERT_EDGES,
-            [ulid_for[lk] for lk in links], links,
+            [ulid_for[lk] for lk in links],
+            [by_link[lk].listing_url or lk for lk in links],  # real surface URL, fallback link
             [by_link[lk].listing_ref for lk in links],
             [by_link[lk].price for lk in links], platform_ulid)
         stats["edges_created"] += sum(1 for r in edge_rows if r["inserted"])
