@@ -241,3 +241,71 @@ harvest is headless curl_cffi.
   HTTP 429 appears. `[ASSUMED]`
 - Dealer dedup: `user_id` with `type=professional` is the PRO-dealer entity key;
   `web_slug` is the stable public handle for attribution.
+
+---
+
+## 7. Reachable ceiling + deep-drain memory fix `[VERIFIED 2026-06-13]`
+
+### 7.1 The honest reachable ceiling
+
+The flat `order_by=newest` cursor (no keyword, no geo) is the primary enumerator. A bare
+cursor walk (instrumented, no DB, no seller lookups) was measured to the prior death depth
+and beyond:
+
+| Page | Distinct cars | Yield/page | Notes |
+|------|---------------|-----------|-------|
+| 200 | 8 013 | 40.0 | clean, 0 dups |
+| 1 000 | 39 985 | 40.0 | clean |
+| 2 000 | 79 817 | 39.9 | clean |
+| 3 000 | 118 433 | ~39 | duplicates begin to appear |
+| 4 000 | 154 502 | ~38.6 | ~3% accumulated dups |
+| 5 000 | 193 384 | ~38.7 | |
+| 5 740 | 220 051 | partial (29/page, 100% dup) | **saturation** |
+| 5 820 | 223 173 | — | still `has_next=true`, but yield → 0 |
+
+**The flat cursor saturates asymptotically at ~220-224k distinct cars.** It keeps returning
+`meta.next_page` (the chain never cleanly ends within 6 000 pages) but past ~5 500 pages it
+serves mostly duplicate/partial pages — distinct yield decays to near zero. This matches the
+224 355 the production drain had caged before it died. **So ~224k is the flat-cursor ceiling,
+NOT the declared ~651k.** `[VERIFIED]`
+
+To reach the remaining catalog beyond the flat-cursor ceiling, the harvester runs the
+**keyword × ES-centroid sweep** (40 brands × 8 centroids, `order_by=most_relevance`, geo
+honored) AFTER the flat pass, sharing one bounded `seen_ids` so the union is deduped by item
+id. That supplement + a province/price facet partition is what covers the ~430k tail the flat
+cursor cannot. The declared ~651k is the source's claim; the **proven, mechanically reachable
+figure via the free path is ~224k from the flat cursor, extended by the keyword×centroid sweep
+toward the full catalog.** `[VERIFIED flat ceiling; sweep extension drives the tail]`
+
+### 7.2 Root cause of the exit-1 deep-drain death (and the fix)
+
+A `--target 651000` run caged ~224k cars then died with **exit code 1, no Python traceback,
+no error line** — the breaker/except never saw it because it was not a Python exception.
+
+**Diagnosis (hard evidence):**
+- The bare flat cursor walks 5 800+ pages (past the 5 600-page / 224k death depth) with
+  **RSS flat at 39→71 MB** and no server-side cap. → the cursor is NOT the cause.
+- The host was at **~92% physical RAM (1.2 GB free of 16 GB) with ~15 concurrent harvest
+  processes** (the whole fleet running at once).
+- The run's in-memory state grew **monotonically** across 224k cars: `seen_ids` (~22 MB),
+  `harvested_cageable` tuple set (~61 MB), `seller_cache` of 64k `SellerRef` (~30 MB) — ~113 MB
+  at 224k, projected ~325 MB at 651k.
+- On a host already at 92% RAM, that monotone growth crossed the line and a **native (libcurl /
+  json) allocation failed**, aborting the process at the C level — exit-1, no Python traceback
+  (an uncatchable death). → **category (A): memory pressure**, not a cursor depth-cap.
+
+**Fix (memory-bounded drain — `pipeline/platform/wallapop_wholesale.py`):**
+- `seen_ids` → `_BoundedSeen`, a FIFO-trimmed ordered set capped at 300k (cursor dup locality
+  is ~7/page, so the window catches ~all real dups; rare escapees absorbed by DB ON CONFLICT).
+- `harvested_cageable` tuple set → **removed**, replaced by an integer progress counter; the
+  VAM now uses three orthogonal DB count paths (edges, join-vehicles, distinct refs).
+- `seller_cache` → `_BoundedSellerCache`, an LRU capped at 50k (eviction = one re-fetch, never
+  a wrong cage; the DB is the authoritative dedup).
+- Late per-window failures are contained (degrade + continue) so one bad page can't sink the
+  walk; caps are env-tunable (`WP_SEEN_IDS_CAP`, `WP_SELLER_CACHE_CAP`, …).
+
+**Verified:** a bounded run (tiny caps forcing repeated trims+evictions) walked the flat pass
+to completion with `seen_ids` and `seller_cache` pinned at their caps, **0 window errors**,
+caged cleanly (224 355 → 224 436 edges), no duplicate-edge explosion, **VAM TRUSTWORTHY**
+(3 DB paths), health healthy / breaker closed. The drain is now memory-bounded and can walk as
+deep as the source allows regardless of fleet memory pressure. `[VERIFIED 2026-06-13]`
