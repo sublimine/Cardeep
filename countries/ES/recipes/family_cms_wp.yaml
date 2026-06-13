@@ -41,6 +41,8 @@ strategy_b_html_cards:
   theme_overrides:
     - ga-car-card
     - sc_cars_item
+    - stm_motors
+    - auto_listing
   note: WordPress is theme-VARIED; each theme is ONE override entry (card splitter + field selectors). Adding a theme is one row.
 ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
 multiplier: ONE recipe + ONE Vehica parser harvests EVERY Vehica dealer (byte-identical JSON); the HTML half adds a thin per-theme selector override so one skeleton serves the volume tail.

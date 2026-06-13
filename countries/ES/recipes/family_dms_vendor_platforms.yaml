@@ -38,6 +38,9 @@ subfamilies:
       - /coches-segunda-mano
       - /coches-nuevos
       - /vehiculos-de-ocasion
+      - /es/coches-ocasion
+      - /es/coches
+      - /es/coches-segunda-mano
     pagination: ?pag=N until a page yields no NEW cards (or max_pages cap)
     detail_template: /ficha-vehiculo-ocasion/<slug>/<id>
     field_map:

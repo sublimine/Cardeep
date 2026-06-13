@@ -1,0 +1,33 @@
+# Cardeep extraction recipe — family_framework_webbuilder
+# Reusable; re-scrape without raw crude.
+version: 1
+source: family_framework_webbuilder
+family: JS-framework dealer-site family (Next/Astro/Nuxt/Angular on the shared 'web-builder' SaaS)
+scope: long-tail dealer OWN-SITE inventory, harvested by JS-framework SaaS family
+engine: curl_cffi+chrome131_impersonate+sitemap+jsonld(GET, server-rendered)
+access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser, no creds). The listing UI is a JS SPA, but sitemap.xml and per-PDP schema.org JSON-LD are server-rendered — no JS execution needed.
+data_surface: dealer_site_sitemap+jsonld
+fingerprint: shared dealer-site SaaS: dealer logo on firebasestorage.googleapis.com/v0/b/web-builder/* and vehicle photos on storage.googleapis.com/vehicle-multipost-multimedia/* (or /vehicles-prd/*). A site is a member iff its listing HTML carries the web-builder host (spine) AND a vehicle photo bucket (corroborator).
+subfamilies: nextjs (App-Router RSC), astro, nuxt, angular — all on the same SaaS
+listing_paths:
+  - /coches-de-segunda-mano
+  - /stock
+  - /comprar-vehiculos
+  - /vehiculos
+  - /coches
+  - /
+enumeration: sitemap.xml -> every '<loc>...-de-segunda-mano-<uuid></loc>' (the COMPLETE inventory; matches the page's numberOfItems). Query-param pagination is client-side only and is NOT used.
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
+multiplier: ONE recipe + ONE parser harvests EVERY family member, because the sitemap shape and the per-PDP schema.org Car JSON-LD are byte-identical across member sites.
+field_map:
+  deep_link: JSON-LD Car.url (== the sitemap <loc>)
+  listing_ref: JSON-LD Car.vehicleIdentificationNumber (platform UUID; == slug tail)
+  title: JSON-LD Car.name
+  make: JSON-LD Car.brand
+  model: JSON-LD Car.model
+  year: JSON-LD Car.productionDate (fallback dateVehicleFirstRegistered[:4])
+  km: JSON-LD Car.mileageFromOdometer.value
+  price: JSON-LD Car.offers.price (EUR)
+  fuel: JSON-LD Car.vehicleEngine.fuelType
+  transmission: JSON-LD Car.vehicleTransmission (M=Manual, A=Automático)
+  photo_url: JSON-LD Car.image[0]

@@ -220,7 +220,18 @@ class FamilyFetcher:
         self.last_status: int | None = None
 
     def fetch(self, url: str) -> str:
-        resp = self._session.get(url, impersonate=_IMPERSONATE, timeout=_TIMEOUT)
+        try:
+            resp = self._session.get(url, impersonate=_IMPERSONATE, timeout=_TIMEOUT)
+        except Exception as e:  # noqa: BLE001
+            # A broken TLS cert (expired / self-signed / SNI mismatch) is a config
+            # defect on the dealer's side, not an unreachable site. The HTML is still
+            # served; retry once with verification relaxed so a reachable family member
+            # is not lost to a cosmetic cert error. Network/DNS failures re-raise.
+            if any(t in type(e).__name__ for t in ("SSL", "Certificate")):
+                resp = self._session.get(url, impersonate=_IMPERSONATE,
+                                         timeout=_TIMEOUT, verify=False)
+            else:
+                raise
         self.last_status = resp.status_code
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code} on {url}")

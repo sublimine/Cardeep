@@ -162,6 +162,18 @@ def _price_to_float(raw) -> float | None:
     return v if v > 0 else None
 
 
+def _first_group(m: "re.Match | None") -> str | None:
+    """Return the first non-empty capture group of a match. Themes that accept more
+    than one markup skin express that as an alternation with several groups (only one
+    of which fires per card); this coalesces them to the single value that matched."""
+    if m is None:
+        return None
+    for g in m.groups():
+        if g:
+            return g
+    return m.group(0)
+
+
 def _split_make_model(text: str | None) -> tuple[str | None, str | None]:
     """Title 'CITROEN C4 PICASSO' -> make='CITROEN', model='C4 PICASSO'.
     First token = make; remainder = model. Keeps multi-word models intact."""
@@ -307,7 +319,62 @@ _THEME_SC = CardTheme(
     page_template="{base}/page/{n}/",
 )
 
-CARD_THEMES = (_THEME_GA, _THEME_SC)
+# Theme: STM Motors plugin (`motors` theme — the WordPress automotive plugin that
+# powers the `wordpress+motors_plugin` subfamily). BYTE-UNIFORM across every Motors
+# dealer regardless of the host theme skin: each car is a `stm-isotope-listing-item`
+# grid cell whose enclosing class carries the faceted taxonomy tokens (year, fuel,
+# make), with a `data-price` attribute, a `/listings/` detail anchor, a `car-title`
+# div, and a `car-meta-bottom` spec list (`stm-icon-road` km, `stm-icon-fuel`). ONE
+# override reads every Motors dealer — the plugin half of the WordPress family, the
+# same multiplier shape as Vehica but for server-rendered Motors markup. Verified
+# live 2026-06-13 (estellerimport.com, lowcosttorres.es, marinamultimarca.com).
+_THEME_STM = CardTheme(
+    key="stm_motors",
+    marker="stm-isotope-listing-item",
+    # Lookahead split: keep the opening `class="... stm-isotope-listing-item ..."`
+    # INSIDE each fragment so the faceted taxonomy tokens (year/fuel) survive into the
+    # spec parse instead of being eaten by the delimiter.
+    card_split=re.compile(r'(?=<div[^>]*class="[^"]*stm-isotope-listing-item[^"]*")'),
+    link_re=re.compile(r'<a href="([^"]+/listings/[^"]+)"'),
+    # Title across both Motors skins: the `car-title` div (multilisting skin) OR the
+    # `data-title="..."` the compare/price anchor carries (photos-unit skin).
+    title_re=re.compile(r'car-title"[^>]*>\s*([^<]+?)\s*</div>|data-title="([^"]+)"', re.S),
+    # Price across both skins: the `data-price="20900.00"` grid attribute (capture the
+    # integer part so the shared digit-strip keeps euros), OR — when the plugin renders
+    # price as text inside `normal-price` — a `<span ...>8.500€</span>` euro amount.
+    price_re=re.compile(r'data-price="([0-9]+)'
+                        r'|normal-price.*?heading-font">\s*([0-9][0-9.\s]*)\s*' + _EURO,
+                        re.S),
+    # Specs come from TWO surfaces, both inside the same fragment: the faceted class
+    # taxonomy (`... 04-2023-2047 gasolina-410 ...` -> year + fuel) AND the
+    # `car-meta-bottom` list (`<span>34000 km</span>` -> km). One spec_re captures
+    # both token streams; _parse_card_specs classifies year/km/fuel by shape/word.
+    spec_re=re.compile(r'<span>([^<]+?)</span>|(?:^|[\s-])((?:19|20)\d{2})-\d+'
+                       r'|(?:^|[\s-])(gasolina|diesel|diésel|hibrido|h[ií]brido|'
+                       r'el[eé]ctrico|electrico|glp|gnc)-\d+'),
+    page_template="{base}/page/{n}/",
+)
+
+# Theme: WP Auto Listing plugin (`auto-listings-items` grid). Each car is an
+# `<li class="... auto-listing type-auto-listing ...">` cell; the detail anchor points
+# to the listing permalink (`/coches/<slug>/` or `/listing/<slug>/`), the title is the
+# `car_title`/`title` h3 anchor, price is the `price-amount` span, and km is the
+# `odomoter` spec `<li>`. Two skins exist (price class `precio`/`price`, title class
+# `car_title`/`title`); one override covers both via alternation. Verified live
+# 2026-06-13 (diamondsportauto.com, automovilespros.net).
+_THEME_AL = CardTheme(
+    key="auto_listing",
+    marker="auto-listing type-auto-listing",
+    card_split=re.compile(r'(?=<li[^>]*class="[^"]*auto-listing type-auto-listing[^"]*")'),
+    link_re=re.compile(r'<a[^>]*href="([^"]*/(?:coches|listing|vehiculo|listings)/[^"]+)"'),
+    title_re=re.compile(r'(?:car_title|class="title)"?[^>]*>\s*<a[^>]*>\s*([^<]+?)\s*</a>', re.S),
+    price_re=re.compile(r'price-amount">\s*([0-9][0-9.\s]*)\s*<'),
+    # specs: the `at-a-glance` <li> values (km via "NNN km", fuel word when present).
+    spec_re=re.compile(r'<li[^>]*>\s*(?:<i[^>]*></i>)?\s*([^<]+?)\s*</li>'),
+    page_template="{base}/page/{n}/",
+)
+
+CARD_THEMES = (_THEME_GA, _THEME_SC, _THEME_STM, _THEME_AL)
 
 
 def _parse_card_specs(theme: CardTheme, frag: str) -> tuple[int | None, int | None, str | None]:
@@ -316,7 +383,16 @@ def _parse_card_specs(theme: CardTheme, frag: str) -> tuple[int | None, int | No
     a known fuel word. Robust to spec ordering across theme variants."""
     if theme.spec_re is None:
         return (None, None, None)
-    toks = [_clean(t) for t in theme.spec_re.findall(frag)]
+    # findall returns a str per match for a single-group regex, or a tuple of groups
+    # for a multi-group one (the STM theme captures from several token streams in one
+    # alternation). Flatten either shape into a flat list of non-empty token strings.
+    raw = theme.spec_re.findall(frag)
+    toks: list[str | None] = []
+    for item in raw:
+        if isinstance(item, tuple):
+            toks.extend(_clean(g) for g in item if g)
+        else:
+            toks.append(_clean(item))
     year = km = None
     fuel = None
     fuels = ("diesel", "diésel", "gasolina", "hibrido", "híbrido", "electrico",
@@ -353,12 +429,12 @@ def parse_html_cards(theme: CardTheme, listing_html: str, base_host: str) -> lis
             continue
         seen.add(deep_link)
         tm = theme.title_re.search(frag)
-        title = _clean(tm.group(1)) if tm else None
+        title = _clean(_first_group(tm)) if tm else None
         make, model = _split_make_model(title)
         price = None
         pm = theme.price_re.search(frag)
         if pm:
-            price = _price_to_float(pm.group(1))
+            price = _price_to_float(_first_group(pm))
         year, km, fuel = _parse_card_specs(theme, frag)
         out.append(Vehicle(
             deep_link=deep_link, listing_ref=None, title=title, make=make,

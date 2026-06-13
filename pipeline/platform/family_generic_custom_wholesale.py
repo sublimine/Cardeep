@@ -36,10 +36,21 @@ long-tail flows through the ONE proven architecture, not a fork of it. The ONLY
 difference from DealerK is that the parser is selected per dealer (a registry)
 instead of one parser for the whole family, because the markup is not shared.
 
-Verified live 2026-06-13 against five real generic/custom dealers from their OWN
-websites (all already present as entities in cardeep-pg):
+Verified live 2026-06-13 against TEN real generic/custom dealers from their OWN
+websites (all already present as entities in cardeep-pg). The remaining ~63 generic
+domains in the roster were probed and honestly excluded: OEM/global brand homepages
+(ford.com, maserati.com, honda.es, polestar.com, lancia.es, mopar.eu, copart.es),
+sub-platform delegators whose stock lives on another connector's surface
+(es.renew.auto, quadis.es, concesionarios.seat, autocasion.telenauto.com,
+lexusauto.es, yomovo.es), JS-rendered shells with no server-side cards
+(automotordursan.com, automovilesroel.es, promosale.es, grupoadarsa.com,
+stylecarcanarias.com), and dead/parked/thin hosts. Building a recipe for a JS shell
+or a brand homepage would fabricate ownership, so they are skipped, not faked.
+
   autofesa.com (28), carhay.com (28), autopai.es (29),
-  arguelles-automoviles.com (28), frworldcars.com (02).
+  arguelles-automoviles.com (28), frworldcars.com (02),
+  csvmotor.com (28), autocastro.es (10), puntomotortenerife.com (38),
+  robledauto.com (28), gupicarauto.es (13).
 
 Run:  python -m pipeline.platform.family_generic_custom_wholesale --dealers autofesa.com carhay.com
       python -m pipeline.platform.family_generic_custom_wholesale --all
@@ -412,20 +423,253 @@ def parse_frworldcars(html_text: str, base: str) -> list[Vehicle]:
     return out
 
 
+# csvmotor.com bespoke 'car-card' SSR grid (data-ssr="1"). The wrapper anchor carries
+# BOTH the /coches/<slug>-<id> detail link and the card body. Price in 'car-price-corner'
+# (the cash price; 'car-cuota-*' is the monthly finance quote — never the price). Make+
+# model in 'car-model', version in 'car-variant', spec spans (year/fuel) in 'car-specs'.
+# Real ?page=N pagination (each page brings a fresh set of cards).
+_CSV_CARD = re.compile(
+    r'<a class="car-card[^"]*" href="(/coches/[^"]+)"(.*?)'
+    r'(?=<a class="car-card|</main|<footer)', re.S)
+_CSV_PRICE = re.compile(r'class="car-price-corner">\s*([0-9][0-9.\s]*)')
+_CSV_PRICE_ALT = re.compile(r'class="car-price">\s*([0-9][0-9.\s]*)')
+_CSV_MODEL = re.compile(r'class="car-model(?:-corner)?">\s*([^<]+)</div>')
+_CSV_VARIANT = re.compile(r'class="car-variant">\s*([^<]+)</div>')
+_CSV_SPECS = re.compile(r'class="car-specs">(.*?)</div>', re.S)
+_CSV_SPAN = re.compile(r'<span>([^<]*)</span>')
+_CSV_IMG = re.compile(r'<img[^>]+src="(https?://[^"]+?\.(?:jpe?g|png|webp))', re.I)
+
+
+def parse_csvmotor(html_text: str, base: str) -> list[Vehicle]:
+    """csvmotor.com SSR 'car-card' grid. Cash price is 'car-price-corner' (NOT the
+    'car-cuota' finance quote). Make/model in 'car-model'; spec spans give year+fuel."""
+    out: list[Vehicle] = []
+    seen: set[str] = set()
+    for m in _CSV_CARD.finditer(html_text):
+        deep_link = _abs_url(base, m.group(1))
+        if deep_link in seen:
+            continue
+        seen.add(deep_link)
+        frag = m.group(2)
+        pm = _CSV_PRICE.search(frag) or _CSV_PRICE_ALT.search(frag)
+        price = _euros_to_float(pm.group(1)) if pm else None
+        mo = _CSV_MODEL.search(frag)
+        model_full = _clean(mo.group(1)) if mo else None
+        vo = _CSV_VARIANT.search(frag)
+        variant = _clean(vo.group(1)) if vo else None
+        mk, md = _split_make_model(model_full)
+        title = " ".join(b for b in (model_full, variant) if b) or model_full
+        year = km = fuel = None
+        sp = _CSV_SPECS.search(frag)
+        if sp:
+            spans = " ".join(_clean(x) or "" for x in _CSV_SPAN.findall(sp.group(1)))
+            year, km, fuel = _parse_spec_line(spans)
+        ref_m = re.search(r"-(\d+)(?:[/?#]|$)", deep_link)
+        img = _CSV_IMG.search(frag)
+        out.append(Vehicle(
+            deep_link=deep_link, listing_ref=ref_m.group(1) if ref_m else None,
+            title=title, make=mk, model=md, year=year, km=km, price=price, fuel=fuel,
+            photo_url=img.group(1) if img else None))
+    return out
+
+
+# autocastro.es bespoke Bootstrap 'card-*' grid. Title in 'card-title' (<b>make+model</b>
+# then version text); spec line in 'card-info' ('YEAR | FUEL | KM km | TRANS'); cash price
+# in 'card-price__block__price'. Detail link /coches-segunda-mano/<slug>-<id>. Full
+# inventory on one page (?page=N returns the same page -> 'single').
+_AC_CARD = re.compile(
+    r'href="(https://www\.autocastro\.es/coches-segunda-mano/[^"#?]+-\d+)"(.*?)'
+    r'(?=href="https://www\.autocastro\.es/coches-segunda-mano/[^"#?]+-\d+"|<footer)', re.S)
+_AC_TITLE = re.compile(r'class="card-title[^"]*">\s*<b>([^<]+)</b>([^<]*)</h4>')
+_AC_INFO = re.compile(r'class="[^"]*card-info[^"]*"[^>]*>\s*([0-9][^<]*?)</li>')
+_AC_PRICE = re.compile(r'class="card-price__block__price[^"]*">\s*([0-9][0-9.\s]*)')
+_AC_IMG = re.compile(r'<img[^>]+src="([^"]+?\.(?:jpe?g|png|webp))', re.I)
+
+
+def parse_autocastro(html_text: str, base: str) -> list[Vehicle]:
+    """autocastro.es bespoke Bootstrap cards. Make+model bolded in card-title; the
+    card-info <li> is 'YEAR | FUEL | KM km | TRANS'; cash price in card-price__block."""
+    out: list[Vehicle] = []
+    seen: set[str] = set()
+    for m in _AC_CARD.finditer(html_text):
+        deep_link = m.group(1)
+        if deep_link in seen:
+            continue
+        seen.add(deep_link)
+        frag = m.group(2)
+        make = model = title = None
+        tm = _AC_TITLE.search(frag)
+        if tm:
+            name = _clean(tm.group(1))
+            rest = _clean(tm.group(2))
+            title = " ".join(b for b in (name, rest) if b)
+            make, model = _split_make_model(name)
+        year = km = fuel = None
+        info = _AC_INFO.search(frag)
+        if info:
+            year, km, fuel = _parse_spec_line(info.group(1))
+        pm = _AC_PRICE.search(frag)
+        price = _euros_to_float(pm.group(1)) if pm else None
+        ref_m = re.search(r"-(\d+)$", deep_link)
+        img = _AC_IMG.search(frag)
+        out.append(Vehicle(
+            deep_link=deep_link, listing_ref=ref_m.group(1) if ref_m else None,
+            title=title, make=make, model=model, year=year, km=km, price=price, fuel=fuel,
+            photo_url=img.group(1) if img else None))
+    return out
+
+
+# puntomotortenerife.com bespoke 'car-content' cards. Detail link /es/vehiculo/<id>/;
+# title in the photo alt; 'car-feature' <li> list is year / km / fuel; cash price in
+# 'box-title'. Real ?page=N pagination (each page brings 12 fresh cards).
+_PM_CARD = re.compile(
+    r'href="(/es/vehiculo/(\d+)/)"(.*?)(?=href="/es/vehiculo/\d+/"|<footer)', re.S)
+_PM_ALT = re.compile(r'alt="([^"]+)"')
+_PM_LI = re.compile(r'<li[^>]*>(.*?)</li>', re.S)
+_PM_PRICE = re.compile(r'class="box-title">\s*([0-9][0-9.\s]*)\s*(?:€|&euro;)')
+_PM_IMG = re.compile(r'src="([^"]+?\.(?:jpe?g|png|webp))"', re.I)
+
+
+def parse_puntomotor(html_text: str, base: str) -> list[Vehicle]:
+    """puntomotortenerife.com 'car-content' cards. Make/model from the photo alt;
+    car-feature <li> carries year/km/fuel; cash price in box-title."""
+    out: list[Vehicle] = []
+    seen: set[str] = set()
+    for m in _PM_CARD.finditer(html_text):
+        deep_link = _abs_url(base, m.group(1))
+        ref = m.group(2)
+        if deep_link in seen:
+            continue
+        seen.add(deep_link)
+        frag = m.group(3)
+        am = _PM_ALT.search(frag)
+        title = _clean(am.group(1)) if am else None
+        make, model = _split_make_model(title)
+        joined = " | ".join(_clean(x) or "" for x in _PM_LI.findall(frag))
+        year, km, fuel = _parse_spec_line(joined)
+        pm = _PM_PRICE.search(frag)
+        price = _euros_to_float(pm.group(1)) if pm else None
+        img = _PM_IMG.search(frag)
+        out.append(Vehicle(
+            deep_link=deep_link, listing_ref=ref, title=title, make=make, model=model,
+            year=year, km=km, price=price, fuel=fuel,
+            photo_url=img.group(1) if img else None))
+    return out
+
+
+# robledauto.com WordPress 'car-item' cards. Detail link /Vehículos/<id>/ (the id also
+# rides 'data-id'); title is a prose <p> (make = first token, model = second); cash price
+# in 'new-price' with Spanish ',00' cents (we read euros only). Paginates as /page/N/.
+_ROB_CARD = re.compile(
+    r'class="car-item.*?href="(https://robledauto\.com/Veh[^"]+/(\d+)/)"(.*?)'
+    r'(?=class="car-item|<footer)', re.S)
+_ROB_TITLE = re.compile(r'class="car-title">\s*<a[^>]*></a>\s*<p>([^<]+)</p>')
+_ROB_PRICE = re.compile(r'class="new-price">\s*([0-9][0-9.\s]*)')
+_ROB_IMG = re.compile(r'<img[^>]+src="(https?://[^"]+?\.(?:jpe?g|png|webp))', re.I)
+
+
+def parse_robledauto(html_text: str, base: str) -> list[Vehicle]:
+    """robledauto.com WP 'car-item' cards. Title is descriptive prose, so make/model
+    are best-effort from the first tokens; price is 'new-price' (',00' cents stripped)."""
+    out: list[Vehicle] = []
+    seen: set[str] = set()
+    for m in _ROB_CARD.finditer(html_text):
+        deep_link = m.group(1)
+        ref = m.group(2)
+        if deep_link in seen:
+            continue
+        seen.add(deep_link)
+        frag = m.group(3)
+        tm = _ROB_TITLE.search(frag)
+        title = _clean(tm.group(1)) if tm else None
+        make = model = year = None
+        if title:
+            toks = title.split()
+            make = toks[0].capitalize() if toks else None
+            model = toks[1] if len(toks) > 1 else None
+            my = re.search(r"\b(19|20)\d{2}\b", title)
+            year = int(my.group(0)) if my else None
+        pm = _ROB_PRICE.search(frag)
+        price = _euros_to_float(pm.group(1)) if pm else None
+        img = _ROB_IMG.search(frag)
+        out.append(Vehicle(
+            deep_link=deep_link, listing_ref=ref, title=title, make=make, model=model,
+            year=year, km=None, price=price, fuel=None,
+            photo_url=img.group(1) if img else None))
+    return out
+
+
+# gupicarauto.es Joomla 'com_rdautos' cards. Title in '<h2 class="responsive_h2">' with
+# the detail link /index.php/es/stock-automoviles/detail/<id>-<slug> and a <strong>
+# 'Make Model<br>VARIANT (YEAR)'; a spec table gives Precio / Km / Combustible. Joomla
+# pagination is ?start=N (offset, page size 20).
+_GUP_CARD = re.compile(
+    r'<h2 class="responsive_h2">\s*<a\s+href="(/index\.php/es/stock-automoviles/detail/(\d+)-[^"]+)">'
+    r'<strong>(.*?)</strong></a></h2>(.*?)'
+    r'(?=<h2 class="responsive_h2">|<footer|class="pagination)', re.S)
+_GUP_BR = re.compile(r"<br\s*/?>")
+_GUP_PRICE = re.compile(r'Precio\s*</td>\s*<td[^>]*>\s*([0-9][0-9.\s]*)')
+_GUP_KM = re.compile(r'Km\s*</td>\s*<td[^>]*>\s*([0-9.\s]+)\s*Kil', re.I)
+_GUP_FUEL = re.compile(r'Combustible\s*</td>\s*<td[^>]*>\s*([^<]+)</td>', re.I)
+_GUP_YEAR = re.compile(r"\((\d{4})\)")
+_GUP_IMG = re.compile(r'<img src="([^"]+)"')
+
+
+def parse_gupicar(html_text: str, base: str) -> list[Vehicle]:
+    """gupicarauto.es Joomla com_rdautos cards. Make/model from the <strong> head
+    (before <br>); year in trailing '(YYYY)'; price/km/fuel from the spec table."""
+    out: list[Vehicle] = []
+    seen: set[str] = set()
+    for m in _GUP_CARD.finditer(html_text):
+        deep_link = _abs_url(base, m.group(1))
+        ref = m.group(2)
+        if deep_link in seen:
+            continue
+        seen.add(deep_link)
+        head = m.group(3)
+        frag = m.group(4)
+        title = _clean(head)
+        name_part = _clean(_GUP_BR.split(head, 1)[0])
+        make, model = _split_make_model(name_part)
+        ym = _GUP_YEAR.search(head)
+        year = int(ym.group(1)) if ym else None
+        pm = _GUP_PRICE.search(frag)
+        price = _euros_to_float(pm.group(1)) if pm else None
+        km = None
+        kmm = _GUP_KM.search(frag)
+        if kmm:
+            kd = re.sub(r"[^\d]", "", kmm.group(1))
+            km = int(kd) if kd else None
+        fm = _GUP_FUEL.search(frag)
+        fuel = _clean(fm.group(1)) if fm else None
+        img = _GUP_IMG.search(frag)
+        out.append(Vehicle(
+            deep_link=deep_link, listing_ref=ref, title=title, make=make, model=model,
+            year=year, km=km, price=price, fuel=fuel,
+            photo_url=_abs_url(base, img.group(1)) if img else None))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Per-dealer recipe registry. Each member of the generic/custom family declares
 # its OWN listing path, pagination template and parser — because there is no shared
 # template to fingerprint. This registry IS the family: ONE connector, N recipes.
-# `pages`: 'query' -> ?page=N ; 'single' -> one page (site has no server pagination).
+# `pages`: 'query' -> ?page=N ; 'single' -> one page (site has no server pagination);
+#          'template' -> use `page_tmpl` (e.g. WP '/page/N/' or Joomla '?start=N').
 # ---------------------------------------------------------------------------
 @dataclass
 class DealerRecipe:
     host: str
     listing_path: str
     parser: Callable[[str, str], list[Vehicle]]
-    pages: str = "query"           # 'query' (?page=N) | 'single'
+    pages: str = "query"           # 'query' (?page=N) | 'single' | 'template'
     subfamily: str = "custom"
     notes: str = ""
+    # For pages == 'template': a URL template appended to the base, with '{n}' the
+    # 1-based page number and '{off}' the zero-based offset (page * page_step). E.g.
+    # WP '/coches/page/{n}/' or Joomla '/stock?start={off}'. page_step is the page size.
+    page_tmpl: str = ""
+    page_step: int = 20
 
 
 REGISTRY: dict[str, DealerRecipe] = {
@@ -449,6 +693,31 @@ REGISTRY: dict[str, DealerRecipe] = {
         host="frworldcars.com", listing_path="/vehiculos/",
         parser=parse_frworldcars, pages="single", subfamily="custom",
         notes="blog-style <article> cards; price embedded in <h3> headline"),
+    # --- roster extension 2026-06-13: own-site SSR dealers verified live, each card
+    #     parser developed against real HTML; every host resolves to an existing DB
+    #     entity (ownership is direct, no platform_listing edge). ---
+    "csvmotor.com": DealerRecipe(
+        host="csvmotor.com", listing_path="/coches-ocasion/",
+        parser=parse_csvmotor, pages="query", subfamily="custom",
+        notes="SSR car-card grid (data-ssr=1); cash price car-price-corner; ?page=N"),
+    "autocastro.es": DealerRecipe(
+        host="autocastro.es", listing_path="/coches-segunda-mano",
+        parser=parse_autocastro, pages="single", subfamily="custom",
+        notes="Bootstrap card-* grid; full inventory on one page (no server paging)"),
+    "puntomotortenerife.com": DealerRecipe(
+        host="puntomotortenerife.com", listing_path="/es/inventario/",
+        parser=parse_puntomotor, pages="query", subfamily="custom",
+        notes="car-content cards; /es/vehiculo/<id>/ detail; ?page=N (12/page)"),
+    "robledauto.com": DealerRecipe(
+        host="robledauto.com", listing_path="/coches/",
+        parser=parse_robledauto, pages="template", subfamily="custom",
+        page_tmpl="/coches/page/{n}/",
+        notes="WordPress car-item cards; WP /page/N/ pagination; prose titles"),
+    "gupicarauto.es": DealerRecipe(
+        host="gupicarauto.es", listing_path="/index.php/es/stock-automoviles",
+        parser=parse_gupicar, pages="template", subfamily="custom",
+        page_tmpl="/index.php/es/stock-automoviles?start={off}", page_step=20,
+        notes="Joomla com_rdautos cards; Joomla ?start=N offset pagination"),
 }
 
 
@@ -475,10 +744,15 @@ class FamilyFetcher:
 def _build_family_recipe() -> dict:
     members = {}
     for host, rc in REGISTRY.items():
+        if rc.pages == "query":
+            pagination = "?page=N until a page yields no new cards"
+        elif rc.pages == "template":
+            pagination = f"{rc.page_tmpl} (step {rc.page_step}) until no new cards"
+        else:
+            pagination = "single listing page"
         members[host] = {
             "listing_path": rc.listing_path,
-            "pagination": ("?page=N until a page yields no new cards"
-                           if rc.pages == "query" else "single listing page"),
+            "pagination": pagination,
             "parser": rc.parser.__name__,
             "subfamily": rc.subfamily,
             "notes": rc.notes,
@@ -699,11 +973,15 @@ async def harvest_one_dealer(conn: asyncpg.Connection, governed_fetch,
     all_vehicles: list[Vehicle] = list(cards)
     summary["pages"] = 1
 
-    if rc.pages == "query":
+    if rc.pages in ("query", "template"):
         seen_links = {v.deep_link for v in cards}
         page = 2
         while page <= max_pages:
-            url = f"{base}{rc.listing_path}?page={page}"
+            if rc.pages == "query":
+                url = f"{base}{rc.listing_path}?page={page}"
+            else:
+                off = (page - 1) * rc.page_step
+                url = base + rc.page_tmpl.format(n=page, off=off)
             try:
                 ph = await governed_fetch(url)
             except Exception:

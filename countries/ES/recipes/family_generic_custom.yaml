@@ -41,3 +41,33 @@ members:
     parser: parse_frworldcars
     subfamily: custom
     notes: blog-style <article> cards; price embedded in <h3> headline
+  csvmotor.com:
+    listing_path: /coches-ocasion/
+    pagination: ?page=N until a page yields no new cards
+    parser: parse_csvmotor
+    subfamily: custom
+    notes: SSR car-card grid (data-ssr=1); cash price car-price-corner; ?page=N
+  autocastro.es:
+    listing_path: /coches-segunda-mano
+    pagination: single listing page
+    parser: parse_autocastro
+    subfamily: custom
+    notes: Bootstrap card-* grid; full inventory on one page (no server paging)
+  puntomotortenerife.com:
+    listing_path: /es/inventario/
+    pagination: ?page=N until a page yields no new cards
+    parser: parse_puntomotor
+    subfamily: custom
+    notes: car-content cards; /es/vehiculo/<id>/ detail; ?page=N (12/page)
+  robledauto.com:
+    listing_path: /coches/
+    pagination: /coches/page/{n}/ (step 20) until no new cards
+    parser: parse_robledauto
+    subfamily: custom
+    notes: WordPress car-item cards; WP /page/N/ pagination; prose titles
+  gupicarauto.es:
+    listing_path: /index.php/es/stock-automoviles
+    pagination: /index.php/es/stock-automoviles?start={off} (step 20) until no new cards
+    parser: parse_gupicar
+    subfamily: custom
+    notes: Joomla com_rdautos cards; Joomla ?start=N offset pagination

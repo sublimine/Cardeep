@@ -181,16 +181,37 @@ def classify_subfamily(home_html: str) -> str | None:
 # stable classes. The page bytes are latin-1-ish: `€` arrives as a replacement
 # char, so price detection keys on the `precio` class, not on a euro glyph.
 # ===========================================================================
+# Canonical detail link. The make/model segments may contain '+' (space-encoded,
+# e.g. /coches/tesla/model+3/3501244), and the listing prefix is '/coches' on most
+# members but '/vehiculos' on some (same inventario.pro template, different slug).
 _IP_DETAIL_RE = re.compile(
-    r'href=["\'](/coches/([a-z0-9\-]+)/([a-z0-9\-]+)/(\d+))["\']', re.I)
-# split into per-card fragments on the card container id
-_IP_CARD_SPLIT = re.compile(r'<div\s+id="card\d+"', re.I)
+    r'href=["\'](/(?:coches|vehiculos)/([a-z0-9\-\+]+)/([a-z0-9\-\+]+)/(\d+))["\']', re.I)
+# Flat-slug detail link variant (newer inventario.pro card template): the detail
+# href is a single hyphenated slug ending in the numeric id, e.g.
+# /mercedes-clase-e-e-300-de-con-tecnologia-hibrida-eq-3458013. The make/model are
+# NOT in the path here, so this variant reads them from the card's `marca` span.
+_IP_FLAT_DETAIL_RE = re.compile(
+    r'href=["\'](/([a-z0-9][a-z0-9\-]*?-(\d{5,})))["\']', re.I)
+# split into per-card fragments on the card container id (id="cardN" or id="card-coche")
+_IP_CARD_SPLIT = re.compile(r'<div\s+[^>]*\bid="card\d+"', re.I)
+# Flat-template card split: cards are <div class="card card-coche"> blocks carrying
+# an <input name="id" value="<numeric>">. Used only when the canonical split yields
+# no canonical detail links.
+_IP_FLAT_CARD_SPLIT = re.compile(r'<div\s+class="card\s+card-coche"', re.I)
+_IP_FLAT_ID_RE = re.compile(r'<input[^>]*name="id"[^>]*value="(\d+)"', re.I)
+# Flat-template make/model + price come from named spans/classes.
+_IP_MARCA_RE = re.compile(r'class="marca[^"]*"[^>]*>\s*([^<]+?)\s*<', re.I)
 # Variant A title: <div class="titulo_card ...">Make Model</div>
 _IP_TITLE_A_RE = re.compile(r'titulo_card[^>]*>\s*([^<]+?)\s*<', re.I)
 # Variant B title: <div class="titulo">Make Model</div> [+ <div class="subtitulo">version</div>]
 _IP_TITLE_B_RE = re.compile(r'class="titulo"[^>]*>\s*([^<]+?)\s*<', re.I)
 _IP_SUBTITLE_RE = re.compile(r'class="subtitulo"[^>]*>\s*([^<]+?)\s*<', re.I)
 _IP_PRICE_RE = re.compile(r'class="precio"[^>]*>\s*([0-9][0-9.\s]*)', re.I)
+# Variant D price: <div class="price-vehicle">52.900 €</div> (the cuota/quota in the
+# same card is a MONTHLY payment, NOT the total — we anchor on price-vehicle to skip it).
+_IP_PRICE_D_RE = re.compile(r'class="[^"]*price-vehicle[^"]*"[^>]*>\s*([0-9][0-9.\s]*)', re.I)
+# Variant D year: <span class="matriculacion_year">2021</span>.
+_IP_YEAR_D_RE = re.compile(r'matriculacion_year"[^>]*>\s*(\d{4})', re.I)
 # photos live on either imgs.inventario.pro or fotos.inventario.pro
 _IP_IMG_RE = re.compile(
     r'(https?://(?:imgs|fotos)\.inventario\.pro/[^"\'\s)]+?\.(?:jpe?g|png|webp))', re.I)
@@ -251,17 +272,28 @@ def parse_inventario_pro(listing_html: str, base: str) -> list[Vehicle]:
                 _clean(sub.group(1)) if sub else None) if b]
             title = _fix_mojibake(" ".join(bits)) if bits else None
         # make/model: prefer the title's first token; fall back to the URL slugs.
+        # Slugs URL-encode spaces as '+' (e.g. model+3 -> 'Model 3'), so decode both
+        # separators before title-casing.
         make, model = _split_make_model(title)
         if not make:
-            make = make_slug.replace("-", " ").title()
+            make = make_slug.replace("+", " ").replace("-", " ").strip().title()
         if not model:
-            model = model_slug.replace("-", " ").title()
+            model = model_slug.replace("+", " ").replace("-", " ").strip().title()
+        # The title itself can carry '+' for spaces too (rare); normalise it.
+        if title and "+" in title:
+            title = re.sub(r"\++", " ", title).strip()
+            make, model = _split_make_model(title) if not (make and model) else (make, model)
 
         price = None
         pm = _IP_PRICE_RE.search(frag)
         if pm:
             price = _digits_to_int(pm.group(1), 50, 100_000_000)
             price = float(price) if price is not None else None
+        if price is None:                       # variant D: div.price-vehicle (skip cuota)
+            pd = _IP_PRICE_D_RE.search(frag)
+            if pd:
+                pv = _digits_to_int(pd.group(1), 50, 100_000_000)
+                price = float(pv) if pv is not None else None
 
         # detail rows: variant A uses icon-class spans; variant B uses <div class="flex">
         # rows (SVG + trailing text) ordered year, km, fuel, transmission.
@@ -269,6 +301,10 @@ def parse_inventario_pro(listing_html: str, base: str) -> list[Vehicle]:
             _IP_KM_A_RE.search(frag).group(1), 0, 5_000_000) if _IP_KM_A_RE.search(frag) else None
         year = _digits_to_int(
             _IP_YEAR_A_RE.search(frag).group(1), 1900, 2100) if _IP_YEAR_A_RE.search(frag) else None
+        if year is None:                        # variant D: span.matriculacion_year
+            yd = _IP_YEAR_D_RE.search(frag)
+            if yd:
+                year = _digits_to_int(yd.group(1), 1900, 2100)
         fuel = _fix_mojibake(_clean(
             _IP_FUEL_A_RE.search(frag).group(1))) if _IP_FUEL_A_RE.search(frag) else None
         # Variant B/C: read the <div class="flex"|"detalle"> rows (SVG-stripped) and
@@ -303,6 +339,77 @@ def parse_inventario_pro(listing_html: str, base: str) -> list[Vehicle]:
             deep_link=deep_link, listing_ref=lid, title=title, make=make,
             model=model, year=year, km=km, price=price, fuel=fuel,
             photo_url=photo.group(1) if photo else None, subfamily="inventario_pro"))
+    if out:
+        return out
+    # No canonical cards -> try the flat-slug template (same inventario.pro platform,
+    # newer card markup: <div class="card card-coche"> + <input name="id"> + flat
+    # detail slug + <span class="marca">). ONE parser still serves the whole family.
+    return _parse_inventario_pro_flat(listing_html, base)
+
+
+def _parse_inventario_pro_flat(listing_html: str, base: str) -> list[Vehicle]:
+    """Parse the flat-slug inventario.pro card template.
+
+    Card: `<div class="card card-coche">` with `<input name="id" value="<num>">`,
+    a flat detail href `/<make-model-...-<id>>`, make/model in `<span class="marca">`,
+    price in `<span|p class="precio">`. make/model are NOT in the path, so we read
+    them from the `marca` span (the platform's structured label)."""
+    out: list[Vehicle] = []
+    seen: set[str] = set()
+    fragments = _IP_FLAT_CARD_SPLIT.split(listing_html)
+    for frag in fragments[1:]:
+        idm = _IP_FLAT_ID_RE.search(frag)
+        if not idm:
+            continue
+        lid = idm.group(1)
+        # the detail href is the flat slug ending in this id; match it specifically.
+        dm = None
+        for cand in _IP_FLAT_DETAIL_RE.finditer(frag):
+            if cand.group(3) == lid:
+                dm = cand
+                break
+        if dm is None:
+            dm = _IP_FLAT_DETAIL_RE.search(frag)
+        if dm is None:
+            continue
+        deep_link = base + dm.group(1)
+        if deep_link in seen:
+            continue
+        seen.add(deep_link)
+
+        marca = _IP_MARCA_RE.search(frag)
+        title = _fix_mojibake(_clean(marca.group(1))) if marca else None
+        make, model = _split_make_model(title)
+
+        price = None
+        pm = _IP_PRICE_RE.search(frag)
+        if pm:
+            pv = _digits_to_int(pm.group(1), 50, 100_000_000)
+            price = float(pv) if pv is not None else None
+
+        km = year = fuel = None
+        for fm in _IP_FLEX_RE.finditer(frag):
+            inner = _IP_SVG_RE.sub(" ", fm.group(1))
+            inner = re.sub(r"<[^>]+>", " ", inner)
+            val = _clean(inner)
+            if not val:
+                continue
+            low = val.lower()
+            if km is None:
+                kmm = _IP_KM_TOKEN_RE.search(val)
+                if kmm:
+                    km = _digits_to_int(kmm.group(1), 0, 5_000_000)
+                    continue
+            if year is None and "km" not in low:
+                ym = _IP_YEAR_TOKEN_RE.search(val)
+                if ym:
+                    year = _digits_to_int(ym.group(1), 1900, 2100)
+                    continue
+        photo = _IP_IMG_RE.search(frag)
+        out.append(Vehicle(
+            deep_link=deep_link, listing_ref=lid, title=title, make=make,
+            model=model, year=year, km=km, price=price, fuel=fuel,
+            photo_url=photo.group(1) if photo else None, subfamily="inventario_pro"))
     return out
 
 
@@ -312,8 +419,12 @@ def parse_inventario_pro(listing_html: str, base: str) -> list[Vehicle]:
 # the ficha detail link `/ficha-vehiculo-ocasion/<slug>/<id>`. We split on the
 # ficha id and read the inputs in the SAME card window. No mojibake here.
 # ===========================================================================
+# The ficha detail link is `/ficha-vehiculo-ocasion/<slug>/<id>`, optionally behind a
+# short locale prefix on multilingual hosts (e.g. grupmibec.com -> /es/ficha-...).
+# The prefix is captured INSIDE group(1) so the absolute deep_link stays correct, and
+# the id remains group(3). Group indices are preserved (locale is a non-capturing group).
 _MF_DETAIL_RE = re.compile(
-    r'href=["\'](/ficha-vehiculo-ocasion/([a-z0-9\-]+)/(\d+))["\']', re.I)
+    r'href=["\'](/(?:[a-z]{2}/)?ficha-vehiculo-ocasion/([a-z0-9\-]+)/(\d+))["\']', re.I)
 _MF_HIDDEN_RE = re.compile(
     r'<input[^>]*name="([a-zA-Z]+)"[^>]*value="([^"]*)"', re.I)
 _MF_IMG_RE = re.compile(
@@ -324,18 +435,49 @@ def _mf_hidden_map(frag: str) -> dict[str, str]:
     return {k: _htmllib.unescape(v) for k, v in _MF_HIDDEN_RE.findall(frag)}
 
 
+_MF_ANUNCIO_RE = re.compile(r'<input[^>]*name="anuncio_id"[^>]*value="(\d+)"', re.I)
+
+
 def parse_motorflash(listing_html: str, base: str) -> list[Vehicle]:
     """Parse every used-car card from one motorflash listing page.
-    The card's hidden inputs are the structured truth; the ficha link is the id."""
+
+    The card's hidden inputs are the structured truth. We anchor on the per-card
+    `anuncio_id` hidden input (present and 1:1 with `marcaVehiculo` on every member),
+    NOT on the ficha href: some members render a featured ficha link repeated dozens
+    of times at the top (e.g. grupmibec.com), which would mis-align an href-anchored
+    window onto the wrong card. The anuncio_id block is the stable card boundary; the
+    ficha link is resolved by matching the SAME id, so make/model/price/km always come
+    from this card's own inputs."""
     out: list[Vehicle] = []
     seen: set[str] = set()
-    # Window each card from its hidden-input block (which precedes the ficha link)
-    # up to the next ficha id. Anchor on detail links and read backwards/forwards.
+
+    anchors = [(m.start(), m.group(1)) for m in _MF_ANUNCIO_RE.finditer(listing_html)]
+    if anchors:
+        # Map each numeric id -> its ficha deep_link (first href that carries this id).
+        ficha_for: dict[str, str] = {}
+        for fm in _MF_DETAIL_RE.finditer(listing_html):
+            fid = fm.group(3)
+            ficha_for.setdefault(fid, base + fm.group(1))
+        for i, (pos, aid) in enumerate(anchors):
+            if aid in seen:
+                continue
+            seen.add(aid)
+            # window this card from its anuncio_id to the next card's anuncio_id; the
+            # structured inputs for this card live entirely in that span.
+            end = anchors[i + 1][0] if i + 1 < len(anchors) else min(len(listing_html), pos + 6000)
+            window = listing_html[pos:end]
+            hm = _mf_hidden_map(window)
+            deep_link = ficha_for.get(aid)
+            if not deep_link:
+                continue
+            out.append(_mf_vehicle_from_inputs(deep_link, aid, hm, window))
+        return out
+
+    # Fallback: no anuncio_id inputs (older/variant markup) -> window on ficha hrefs.
     detail_positions = [(m.start(), m) for m in _MF_DETAIL_RE.finditer(listing_html)]
     if not detail_positions:
         return out
-    # Build distinct-id ordered cuts so each window holds exactly one vehicle's data.
-    cuts: list[tuple[str, str, int]] = []   # (deep_link, listing_ref, anchor_pos)
+    cuts: list[tuple[str, str, int]] = []
     for pos, m in detail_positions:
         rel, lid = m.group(1), m.group(3)
         deep_link = base + rel
@@ -343,37 +485,36 @@ def parse_motorflash(listing_html: str, base: str) -> list[Vehicle]:
             continue
         seen.add(deep_link)
         cuts.append((deep_link, lid, pos))
-
     for i, (deep_link, lid, pos) in enumerate(cuts):
         end = cuts[i + 1][2] if i + 1 < len(cuts) else min(len(listing_html), pos + 8000)
-        # the hidden inputs sit just BEFORE the first ficha anchor of this card;
-        # widen the window backward to the previous card's anchor (or 4k before).
         start = cuts[i - 1][2] if i > 0 else max(0, pos - 4000)
         window = listing_html[start:end]
-        hm = _mf_hidden_map(window)
-
-        make = _clean(hm.get("marcaVehiculo"))
-        model = _clean(hm.get("modeloVehiculo"))
-        price = _digits_to_int(hm.get("precio"), 50, 100_000_000)
-        price = float(price) if price is not None else None
-        km = _digits_to_int(hm.get("kilometros"), 0, 5_000_000)
-        year = None
-        meses = _digits_to_int(hm.get("mesesAntiguedad"), 0, 1200)
-        # mesesAntiguedad is age-in-months from "now"; derive registration year.
-        if meses is not None:
-            from datetime import date
-            year = date.today().year - (meses // 12)
-            if not (1900 <= year <= 2100):
-                year = None
-        title_bits = [b for b in (make, model) if b]
-        title = " ".join(title_bits) if title_bits else None
-        photo = _MF_IMG_RE.search(window)
-
-        out.append(Vehicle(
-            deep_link=deep_link, listing_ref=lid, title=title, make=make,
-            model=model, year=year, km=km, price=price, fuel=None,
-            photo_url=photo.group(1) if photo else None, subfamily="motorflash"))
+        out.append(_mf_vehicle_from_inputs(deep_link, lid, _mf_hidden_map(window), window))
     return out
+
+
+def _mf_vehicle_from_inputs(deep_link: str, lid: str, hm: dict[str, str],
+                            window: str) -> Vehicle:
+    make = _clean(hm.get("marcaVehiculo"))
+    model = _clean(hm.get("modeloVehiculo"))
+    price = _digits_to_int(hm.get("precio"), 50, 100_000_000)
+    price = float(price) if price is not None else None
+    km = _digits_to_int(hm.get("kilometros"), 0, 5_000_000)
+    year = None
+    meses = _digits_to_int(hm.get("mesesAntiguedad"), 0, 1200)
+    # mesesAntiguedad is age-in-months from "now"; derive registration year.
+    if meses is not None:
+        from datetime import date
+        year = date.today().year - (meses // 12)
+        if not (1900 <= year <= 2100):
+            year = None
+    title_bits = [b for b in (make, model) if b]
+    title = " ".join(title_bits) if title_bits else None
+    photo = _MF_IMG_RE.search(window)
+    return Vehicle(
+        deep_link=deep_link, listing_ref=lid, title=title, make=make,
+        model=model, year=year, km=km, price=price, fuel=None,
+        photo_url=photo.group(1) if photo else None, subfamily="motorflash")
 
 
 # ---------------------------------------------------------------------------
@@ -387,8 +528,11 @@ _SUBFAMILY = {
         "fingerprint": _FP_INVENTARIO_PRO,
     },
     "motorflash": {
+        # Plain paths first; locale-prefixed variants (/es/...) for multilingual hosts
+        # (e.g. grupmibec.com serves its stock under /es/coches-ocasion).
         "paths": ("/coches-ocasion", "/coches", "/coches-segunda-mano",
-                  "/coches-nuevos", "/vehiculos-de-ocasion"),
+                  "/coches-nuevos", "/vehiculos-de-ocasion",
+                  "/es/coches-ocasion", "/es/coches", "/es/coches-segunda-mano"),
         "page_param": "pag",             # ?pag=N
         "parser": parse_motorflash,
         "fingerprint": _FP_MOTORFLASH,
