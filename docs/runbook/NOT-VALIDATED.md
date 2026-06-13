@@ -141,6 +141,45 @@ CLASE (rutan la entidad FUERA del set servido), no fallos del verificador:
 
 ---
 
+## 7. Descubrimiento intentado SIN cierre (fase DESCUBRIR)
+
+> Lo validado de la ola de descubrimiento está en [03-DISCOVERY.md](03-DISCOVERY.md) y en el ledger
+> (association +409, DealerK own-site 327 / id 609, geo-sweep +68). Aquí va lo que se intentó y NO
+> cumple la regla dura.
+
+### 7.1 `paginas_amarillas` / discover_directories — DRY-RUN, +0 escrito
+- El frente corrió pero el report `docs/research/paginas_amarillas_upsert_report.json` marca
+  `"committed": false` (new=62 propuestas: 36 concesionario + 18 compraventa + 6 desguace + 2 garaje).
+- `[VERIFICADO]` en la DB viva: `count(entity WHERE first_discovered_source='paginas_amarillas')` =
+  **0**; `count(entity_source WHERE source_key='paginas_amarillas')` = **0**. Sin escritura no hay
+  unidad de descubrimiento → **NO entra al runbook**.
+- **Acción de cierre:** re-correr con `--commit` (tras revisar las 62 propuestas) y re-contar la DB.
+  (La `directory` `source_group=9.953` viva es OSM/censo legado, NO este frente.)
+
+### 7.2 Asociaciones AMURALLADAS (sin lista pública enumerable)
+| Asociación | Alcance estimado | Estado | Motivo |
+|---|---|---|---|
+| **Faconauto** | ~2.018 dealers (federación) | ⛔ AMURALLADO | sin lista de socios pública; solo gateway. |
+| **GANVAM** | ~7.500 firmas | ⛔ AMURALLADO | herramientas de socio tras login; sin directorio público. |
+| **ANCOVE** | compraventa nacional | ⛔ AMURALLADO | "contenidos sólo para afiliados". |
+| **ANCOPEL** | concesionarios Opel | ⛔ ROTO | página `concesionarios-asociados` da 404 en vivo; widget de mapa desaparecido. |
+| **AECS zona-asociados** | zona privada Stellantis | ⛔ AUTH-WALLED | `zona-asociados.*` tras login (el `directorio-asociados` público SÍ se minó → 74 dealers, validado). |
+
+Probadas y excluidas honestamente, no adivinadas. Sin superficie pública no hay descubrimiento.
+
+### 7.3 Cierre geográfico al 100 % — PENDIENTE
+- El barrido geo es por **muestreo** (capital + 2ª/3ª ciudad por provincia), no censo exhaustivo del
+  long-tail. WebSearch devuelve la primera página por consulta; quedan pueblos pequeños sin barrer.
+- Para cerrar el denominador (~44k suelo Páginas Amarillas) la vía correcta es ingerir los **dumps geo
+  legales** (Foursquare OS Places Apache-2.0, Overture CDLA) + Páginas Amarillas por rúbrica — ya
+  catalogados en `SOURCES_ES.md`, **fuera del alcance** de esta ola. Google Places API descartado por
+  ToS (prohíbe indexar/cachear).
+- **Enriquecimiento detectado (no nuevo):** ~20 candidatos deduplicados por `nombre+municipio` eran
+  dealers YA en el censo vía marketplaces pero con `website IS NULL`; el sweep halló su web propia →
+  oportunidad de back-fill de `website` para habilitar cosecha own-site. **No ejecutado**, registrado.
+
+---
+
 > **Cierre.** Todo en este apéndice está FUERA del runbook por una razón declarada y verificable.
 > Cuando una de estas unidades cierre end-to-end con un `verification_verdict` TRUSTWORTHY nuevo,
 > migra a [VALIDATION-INDEX.md](VALIDATION-INDEX.md) y a su `platforms/<slug>.md` siguiendo el

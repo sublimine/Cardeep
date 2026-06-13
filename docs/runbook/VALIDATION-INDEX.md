@@ -7,9 +7,10 @@
 > `primary_value` coinciden al dígito**. Lo REFUTED / no validado vive en
 > [NOT-VALIDATED.md](NOT-VALIDATED.md).
 >
-> Verificado **2026-06-13**. Ledger total vivo: **587 veredictos (577 TRUSTWORTHY, 10 REFUTED)**.
-> Esta tabla lista las unidades-conector + las verdades de motor; el ledger completo incluye además
-> 371 `entity_inventory` por-entidad no enumerados aquí (uno por punto de venta).
+> Verificado **2026-06-13**. Ledger total vivo: **598 veredictos (588 TRUSTWORTHY, 10 REFUTED)**.
+> Esta tabla lista las unidades-conector + las verdades de motor + las unidades de descubrimiento; el
+> ledger completo incluye además 370 `entity_inventory` por-entidad no enumerados aquí (uno por punto
+> de venta).
 
 ---
 
@@ -108,6 +109,26 @@
 
 ---
 
+## Descubrimiento (3 · métodos de hallazgo de puntos de venta)
+
+> Fase **DESCUBRIR** del E2E: pueblan `entity`+`entity_source`, no scrapean stock. Detalle, micro-acciones
+> y dedup en [03-DISCOVERY.md](03-DISCOVERY.md). Cada cifra re-contada de la DB viva esta sesión.
+
+| Unidad | verdict id | count | CLI | fecha |
+|---|---:|---:|---|---|
+| association points-of-sale (AEDRA/ACEVAS/AECS) | harness re-verificado | 409 nuevos (346 desg + 36 aecs + 27 acevas) | `python scripts/associations/upsert_associations.py --commit` | 2026-06-13 |
+| association DealerK own-site harvest | **609** | 327 coches (5 dealers AECS) | `python -m pipeline.platform.family_dealerk_wholesale --dealers grupodimolk.com autociba.es hervimotor.com betulacars.es danielrovira.net` | 2026-06-13 |
+| geographic sweep ("garaje perdido") | harness re-verificado | 68 dealers (59 cv + 7 desg + 1 conc + 1 garaje) | `python scripts/geo_sweep_collect.py docs/research/geographic/candidates_batch1.json` | 2026-06-13 |
+
+> `[VERIFICADO]` en la DB viva: `source_group='association'` = **409** (346+36+27), Σ coches sobre los
+> 5 dealers AECS DealerK = **327** (verdict id 609, div 0.0), `first_discovered_source='geo_sweep'` =
+> **68**. Las dos filas "harness re-verificado" son conteos-censo confirmados contra la DB esta sesión
+> (no llevan verdict propio porque el descubrimiento se mide por conteo de entidad, no por VAM-slice;
+> su cosecha de stock SÍ lleva verdict — id 609). `paginas_amarillas` corrió en dry-run (0 escrito) →
+> [NOT-VALIDATED.md](NOT-VALIDATED.md).
+
+---
+
 ## Resumen del ledger
 
 | Bloque | unidades-conector | verdict ids |
@@ -117,9 +138,12 @@
 | Otros grupos | 3 | 541, 542, 543 |
 | Long-tail | 7 | 606, 598, 597, 596, 535, 525, 498 |
 | Motor (geo/api/dedup/global) | 10 | 581, 583, 577, 578, 579, 580, 582, 574, 559, 556 |
-| **TOTAL filas de este índice** | **45 unidades-conector + 10 de motor = 55 verdict ids** | — |
+| Descubrimiento | 3 | 609 (+ 2 harness re-verificados sin verdict propio) |
+| **TOTAL filas de este índice** | **45 unidades-conector + 10 de motor + 3 de descubrimiento = 56 verdict ids citados** | — |
 
-Las **55 ids** de este índice fueron confirmadas en la DB viva esta sesión (`SELECT … WHERE id =
-ANY(...)`): 55 de 55 encontradas, cero faltantes, `primary_value` coincidente. El ledger completo
-contiene 587 veredictos; los 371 `entity_inventory` por-entidad y los 10 REFUTED no se enumeran aquí
-(los REFUTED están en [NOT-VALIDATED.md](NOT-VALIDATED.md)).
+Las **56 ids** citadas en este índice (55 previas + **609**) fueron confirmadas en la DB viva esta
+sesión (`SELECT … WHERE id = ANY(...)`): todas encontradas, cero faltantes, `primary_value`
+coincidente. El ledger completo contiene **588 TRUSTWORTHY + 10 REFUTED = 598** veredictos; los 370
+`entity_inventory` por-entidad y los 10 REFUTED no se enumeran aquí (los REFUTED están en
+[NOT-VALIDATED.md](NOT-VALIDATED.md)). Las dos unidades de descubrimiento sin verdict propio
+(association +409, geo-sweep +68) son conteos-censo re-verificados contra la DB, no VAM-slices.

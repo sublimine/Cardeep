@@ -59,6 +59,14 @@ reachable; 86 unreachable.
 host); `defense_tier=t0_open` para las 6 familias Tier-0, **t1_browser** solo para
 `family_unreachable` (Chromium real, body-gate ciego al status); ownership directa sin arista.
 
+## De dónde salen los dealers own-site (fase DESCUBRIR)
+
+Los puntos de venta que alimentan este grupo se hallan con los arneses de descubrimiento validados
+([03-DISCOVERY.md](../03-DISCOVERY.md)): el **association-mining** (+409 nuevos AEDRA/ACEVAS/AECS, de
+los que 5 concesionarios AECS DealerK aportaron **327 coches** own-site vía verdict id 609) y el
+**barrido geográfico** (+68 dealers, 40 con web propia cosechable lista para receta per-dealer). Son
+candidatos de familia: una vez fingerprinteados caen en una de las 7 familias de arriba.
+
 **Fuera del runbook:** 89 unreachable genuinamente muertas/walled (confirmadas por camoufox stealth),
 9.828 cars own-site sin familia asignada, builders sin superficie machine-readable. Ver
 [NOT-VALIDATED.md](../NOT-VALIDATED.md).
