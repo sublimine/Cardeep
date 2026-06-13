@@ -58,6 +58,7 @@ Run:  python -m pipeline.platform.family_builder_wix_ueni_google_sites_basekit__
 from __future__ import annotations
 
 import argparse
+import sys
 import asyncio
 import html as _htmllib
 import json
@@ -920,7 +921,21 @@ def _print_report(stats: dict) -> None:
     print("=" * 64)
 
 
+def _force_utf8_stdout() -> None:
+    """Windows consoles/pipes default to cp1252, which cannot encode the Σ sign, arrows,
+    em-dashes, or the accented car titles this connector prints (Híbrido, Diésel,
+    Automática) — a raw print() then crashes the whole drain mid-flight. Reconfigure
+    stdout/stderr to UTF-8 (errors='replace') so progress logging can never abort the
+    harvest. Idempotent, no-op where already UTF-8."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except (AttributeError, ValueError):
+            pass
+
+
 def main() -> None:
+    _force_utf8_stdout()
     p = argparse.ArgumentParser(
         description="Builder (Wix/Ueni/Google Sites/BaseKit/...) family long-tail harvester "
                     "(one recipe -> N dealers)")

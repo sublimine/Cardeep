@@ -110,6 +110,102 @@ async def entities_by_province(province_code: str) -> JSONResponse:
         return ok([dict(r) for r in rows], count=len(rows), province=province_code)
 
 
+@app.get("/geo/{province_code}/tree")
+async def province_inventory_tree(province_code: str) -> JSONResponse:
+    """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad, with a
+    clean count tree and zero NULL-geo noise (only municipality-resolved entities,
+    inner-joined through the comarca layer)."""
+    async with app.state.pool.acquire() as c:
+        prov = await c.fetchrow(
+            "SELECT code, name, ccaa_code, ccaa_name FROM geo_province WHERE code=$1",
+            province_code)
+        if prov is None:
+            return err(f"province {province_code} not found")
+        rows = await c.fetch(
+            """SELECT co.id AS comarca_id, co.name AS comarca, co.ine_code,
+                      m.code AS municipality_code, m.name AS municipality,
+                      count(e.entity_ulid) AS entities,
+                      count(*) FILTER (WHERE e.kind='compraventa')          AS compraventa,
+                      count(*) FILTER (WHERE e.kind='concesionario_oficial') AS oficial,
+                      count(*) FILTER (WHERE e.kind='desguace')             AS desguace,
+                      count(*) FILTER (WHERE e.kind='plataforma')           AS plataforma
+                 FROM entity e
+                 JOIN geo_municipality m ON m.code = e.municipality_code
+                 JOIN geo_comarca      co ON co.id = m.comarca_id
+                WHERE e.province_code = $1 AND e.comarca_id IS NOT NULL
+                GROUP BY co.id, co.name, co.ine_code, m.code, m.name
+                HAVING count(e.entity_ulid) > 0
+                ORDER BY co.ine_code, entities DESC, m.name""",
+            province_code)
+        comarcas: dict[int, dict[str, Any]] = {}
+        prov_total = 0
+        for r in rows:
+            node = comarcas.setdefault(r["comarca_id"], {
+                "comarca_id": r["comarca_id"], "ine_code": r["ine_code"],
+                "name": r["comarca"], "entities": 0, "municipalities": []})
+            node["entities"] += r["entities"]
+            prov_total += r["entities"]
+            node["municipalities"].append({
+                "municipality_code": r["municipality_code"], "name": r["municipality"],
+                "entities": r["entities"], "compraventa": r["compraventa"],
+                "oficial": r["oficial"], "desguace": r["desguace"],
+                "plataforma": r["plataforma"]})
+        # province-only entities (have province, no municipality) reported separately,
+        # never mixed into the comarca tree as noise.
+        province_only = await c.fetchval(
+            "SELECT count(*) FROM entity WHERE province_code=$1 AND municipality_code IS NULL",
+            province_code)
+        tree = {
+            "province": {"code": prov["code"], "name": prov["name"],
+                         "ccaa_code": prov["ccaa_code"], "ccaa_name": prov["ccaa_name"]},
+            "comarcas": list(comarcas.values()),
+            "entities_geo_clean": prov_total,
+            "entities_province_only_no_municipality": province_only,
+        }
+        return ok(tree, comarca_count=len(comarcas), province=province_code)
+
+
+@app.get("/geo/completeness")
+async def geo_completeness() -> JSONResponse:
+    """National geo-completeness report: how many entities/vehicles carry the full
+    pais+PROVINCIA+COMARCA+ciudad grid vs partial, every number from a live query."""
+    async with app.state.pool.acquire() as c:
+        e_total = await c.fetchval("SELECT count(*) FROM entity")
+        e_full = await c.fetchval(
+            "SELECT count(*) FROM entity WHERE province_code IS NOT NULL "
+            "AND municipality_code IS NOT NULL AND comarca_id IS NOT NULL")
+        e_no_comarca_city = await c.fetchval(
+            "SELECT count(*) FROM entity WHERE municipality_code IS NOT NULL AND comarca_id IS NULL")
+        e_prov_only = await c.fetchval(
+            "SELECT count(*) FROM entity WHERE province_code IS NOT NULL AND municipality_code IS NULL")
+        e_no_geo = await c.fetchval("SELECT count(*) FROM entity WHERE province_code IS NULL")
+        v_total = await c.fetchval("SELECT count(*) FROM vehicle")
+        v_full = await c.fetchval(
+            "SELECT count(*) FROM vehicle v JOIN entity e ON e.entity_ulid=v.entity_ulid "
+            "WHERE e.province_code IS NOT NULL AND e.municipality_code IS NOT NULL "
+            "AND e.comarca_id IS NOT NULL")
+        geo = {
+            "provinces": await c.fetchval("SELECT count(*) FROM geo_province"),
+            "comarcas": await c.fetchval("SELECT count(*) FROM geo_comarca"),
+            "municipalities": await c.fetchval("SELECT count(*) FROM geo_municipality"),
+            "municipalities_with_comarca": await c.fetchval(
+                "SELECT count(*) FROM geo_municipality WHERE comarca_id IS NOT NULL"),
+        }
+        return ok({
+            "geo_grid": geo,
+            "entities": {
+                "total": e_total, "full_prov_comarca_muni": e_full,
+                "municipality_no_comarca_ceuta_melilla": e_no_comarca_city,
+                "province_only": e_prov_only, "no_geo": e_no_geo,
+                "full_pct": round(100 * e_full / e_total, 2) if e_total else 0,
+            },
+            "vehicles": {
+                "total": v_total, "full_prov_comarca_muni": v_full,
+                "full_pct": round(100 * v_full / v_total, 2) if v_total else 0,
+            },
+        })
+
+
 @app.get("/platforms/{cdp_code}/inventory")
 async def platform_inventory(cdp_code: str) -> JSONResponse:
     """Cars linked to a platform via platform_listing, each WITH its selling-dealer

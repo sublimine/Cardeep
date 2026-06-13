@@ -29,3 +29,7 @@ field_map:
   photo_url: photos[adId].imageUrls[0] (prefixed https://)
   dealer: ad {type, authorId, authorName}
   location: ad.location {province.id(=INE code), city.name}
+segment: all
+segment_params:
+
+segment_note: milanuncios is ONE flat supply index; segments are per-item facet slices (km band / sellerType), NOT separate backends. 'all' = full coverage.

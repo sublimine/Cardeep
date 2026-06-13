@@ -499,7 +499,21 @@ def _print_report(stats: dict) -> None:
     print("=" * 64)
 
 
+def _force_utf8_stdout() -> None:
+    """Windows consoles/pipes default to cp1252, which cannot encode the Σ sign, arrows,
+    em-dashes, or the accented car titles this connector prints (Híbrido, Diésel,
+    Automática) — a raw print() then crashes the whole drain mid-flight. Reconfigure
+    stdout/stderr to UTF-8 (errors='replace') so progress logging can never abort the
+    harvest. Idempotent, no-op where already UTF-8."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except (AttributeError, ValueError):
+            pass
+
+
 def main() -> None:
+    _force_utf8_stdout()
     max_pages = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_MAX_PAGES
     stats = asyncio.run(harvest(max_pages))
     _print_report(stats)

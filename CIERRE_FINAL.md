@@ -188,3 +188,147 @@ con su criterio de aceptación. **Cero números inflados. Cero huecos ocultos.**
 - API probada en vivo (uvicorn 127.0.0.1:8093): /health, /entities/{cdp}/inventory, /entities/{cdp}/delta,
   /platforms/{cdp}/inventory, /geo/{prov}/entities — todos sirviendo coches reales con precio/make/model/geo.
 - Sin `git commit` (por instrucción del owner).
+
+---
+
+## 6. SEGUNDA OLA — FRENTES POST-CIERRE (auditoría adversarial, 2026-06-13)
+
+> Cada cifra de esta sección contada por el Director con `asyncpg`/`psycopg2` contra la DB viva
+> `cardeep-pg :5433`, VAM ≥2 caminos ortogonales, con la verja de no-fingir intacta. La DB **siguió
+> ingiriendo** tras el §1: los globales de abajo son un snapshot más reciente y por eso superan al §1.
+
+### Globales (snapshot vivo único, `now()` = 2026-06-13 06:37:18 UTC, REPEATABLE READ)
+| Métrica | §1 (snapshot anterior) | Valor actual verificado | Camino |
+|---|---|---|---|
+| `vehicle` (filas totales) | 1.030.185 | **1.332.617** | `count(*) FROM vehicle` |
+| `vehicle` status=available | 1.028.810 | **1.331.242** | `count(*) WHERE status='available'` |
+| `entity` (puntos de venta + plataformas) | 207.934 | **309.147** | `count(*) FROM entity` |
+| `platform_listing` (aristas) | 983.981 | **1.286.413** | `count(*) FROM platform_listing` |
+| `vehicle_event` (delta/historial) | 1.033.279 | **1.335.715** | `count(*) FROM vehicle_event` |
+| Provincias con entidades | 52 / 52 | **52 / 52** | `distinct province_code` |
+| Municipios con entidades | 4.181 | **4.712** | `distinct municipality_code` |
+| Plataformas (`platform`) | 22 | **22** | `count(*) FROM platform` |
+
+> El salto absoluto (≈+302k vehículos, +303k aristas) refleja los frentes de esta ola más la ingesta
+> viva continua entre snapshots; NO debe leerse como una suma disjunta limpia. Las advertencias de §2
+> (doble-conteo coches.com, long-tail no aditivo, dedup cross-plataforma) siguen vigentes sobre este total.
+
+### A. wallapop facet → +37.731 aristas (techo del cursor plano superado)
+- DB antes=457.766 aristas → tras runs de faceta=**495.497 aristas** (+37.731 coches verificados-nuevos
+  que el cursor plano **nunca alcanzó**). Run profesional: 18/18 celdas limpias / 0 erroradas, +24.934
+  aristas + 24.934 eventos delta NEW.
+- **VAM 3 caminos DB ortogonales** (asyncpg propio, quiesced tras salida del proceso):
+  PATH1 `platform_listing` edges = **495.497** == PATH2 distinct join-reachable vehicles = **495.497**
+  (e==jv EXACTO) ; PATH3 distinct native `listing_ref` = **495.448** (|delta|=49 = 0,010%, re-listed
+  native ids, dentro de tolerancia). Veredicto **TRUSTWORTHY**, health healthy / breaker closed, no-drop guard OK.
+- Owners: 3.932 compraventa + 160.847 particular. Oracle de conteo vivo (next_page JWT
+  `pointers.ORGANIC.remaining_documents`) baseline ≈ **651.328–651.372**.
+- Cobertura capture-recapture: Σ(celda declarada) pro=348.058 + priv=344.286 vs baseline oracle 651k
+  (overhang de band-boundary colapsado por dedup global de item-id).
+- CLI: `python -m pipeline.platform.wallapop_facet --seller-types professional,private --cell-max 40000
+  --target 700000 --concurrency 12` (HOST LIBRE, sin proxy/navegador, curl_cffi chrome131).
+
+### B. coches.com renting XHR → 1.035 aristas (era 13)
+- 1.035 aristas `platform_listing` de renting enjauladas: 1.034 del drenaje per-make MECE de hoy + 1
+  oferta envejecida aún listada (BMW X1) del run previo. **1.034 = inventario paginable COMPLETO** de
+  renting hoy; el `totalOffers=8767/~8908` del hub es una faceta HEADLINE (cada modelo contado por
+  dealer/config), **NO un set paginable** — probado abajo.
+- **VAM 4 caminos DB ortogonales ALL agree = 1.035**: PATH1 edges `LIKE '%renting-coches/%'` = 1.035 ;
+  PATH2 distinct vehicles vía edge→vehicle join = 1.035 ; PATH3 `vehicle_event` NEW con
+  `new_value->>'segment'='renting'` = 1.035 ; PATH4 distinct `listing_ref` (offer UUIDs) = 1.035.
+  **(Re-verificado en este cierre: PATH1 live = 1.035 EXACTO.)**
+- VAM in-run TRUSTWORTHY: harvested_cageable=1.034 == db_edges run-scoped=1.034 (el +1 BMW X1 envejecido
+  excluido del peg in-run por `last_seen>=run_start`). Prueba MECE: Σ per-make `data.search.total` sobre
+  52 makeOptions == |unión distinct card ids| == 1.034 exacto, 0 dups cross-make. Re-run idempotente
+  (0 coches / 0 eventos), health=healthy, breaker=closed, 0 page errors, 39/39 makes completados.
+- CLI: `python -m pipeline.platform.coches_com_wholesale --segment renting --all --concurrency 10`.
+
+### C. OEM-VO geo + recuperación de provincia → grupo a 32.271 (era 31.448)
+- **kia_vo** (`CDP-ES-00-YK54F18S`): edges=**1.519** == distinct vehicles=1.519 == distinct deep_links=1.519
+  (VAM 3 caminos AGREE; 4º path listing_ref también=1.519), 63 dealers, 36 provincias, 0 huérfanos,
+  0 bad-province. Drain vivo: declared_full=1.520, dealer_items=1.513, dup_ids=7, **geo_fallback_recovered=476**,
+  geo_skipped 481→**0**. TRUSTWORTHY.
+- **volvo_jlr_suzuki_vo** (`CDP-ES-00-T0G18J3M`): edges=**1.801** == vehicles=1.801 == deep_links=1.801
+  (AGREE), 98 dealers, 38 provincias, 0 huérfanos/bad-province; geo_skipped 46→**0**, +46 aristas nuevas. TRUSTWORTHY.
+- **nissan_intelligent_choice** (`CDP-ES-00-TDWVVTAF`): edges=1.622, geo_skipped=0 — **YA COMPLETO** (sin trabajo).
+- **seat_cupra_vo** (`CDP-ES-00-3N995HG6`): edges=1.323=declared, geo_skipped=0 — **YA COMPLETO** (sin trabajo).
+- Idempotencia: re-runs kia y volvo → 0 aristas nuevas / 0 geo-skip. **Grupo OEM-VO ahora 32.271 vehículos /
+  5.755 dealers** (sube desde 31.448 del SCOREBOARD). Provincias recuperadas spot-checked en DB:
+  kia Sant Boi→08 (242 cars NULL-muni: AR MOTORS 228 + DELTA PRAT 14), GRANDA SIERO→ASTURIANA prov 33,
+  BIZKAIA→48, Granada→18, PALMA/MENORCA→07, Fuenlabrada→28, Oyarzun→20, San Ciprian de Viñas→32;
+  volvo Oleiros→15 (muni 15058, 33 cars), Madrid→28 (muni 28079, 13 cars). Sumas distinct-province:
+  476 (kia) + 46 (volvo) EXACTAS.
+- CLI: `python -m pipeline.platform.oem_kia_wholesale` ; `python -m pipeline.platform.oem_volvo_jlr_suzuki_wholesale`.
+
+### D. Tier-1 residuales
+- **milanuncios**: edges 259.034 → **259.706** (band prov29 vehicles 1.595 → 2.259, 12/12 bands clean).
+- **motor.es VN**: edges 48.997 → **49.009** (offers 1 → 14), renting 0 enjaulado.
+- VAM sacrificial-slot, ≥2 caminos DB: milanuncios listing rows 259.706 / prov29 band vehicles 2.259
+  quorum **TRUSTWORTHY** ; motor.es listing rows 49.009 / km null offers 14 quorum **TRUSTWORTHY** ;
+  renting cero — los 37 links son breadcrumb-only.
+
+### E. cp1252 (Σ) global fix — RESUELVE el hueco §2.E / R-print
+- **31 módulos `pipeline/platform/` parcheados** (cada uno recibe `def _force_utf8_stdout()` + una llamada
+  como primera línea de `main()`); 2 ficheros correctamente saltados (`__init__.py` sin `main()`;
+  `coches_com_wholesale.py` ya tenía el helper canónico que espejé). Total dir = 33 → 31 cambiados +
+  1 pre-existente + 1 sin-main = **cobertura completa**.
+- **VERIFICACIÓN 2 caminos DB-free**: (1) `importlib.import_module` sobre los 32 módulos con main →
+  IMPORT OK 32 / FAIL 0 ; (2) `py_compile pipeline/platform/*.py` → todos OK. Audit de ocurrencias:
+  cada fichero exactamente 1 def + 1 call (sin doble-insert).
+- **PRUEBA FUNCIONAL root-cause** bajo stdout cp1252 simulado: BUG_REPRODUCED (print crudo de
+  `'Σ → Híbrido Diésel Automática —'` lanza `UnicodeEncodeError`)=True ; FIX_WORKS (mismo print tras
+  `_force_utf8_stdout` NO crashea)=True ; UTF8_BYTES_WRITTEN=True. `git status --porcelain` = exactamente
+  los 31 `.py` modificados, nada más (patcher temporal + backup eliminados de scratch/).
+- Esto **cierra el hueco §2.E (item 14)**: el bug cp1252 estaba "Pendiente" en el §2; ahora corregido y
+  probado por raíz. CLI: `python -m py_compile pipeline/platform/*.py && python -c "import importlib,glob,os;
+  [importlib.import_module('pipeline.platform.'+os.path.basename(p)[:-3]) for p in
+  sorted(glob.glob('pipeline/platform/*.py')) if os.path.basename(p)!='__init__.py']"`.
+
+### F. Jerarquía geo a escala (provincia → comarca → municipio)
+- provinces=**52** ; comarcas=**323** en 50 provincias (Ceuta/Melilla 0 por construcción) ;
+  municipalities=**8.132**, con comarca=8.130 (99,98%, solo 51001 Ceuta + 52001 Melilla sin cubrir).
+- entities total=297.927, FULL prov+comarca+muni=231.425 (77,68%); 231.425/232.076=99,72% de las
+  entidades muni-resueltas llevan comarca (el déficit 651 = Ceuta 466 + Melilla 185 exacto).
+  vehicles total=1.287.200, FULL geo=877.026 (68,13%).
+- **VAM Path A vs Path B** sobre comarca de entidad: count directo (231.425) == count vía join
+  `geo_municipality` (231.425), drift **0**. Invariantes todos 0: drift entity.comarca_id vs
+  municipality.comarca_id=0; cruces de provincia muni→comarca=0; entity→comarca=0; FK comarca→province
+  huérfanos=0. Cobertura muni cross-check 2 vías (NOT NULL 8.130 == DISTINCT join 8.130). Fuente comarca:
+  8.089/8.092 INE matched (3 códigos fusionados obsoletos), bug de parser corregido (Pontevedra header
+  'Montaña' pelado). Trigger verificado vivo: insertar entity en muni 08019 auto-set comarca_id=50
+  (Bajo Llobregat), rollback limpio. API viva (port 8097) `/geo/completeness` y `/geo/08/tree` consistentes;
+  `/geo/51/tree` (Ceuta) → 0 comarcas correctamente.
+- CLI: `python -m scripts.migrate up && python -m scripts.backfill_comarca && uvicorn services.api.main:app --port 8097`.
+
+### G. Watermark de dedup cross-plataforma (mismo coche en ≥2 plataformas)
+- **Cota INFERIOR estricta de sobre-conteo = 134.027 filas-vehículo excedentes** (suelo exacto:
+  make+model+year+km+price+province coincidente abarcando ≥2 plataformas). **VAM 2 caminos**: SQL GROUP BY
+  134.027 == Python set-grouping 134.027, divergencia 0,0% (snapshots previos 132.016/132.178 conforme los
+  scrapers crecían). = **14,36% de tasa de dup cross-plataforma** sobre 933.417 listings candidatos de clave-completa.
+- Strong-key (VIN-exacto) cross-plataforma: solo ≈110 grupos (`photo_hash` poblado en 0 vehículos; VINs
+  reales de 17 chars en solo 18.087 de 1.293.546 vehículos). Ledger: `verification_verdict` ids 574 (y 556/566),
+  `subject_type='cross_platform_dedup_watermark'`, verdict TRUSTWORTHY. `vin_ref` NO es VIN: almacena
+  `v.listing_ref` (ad id nativo); solo len-17 charset-limpio son VINs reales.
+- Esto **cuantifica el hueco de dedup global** que el §1 advertía sin cifra: el total 1.33M carga ≥134.027
+  duplicados cross-plataforma. MEASURE-ONLY por defecto (no merge). CLI:
+  `python -m scripts.cross_platform_dedup_watermark` (`--dry-run` rollback total ; `--merge-vin` colapso VIN-exacto reversible).
+
+### H. S-HEALTH battle-test → 25/25 PASS, cascada probada E2E
+- 25/25 checks PASS, RC:0. Cascada probada por filas DB vivas sobre clave desechable
+  (`TEST_SHEALTH_CASCADE`): 3 fallos 403 consecutivos → `source_breaker` state='open' consecutive_fails=3,
+  `breaker_tripped` edge una sola vez; `source_health` status='down' fails=3; `harvest_run` auditó los 3
+  fallos; `fire_alert` UNA alerta deduped con origen exacto `TEST_SHEALTH_CASCADE:scrape`; `auto_repair`
+  3 `repair_attempt` (action=refingerprint, succeeded=False = P10 spend-gated); classify matrix 6/6 correcto.
+- Degradación elegante: `is_open(TEST)=True` (harvest lo salta) mientras el source real
+  `coches_net_wholesale` quedó closed/healthy/0 byte-idéntico antes/después, y un 2º vecino desechable
+  activo quedó closed/healthy (bulkhead no-vacuo). Snapshot servido por API inmóvil: entity 297.602→297.602,
+  vehicle_available 1.282.647→1.282.647. Cooldown exponencial: 4º fallo ≈1.800s = 2× base 900s.
+  Recovery: un run limpio → breaker closed/0, health healthy/0, alert resolved.
+- **Audit 2º-camino independiente**: 0 residuo TEST en las 5 tablas; totales restaurados a baseline exacto
+  (breaker=31, health=31, repair_attempt=7, alert=5). CLI: `python scratch/shealth_battletest.py` (PYTHONUTF8=1).
+
+> **Cierre de la 2ª ola:** 8 frentes, cada cifra contada por ≥2 caminos DB ortogonales o probada por
+> reproducción funcional. Se **cierra el hueco §2.E (cp1252)**. Se **cuantifica el hueco de dedup global**
+> (≥134.027 cross-plataforma). wallapop sube a 495.497 aristas (+37.731 reales), renting a 1.035, OEM-VO a
+> 32.271, milanuncios a 259.706, motor.es VN a 49.009. Cero números inflados; cada hueco restante (wallapop
+> →651k, segmentos Imperva, subastas con verja, Tier-2 proxy) sigue declarado, no fingido.

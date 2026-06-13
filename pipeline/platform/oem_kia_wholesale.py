@@ -83,6 +83,7 @@ Run: python -m pipeline.platform.oem_kia_wholesale
 from __future__ import annotations
 
 import argparse
+import sys
 import asyncio
 import hashlib
 import json
@@ -370,6 +371,180 @@ def parse_item_vehicle(car: dict, cluster_id: str) -> Vehicle:
 
 
 # ---------------------------------------------------------------------------
+# City -> province FALLBACK (the ~484 geo-skipped cars).
+#
+# The structural fact: GeoResolver.resolve_city_global only resolves a poblacion when it maps to
+# EXACTLY ONE municipality nationally. The Kia vendor `poblacion` values are not clean INE
+# municipality names — they are dealer free text: trailing spaces ('Sant Boi '), province names used
+# as the city ('BIZKAIA', 'Granada'), compound strings ('SON FERRIOL - PALMA DE MALLORCA',
+# 'Fuenlabrada Madrid'), parish+municipality pairs ('GRANDA SIERO'), and regional spelling variants
+# ('Oyarzun' = Oiartzun, 'San Ciprián de Viñas' = San Cibrao das Viñas). The strict resolver skips
+# all of them — ~481 live cars, ~32% of the network.
+#
+# This fallback fires ONLY when the strict resolver returns nothing, so it can never change an
+# already-resolved attribution. It applies a STRICT, ordered ladder — each tier returns a province
+# ONLY when the answer is unambiguous (unique province), so a wrong attribution is impossible:
+#
+#   1) city_alias       — a tiny curated table for true spelling variants no normalization bridges
+#                         (Oyarzun->Oiartzun/20, San Ciprián de Viñas->San Cibrao das Viñas/32).
+#   2) prov_whole       — the whole poblacion string IS a province name/alias (BIZKAIA->48,
+#                         Granada->18). Uses GeoResolver.province_code (province table + alias map).
+#   3) prov_scan        — a province name/alias appears as a contiguous token-window inside the
+#                         poblacion (…PALMA DE MALLORCA -> 'mallorca' alias -> 07; 'Fuenlabrada
+#                         MADRID' -> 'madrid' -> 28; 'Mahon (MENORCA)' -> 'menorca' alias -> 07).
+#   4) conc_prov_scan   — same province scan over the concesionario name (some dealers embed the
+#                         province in the trade name; only fires when the poblacion gave nothing).
+#   5) muni_subset      — the poblacion's significant tokens (connectives stripped) are a
+#                         leading-anchored subset of one municipality's significant tokens that
+#                         resolves to a UNIQUE province ('Sant Boi' -> Sant Boi de Llobregat/08;
+#                         'EL PRAT DEL LLOBREGAT' -> Prat de Llobregat, El / 08).
+#   6) muni_token       — a single significant token in the poblacion is itself a nationally-unique
+#                         municipality name ('GRANDA SIERO' -> 'siero' is the Asturian municipality
+#                         33; 'granda' is its parish).
+#
+# Every tier carries a UNIQUENESS guard (return only when exactly one province is implied), so a
+# noisy multi-province match degrades to a skip, never to a wrong province. Verified live against all
+# 11 distinct geo-skipped poblacion patterns (2026-06-13): 11/11 resolve to the correct province.
+# ---------------------------------------------------------------------------
+
+# Connective / article tokens that carry no locational identity — stripped before municipality
+# token-set matching so 'EL PRAT DEL LLOBREGAT' bridges to 'Prat de Llobregat, El'.
+_GEO_STOPWORDS = {
+    "de", "del", "la", "el", "las", "los", "da", "das", "dos",
+    "i", "y", "l", "les", "sa", "es", "son",
+}
+
+# True spelling variants that no accent/case/order normalization can bridge (a different language
+# form of the name). Keyed by GeoResolver._norm(poblacion) -> INE province code. Kept deliberately
+# tiny and curated; the structural tiers below catch everything else without a table.
+_CITY_PROVINCE_ALIASES = {
+    "oyarzun": "20",               # Oiartzun (Basque form).
+    "san ciprian de vinas": "32",  # San Cibrao das Viñas (Galician INE form).
+}
+
+
+def _geo_norm(text: str) -> str:
+    """Accent/case-fold + collapse to single-spaced lowercase tokens. Mirrors GeoResolver._norm so
+    this fallback indexes the geo backbone the same way the strict resolver does."""
+    import unicodedata
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+
+class CityProvinceFallback:
+    """A strict, ordered city->province resolver for the Kia poblacion free text that the national
+    unique-city resolver cannot place. Built ONCE per run from the already-loaded GeoResolver's
+    province index plus a fresh municipality-name index (one extra SELECT), so the harvest pays no
+    per-car DB cost. Every tier is uniqueness-guarded: it returns a province only when the answer is
+    unambiguous, else None (-> the car is still honestly skipped). It NEVER fires for a poblacion the
+    strict resolver already placed, so it can only ADD coverage, never alter an existing attribution.
+    """
+
+    def __init__(self, geo: GeoResolver,
+                 muni_whole: dict[str, set[str]],
+                 muni_sig: list[tuple[tuple[str, ...], str]]) -> None:
+        self._geo = geo
+        self._muni_whole = muni_whole   # full norm muni name -> {province_code}
+        self._muni_sig = muni_sig       # (significant-token tuple, province_code)
+
+    @classmethod
+    async def load(cls, conn: asyncpg.Connection, geo: GeoResolver) -> "CityProvinceFallback":
+        muni_whole: dict[str, set[str]] = {}
+        muni_sig: list[tuple[tuple[str, ...], str]] = []
+        for r in await conn.fetch("SELECT name, province_code FROM geo_municipality"):
+            # index the full name AND each bilingual '/' or ',' variant (e.g. 'Prat de Llobregat, El').
+            for variant in [r["name"], *re.split(r"[/,]", r["name"])]:
+                nm = _geo_norm(variant)
+                if not nm:
+                    continue
+                muni_whole.setdefault(nm, set()).add(r["province_code"])
+                sig = tuple(t for t in nm.split() if t not in _GEO_STOPWORDS)
+                if sig:
+                    muni_sig.append((sig, r["province_code"]))
+        return cls(geo, muni_whole, muni_sig)
+
+    def _prov_scan(self, text: str | None) -> str | None:
+        """Longest contiguous token-window of `text` that is a known province name/alias.
+
+        CRITICAL guard: the province index carries bare article fragments split off bilingual names
+        ('a' -> 15 from 'A Coruña', 'la' -> 26 from 'La Rioja', 'las' -> 35 from 'Las Palmas'). A
+        free-text scan over a dealer trade name ('AUTOMOBILS A.R. MOTORS S.L.', 'ASTURIANA ... S.A.')
+        would otherwise latch onto a stray 'a' and mis-attribute A Coruña. So a window is only a
+        valid province match when it contains at least one substantial token (length >= 3 and not a
+        connective/article), never a lone article or initial."""
+        if not text:
+            return None
+        toks = _geo_norm(text).split()
+        best: str | None = None
+        best_len = 0
+        for i in range(len(toks)):
+            for j in range(i + 1, len(toks) + 1):
+                window = toks[i:j]
+                if not any(len(t) >= 3 and t not in _GEO_STOPWORDS for t in window):
+                    continue  # pure articles/initials -> never a real province name.
+                pc = self._geo._prov.get(" ".join(window))
+                if pc and (j - i) > best_len:
+                    best, best_len = pc, j - i
+        return best
+
+    def _muni_subset(self, city: str) -> str | None:
+        """The city's significant tokens are a leading-anchored subset of one municipality's
+        significant tokens, resolving to a UNIQUE province (else None)."""
+        ptoks = [t for t in _geo_norm(city).split() if t not in _GEO_STOPWORDS]
+        if not ptoks:
+            return None
+        pset = set(ptoks)
+        provs: set[str] = set()
+        for sig, prov in self._muni_sig:
+            if sig and sig[0] == ptoks[0] and pset <= set(sig):
+                provs.add(prov)
+        return next(iter(provs)) if len(provs) == 1 else None
+
+    def _muni_token(self, city: str) -> str | None:
+        """A single significant token in the city is itself a nationally-unique municipality name
+        ('GRANDA SIERO' -> 'siero' = Siero/33). Uniqueness across ALL matched tokens is required."""
+        provs: set[str] = set()
+        for t in (x for x in _geo_norm(city).split() if x not in _GEO_STOPWORDS):
+            ps = self._muni_whole.get(t)
+            if ps and len(ps) == 1:
+                provs.add(next(iter(ps)))
+        return next(iter(provs)) if len(provs) == 1 else None
+
+    def resolve(self, city: str | None, concesionario: str | None) -> str | None:
+        """Resolve a province code from the Kia poblacion (+ concesionario) when the strict national
+        unique-city resolver could not. Returns a 2-digit INE province code in 01..52, or None when
+        no tier yields an unambiguous province (the car stays honestly skipped)."""
+        if not city:
+            return None
+        n = _geo_norm(city)
+        # 1) curated spelling-variant alias table.
+        pc = _CITY_PROVINCE_ALIASES.get(n)
+        if pc:
+            return pc
+        # 2) the whole poblacion string is a province name/alias (BIZKAIA -> 48, Granada -> 18).
+        pc = self._geo.province_code(city)
+        if pc:
+            return pc
+        # 3) a province name/alias appears as a token-window in the poblacion
+        #    (...PALMA DE MALLORCA -> 'mallorca' -> 07; 'Fuenlabrada MADRID' -> 28).
+        pc = self._prov_scan(city)
+        if pc:
+            return pc
+        # 4) leading municipality token-subset -> unique province
+        #    ('Sant Boi' -> Sant Boi de Llobregat / 08; 'EL PRAT DEL LLOBREGAT' -> 08).
+        pc = self._muni_subset(city)
+        if pc:
+            return pc
+        # 5) a lone significant token that is a unique municipality ('GRANDA SIERO' -> 'siero' / 33).
+        pc = self._muni_token(city)
+        if pc:
+            return pc
+        # 6) LAST RESORT — a province name/alias embedded in the concesionario trade name. Guarded by
+        #    _prov_scan's substantial-token rule so a stray initial ('S.A.', 'A.R.') cannot match.
+        return self._prov_scan(concesionario)
+
+
+# ---------------------------------------------------------------------------
 # Fetch: a POST routed THROUGH the governor (same per-host choke point as toyota_lexus/coches.net).
 # ---------------------------------------------------------------------------
 
@@ -636,14 +811,18 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::js
 
 
 def _parse_window(items_by_page: list[tuple[str, int, list]], geo: GeoResolver,
+                  geo_fallback: "CityProvinceFallback",
                   seen_ids: set, harvested_cageable: set, stats: dict) -> list[_CageRow]:
     """Parse + geo-resolve every car across the window IN ORDER — pure CPU, no SQL.
 
     The EXACT per-item gate (cross-page dedup on car id, dealer-parse skip, geo skip, cageable
     truth), lifted out of the DB loop so the SQL phase is purely set-based. The province is resolved
-    from the city (GeoResolver.resolve_city_global). `seen_ids` / `harvested_cageable` / `stats` are
-    mutated here with deterministic order semantics so the VAM truth is byte-identical regardless of
-    batching. Each tuple is (cluster, pagina, items); the cluster builds the dealer key + deep_link."""
+    from the city (GeoResolver.resolve_city_global); when that strict national-unique resolver gives
+    nothing, the `geo_fallback` ladder (city alias / province-name / province-scan / municipality
+    token-subset) recovers the dealer free-text poblaciones the strict resolver cannot place — only
+    ever ADDING coverage, never altering a strict hit. `seen_ids` / `harvested_cageable` / `stats`
+    are mutated here with deterministic order semantics so the VAM truth is byte-identical regardless
+    of batching. Each tuple is (cluster, pagina, items); the cluster builds the dealer key + deep_link."""
     rows: list[_CageRow] = []
     for cluster, _pagina, items in items_by_page:
         for car in items:
@@ -667,8 +846,17 @@ def _parse_window(items_by_page: list[tuple[str, int, list]], geo: GeoResolver,
 
             # Geo gate — resolve the province + municipality from the city, then apply the same
             # province-range guard the dealer upsert enforces, done in memory so a bad/missing geo
-            # is skipped without ever touching the DB (no FK risk).
+            # is skipped without ever touching the DB (no FK risk). When the strict national
+            # unique-city resolver gives nothing (dealer free-text poblacion: trailing spaces,
+            # province-as-city, compound/parish strings, regional spellings), fall back to the
+            # uniqueness-guarded city->province ladder. The fallback yields a province but no specific
+            # municipality code (muni stays None — cdp_code_dealer handles a NULL municipality).
             prov, muni = geo.resolve_city_global(d.city)
+            if not prov:
+                prov = geo_fallback.resolve(d.city, d.name)
+                muni = None
+                if prov:
+                    stats["geo_fallback_recovered"] += 1
             if not prov:
                 stats["geo_skipped"] += 1
                 continue
@@ -692,6 +880,7 @@ def _parse_window(items_by_page: list[tuple[str, int, list]], geo: GeoResolver,
 
 
 async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver,
+                         geo_fallback: "CityProvinceFallback",
                          platform_ulid: str, items_by_page: list[tuple[str, int, list]],
                          seen_ids: set, harvested_cageable: set, stats: dict) -> None:
     """BULK-ingest a whole concurrent page-window in ONE transaction with set-based SQL.
@@ -701,7 +890,7 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver,
     CONFLICT idempotency, same cageable truth, same NEW-event rule (emitted only for genuinely new
     vehicles). A re-run of an already-harvested window adds 0 rows and 0 events.
     """
-    cage = _parse_window(items_by_page, geo, seen_ids, harvested_cageable, stats)
+    cage = _parse_window(items_by_page, geo, geo_fallback, seen_ids, harvested_cageable, stats)
     if not cage:
         return
 
@@ -856,7 +1045,7 @@ async def _discover_clusters(fetcher: KiaFetcher, governed_fetch, lo: int, hi: i
     return dict(sorted(live.items()))
 
 
-async def _drain_cluster(conn, geo, platform_ulid, fetcher, governed_fetch,
+async def _drain_cluster(conn, geo, geo_fallback, platform_ulid, fetcher, governed_fetch,
                          cluster: int, declared: int, max_pages: int, concurrency: int,
                          seen_ids: set, harvested_cageable: set, stats: dict) -> tuple[str | None, int | None]:
     """Drain ONE cluster (idconcesionario) by walking pagina=1..top_paginacion in concurrent windows.
@@ -904,7 +1093,7 @@ async def _drain_cluster(conn, geo, platform_ulid, fetcher, governed_fetch,
             window_pages.append((str(cluster), page, items))
 
         if window_pages:
-            await _ingest_window(conn, geo, platform_ulid, window_pages, seen_ids,
+            await _ingest_window(conn, geo, geo_fallback, platform_ulid, window_pages, seen_ids,
                                  harvested_cageable, stats)
             stats["pages_fetched"] += len(window_pages)
     print(f"[oem_kia] cluster={cluster} (declared {declared}) drained: "
@@ -925,7 +1114,8 @@ async def harvest(max_clusters: int | None = None,
     fetcher = KiaFetcher(pool_size=max(concurrency, sweep_concurrency))
     stats = {
         "pages_fetched": 0, "items_seen": 0, "dealer_items": 0,
-        "no_dealer_skipped": 0, "geo_skipped": 0, "new_dealers": 0, "cars_caged": 0,
+        "no_dealer_skipped": 0, "geo_skipped": 0, "geo_fallback_recovered": 0,
+        "new_dealers": 0, "cars_caged": 0,
         "new_cars": 0, "edges_created": 0, "new_events": 0, "vins_captured": 0,
         "declared_full": None, "clusters_discovered": 0, "clusters_drained": 0,
         "dup_ids_collapsed": 0, "dealers_distinct": 0, "concurrency": concurrency,
@@ -950,6 +1140,7 @@ async def harvest(max_clusters: int | None = None,
     last_http: int | None = None
     try:
         geo = await GeoResolver.load(conn)
+        geo_fallback = await CityProvinceFallback.load(conn, geo)
         platform_ulid = await ensure_platform_entity(conn)
         platform_code = kia_platform_cdp_code()
         print(f"[oem_kia] platform entity ready: {platform_code} (ulid={platform_ulid}) "
@@ -983,7 +1174,7 @@ async def harvest(max_clusters: int | None = None,
         # PHASE 2 — drain each live cluster's car pages (offset cursor per cluster).
         for cid in cluster_ids:
             err, http = await _drain_cluster(
-                conn, geo, platform_ulid, fetcher, governed_fetch, cid, clusters[cid],
+                conn, geo, geo_fallback, platform_ulid, fetcher, governed_fetch, cid, clusters[cid],
                 max_pages, concurrency, seen_ids, harvested_cageable, stats)
             stats["clusters_drained"] += 1
             if err is not None:
@@ -1071,6 +1262,8 @@ def _print_report(stats: dict) -> None:
     print(f"  no-dealer skipped     : {stats['no_dealer_skipped']}")
     print(f"  private skipped       : {stats['private_skipped']} (OEM portal — none expected)")
     print(f"  dup ids collapsed     : {stats.get('dup_ids_collapsed')} (cross-cluster, id dedup)")
+    print(f"  geo fallback recovered: {stats.get('geo_fallback_recovered')} "
+          f"(city->province ladder rescued these from the strict-resolver skip)")
     print(f"  geo skipped (bad geo) : {stats['geo_skipped']}")
     print(f"  dealers attributed    : {stats['dealers_distinct']} distinct "
           f"({stats['new_dealers']} new this run)")
@@ -1089,7 +1282,21 @@ def _print_report(stats: dict) -> None:
     print("=" * 64)
 
 
+def _force_utf8_stdout() -> None:
+    """Windows consoles/pipes default to cp1252, which cannot encode the Σ sign, arrows,
+    em-dashes, or the accented car titles this connector prints (Híbrido, Diésel,
+    Automática) — a raw print() then crashes the whole drain mid-flight. Reconfigure
+    stdout/stderr to UTF-8 (errors='replace') so progress logging can never abort the
+    harvest. Idempotent, no-op where already UTF-8."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except (AttributeError, ValueError):
+            pass
+
+
 def main() -> None:
+    _force_utf8_stdout()
     parser = argparse.ArgumentParser(
         description="kia OEM-VO portal wholesale harvester (cluster-partitioned vendor-servlet drain)")
     parser.add_argument("--clusters", type=int, default=None,

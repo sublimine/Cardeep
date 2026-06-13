@@ -14,7 +14,7 @@ request:
   search_params: keywords=<term>&source=deep_link&category_id=100&search_id=<uuid>&latitude=<lat>&longitude=<lon>&order_by=most_relevance&section_type=organic_search_results
   headers: accept json; accept-language es; deviceos/x-deviceos=0; x-appversion; x-deviceid=<uuid per session>; mpid/trackinguserid=stable; referer/origin es.wallapop.com; sec-ch-ua-platform Windows
   pagination: opaque next_page JWT in meta.next_page replayed as &next_page=<jwt>, ~40/page
-enumeration: keyword sweep (~40 car brands) x ES geo-centroid grid (lat/long HONORED); each (keyword,centroid) paged by the meta.next_page JWT until the chain ends; dedup by item id across the whole run
+enumeration: FACET partition (depth-cap fix): seller_type {professional,private} x price band (min_sale_price/max_sale_price), each cell sized <= cell_max via the live pointers.ORGANIC.remaining_documents oracle and drained by the meta.next_page JWT chain to its natural end; geo lat/long is NOT a partition axis (every centroid returns the national pool). Global item-id dedup collapses cross-cell overlap. Supersedes the flat order_by=newest cursor that depth-capped (~347k) short of the ~651k catalog.
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=marketplace_generalist, role=platform, data_surface=app_api
 attribution: per-item user_id -> GET /users/{id} (cached per run): type 'professional' -> compraventa DEALER; type 'normal' -> PER-SELLER 'particular' entity (cdp particular:wallapop:{user_id}; one human=one entity, sells_cars=TRUE; car+edge+delta caged identically to a dealer)
 dual_membership: vehicle.entity_ulid=SELLING DEALER/particular; platform_listing edge=platform<->vehicle
@@ -32,3 +32,9 @@ field_map:
   photo_url: item.images[0].urls.big|medium|small
   location: item.location {region2, city, latitude, longitude, postal_code}
   seller: users/{user_id} {type, web_slug, micro_name, featured, location.zip/city}
+facet_axes:
+  seller_type:
+    - professional
+    - private
+  price: min_sale_price/max_sale_price (EUR)
+  count_oracle: next_page JWT pointers.ORGANIC.remaining_documents

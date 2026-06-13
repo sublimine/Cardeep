@@ -153,7 +153,10 @@ SEGMENT_DECLARED = {
     SEGMENT_VO: 92381,       # classifieds.total
     SEGMENT_KM0: 15630,      # Σ /km0/ brands == popularClassified.total
     SEGMENT_VN: 826,         # /coches-nuevos/coches-nuevos.htm search.total (catalog offers)
-    SEGMENT_RENTING: 8908,   # /renting-coches totalOffers
+    SEGMENT_RENTING: 8908,   # /renting-coches totalOffers HEADLINE facet (each model counted
+    #                          across dealers/configs). The REAL paginable+cageable set is Σ per-
+    #                          make data.search.total (~1k live) — every distinct offer CARD,
+    #                          reached 100% via the makeOptions MECE per-make drain.
 }
 
 # Headers sufficient for the free path (recipe; chrome131 supplies UA + TLS/JA3 + h2).
@@ -581,9 +584,11 @@ def vn_offer_to_vehicle(o: CatalogOffer) -> Vehicle:
 
 
 def extract_renting(html: str) -> dict | None:
-    """Pull the renting hub pageProps: totalOffers + the make/brand partition + the inline
-    special-offer lists (specialOffersMonthly/Punctual). The FULL 8,908 paginated list loads
-    client-side via XHR (not in SSR); we cage the SSR-exposed offers and declare the total."""
+    """Pull the renting hub pageProps: totalOffers (the headline facet) + makeOptions (the
+    52-make MECE partition axis) + the inline special-offer lists. The FULL paginable list is
+    NOT here — it lives on the per-make route /renting-coches/{slug}/?page=N (data.search), which
+    discover_renting_makes()/harvest_renting() drain to 100%. This hub extractor now serves
+    discovery (totalOffers + makeOptions); the offer cards come from extract_renting_search()."""
     m = _NEXT_DATA_RE.search(html)
     if not m:
         return None
@@ -623,6 +628,115 @@ def parse_renting_offer(item: dict) -> RentingOffer | None:
         offer_id=oid, make=item.get("make"), model=item.get("model"),
         href=item.get("href"), fee_amount=fee,
         dealer_uuid=item.get("dealerId"), dealer_name=item.get("dealerName"))
+
+
+# ---------------------------------------------------------------------------
+# Renting LIST surface (the full paginable offer list — replaces the 13-offer SSR-inline
+# path). VERIFIED live 2026-06-13: the hub /renting-coches SSR carries totalOffers (a headline
+# facet) + only ~13 inline special offers; the FULL list lives on the SRP-shaped per-make route
+#   GET /renting-coches/{make-slug}/?page=N  ->  props.pageProps.data.search.classifiedList[<=12]
+# This is the SAME __NEXT_DATA__ SSR surface as VO/km0 — a GET, no XHR/JWT, ZERO proxy. The
+# 52-make makeOptions facet is a PERFECT MECE partition of the paginable list: drained live,
+# Σ(per-make search.total) == |union of distinct card ids| == 1,034 (every offer card lives
+# under exactly one make, no cross-make dups, the unfiltered list truncates at ~1,014 but the
+# per-make walk reaches every card). The list card is a SUPERSET of the inline special-offer
+# blob: id(UUID)+href+make+model+version+feeFrom+fuel+transmission+year+km+dealerId+dealerName.
+# ---------------------------------------------------------------------------
+_RENTING_LIST_ROOT = "https://www.coches.com/renting-coches"  # /{make-slug}/?page=N
+_RENTING_CARDS_PER_PAGE = 12  # the renting SRP serves 12 offer cards per request (verified).
+
+
+@dataclass
+class RentingCard:
+    """One renting OFFER parsed from data.search.classifiedList[i] (the full list surface).
+
+    The car's stable identity on the renting surface is its `id` (a UUID; cross-make dedup
+    key) and its `href` (the stable per-offer URL). It carries a `feeFrom` monthly fee (the
+    renting price grain), make/model/version, fuel/transmission/year/km, and a dealerId+
+    dealerName (the renting seller — a UUID, NOT a VO crmId, and with NO geo on this surface,
+    so the offer is caged platform-owned exactly like VN catalog offers)."""
+    offer_id: str
+    href: str | None
+    make: str | None
+    model: str | None
+    version: str | None
+    fee_from: float | None
+    fuel: str | None
+    transmission: str | None
+    year: int | None
+    km: int | None
+    dealer_uuid: str | None
+    dealer_name: str | None
+    photo_url: str | None
+
+
+def extract_renting_search(html: str) -> dict | None:
+    """Pull props.pageProps.data.search (.total + .classifiedList[<=12]) from a renting list
+    page (/renting-coches/{make-slug}/?page=N). Same shape as VO's classifieds (total + list),
+    just under data.search. Returns None on Imperva interstitial / structure drift."""
+    m = _NEXT_DATA_RE.search(html)
+    if not m:
+        return None
+    try:
+        data = json.loads(m.group(1))
+    except (ValueError, TypeError):
+        return None
+    s = (((data.get("props") or {}).get("pageProps") or {}).get("data") or {}).get("search")
+    return s if isinstance(s, dict) and "classifiedList" in s else None
+
+
+def parse_renting_card(item: dict) -> RentingCard | None:
+    """Parse one renting offer from data.search.classifiedList[i] (REAL field map, verified
+    live 2026-06-13). `id` is the stable offer UUID (dedup key); `href` is the stable URL."""
+    oid = str(item.get("id") or "").strip()
+    if not oid:
+        return None
+    fee = item.get("feeFrom")
+    try:
+        fee = float(fee) if fee is not None else None
+    except (TypeError, ValueError):
+        fee = None
+    year = _to_int(item.get("registrationYear"))
+    if year is not None and not (1900 <= year <= 2100):
+        year = None
+    km = _to_int(item.get("mileage"))
+    if km is not None and (km < 0 or km > 5_000_000):
+        km = None
+    fuel = item.get("fuelName") or _name(item.get("fuel"))
+    return RentingCard(
+        offer_id=oid, href=item.get("href"),
+        make=item.get("make"), model=item.get("model"), version=item.get("version"),
+        fee_from=fee, fuel=fuel, transmission=item.get("transmissionName"),
+        year=year, km=km,
+        dealer_uuid=item.get("dealerId"), dealer_name=item.get("dealerName"),
+        photo_url=item.get("imageUrl") or (
+            (item.get("image") or {}).get("src") if isinstance(item.get("image"), dict) else None))
+
+
+def renting_offer_deep_link(offer_id: str, href: str | None) -> str:
+    """Canonical, stable renting-offer deep link keyed on the offer UUID (the offer's identity).
+    Prefer the real per-offer href when present (it embeds the same UUID); fall back to a
+    UUID-keyed canonical so the link is stable + slug-free. Distinct /renting-coches/ namespace
+    so it never collides with VO/km0/VN on (entity, link)."""
+    h = (href or "").strip()
+    if h:
+        return h
+    oid = (offer_id or "").strip()
+    return f"{_RENTING_LIST_ROOT}/offer/{oid}" if oid else _RENTING_LIST_ROOT
+
+
+def renting_card_to_vehicle(c: RentingCard) -> Vehicle:
+    """Adapt a RentingCard to the Vehicle cage row (one renting offer = one platform-owned
+    listing). The monthly `feeFrom` is the renting price grain (no sale price on this surface);
+    make/model/version build the title. No price_drop (a fee, not a discounted sale)."""
+    title = " ".join(p for p in (c.make, c.model, c.version) if p) or None
+    return Vehicle(
+        deep_link=renting_offer_deep_link(c.offer_id, c.href),
+        listing_ref=c.offer_id, title=title, make=c.make, model=c.model,
+        year=c.year, km=c.km, price=c.fee_from, fuel=c.fuel,
+        transmission=c.transmission, photo_url=c.photo_url, price_drop=None,
+        segment=SEGMENT_RENTING,
+        listing_url=(c.href or renting_offer_deep_link(c.offer_id, c.href)))
 
 
 # ---------------------------------------------------------------------------
@@ -709,9 +823,15 @@ COCHES_PLATFORM_RECIPE = {
         "vn": ("/coches-nuevos/coches-nuevos.htm?page=N · search.total=826 · 20 version OFFERS"
                "/page (make/model/version, pvp, discount) · NO dealer -> owned by the PLATFORM "
                "entity · PVP->price discount captured as price_drop for delta"),
-        "renting": ("/renting-coches · totalOffers=8,908 (declared) · SSR exposes "
-                    "specialOffersPunctual/Monthly (dealerId+href+fee) caged as platform-owned; "
-                    "full paginated list is client-XHR -> escalation reserve"),
+        "renting": ("/renting-coches/{make-slug}/?page=N -> data.search.classifiedList[<=12] "
+                    "(the SAME __NEXT_DATA__ SSR surface as VO; a GET, ZERO proxy, NO XHR/JWT) "
+                    "· makeOptions (52 makes) is a PERFECT MECE partition: Σ per-make "
+                    "data.search.total == |union of distinct card ids| (verified live, no cross-"
+                    "make dup) so the per-make walk reaches 100% of the paginable list · each "
+                    "offer caged PLATFORM-OWNED (seller is a UUID, no geo on this surface) · the "
+                    "hub totalOffers (~8.9k) is a HEADLINE facet (each model counted across "
+                    "dealers/configs), NOT the paginable ceiling — the REAL captured set == Σ "
+                    "per-make paginable total (~1k live)"),
         "all": "drains vo->km0->vn->renting in SEQUENCE under ONE governor/breaker (one host).",
     },
     "reconcile": ("vo 92,381 + km0 15,630 + vn 826 + renting 8,908 = ~117,745 captureable; the "
@@ -1166,7 +1286,7 @@ async def harvest(limit: int = DEFAULT_LIMIT, concurrency: int = DEFAULT_CONCURR
     if segment in (SEGMENT_VN, SEGMENT_CATALOG):
         return await harvest_vn(limit, concurrency, drain_all)
     if segment == SEGMENT_RENTING:
-        return await harvest_renting(limit, drain_all)
+        return await harvest_renting(limit, drain_all, concurrency)
     if segment not in _SRP_SEGMENTS:
         raise ValueError(f"unknown segment {segment!r}; choices: {_SEGMENT_CHOICES}")
     conn = await asyncpg.connect(DSN)
@@ -1575,83 +1695,202 @@ async def harvest_vn(limit: int = DEFAULT_LIMIT, concurrency: int = DEFAULT_CONC
         await conn.close()
 
 
-async def harvest_renting(limit: int = DEFAULT_LIMIT, drain_all: bool = False) -> dict:
-    """Drain the RENTING segment hub /renting-coches. The hub SSR exposes totalOffers (the
-    declared count, ~8,908) + the make/brand partition + the inline special-offer lists
-    (specialOffersMonthly/Punctual, which carry dealerId+dealerName+href+fee). We cage the
-    SSR-exposed offers as platform-owned listings and DECLARE the full total honestly. The
-    full 8,908 paginated PDP list loads client-side via XHR (escalation reserve documented)."""
+async def discover_renting_makes(governed_fetch, fetcher: CochesComFetcher
+                                 ) -> tuple[list[_MakePartition], int, int]:
+    """Discover the renting MECE make partition + both reconcile pegs.
+
+    The hub /renting-coches carries `totalOffers` (the DECLARED headline facet — each renting
+    model counted across dealers/configs, ~8,9k) and `makeOptions` (every make as label/value).
+    `makeOptions` is the partition axis: each make's REAL paginable count is its list page's
+    data.search.total. We probe page-1 of every make to read that total and derive its page span.
+    Returns (partitions sorted by descending count, declared_total_offers, sum_paginable_totals).
+    Σ(per-make total) is the REAL cageable peg (verified live == |union of distinct ids|); the
+    declared totalOffers is reported for honesty but is NOT the paginable ceiling."""
+    hub_html = await fetcher.fetch_async(governed_fetch, _RENTING_URL)
+    pp = extract_renting(hub_html)
+    if pp is None:
+        raise RuntimeError("renting hub missing (Imperva/drift)")
+    declared = _to_int(pp.get("totalOffers")) or 0
+    make_opts = pp.get("makeOptions") or []
+    labels = [o.get("label") for o in make_opts
+              if isinstance(o, dict) and o.get("label")]
+    if not labels:
+        raise RuntimeError("renting makeOptions partition missing (Imperva/drift)")
+    partitions: list[_MakePartition] = []
+    sum_totals = 0
+    for lab in labels:
+        slug = make_slug(lab)
+        html = await fetcher.fetch_async(
+            governed_fetch, f"{_RENTING_LIST_ROOT}/{slug}/")
+        s = extract_renting_search(html)
+        total = _to_int((s or {}).get("total")) or 0
+        sum_totals += total
+        if total <= 0:
+            continue  # this make has no renting offers today (e.g. tesla, porsche)
+        partitions.append(_MakePartition(
+            text=lab, slug=slug, count=total,
+            pages=max(1, math.ceil(total / _RENTING_CARDS_PER_PAGE))))
+    partitions.sort(key=lambda p: p.count, reverse=True)
+    print(f"[coches_com_wholesale:renting] {len(partitions)} makes with offers "
+          f"(of {len(labels)} listed); Σ paginable totals={sum_totals}; "
+          f"declared totalOffers={declared} (headline facet, NOT the paginable ceiling).")
+    return partitions, declared, sum_totals
+
+
+def _renting_page_url(slug: str, page: int) -> str:
+    """Per-make renting list page URL. page==1 has no query; page>1 adds ?page=N.
+    GET /renting-coches/{make-slug}/?page=N (verified live 2026-06-13, 12 cards/page)."""
+    base = f"{_RENTING_LIST_ROOT}/{slug}/"
+    return base if page <= 1 else f"{base}?page={page}"
+
+
+async def harvest_renting(limit: int = DEFAULT_LIMIT, drain_all: bool = False,
+                          concurrency: int = DEFAULT_CONCURRENCY) -> dict:
+    """Drain the FULL RENTING offer list — every paginable card, not the 13 SSR-inline offers.
+
+    The hub /renting-coches SSR exposes only ~13 inline special offers + a totalOffers headline;
+    the full list lives on the per-make route GET /renting-coches/{make-slug}/?page=N ->
+    props.pageProps.data.search.classifiedList[<=12] (the SAME __NEXT_DATA__ SSR surface VO/km0
+    use — a GET, ZERO proxy, no XHR/JWT). makeOptions is a PERFECT MECE partition of the
+    paginable list (verified live: Σ per-make total == |union of distinct card ids|, no cross-
+    make dup), so a per-make walk reaches 100% of the cageable renting inventory. Each offer is
+    caged PLATFORM-OWNED (renting seller is a UUID with no geo on this surface) via the same
+    _cage_platform_owned contract as VN. The declared totalOffers (~8.9k) is the platform's
+    headline facet (each model counted across dealers/configs); it is reported honestly but is
+    NOT the paginable ceiling — the REAL captured set == Σ per-make paginable totals."""
     conn = await asyncpg.connect(DSN)
     cage_limit = None if drain_all else max(1, limit)
+    concurrency = max(1, concurrency)
     stats = _segment_stats(SEGMENT_RENTING, drain_all, cage_limit)
+    stats["concurrency"] = concurrency
     if await is_open(conn, COCHES_SOURCE_KEY):
         await conn.close()
         return {"skipped": True, "reason": "breaker_open", "source_key": COCHES_SOURCE_KEY,
                 "segment": SEGMENT_RENTING}
-    fetcher = CochesComFetcher(pool_size=1)
+    fetcher = CochesComFetcher(pool_size=concurrency)
     gov = governor()
     governed_fetch = gov.wrap_fetch_text(fetcher.fetch)
     fetch_error = None
     last_http = None
+    seen_ids: set[str] = set()  # cross-make dedup on the stable offer UUID
     try:
         platform_ulid = await ensure_platform_entity(conn)
         platform_code = coches_platform_cdp_code()
+        # DB-clock run start: every edge this run touches gets last_seen = now() (DB clock), so
+        # this peg scopes the VAM's db_edges to edges TOUCHED this run — the correct like-with-
+        # like on a churning surface (an offer aged out since the last run must not refute today).
+        run_started_at = await conn.fetchval("SELECT now()")
+
+        # Phase 1 — discover the make partition (declared headline + paginable Σ).
         try:
-            html = await fetcher.fetch_async(governed_fetch, _RENTING_URL)
-        except Exception as e:  # noqa: BLE001
+            partitions, declared, sum_totals = await discover_renting_makes(
+                governed_fetch, fetcher)
+        except Exception as e:  # noqa: BLE001 — hub/partition unreachable: fail honestly
             fetch_error = str(e); last_http = fetcher.last_status
             await record_run(conn, COCHES_SOURCE_KEY, ok=False, rows=0, error=fetch_error,
                              http_status=last_http)
             return {"skipped": True, "reason": "renting_discovery_failed", "error": fetch_error,
                     "segment": SEGMENT_RENTING, "platform_code": platform_code}
-        pp = extract_renting(html)
-        if pp is None:
-            await record_run(conn, COCHES_SOURCE_KEY, ok=False, rows=0,
-                             error="renting hub missing")
-            return {"skipped": True, "reason": "renting_no_hub", "segment": SEGMENT_RENTING,
-                    "platform_code": platform_code}
-        declared = _to_int(pp.get("totalOffers")) or 0
         stats["declared_full"] = declared
-        offers = []
-        seen_offers: set[str] = set()
-        for key in ("specialOffersPunctual", "specialOffersMonthly"):
-            for it in (pp.get(key) or []):
-                o = parse_renting_offer(it)
-                if o is None or o.offer_id in seen_offers:
-                    continue
-                seen_offers.add(o.offer_id)
-                stats["cards_seen"] += 1
-                link = o.href or f"https://www.coches.com/renting-coches/offer/{o.offer_id}"
-                title = " ".join(p for p in (o.make, o.model) if p) or None
-                offers.append(Vehicle(
-                    deep_link=link, listing_ref=o.offer_id, title=title, make=o.make,
-                    model=o.model, year=None, km=None, price=o.fee_amount, fuel=None,
-                    transmission=None, photo_url=None, price_drop=None))
-        if offers:
-            await _cage_platform_owned(conn, platform_ulid, offers, stats, SEGMENT_RENTING)
-        stats["pages_fetched"] = 1
-        print(f"[coches_com_wholesale:renting] declared totalOffers={declared}; "
-              f"SSR-exposed offers caged={stats['cars_caged']} "
-              f"(full 8,908 list is client-XHR — escalation reserve).")
+        stats["renting_paginable_total"] = sum_totals
+        stats["makes_discovered"] = len(partitions)
+        target = "ALL offer cards" if drain_all else f"{cage_limit} offers (proof cap)"
+        print(f"[coches_com_wholesale:renting] paginable Σ={sum_totals}; cage target = {target}; "
+              f"CONCURRENT drain window={concurrency} pages.")
+
+        # Phase 2 — walk each make partition page-by-page in a concurrent window (paced by the
+        # per-host bucket), BULK-caging each window's offers platform-owned in one tx.
+        stop = False
+        for part in partitions:
+            if stop:
+                break
+            page_cap = min(part.pages, _DEEP_PAGE_CAP)
+            next_page = 1
+            make_done = False
+            while next_page <= page_cap and not stop and not make_done:
+                window = list(range(next_page, min(next_page + concurrency, page_cap + 1)))
+                next_page = window[-1] + 1
+                results = await asyncio.gather(
+                    *(fetcher.fetch_async(governed_fetch, _renting_page_url(part.slug, p))
+                      for p in window),
+                    return_exceptions=True)
+                window_offers: list[Vehicle] = []
+                for page, data in zip(window, results):
+                    if isinstance(data, Exception):
+                        stats["page_errors"] += 1
+                        last_http = fetcher.last_status
+                        if stats["page_errors"] > 10 and stats["page_errors"] > stats["pages_fetched"]:
+                            fetch_error = f"renting fetch wall: {data}"
+                            print("[coches_com_wholesale:renting] page failures dominate; "
+                                  "stopping drain (Imperva wall?).")
+                            stop = True
+                            break
+                        continue
+                    s = extract_renting_search(data)
+                    if s is None:
+                        stats["no_classifieds"] += 1
+                        continue
+                    cards = s.get("classifiedList") or []
+                    stats["pages_fetched"] += 1
+                    if not cards:
+                        make_done = True  # this make's result set is exhausted (terminator)
+                        continue
+                    for card in cards:
+                        c = parse_renting_card(card)
+                        if c is None:
+                            continue
+                        if c.offer_id in seen_ids:
+                            stats["dup_ids_collapsed"] += 1
+                            continue
+                        seen_ids.add(c.offer_id)
+                        stats["cards_seen"] += 1
+                        window_offers.append(renting_card_to_vehicle(c))
+                if window_offers:
+                    await _cage_platform_owned(conn, platform_ulid, window_offers, stats,
+                                               SEGMENT_RENTING)
+                if cage_limit is not None and len(seen_ids) >= cage_limit:
+                    print(f"[coches_com_wholesale:renting] cage target reached "
+                          f"({len(seen_ids)} >= {cage_limit}); stopping proof slice.")
+                    stop = True
+                    break
+            if make_done or next_page > page_cap:
+                stats["makes_completed"] += 1
+
+        print(f"[coches_com_wholesale:renting] caged={stats['cars_caged']} distinct offers "
+              f"(new={stats['new_cars']}); paginable Σ={sum_totals}; declared headline={declared}.")
         await _finalize_platform_segment(conn, stats, platform_ulid, platform_code,
                                          SEGMENT_RENTING, "renting-coches/", fetch_error,
-                                         last_http)
+                                         last_http, seen_since=run_started_at)
         return stats
     finally:
         await conn.close()
 
 
 async def _finalize_platform_segment(conn, stats, platform_ulid, platform_code, segment,
-                                     url_marker, fetch_error, last_http):
+                                     url_marker, fetch_error, last_http, seen_since=None):
     """Shared finalize for VN/renting: write recipe, run the segment-scoped VAM quorum (db
     edges in this segment's listing_url namespace vs harvested), and record the S-HEALTH
-    heartbeat. Mirrors the VO/km0 finalize exactly so every segment is verified the same way."""
+    heartbeat. Mirrors the VO/km0 finalize exactly so every segment is verified the same way.
+
+    `seen_since` (a tz-aware run-start timestamp) scopes db_edges to edges TOUCHED in THIS run
+    (last_seen >= seen_since) — the proper like-with-like on a CHURNING surface where the
+    cumulative DB legitimately holds aged-out offers the current snapshot no longer lists (e.g.
+    a renting offer that expired between runs). Omitted (None) -> the cumulative-namespace count
+    (VN: its surface doesn't churn within a run and declared==paginated, so cumulative==harvest)."""
     recipe_path = write_recipe(platform_code, COCHES_PLATFORM_RECIPE)
     stats["recipe_path"] = str(recipe_path)
     seg_like = f"%{url_marker}%"
-    db_edges = await conn.fetchval(
-        "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1 "
-        "AND listing_url LIKE $2", platform_ulid, seg_like)
+    if seen_since is not None:
+        db_edges = await conn.fetchval(
+            "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1 "
+            "AND listing_url LIKE $2 AND last_seen >= $3", platform_ulid, seg_like, seen_since)
+        stats["db_edges_cumulative"] = await conn.fetchval(
+            "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1 "
+            "AND listing_url LIKE $2", platform_ulid, seg_like)
+    else:
+        db_edges = await conn.fetchval(
+            "SELECT count(*) FROM platform_listing WHERE platform_entity_ulid=$1 "
+            "AND listing_url LIKE $2", platform_ulid, seg_like)
     harvested = stats["cars_caged"]
     verdict = await record_count_verdict(
         conn, subject_type="platform_segment", subject_key=f"{platform_code}:{segment}",

@@ -81,6 +81,7 @@ Run: python -m pipeline.platform.oem_volvo_jlr_suzuki_wholesale --pages 20
 from __future__ import annotations
 
 import argparse
+import sys
 import asyncio
 import hashlib
 import json
@@ -852,10 +853,14 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::js
 """
 
 
-def _resolve_province(d: DealerRef, geocoder: ProvinceGeocoder) -> str | None:
+def _resolve_province(d: DealerRef, geocoder: ProvinceGeocoder,
+                      geo: GeoResolver | None = None) -> str | None:
     """Resolve the dealer's INE province. PRIMARY: the zip's first 2 digits (authoritative, the
-    renew model). FALLBACK: geocode from lat/lon (nearest labeled point) when the zip is
-    missing/malformed (Volvo only; AVL has no lat/lon). Returns a validated '01'..'52' code or None."""
+    renew model). FALLBACK 1: geocode from lat/lon (nearest labeled point) when the zip is
+    missing/malformed (Volvo only; AVL has no lat/lon). FALLBACK 2: the dealer city as a
+    nationally-unique municipality (the AVL Land Rover/Jaguar surface carries a clean `city` but no
+    zip and no lat/lon for some dealers — e.g. 'Oleiros' -> A Coruña/15, 'Madrid' -> 28 — so the city
+    rescues those that zip+geocode cannot). Returns a validated '01'..'52' code or None."""
     if d.zip:
         digits = re.sub(r"\D", "", d.zip)
         if len(digits) >= 2:
@@ -864,6 +869,15 @@ def _resolve_province(d: DealerRef, geocoder: ProvinceGeocoder) -> str | None:
                 return prov
     if d.lat is not None and d.lon is not None:
         prov = geocoder.nearest_province(d.lat, d.lon)
+        if prov and prov.isdigit() and "01" <= prov <= "52":
+            return prov
+    if geo is not None and d.city:
+        # the whole city string may itself be a province name/alias (e.g. 'Madrid'); else a
+        # nationally-unique municipality resolves it cleanly.
+        prov = geo.province_code(d.city)
+        if prov and prov.isdigit() and "01" <= prov <= "52":
+            return prov
+        prov, _ = geo.resolve_city_global(d.city)
         if prov and prov.isdigit() and "01" <= prov <= "52":
             return prov
     return None
@@ -915,10 +929,11 @@ def _parse_window(items_by_page: list[tuple[int, int, list]], geo: GeoResolver,
                 continue
             stats["dealer_items"] += 1
 
-            # Geo gate — resolve the province (zip first, lat/lon fallback), then apply the same
-            # province-range guard the dealer upsert enforces, done in memory so a bad/missing geo is
-            # skipped without ever touching the DB (no FK risk).
-            prov = _resolve_province(d, geocoder)
+            # Geo gate — resolve the province (zip first, lat/lon fallback, city fallback), then apply
+            # the same province-range guard the dealer upsert enforces, done in memory so a bad/missing
+            # geo is skipped without ever touching the DB (no FK risk). The city fallback rescues the
+            # AVL dealers (Land Rover/Jaguar) that carry a clean city but no zip and no lat/lon.
+            prov = _resolve_province(d, geocoder, geo)
             if not prov:
                 stats["geo_skipped"] += 1
                 continue
@@ -1319,7 +1334,21 @@ def _print_report(stats: dict) -> None:
     print("=" * 64)
 
 
+def _force_utf8_stdout() -> None:
+    """Windows consoles/pipes default to cp1252, which cannot encode the Σ sign, arrows,
+    em-dashes, or the accented car titles this connector prints (Híbrido, Diésel,
+    Automática) — a raw print() then crashes the whole drain mid-flight. Reconfigure
+    stdout/stderr to UTF-8 (errors='replace') so progress logging can never abort the
+    harvest. Idempotent, no-op where already UTF-8."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except (AttributeError, ValueError):
+            pass
+
+
 def main() -> None:
+    _force_utf8_stdout()
     parser = argparse.ArgumentParser(
         description="volvo_jlr_suzuki OEM-VO portal wholesale harvester (two-platform JSON drain)")
     parser.add_argument("--pages", type=int, default=DEFAULT_MAX_PAGES,
