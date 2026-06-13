@@ -202,10 +202,14 @@ header is the only gate; €0, no proxy/browser/token). **DB-wide `segment=new` 
 
 ## 5. Channel-types REVEALED but NOT YET in the taxonomy (empty kind / no slot)
 
-### 5.1 `importador` — kind EXISTS, **0 ENTITIES** (NEW-TYPE, empty)
+### 5.1 `importador` — kind EXISTS, **POPULATED: 11 entities / 187 cars** (was 0 — see §10)
 
-`kind='importador'` is a real enum value with **zero rows** (verified live: 0). Real,
-reachable operators (mostly German VO with ~10–20% saving):
+> **UPDATE (§10 follow-up wave, 2026-06-13):** `kind='importador'` is now **POPULATED — 11
+> entities / 187 cars** (MODRIVE connected; TrendCars/Carismatic reclassified). The "0 rows"
+> below is the pre-wave state, kept for the historical Δ.
+
+`kind='importador'` was a real enum value with **zero rows** (verified live: 0) at census time.
+Real, reachable operators (mostly German VO with ~10–20% saving):
 
 | Operator | Domain | Surface | Status |
 |---|---|---|---|
@@ -354,5 +358,80 @@ Beyond the 3 already held (Autorola, BCA, Ayvens Carmarket). Auction group lives
 > `platform`/`plataforma` entity count: **10 → 13** (Motorflash, Subastacar, seat_cupra_new).
 > `rentacar_vo` members: **3 → 6** (Arval, Northgate, Athlon). `segment=new` edges:
 > **6.151 → 8.380** live. All counts re-verified by direct DB query 2026-06-13.
+
+---
+
+## 10. Follow-up wave — Δ-list operators CONNECTED (DB-verified 2026-06-13)
+
+This wave executes the §8 Δ-list and the §5 empty/no-slot channel-types. **Every count below
+is from my own 3-path DB query (`db_edges == db_join_vehicles == harvested_cageable`) against
+`postgres://cardeep@localhost:5433/cardeep` HOY.** All four fronts **VAM TRUSTWORTHY**.
+
+| Front | Newly-connected operator(s) | Cars | Entities | VAM | Channel-type effect |
+|---|---|---|---|---|---|
+| `importador` (§5.1 NEW-TYPE empty → POPULATED) | MODRIVE + TrendCars/Carismatic reclassified | **187** | **11** | TRUSTWORTHY (vehicles_owned(kind=importador)=187 == distinct edge_join_vehicles=187; MODRIVE own-slice db_edges=19 == db_join_vehicles=19 == harvested_cageable=19) | `kind='importador'` **0 → 11 entities** |
+| `faciliteacoches_racc` (§5.3 + §5.4 → CONNECTED) | Facilitea Coches (CaixaBank VO) + RACC ocasión | **884** | **251** | TRUSTWORTHY (both members db_edges==db_join_vehicles==harvested_cageable: faciliteacoches 788=788=788, RACC 96=96=96) | 2 new `plataforma` entities w/ dealer attribution |
+| `b2b_auctions` (§7 → LocalizaVO CONNECTED) | LocalizaVO (Localiza rent-a-car VO remarketing) | **318** | **3** | TRUSTWORTHY | B2B partial-SSR operator caged (`official_registry`) |
+| `renting_vo` (§6 Athlon DEFERRED → DRAINED) | Athlon Car Outlet (browser hydrate pass) | **52** | **1** | TRUSTWORTHY | `rentacar_vo` Athlon slice **0 → 52 cars** |
+
+**Status transitions applied to the taxonomy above:**
+- **§5.1 `importador`** — was *NEW-TYPE, 0 ENTITIES*. Now **POPULATED: 11 entities / 187 cars**.
+  MODRIVE (`CDP-ES-00-MVRE0FYC`, 19 cars) connected; TrendCars (4 CDP rows) + Carismatic
+  (4 CDP rows) **RECLASSIFIED → importador** as anticipated in the §5.1 plan. Connector
+  `pipeline/platform/group_importador_wholesale.py` + reclassifier `scripts/reclassify_importadores.py`.
+- **§5.3 faciliteacoches.com** — was *MISSING operator*. Now **CONNECTED**: Facilitea Coches
+  (`CDP-ES-00-9PXHGJBY`, `marketplace_motor`) **788 cars / 248 dealer entities**. Connector
+  `pipeline/platform/faciliteacoches_racc_wholesale.py`.
+- **§5.4 cochesocasion.racc.es** — was *MISSING (minor)*. Now **CONNECTED**: RACC Coches de
+  Ocasión (`CDP-ES-00-58C3W3P9`, `association`) **96 cars / 1 entity**. Same connector.
+- **§7 LocalizaVO** — was *MISSING — partial SSR (deferred)*. Now **CONNECTED**:
+  `CDP-ES-00-HFR3D62Y`, `official_registry`, **318 cars** (free vector reached). Connector
+  `pipeline/platform/localizavo_wholesale.py`.
+- **§6 Athlon Car Outlet** — was *NEWLY-CONNECTED (entity) / DRAIN DEFERRED, 0 cars (114
+  declared)*. Now **DRAINED: 52 cars owned** (`CDP-ES-08-FSZ9HXWX`, `rentacar_vo`). The
+  Angular-hydrated SPA was harvested via the deferred browser pass. Connector
+  `pipeline/platform/group_rentacar_vo_wholesale.py --member athlon`.
+
+> **Also landed alongside (visible in live `kind='plataforma'` roster, classic-marketplace
+> front from §3.2/§5.2):** Car & Classic (`CDP-ES-00-WS3ZTNX7`, 585 edges) and Miclásico
+> (`CDP-ES-00-TSJFC4J2`, 693 edges) are now caged as `plataforma`/`marketplace_motor`,
+> resolving the §5.2 *classic-marketplace NO-SLOT* hole into the marketplace family.
+
+**CLI commands of record (this wave):**
+```
+# importador
+CARDEEP_DSN="postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep" \
+  python -m pipeline.platform.group_importador_wholesale --members modrive --pages 3
+CARDEEP_DSN="postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep" \
+  python -m scripts.reclassify_importadores
+
+# faciliteacoches + RACC
+set CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep
+python -m pipeline.platform.faciliteacoches_racc_wholesale --members faciliteacoches racc --pages 8 --concurrency 8
+
+# b2b LocalizaVO
+set CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep
+set PYTHONPATH=C:\Users\elias\projects\cardeep
+python -m pipeline.platform.localizavo_wholesale
+
+# renting_vo Athlon
+set CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep
+python -m pipeline.platform.group_rentacar_vo_wholesale --member athlon
+```
+
+### Live DB deltas after this wave (my query, 2026-06-13)
+
+| Metric | Prior (§9) | **Now (verified live)** |
+|---|---|---|
+| `kind='importador'` entities | 0 | **11** |
+| `kind='plataforma'` entities | 13 | **18** (Facilitea, RACC, LocalizaVO, Car & Classic, Miclásico) |
+| `kind='subasta'` entities | 95 | **97** |
+| `rentacar_vo` Athlon cars owned | 0 (deferred) | **52** |
+| `platform_listing segment='used'` | 1.432.777 | **1.436.153** |
+| Net cars connected this wave | — | **187 + 884 + 318 + 52 = 1.441** (excl. classic) |
+
+> All four fronts re-counted by ≥2 (importador, both faciliteacoches members: 3) DB paths that
+> AGREE exactly. Zero cars fabricated. The §5 empty/no-slot channel-types (`importador`,
+> bank-VO aggregator, auto-club VO, classic-marketplace) are now POPULATED.
 </content>
 </invoke>

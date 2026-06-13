@@ -527,3 +527,167 @@ con su criterio de aceptación. **Cero números inflados. Cero huecos ocultos.**
 - **Cero números inflados. Cero huecos ocultos. Cada cifra contada AHORA contra la DB viva por ≥2 caminos
   o marcada UNVERIFIED. Dos correcciones anti-alucinación declaradas:** (1) subastas son DISJUNTAS, no
   "dual-membership"; (2) "sale_events=20" no es verificable contra el esquema real.
+
+## 9. 5ª ola — DESCUBRIMIENTO / EXPANSIÓN (el "garaje perdido", auditoría adversarial, 2026-06-13)
+
+> **Frente de descubrimiento.** Mientras las olas 1ª–4ª drenaban superficies ya conocidas, esta ola
+> **ensancha el censo**: busca puntos de venta de coche que NO estaban en ningún conector previo
+> (asociaciones de concesionarios, barrido geográfico del long-tail local, directorios, cadenas y
+> rent-a-car nuevos) y drena el roster completo de own-sites alcanzables. Siete sub-frentes corrieron en
+> paralelo; cada cifra de abajo fue **re-derivada AHORA por el Director con `psql` directo contra
+> `cardeep-pg :5433`** (`postgres://cardeep@localhost:5433/cardeep`), VAM ≥2 caminos, **nunca desde el
+> tally que reportó el sub-frente**. Esquema real reconfirmado: `entity.source_group` (enum) y
+> `entity.first_discovered_source` (texto) clasifican origen; own-site = `vehicle` sin arista en
+> `platform_listing` y cuyo `entity_ulid` no es una fila de `platform`.
+
+### Globales (snapshot vivo único, contado AHORA contra la DB viva)
+| Métrica | 4ª ola (§8) | **5ª ola (LANDED, actual)** | Camino verificado |
+|---|---|---|---|
+| `entity` (puntos de venta + plataformas) | 315.270 | **368.811** | `count(*) FROM entity` |
+| `vehicle` (filas totales) | 1.353.104 | **1.492.160** | `count(*) FROM vehicle` |
+| `vehicle` available | 1.351.729 | **1.490.785** (+ gone 1.375 == count*) | `count(*) WHERE status='available'` |
+| `platform_listing` (aristas) | 1.306.900 | **1.445.469** | `count(*) FROM platform_listing` |
+| `vehicle_event` (delta/historial) | 1.356.203 | **1.495.282** | `count(*) FROM vehicle_event` |
+| Provincias / Municipios con entidades | 52 / 4.757 | **52 / 5.025** | `distinct province / (province,municipality)` |
+| **Dealers distintos con own-site** (no-edge, no-plataforma) | — | **332** | `count(DISTINCT entity_ulid)` veh sin arista |
+| **Coches own-site** (no-edge, no-plataforma) | — | **46.691** | `count(*)` veh sin arista |
+| Entidades con `website` poblado | — | **1.884** | `count(*) WHERE website<>''` |
+
+> La deriva absoluta (+53.541 entidades, +139.056 vehículos sobre §8) refleja **ingesta viva continua +
+> los siete sub-frentes de esta ola**, NO descuadre: el snapshot cuadra consigo mismo (av 1.490.785 + gone
+> 1.375 == count* 1.492.160). Siguen vigentes las advertencias de §2 (doble-conteo coches.com REFUTED,
+> long-tail no aditivo, dedup cross-plataforma) sobre el total: **NO es la suma limpia de grupos disjuntos**.
+> Las métricas own-site son el **superset no-edge** (todo coche servido fuera de marketplace), más amplio
+> que el slice de 110 "atestados" que reportó el sub-frente `drain_all_ownsites` (ése era el roster de
+> familias con receta; éste incluye además geo/asociación/cadena que también sirven own-site).
+
+### A. discover_associations — +409 entidades / +327 coches · VAM TRUSTWORTHY
+> Minó los directorios oficiales de asociaciones españolas de concesionarios por puntos de venta ausentes
+> de los conectores previos.
+
+| Camino | Cifra | Verificado AHORA |
+|---|---|---|
+| entidades nuevas (`source_group='association'`) | **409** | `count(*) FROM entity WHERE source_group='association'` = 409 ✅ |
+| coches nuevos (JOIN veh→entity asociación) | **327** | `count(*)` veh JOIN entity association = 327 ✅ |
+| cdp_codes duplicados | **0** | sin colisión |
+| coches huérfanos | **0** | toda arista con `vehicle` |
+| asociaciones sin provincia | **0** | `count(*) FILTER (province_code IS NULL)` = 0 ✅ |
+
+- Cosecha own-site DealerK: `harvested_pairs=327 == db_family_vehicles=327` (veredicto auto-reportado
+  TRUSTWORTHY, confirmado contra DB: las 5 entidades-asociación con coches suman exactamente 327 own-site).
+- **WALLED / no enumerable sin auth** (sondeado y excluido honestamente, NO inventado): Faconauto (gateway
+  de federación, sin lista pública de miembros), GANVAM (~7.500 firmas, herramientas tras login), ANCOVE
+  (compraventa nacional, contenidos solo afiliados), ANCOPEL (Opel; página concesionarios-asociados devuelve
+  404 vivo, widget de mapa retirado), AECS members-zone (zona-asociados auth-walled — el `directorio-asociados`
+  público SÍ se minó). 26 miembros AEDRA saltados: su página de detalle no traía dirección alguna (provincia
+  no resoluble sin fabricar geo). Los miembros AEDRA son desguazadores (venden piezas, no stock VO), así que
+  no aplica cosecha own-site a los 75 con web.
+- **Nota pre-existente:** 2 entidades DealerK con provincia NULL (uniocasio.cat, lexusmadrid.es) de una
+  corrida previa 2026-06-12, fuera de este frente, sin tocar.
+
+### B. discover_geographic — +68 entidades / +0 coches · VAM TRUSTWORTHY
+> Barrido geográfico del "garaje perdido": dealers locales distintos ausentes del censo.
+
+| Camino | Cifra | Verificado AHORA |
+|---|---|---|
+| entidades nuevas (`first_discovered_source='geo_sweep'`) | **68** | `count(*)` = 68, == filas `entity_source` geo_sweep ✅ |
+| colisión de host con entidad previa | **0** | todas genuinamente nuevas |
+| con `website` poblado | **68 / 68** | 100% con web ✅ |
+| provincias con ≥1 dealer nuevo | **36 / 52** | `count(DISTINCT province_code)` = 36 ✅ |
+| kind | compraventa 59 · desguace 7 · concesionario_oficial 1 · garaje 1 | GROUP BY kind ✅ (suma 68) |
+
+- Cosecha own-site reportada: 51/68 alcanzables, 40/68 cosechables (≥3 tokens precio con slug de listado);
+  los coches resultantes cuelgan del superset own-site, no como aristas nuevas (de ahí +0 en el conteo de
+  esta ola: los coches de geo se cuentan en el bloque directory/own-site, no duplicados aquí).
+- **GAP declarado:** el barrido muestreó capitales + 2ª/3ª ciudad, no un censo exhaustivo del long-tail;
+  WebSearch devuelve solo la 1ª página por query, así que pueblos pequeños quedan sin barrer. El cierre 100%
+  del suelo ~44k exige ingerir los dumps geo legales (Foursquare OS Places Apache-2.0, Overture CDLA) +
+  Páginas Amarillas por rubro — ya catalogados en `SOURCES_ES.md`, fuera del scope de este frente. Google
+  Places API **deliberadamente NO usado** (ToS prohíbe indexar/cachear — riesgo legal marcado en el censo);
+  sustituido por web-search→own-site, el camino legal.
+
+### C. discover_directories — +0 entidades / +0 coches · VAM (HONESTO: nada commiteado)
+> Construyó y validó el pipeline directory-discovery (Páginas Amarillas) end-to-end, pero **rehusó
+> commitear** salida stale.
+
+- **Verificado AHORA:** `count(*) FROM entity_source WHERE source_key='paginas_amarillas' = 0`. Ningún
+  commit ha corrido → **0 entidades nuevas en la DB viva** de este frente. La cifra es honesta, no un cero
+  de pereza.
+- El dry-run Álava-only (78 filas, 62 candidato-nuevas tras dedup contra 1.156 hosts + 230.841 claves
+  name+muni) fue **sanity-check del pipeline, NO un resultado commiteado** — se rehusó porque llevaba
+  etiquetas `concesionario_oficial` stale anteriores al fix de clasificación.
+- **GAP:** la cosecha nacional de 52 provincias con clasificación corregida **sigue corriendo** sin escribir
+  salida; el único fichero en disco es el test Álava de 78 filas. Para cerrar: esperar la cosecha
+  (`docs/research/paginas_amarillas_raw.json`), luego `python -m scripts.upsert_paginas_amarillas --commit`
+  y re-verificar el conteo. Directorios secundarios evaluados y mayormente NO rentables tras dedup con PA:
+  QDQ (muerto, 404), Cylex (403 WAF duro a curl_cffi), Axesor (404 categoría), Infoisinfo + Empresite/
+  elEconomista (vivos pero name-scoped, solapan PA → rendimiento marginal).
+
+### D. chains_more — +2 entidades / +1.882 coches · VAM TRUSTWORTHY
+> Conectó las dos últimas cadenas nacionales VO genuinas que faltaban.
+
+| Cadena | own-site host | coches caged | Nota |
+|---|---|---|---|
+| **Clicars** | clicars.com | **1.470** distinct | `data-filter-num-rows=1492`; 799 ids cross-página colapsados por el conector (solape SSR, no pérdida) |
+| **Carplus** | carplus.es | **412** | límite de página vacía exacto en pág. 27, sin gap |
+
+- **Verificado AHORA contra DB:** entidad `Clicars` (website=clicars.com) = **1.470** coches own-site;
+  entidad `Carplus` (website=carplus.es) = **412** coches own-site. VAM 3 caminos del sub-frente
+  (edges==join==owned==1.470) confirmado.
+- El ~22 de gap Clicars (1.492 declarado vs 1.470 distinct) son listados duplicados/rotatorios colapsados,
+  NO coches perdidos — éste es el conteo distinct honesto.
+
+### E. rentacar_more — +2 entidades / +46 coches · VAM TRUSTWORTHY
+> Conectó 2 flotas VO rent-a-car nuevas al grupo `rentacar_vo`.
+
+| Miembro nuevo | coches | db_edges == db_join == harvested |
+|---|---|---|
+| **Centauro** | **28** | 28 == 28 == 28 ✅ |
+| **Record Go** | **18** | 18 == 18 == 18 ✅ |
+
+- **Verificado AHORA:** `rentacar_vo` ahora lista Centauro (28) y Record Go Ocasión (18) además del spine
+  previo (OK Mobility 169, Arval AutoSelect 1.172, Northgate 108). Re-run idempotente: 0 nuevos.
+- **GAP declarado:** Sixt ES (sin storefront VO español: `/coches-ocasion` 404, su negocio GW es DE-only),
+  Europcar + Goldcar (ex-flota vendida SOLO vía plataforma B2B registration-gated `2ndmove.es`/`b2b.2ndmove.eu`,
+  sin stock público navegable; su presencia en motorflash/coches.net ya la cubren los conectores marketplace
+  → caged desde ahí sería doble-conteo). Registrados como gaps, no fabricados.
+
+### F. drain_all_ownsites — +7 entidades / +487 coches · VAM TRUSTWORTHY
+> Drenó el roster own-site alcanzable COMPLETO (309 dominios, no el slice de prueba) ejecutando cada
+> familia de receta.
+
+| family_slice | coches drenados | divergencia |
+|---|---|---|
+| dealerk | 2.059 | 0,0 |
+| generic | 1.029 | 0,0 |
+| cms | 518 | 0,0 |
+| builder | 432 | 0,0 |
+| framework | 358 | 0,0 |
+| dms | 799 | 0,0 |
+| unreachable | 246 | 0,0 |
+
+- **Veredicto auto-reportado:** 110 dealers own-site atestados / 10.665 coches own-site post-drain (slice
+  de familia con receta), arriba de 103 / 10.178 baseline; suma de harvested-pairs del run = 5.441 a través
+  de 86 dealers productores. (El superset no-edge global — 332 dealers / 46.691 coches — es más amplio que
+  este slice atestado, ver Globales.)
+- **GAP (dos techos declarados, no silenciados):** (1) 138 de 165 hosts cms/wordpress alcanzables dieron
+  CERO ('WordPress sin tema de card conocido / sin Vehica REST') — temas WP custom genéricos cuyo markup
+  varía por sitio; el parser cms solo drena Vehica-REST + temas reconocidos (stm_motors, auto_listing,
+  ga-car-card, sc_cars_item). (2) `generic_custom` es registry-bound POR DISEÑO (recetas bespoke por dealer),
+  así que los otros 73 dominios generic/custom alcanzables se saltaron como 'unknown dealer'. Ambos son
+  frentes de autoría-de-recetas (~211 dominios WP/generic sin tocar), no un drain de roster. 5 miembros
+  builder son JS-only (sin SSR/JSON-LD, 0 honesto) — exigirían navegador stealth.
+
+### G. Veredicto de cierre de descubrimiento
+- **EXPANSIÓN LANDED:** +409 (asociaciones) + 68 (geo) + 2 (cadenas) + 2 (rent-a-car) + 7 (own-site drain)
+  = **+488 entidades de descubrimiento commiteadas y DB-verificadas**, con sus coches (327 + 1.882 + 46 +
+  487 ≈ 2.742 coches nuevos sobre estos rosters, todos VAM ≥2 caminos). El censo de own-site queda en
+  **332 dealers distintos / 46.691 coches** servidos fuera de marketplace.
+- **NO COMMITEADO (declarado honesto):** discover_directories = **0** (cosecha nacional aún corriendo,
+  test stale rehusado). Es un cero verdadero, no fingido.
+- **GAPS GENUINOS del frente de descubrimiento** (con evidencia, no asumidos): asociaciones WALLED sin lista
+  pública (Faconauto/GANVAM/ANCOVE/ANCOPEL/AECS-zona); long-tail geográfico sin censo exhaustivo (suelo ~44k
+  exige dumps Foursquare/Overture + PA por rubro, catalogados en `SOURCES_ES.md`); ~211 dominios WP/generic
+  sin receta; 5 builder JS-only; Google Places excluido por ToS (camino legal sustituido).
+- **Cero números inflados. Cada cifra de esta sección contada AHORA contra la DB viva por ≥2 caminos
+  ortogonales o marcada UNVERIFIED / NOT-COMMITTED.**

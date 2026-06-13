@@ -433,6 +433,98 @@ def _northgate_parse_page(payload: str) -> tuple[list[Vehicle], int | None]:
     return out, (len(out) or None)
 
 
+# ===========================================================================
+# MEMBER: Athlon Car Outlet — operational-LEASING ex-fleet (renting_vo), NOT a
+# tourist rent-a-car. Athlon (Daimler/Mercedes-Benz Mobility) leases fleets to
+# companies and liquidates the returned cars. The buyer-facing storefront is an
+# Angular SPA (occasions.services.athlon.com), but its listing ROOT is SERVER-
+# rendered: the first ~52 cars ship as static <div.cardetail> markup in the
+# index HTML, reachable with a plain Chrome TLS fingerprint (no browser). The
+# deeper stock (114 declared by the IRT facets API) loads via an in-app POST to
+# the Athlon IRT 'search' endpoint whose query DSL is undocumented (returns HTTP
+# 500 to every probed body) — that full drain is a future IRT-search pass; here
+# we cage the SSR slice honestly and record declared_full=114 for VAM arithmetic.
+#
+# Surface (probed live 2026-06-13): GET https://occasions.services.athlon.com/es/
+# -> 635 KB SSR HTML, 52 <div.cardetail> cards. Each card:
+#   anchor  : <a href="./{make}/{model}/{plate}">  -> deep_link (plate = listing_ref)
+#   make/model/version: h3.brand > span.make / span.model / span.type
+#   dl.specs > dd (FIXED 6-slot order, slot 2 may be empty when no energy label):
+#     dd0 reg 'MM-YYYY' -> year ; dd1 'NN.NNN Km' -> km ; dd2 energy label ;
+#     dd3 fuel ; dd4(full-width) transmission ; dd5(full-width) location/depot
+#   div.price : 'NN.NNN&nbsp;€' -> price ; img.src : media.services.irt.athlon.com
+# 'renting_vo' is a LOGICAL family tag (the entity_kind/source_group enums have no
+# renting_vo literal); the entity stays kind=rent_a_car_vo, source_group=rentacar_vo
+# so the existing caged Athlon entity (CDP-ES-08-...) is REUSED, never duplicated.
+# ===========================================================================
+_ATH_APP = "https://occasions.services.athlon.com/es/"
+_ATH_CARD_SPLIT = re.compile(r'(?=<a [^>]*href="\./[^"]+/[0-9A-Z]{5,9}"[^>]*>\s*<div[^>]*class="[^"]*cardetail)')
+_ATH_RE_HREF = re.compile(r'href="\./([a-z0-9-]+/[a-z0-9-]+/([0-9A-Z]{5,9}))"')
+_ATH_RE_MAKE = re.compile(r'class="make"[^>]*>([^<]+)<')
+_ATH_RE_MODEL = re.compile(r'class="model"[^>]*>([^<]*)<')
+_ATH_RE_TYPE = re.compile(r'class="type"[^>]*>([^<]*)<')
+_ATH_RE_DD = re.compile(r'<dd[^>]*>(.*?)</dd>', re.S)
+_ATH_RE_PRICE = re.compile(r'class="price"[^>]*>\s*([\d.]+)')
+_ATH_RE_IMG = re.compile(r'<img[^>]+src="(https://media\.services\.irt\.athlon\.com/[^"]+)"')
+_ATH_REG_RE = re.compile(r'(\d{2})-(\d{4})')
+
+
+def _ath_clean(raw: str) -> str:
+    """Strip tags/svg/entities from a <dd> inner; collapse whitespace and the &nbsp; the
+    price/specs carry. Returns '' for an empty slot (energy label is sometimes absent)."""
+    txt = re.sub(r"<svg.*?</svg>", "", raw, flags=re.S)
+    txt = re.sub(r"<[^>]+>", "", txt)
+    txt = _htmllib.unescape(txt).replace("\xa0", " ")
+    return re.sub(r"\s+", " ", txt).strip()
+
+
+def _ath_year_from_reg(reg: str | None) -> int | None:
+    """'MM-YYYY' first-registration -> the registration YEAR (the surface gives month+year)."""
+    if not reg:
+        return None
+    m = _ATH_REG_RE.search(reg)
+    if not m:
+        return None
+    y = int(m.group(2))
+    return y if 1990 <= y <= _dt.date.today().year + 1 else None
+
+
+def _athlon_parse_page(html: str) -> tuple[list[Vehicle], int | None]:
+    """Parse the Athlon SSR storefront page -> (vehicles, None). The full-stock count is NOT in
+    this HTML (it lives in the IRT facets API, fetched once by the member); declared total is
+    therefore supplied by the member's declared_total, not parsed here."""
+    vehicles: list[Vehicle] = []
+    for block in _ATH_CARD_SPLIT.split(html):
+        href_m = _ATH_RE_HREF.search(block)
+        if not href_m or "cardetail" not in block:
+            continue
+        path, plate = href_m.group(1), href_m.group(2)
+        deep_link = _ATH_APP.rstrip("/") + "/" + path
+        make_m = _ATH_RE_MAKE.search(block)
+        model_m = _ATH_RE_MODEL.search(block)
+        type_m = _ATH_RE_TYPE.search(block)
+        make = _htmllib.unescape(make_m.group(1).strip()) if make_m else None
+        model = _htmllib.unescape(model_m.group(1).strip()) if model_m else None
+        version = _htmllib.unescape(type_m.group(1).strip()) if type_m else None
+        dds = [_ath_clean(d) for d in _ATH_RE_DD.findall(block)]
+        # FIXED 6-slot dl.specs: [reg, km, energyLabel, fuel, transmission, location].
+        year = _ath_year_from_reg(dds[0]) if len(dds) >= 1 else None
+        km = _km_to_int(dds[1]) if len(dds) >= 2 else None
+        fuel = (dds[3] or None) if len(dds) >= 4 else None
+        trans = (dds[4] or None) if len(dds) >= 5 else None
+        price_m = _ATH_RE_PRICE.search(block)
+        img_m = _ATH_RE_IMG.search(block)
+        title_bits = [b for b in (make, model, version) if b]
+        vehicles.append(Vehicle(
+            deep_link=deep_link, listing_ref=plate,
+            title=" ".join(title_bits) if title_bits else None,
+            make=make, model=model, version=version,
+            year=year, km=km, price=_eur_to_float(price_m.group(1)) if price_m else None,
+            fuel=fuel, transmission=trans,
+            photo_url=img_m.group(1) if img_m else None))
+    return vehicles, None
+
+
 # ---------------------------------------------------------------------------
 # Member registry — identity + the surface contract for each company.
 # ---------------------------------------------------------------------------
@@ -585,7 +677,73 @@ def _northgate_recipe() -> dict:
     }
 
 
+def _athlon_recipe() -> dict:
+    return {
+        "version": 1, "source": "athloncaroutlet.es", "group": "rentacar_vo",
+        "subtype": "renting_vo",  # operational-LEASING ex-fleet, distinct from tourist rentacar_vo.
+        "scope": ("renting_vo wholesale (Athlon Car Outlet operational-leasing ex-fleet used-stock; "
+                  "Angular SPA whose listing ROOT is server-rendered with static card markup)"),
+        "engine": "curl_cffi+chrome131_impersonate+ssr_html_cardetail_markup(GET)",
+        "access": ("OPEN server-rendered HTML (Chrome TLS fingerprint; no proxy/browser/cookie). The "
+                   "Angular app at occasions.services.athlon.com prerenders the first ~52 cars as static "
+                   "<div.cardetail> markup in the index HTML -> reachable WITHOUT a browser. The deeper "
+                   "stock loads via an in-app POST to the Athlon IRT 'search' DSL (undocumented; HTTP 500 "
+                   "to every probed body) -> that full drain is a future IRT-search pass. t1_soft."),
+        "endpoint": "GET https://occasions.services.athlon.com/es/",
+        "enumeration": ("single SSR view (~52 cars in static markup). Full stock declared by the unauth "
+                        "IRT facets API GET https://services.athlon.com/api/irt/secured/employee/"
+                        "athloncaroutletes/facets (sum of fuel facet counts = 114 live)."),
+        "ownership": ("Athlon (Mercedes-Benz Mobility) is an operational-LEASING operator selling its "
+                      "returned ex-fleet cars -> the company is the singular selling point and OWNS every "
+                      "car; platform_listing edge records the listing. owner entity == platform entity. "
+                      "HQ Santa Perpetua de Mogoda (Barcelona, 08); per-car location is the delivery depot."),
+        "renting_vo_note": ("renting_vo = operational-leasing operators (Athlon/Arval/Alphabet/Northgate) "
+                            "selling ex-fleet cars, distinct from tourist rentacar (OK Mobility/Centauro). "
+                            "Stored under entity_kind=rent_a_car_vo + source_group=rentacar_vo because the "
+                            "enums carry no 'renting_vo' literal; the distinction lives in family/subtype."),
+        "field_map": {
+            "deep_link": "a href './{make}/{model}/{plate}' (absolutised against /es/)",
+            "listing_ref": "license plate (e.g. 5294LYB) = trailing path segment",
+            "make": "h3.brand span.make", "model": "h3.brand span.model",
+            "version": "h3.brand span.type",
+            "year": "dl.specs dd[0] 'MM-YYYY' -> YYYY", "km": "dl.specs dd[1] 'NN.NNN Km'",
+            "energy_label": "dl.specs dd[2] (ECO/C/cero; sometimes empty)",
+            "fuel": "dl.specs dd[3]", "transmission": "dl.specs dd[4].full-width (AUT7/Manual)",
+            "location": "dl.specs dd[5].full-width (delivery depot)",
+            "price": "div.price 'NN.NNN €'", "photo_url": "img src (media.services.irt.athlon.com)"},
+        "caveats": {
+            "ssr_slice": ("the SSR HTML renders a fixed ~52-card window regardless of ?page/?makes params; "
+                          "the remaining cars (114 declared - ~52 SSR) require the IRT 'search' POST DSL "
+                          "(undocumented, 500 on every probed body) -> deferred to a future pass, declared."),
+            "dd_order": ("dl.specs is a FIXED 6-slot list [reg, km, energyLabel, fuel, transmission, "
+                         "location]; slot 2 (energyLabel) is sometimes empty but never reordered, so "
+                         "positional parsing is stable."),
+            "alphabet_gap": ("Alphabet (the sibling renting_vo operator) has NO free public ES storefront: "
+                             "alphabet-used-cars.es does not resolve, and Alphabet ex-fleet stock is sold "
+                             "through the registration-gated BCA 'Exclusive Alphabet Auction' (es.bca-"
+                             "europe.com) -> already covered by group_subastas_bca; re-caging would double-"
+                             "count, so it is NOT connected here."),
+            "dedup": ("Arval AutoSelect and Northgate Ocasión (the other renting_vo operators) are already "
+                      "connected as live members of this same connector; only Athlon was previously DEFERRED "
+                      "(0 edges) and is promoted here. cdp_code mints from 'domain:athloncaroutlet.es'+HQ "
+                      "province 08, identical to the existing caged entity -> reused, never duplicated."),
+        },
+    }
+
+
 MEMBERS: dict[str, Member] = {
+    "athlon": Member(
+        key="athlon", domain="athloncaroutlet.es", website="athloncaroutlet.es",
+        legal_name="Athlon Car Lease Spain S.A.", trade_name="Athlon Car Outlet",
+        source_key="group_rentacar_vo_athlon", family="athlon_renting_vo_ssr",
+        hq_province="08", hq_city="Santa Perpètua de Mogoda",
+        hq_municipality_name="Santa Perpètua de Mogoda",
+        endpoint="https://occasions.services.athlon.com/es/", page_param=None,
+        default_pages=1, page_size_hint=52, parse_page=_athlon_parse_page,
+        referer="https://www.athloncaroutlet.es/", declared_total=114, recipe=_athlon_recipe(),
+        role="chain", defense_tier="t1_soft",
+        accept="text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        data_surface="next_data"),
     "okmobility": Member(
         key="okmobility", domain="okmobility.com", website="okmobility.com",
         legal_name="OK Mobility Group", trade_name="OK Mobility",
@@ -1096,44 +1254,13 @@ def _print_member(stats: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# DEFERRED member — reachable but browser-required (Angular-hydrated SPA).
-# Caged as a rentacar_vo entity with its recipe, but the ex-fleet stock drain is
-# deferred to a camoufox/Playwright hydrate pass. We register the SELLING POINT
-# and its recipe honestly; we do NOT fabricate stock from the empty static HTML.
+# DEFERRED members — reachable but browser-required (no static SSR slice).
+# Caged as a selling-point entity with its recipe WITHOUT harvesting stock. We
+# register the SELLING POINT honestly; we never fabricate stock from empty HTML.
+# (Athlon was promoted to a LIVE member above once its SSR card slice was proven
+# curl_cffi-reachable; the registry stays so future deferred members can use it.)
 # ---------------------------------------------------------------------------
-DEFERRED_MEMBERS: dict[str, Member] = {
-    "athlon": Member(
-        key="athlon", domain="athloncaroutlet.es", website="athloncaroutlet.es",
-        legal_name="Athlon Car Lease Spain S.A.", trade_name="Athlon Car Outlet",
-        source_key="group_rentacar_vo_athlon", family="athlon_irt_angular_hydrated",
-        hq_province="08", hq_city="Santa Perpètua de Mogoda",
-        hq_municipality_name="Santa Perpètua de Mogoda",
-        endpoint="https://www.athloncaroutlet.es/buscar-coches/", page_param=None,
-        default_pages=1, page_size_hint=114, parse_page=lambda _t: ([], 114),
-        referer="https://www.athloncaroutlet.es/", declared_total=114,
-        recipe={
-            "version": 1, "source": "athloncaroutlet.es", "group": "rentacar_vo",
-            "scope": "rentacar_vo wholesale (Athlon Car Outlet ex-renting used-stock; Angular IRT SPA)",
-            "engine": "camoufox/playwright_hydrate+dom_card_parse (DEFERRED; not curl_cffi-reachable)",
-            "access": ("Angular SPA (occasions.services.athlon.com) fed by the Athlon IRT API "
-                       "(services.athlon.com/api/irt/secured/employee/athloncaroutletes/{facets,search}). "
-                       "'facets' GET is unauth and declares 114; the 'search' POST uses an undocumented "
-                       "query DSL and the listing HTML is client-rendered (absent from raw curl). "
-                       "-> browser hydrate required. t2_js_challenge."),
-            "endpoint": "GET https://www.athloncaroutlet.es/buscar-coches/ (hydrate, parse .cardetail)",
-            "enumeration": "single hydrated page; facets declare 114 cars.",
-            "deep_link": "https://www.athloncaroutlet.es/buscar-coches/{make}/{model}/{licensePlate}",
-            "field_map": {
-                "listing_ref": "license plate (e.g. 5294LYB) in the deep-link path",
-                "make_model_version": ".cardetail text + img alt",
-                "year": "MM-YYYY reg line", "km": "'NN.NNN Km' line",
-                "energy_label": "ECO/C/cero line", "fuel": "Diesel/Gasolina line",
-                "transmission": "AUT7/Manual line", "location": "depot line",
-                "price": "'NN.NNN €' line", "photo_url": "media.services.irt.athlon.com AssetId"},
-            "status": "DEFERRED — entity caged; stock drain pending camoufox hydrate pass.",
-        },
-        defense_tier="t2_js_challenge", http_method="GET", data_surface="internal_api"),
-}
+DEFERRED_MEMBERS: dict[str, Member] = {}
 
 
 async def register_deferred(keys: list[str]) -> None:
