@@ -1,0 +1,42 @@
+# Cardeep extraction recipe — CDP-ES-00-S3K8PK50
+# Reusable; re-scrape without raw crude.
+version: 1
+source: Subastacar (subastas de coches; subastacar.com)
+group: subastas (car auction / remarketing); source_group=official_registry
+scope: platform-wholesale (full public catalog; SSR listing + per-car schema.org JSON-LD)
+engine: curl_cffi+chrome131_impersonate+ssr_html+jsonld
+access: PUBLIC. The entire catalog is server-rendered HTML visible to an anonymous chrome131 GET with NO login. Listing /coches-segunda-mano-ocasion/?pagina=N paginates ('<N> resultados en <P> Páginas'); each detail page embeds a schema.org `vehicle` JSON-LD block (brand/model/VIN/mileage/year/fuel/transmission/offers.price/images). A 'solo profesionales' login exists for an iframe bidding portal, but the STOCK itself is fully public. defense_tier=t0_open, website_waf=none, is_tier1=FALSE.
+data_surface: json_ld
+surface_intent: jsonld
+endpoint: GET https://www.subastacar.com/coches-segunda-mano-ocasion/?pagina=N (listing); GET <detail url> (schema.org vehicle JSON-LD)
+enumeration: page the listing ?pagina=N collecting detail anchors (/coches-segunda-mano-ocasion/comprar-<slug>/<hash>), stop when a page yields no NEW link (natural end) bounded by a runaway guard; dedup on the URL hash; fetch each detail and parse its schema.org vehicle JSON-LD. Aged-out cars (a Subastacar edge not seen this run) are reconciled to status=gone/removed (no phantom stale).
+denominator: the site's own '<N> resultados en <P> Páginas' total (238 verified live 2026-06-13) — the EXACT denominator, not a guess. This is the VAM denominator.
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=official_registry, role=platform, family=subastacar
+seller_model: Subastacar is a SINGLE auction marketplace (no calendar of discrete sale events), so the selling point is the platform-as-auction-house: ONE national entity kind='subasta' (province NULL), role='registry'. Every car is owned by it. No per-lot dealer/province exists on this surface; no province is fabricated.
+dual_membership: vehicle.entity_ulid=national auction-house seller (subasta); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: the detail URL
+  listing_ref: the URL hash (stable per-car id + dedup key)
+  make: ld.brand.name
+  model: ld.model
+  year: ld.dateVehicleFirstRegistered (YYYY) | ld.modelDate
+  km: ld.mileageFromOdometer.value
+  price: ld.offers.price (explicit asking price)
+  fuel: ld.vehicleEngine.fuelType (-> Spanish label)
+  transmission: ld.vehicleTransmission (-> Manual/Automático)
+  photo_url: ld.image[0].url
+  vin: ld.vehicleIdentificationNumber
+gate_documented:
+  auto1: buy surface /es/cars 302->/es/merchant/signin; 30k-car stock behind professional login. GATED.
+  openlane_adesa: /es/findcar is a ~6KB Angular SPA shell, no public data layer; B2B dealer login. GATED.
+  manheim_es: /vehiculos 404 on public host; catalog behind buyer login (B2B). GATED.
+  alcopa: listing host answers 405/WAF to a plain fetch; B2B. GATED.
+  aucto: DNS does not resolve / connection refused. GATED (unreachable).
+  ucars: ucars.es DNS does not resolve; no reachable ES auction operator under the name. UNREACHABLE.
+  reezocar: French consumer car-import aggregator, not an ES B2B auction; /used-cars 404s. OUT OF SCOPE.
+  epicauctions_carmen: no identifiable ES car-auction operator resolves under either name. UNREACHABLE (confessed).
+  subastacar: PUBLIC SSR + schema.org JSON-LD (with offers.price) — the one extra auction op exposing full public stock. CONNECTED.
+caveats:
+  full_catalog: the drain caps at the site's own '<N> resultados' total — full catalog, not a slice.
+  no_geo: auction cars have no per-lot province; the seller is national (province NULL).
+  single_seller: one national auction-house seller (no per-lot dealer on this surface).

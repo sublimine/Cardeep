@@ -1,0 +1,24 @@
+# Cardeep extraction recipe — CDP-ES-00-WN1DMGRN
+# Reusable; re-scrape without raw crude.
+version: 1
+source: motorflash
+scope: platform-wholesale (dealer-index aggregator)
+engine: curl_cffi+chrome_impersonate+json_ld
+access: OPEN (CloudFront, no wall; Chrome UA over Chrome TLS). is_tier1=false
+data_surface: json_ld
+enumeration: sitemap.concesionarios.xml -> /concesionario/{slug}/.../{id}/ (paginated) -> PDP Car JSON-LD
+platform_entity: kind=plataforma, source_group=marketplace_motor, province_code=NULL
+geo_constraint: dealer geo HIDDEN by Motorflash; dealers caged province NULL, merged by cross-platform dedup
+dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle
+field_map:
+  deep_link: PDP url /coche-segunda-mano/{slug}/ocasion/{id}-es/
+  listing_ref: PDP id (motorflash native)
+  make: Car.brand.name
+  model: Car.model
+  year: Car.vehicleModelDate
+  km: Car.mileageFromOdometer.value
+  price: Car.offers.price
+  fuel: Car.fuelType
+  transmission: Car.vehicleTransmission
+  photo_url: Car.image[0]
+  dealer: Car.offers.seller {AutoDealer name, telephone} + page H1 + concesionarios sitemap slug/id

@@ -5,28 +5,15 @@ source: okmobility.com
 group: rentacar_vo
 scope: rentacar_vo wholesale (OK Mobility SSR HTML used-stock storefront, per-page paginated)
 engine: curl_cffi+chrome131_impersonate+ssr_html_embedded_card_markup(GET)
-access: OPEN server-rendered HTML (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). '/en/' locale serves; '/es/' 404s. Public site carries an Opticks bot beacon -> defense_tier t1_soft; the listing HTML itself is unwalled.
-data_surface: sitemap
-surface_intent: ssr_html_embedded_card_markup
+access: OPEN server-rendered HTML (Chrome TLS fingerprint; no proxy/browser/cookie). '/en/' serves; '/es/' 404s. Opticks bot beacon on the public site -> t1_soft; the listing HTML is unwalled.
 endpoint: GET https://okmobility.com/en/buy-car/used?page=N
-enumeration: ?page=1..N (~35 cars/SSR page); id="total-cars" declares the full stock (172 live)
-platform_entity: kind=rent_a_car_vo, province_code=07 (Palma HQ), is_tier1=FALSE, defense_tier=t1_soft, source_group=rentacar_vo, role=chain, family=okmobility
-ownership: the rent-a-car COMPANY is the singular selling point -> it OWNS every ex-fleet car (vehicle.entity_ulid=company). platform_listing edge=company<->vehicle records the listing. owner entity == platform entity (single-operator storefront).
-branches: showroom network recorded for a future per-branch pass (NOT exposed per-car on the list surface): Palma/Gran Via Asima+Levante+Manacor (07009/07007/07500), Barcelona/El Prat+Calonge (08), Bilbao/Sestao (48910), Cuenca (16004), Jaén (23009)
+enumeration: ?page=1..N (~35 cars/page); id="total-cars" declares full stock (172 live)
 field_map:
-  deep_link: a.own-car-card href (absolute /en/buy-car/used/{brand}/{model}/{trim}/{sku}/{id})
-  listing_ref: a.own-car-card data-carid (internal OK Mobility car id; stable dedup key)
-  progiciel_id: URL tail id (data-carProgicielId; stock/progiciel id)
-  make_model: div.car-name (make = first token; model = remainder)
-  version: div.car-motorization (e.g. '1.0 TSI 95')
-  summary: div.car-summary spans = [year | km | fuel | transmission]
-  price: div.paying-prices div.big-cipher-text (ES thousands; current price)
-  prev_price: div.deleted-small-cipher-text (previous price -> price-drop delta)
-  fuel: car-summary[2] (Gasoline/Diesel/Electric/Hybrid; raw EN label)
-  transmission: car-summary[3] (Manual/Automatic; raw EN label)
-  photo_url: div.car-image data-srcbg (cdn.okrentacar.es — ex-rental fleet CDN)
-caveats:
-  locale: '/en/' serves HTTP 200; '/es/' 404s on this surface.
-  encoding: the € glyph is UTF-8 over the wire; decode content as UTF-8 (prices are clean digits).
-  no_per_branch_geo: the listing surface does not attribute a car to a showroom branch; the company is anchored to its HQ province (07) and owns the car. A per-branch owner is NOT fabricated; the detail page carries store=<id> for a later pass.
-  members: group rentacar_vo also includes Centauro (centauro.net, Next.js app — needs an XHR probe), Record Go (recordgoocasion.es, WordPress sitemap + SSR PDP), Sixt/Europcar/Goldcar — added as further members under this same architecture.
+  deep_link: a.own-car-card href
+  listing_ref: data-carid
+  make_model: div.car-name
+  version: div.car-motorization
+  summary: div.car-summary spans [year|km|fuel|transmission]
+  price: div.big-cipher-text
+  prev_price: div.deleted-small-cipher-text
+  photo_url: div.car-image data-srcbg (cdn.okrentacar.es)

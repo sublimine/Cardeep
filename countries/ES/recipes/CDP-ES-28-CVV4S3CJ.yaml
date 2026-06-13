@@ -1,0 +1,24 @@
+# Cardeep extraction recipe — CDP-ES-28-CVV4S3CJ
+# Reusable; re-scrape without raw crude.
+version: 1
+source: autoselect.arval.es
+group: rentacar_vo
+scope: rentacar_vo wholesale (Arval AutoSelect ex-fleet used-stock; JSON Announcements API)
+engine: curl_cffi+chrome131_impersonate+json_api(GET)
+access: OPEN JSON. The React storefront (autoselect.arval.es) is fed by the Azure portal API; we harvest the API JSON directly (Chrome TLS fingerprint; no key/cookie/browser). t1_soft.
+endpoint: GET https://arval-prod-euw-appservice-portalapi.azurewebsites.net/api/Announcements/4?pageNumber=N&pageSize=24
+enumeration: ?pageNumber=1..M&pageSize=24 (24 cars/page). announcements.allAnnouncementsCount declares full stock (1172 live).
+ownership: Arval (BNP Paribas) is the singular selling point -> owns every ex-fleet car; platform_listing edge records the offer. owner entity == platform entity. HQ Madrid; per-car 'location' (Madrid Loeches/Algete/Sevilla...) is the depot.
+field_map:
+  deep_link: offerUrl
+  listing_ref: id (int)
+  make: make
+  model: model
+  version: trim
+  price: salePriceGross
+  prev_price: previousSalePriceGross (>ask -> drop delta)
+  km: details.mileage
+  year: details.registrationYear
+  fuel: details.fuelTypeLabel
+  transmission: details.gearbox
+  photo_url: mainImage (arvalprodeuwsa.blob.core.windows.net)

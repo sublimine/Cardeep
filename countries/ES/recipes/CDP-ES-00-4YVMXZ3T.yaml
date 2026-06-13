@@ -1,0 +1,30 @@
+# Cardeep extraction recipe — CDP-ES-00-4YVMXZ3T
+# Reusable; re-scrape without raw crude.
+version: 1
+source: carplus.es
+group: chain
+scope: vo_chains wholesale (Carplus SSR JSON-LD standalone Vehicle blocks, per-page paginated)
+engine: curl_cffi+chrome131_impersonate+ssr_jsonld_vehicles(GET)
+access: OPEN server-rendered HTML carrying schema.org JSON-LD (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). No WAF -> t0_open.
+data_surface: json_ld
+surface_intent: ssr_jsonld_vehicles
+endpoint: GET https://www.carplus.es/coches-segunda-mano/?page=N
+enumeration: ?page=1..N paginates server-side; 16 standalone @type:Vehicle blocks/page (NOT an ItemList). Boundary walked live: pages 1..25=16, page 26=12, 27+=0 (=412 cars). Carplus does not declare a machine-readable full count on the SRP.
+platform_entity: kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=chain, role=chain, family=carplus
+ownership: CHAIN-AS-OWNER: the SRP does not attribute a car to a 'centro', so the chain owns every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle.
+field_map:
+  deep_link: Vehicle.offers.url (.../coche/{slug}-{vin}/)
+  listing_ref: deep-link tail before trailing '/' = VIN (stable native id)
+  make: Vehicle.brand.name
+  model: Vehicle.model
+  title: Vehicle.name
+  year: Vehicle.productionDate (ISO -> YYYY)
+  km: Vehicle.mileageFromOdometer.value
+  price: Vehicle.offers.price (EUR)
+  fuel: Vehicle.fuelType
+  transmission: Vehicle.vehicleTransmission
+  photo_url: Vehicle.image
+caveats:
+  no_itemlist: cars are 16 STANDALONE @type:Vehicle scripts per page, not one ItemList.
+  no_declared_total: the SRP exposes no offerCount/total; full stock is established by walking to the empty-page boundary (page where 0 Vehicle blocks return).
+  members: see Flexicar recipe; member of source_group='chain'.

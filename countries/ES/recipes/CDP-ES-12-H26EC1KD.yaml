@@ -1,0 +1,20 @@
+# Cardeep extraction recipe — CDP-ES-12-H26EC1KD
+# Reusable; re-scrape without raw crude.
+version: 1
+source: recordgoocasion.es
+group: rentacar_vo
+scope: rentacar_vo wholesale (Record Go DealerK/MotorK WordPress used-stock storefront)
+engine: curl_cffi+chrome131_impersonate+dealerk_vcard_html(GET)
+access: OPEN server-rendered DealerK/MotorK WordPress (cdn.dealerk.es, vcard-* classes) — the SAME CMS family family_dealerk_wholesale already harvests; its parser reads this site byte-for-byte. t1_soft.
+endpoint: GET https://www.recordgoocasion.es/coches/segunda-mano/
+enumeration: single listing page (no ?page; /page/2/ 404s). The Yoast stock_listing_0-sitemap.xml is empty -> harvest the listing page. meta declares 18 coches 'desde 10.200 €'
+per_car_url: /coches/segunda-mano/{city}/{brand}/{model}/{fuel}/{trim}/{id}/
+ownership: the rent-a-car COMPANY owns every ex-fleet car; platform_listing edge records the listing. per-car city is in the URL (valencia/sevilla/malaga) but ownership stays with the company, anchored to its Castellón HQ.
+field_map:
+  deep_link: vcard PDP anchor href (.../<id>/)
+  listing_ref: numeric id in the path
+  make_model: vcard-main-info__make-model
+  version: vcard-main-info__version
+  price: vcard-price__price
+  year/km/fuel: vcard-consumption__title 'MM/YYYY - KM Km - Fuel'
+  photo_url: cdn.dealerk.es vehicle image

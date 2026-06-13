@@ -1,0 +1,30 @@
+# Cardeep extraction recipe — CDP-ES-00-QCMVM26T
+# Reusable; re-scrape without raw crude.
+version: 1
+source: clicars.com
+group: chain
+scope: vo_chains wholesale (Clicars SSR HTML car cards, per-page paginated)
+engine: curl_cffi+chrome131_impersonate+ssr_html_cards(GET)
+access: OPEN server-rendered HTML (Chrome TLS fingerprint; no proxy, no browser, no cookie warm-up). Cloudflare fronts the host but serves NO challenge to chrome131 -> t0_open.
+data_surface: next_data
+surface_intent: ssr_html_cards
+endpoint: GET https://www.clicars.com/coches-segunda-mano-ocasion?page=N
+enumeration: ?page=1..N paginates SERVER-side (disjoint id set per page); 12 cards/page. The SRP declares data-filter-num-rows (full stock, 1494 live) and data-pages (125).
+platform_entity: kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=chain, role=chain, family=clicars
+ownership: CHAIN-AS-OWNER: Clicars is a central online retailer (nationwide delivery); the SRP never attributes a car to a physical branch, so the chain OWNS every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle.
+field_map:
+  listing_ref: card <a data-vehicle-web-id> (native stock id == deep-link tail)
+  deep_link: card <a href> .../comprar-{slug}-{id}
+  make: data-analytics-vehicle-maker (else h2 strong head)
+  model: data-analytics-vehicle-model
+  version: h2 span.version
+  title: h2 strong (Make Model) + version
+  year/km/transmission: h2 span.info '{year} | {km}km | {CV}CV | {Manual|Automático}'
+  fuel: span.fuelName (Gasolina/Diésel/Híbrido/…)
+  price: data-price-web (web price EUR; ES thousands '.')
+  photo_url: img.vehicle-img src
+caveats:
+  card_anchor: split on the INNER clickable '<a data-vehicle-web-id>' — the OUTER wrapper '<div data-vehicle-web-id>' is offset by one vs the inner <a>, so splitting on the wrapper misaligns id<->fields. Inner-<a> split keeps id==deep-link tail.
+  data_json: storage.googleapis.com/.../others/data.json.gz is ONLY facet metadata (makers/fuels/bodies), NOT stock — confirmed via Playwright XHR capture.
+  data_surface_label: schema enum has no 'ssr_html' literal; data_surface stored as 'next_data' (the closest first-party-render literal) with surface_intent precise.
+  members: see Flexicar recipe; Clicars/Carplus join Flexicar/OcasionPlus in source_group='chain'.

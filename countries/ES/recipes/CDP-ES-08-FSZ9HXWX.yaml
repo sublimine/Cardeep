@@ -1,0 +1,23 @@
+# Cardeep extraction recipe — CDP-ES-08-FSZ9HXWX
+# Reusable; re-scrape without raw crude.
+version: 1
+source: athloncaroutlet.es
+group: rentacar_vo
+scope: rentacar_vo wholesale (Athlon Car Outlet ex-renting used-stock; Angular IRT SPA)
+engine: camoufox/playwright_hydrate+dom_card_parse (DEFERRED; not curl_cffi-reachable)
+access: Angular SPA (occasions.services.athlon.com) fed by the Athlon IRT API (services.athlon.com/api/irt/secured/employee/athloncaroutletes/{facets,search}). 'facets' GET is unauth and declares 114; the 'search' POST uses an undocumented query DSL and the listing HTML is client-rendered (absent from raw curl). -> browser hydrate required. t2_js_challenge.
+endpoint: GET https://www.athloncaroutlet.es/buscar-coches/ (hydrate, parse .cardetail)
+enumeration: single hydrated page; facets declare 114 cars.
+deep_link: https://www.athloncaroutlet.es/buscar-coches/{make}/{model}/{licensePlate}
+field_map:
+  listing_ref: license plate (e.g. 5294LYB) in the deep-link path
+  make_model_version: .cardetail text + img alt
+  year: MM-YYYY reg line
+  km: 'NN.NNN Km' line
+  energy_label: ECO/C/cero line
+  fuel: Diesel/Gasolina line
+  transmission: AUT7/Manual line
+  location: depot line
+  price: 'NN.NNN €' line
+  photo_url: media.services.irt.athlon.com AssetId
+status: DEFERRED — entity caged; stock drain pending camoufox hydrate pass.

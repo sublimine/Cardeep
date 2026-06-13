@@ -1,0 +1,43 @@
+# Cardeep extraction recipe — CDP-ES-00-5R30HVA7
+# Reusable; re-scrape without raw crude.
+version: 1
+source: seat_cupra_new (seat.es/localizador-stock + cupra.com/es-es/localizador-stock)
+scope: platform-wholesale (SEAT + CUPRA ES OFFICIAL NEW-CAR stock locator; VW-Group VTP REST API)
+engine: curl_cffi+chrome131_impersonate+vtp_internal_json_api(GET)
+access: OPEN (t0_open). VTP serves 200 application/json to PLAIN curl_cffi when the x-pattern header is present (seatwebfe/cuprawebfe); without it -> 401 VtpApiUnauthorized. No proxy, no browser, no cookie warm-up, no auth token, €0. Transient 500 INTERNAL ERROR under burst -> short retry clears it. is_tier1=FALSE.
+data_surface: internal_api
+surface_intent: vtp_stock_locator_json_api
+endpoint: GET https://vtpapi.seat.com/restapi/v1/{stockType}/search/car
+request:
+  stock_type:
+    seat: stesnwb
+    cupra: cuesnwb
+  headers: x-pattern: seatwebfe|cuprawebfe (ACCESS GATE), x-page (1-based PAGE), x-page-items (page size, <=12), x-sort PRICE_SALE, x-sort-direction ASC
+  note: no region matrix param -> the full national set; PER-CAR dealer zip yields province.
+enumeration: PER BRAND: x-page=1..N step 1 (PAGE_SIZE=12). The default sort is NOT stable across pages -> DEDUP on car.carid across the whole drain. Stop on empty cars[] or page*size >= declared total.
+denominator: Σ criteria.search.criterias[t_body].possibleItems[].number (cars matching empty filter)
+platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_dealer_network, role=platform, family=vw_group_new
+dual_membership: vehicle.entity_ulid=SELLING official dealer (concesionario_oficial); platform_listing edge=platform<->vehicle, segment='new'
+field_map:
+  deep_link: constructed {pdp_base}?carid={carid} (payload href is the datastore URL)
+  listing_ref: car.carid (stable id + dedup key, e.g. ESP0A411034050-2026-781)
+  title: items.localCarTitle (fallback manuf+model)
+  make: items.manuf
+  model: items.model
+  year: items.dateproduction[:4] (fallback dateoffer[:4])
+  km: 0 (brand-new stock — no mileage field on the surface)
+  price: items.prices.values[sale].raw_value (EUR; list = PVP)
+  fuel: items.motor.values[fuel]
+  transmission: items.gear
+  photo: car.images[].imageGroup.images[].image.href (render)
+  dealer: car.hypermediadealer.dealer.items {dealer_id_snw, name, city, region, street, zip, phone, website, position.latitude/longitude}
+  location: dealer.zip[:2] = INE province (authoritative); position lat/lon -> ProvinceGeocoder fallback; dealer.city -> municipality (INE-resolved)
+segment: new (every car: available_from=Immediately, dateproduction set, no mileage)
+caveats:
+  x_pattern_gate: the x-pattern header is the only access gate; it is brand-specific.
+  page_size: x-page-items <= 12; the host 500s on larger page sizes.
+  unstable_sort: PRICE_SALE/ASC repeats items across pages -> carid dedup is mandatory.
+  transient_500: the host emits transient 500 under burst; retry with backoff.
+  encoding: a few human-text fields are latin-1 mojibake; repair with encode/decode.
+  all_official_dealers: OEM new-stock locator — every car belongs to an official dealer.
+verified_live: 2026-06-13 (SEAT ~1733, CUPRA ~1063 national; plain curl_cffi chrome131).

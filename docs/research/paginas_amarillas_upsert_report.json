@@ -1,0 +1,192 @@
+{
+ "source": "paginas_amarillas",
+ "committed": false,
+ "stats": {
+  "new": 62,
+  "dup": 16
+ },
+ "new_by_kind": {
+  "concesionario_oficial": 36,
+  "garaje": 2,
+  "desguace": 6,
+  "compraventa": 18
+ },
+ "new_with_site": 9,
+ "examples": [
+  {
+   "name": "Euro Fleet Cars",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": "http://www.euro-fleet.com"
+  },
+  {
+   "name": "Talleres Garaje Zigoitia",
+   "kind": "garaje",
+   "muni": "01059",
+   "prov": "01",
+   "website": "http://garajezigoita.es"
+  },
+  {
+   "name": "Talleres Chapime",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": "https://www.tallereschapime.es"
+  },
+  {
+   "name": "VehÃ­culos Industriales Arme",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Motor Gorbea",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Jundiz Caravaning Center",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Automoviles El Carmen S.L.",
+   "kind": "concesionario_oficial",
+   "muni": "01036",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Jeep Vitoria Ãlava Lascaray Concesionario Jeep Oficial",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Euro Fleet Cars Xxi, S.L.",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "FRANCISCO JAVIER SANCHEZ SAEZ",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Universal Araba",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Parking Caravanas San Mames",
+   "kind": "concesionario_oficial",
+   "muni": "01002",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Subscar",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Deltavi, S.A. - Alfa Romeo Dealer",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Centro De Servicio Porsche Vitoria",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Concesionario \"audi Ciarsa\"",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "ALGASA",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Moyauto",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Concesionario Oficial Ford Talleres Iaki",
+   "kind": "concesionario_oficial",
+   "muni": "01036",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Lejarazusport",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "SsangYong Sport Movil JuliÃ¡n",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Lasauto",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Sv Car",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Puntocasion",
+   "kind": "concesionario_oficial",
+   "muni": null,
+   "prov": "01",
+   "website": null
+  },
+  {
+   "name": "Garaje Moderno",
+   "kind": "concesionario_oficial",
+   "muni": "01059",
+   "prov": "01",
+   "website": "https://www.beedigital.es/planes/"
+  }
+ ]
+}

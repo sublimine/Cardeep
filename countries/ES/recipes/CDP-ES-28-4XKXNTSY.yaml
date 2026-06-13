@@ -1,0 +1,23 @@
+# Cardeep extraction recipe — CDP-ES-28-4XKXNTSY
+# Reusable; re-scrape without raw crude.
+version: 1
+source: northgate.es
+group: rentacar_vo
+scope: rentacar_vo wholesale (Northgate Ocasión ex-renting used-stock; AEM catalogsearch JSON)
+engine: curl_cffi+chrome131_impersonate+json_post_full_array(POST)
+access: OPEN JSON. AEM catalogsearch servlet returns the WHOLE stock array in one POST (the React/AEM front paginates client-side). Body 'type[]=' triggers the array; 'filter=""' returns only facet metadata. t1_soft.
+endpoint: POST https://www.northgate.es/content/northgate/es/vehiculos-ocasion/jcr:content.catalogsearch.html  (body: type[]=)
+enumeration: single POST -> full array (108 live); no server pagination needed.
+ownership: Northgate Renting is the singular selling point -> owns every ex-renting car; platform_listing edge records the listing. owner entity == platform entity. HQ Madrid; per-car 'province' is the centre that holds the car.
+field_map:
+  deep_link: url (/vehiculos-ocasion/catalogo/...-{id})
+  listing_ref: id
+  make: brand
+  model: model
+  version: version
+  price: price
+  km: km
+  year: year
+  fuel: fuel
+  province: province (per-car centre)
+  photo_url: imagePaths[0]

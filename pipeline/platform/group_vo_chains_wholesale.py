@@ -7,7 +7,10 @@ or the chain COMPANY itself when the surface does not attribute a car to a branc
 the selling point is caged as the entity and every car is OWNED BY it, exactly as a
 marketplace's dealer owns its cars.
 
-This connector opens TWO members with the cleanest data-layer surfaces (probed live 2026-06-13):
+This connector opens FOUR members (probed live 2026-06-13). The first two below run the two owner
+models (Flexicar=per-branch, OcasionPlus=chain-as-owner); Clicars and Carplus are two MORE
+chain-as-owner members added on the same architecture (member 3 = Clicars SSR HTML cards, member 4 =
+Carplus SSR JSON-LD Vehicle blocks), so the whole vo_chains group is one file, not a fork per chain:
 
   1. FLEXICAR (flexicar.es) — kind='cadena', source_group='chain', role='chain'.
      The platform/chain entity is the brand. Each car attributes to its REAL SELLING BRANCH
@@ -51,9 +54,33 @@ PROOF SLICE, NOT THE FULL HARVEST. Flexicar declares ~23,874 cars (995 pages × 
 ~14,052 (~703 pages × 20). The full drain is the full governed run; here each member caps at
 MAX_PAGES (logged honestly) and the declared full count is recorded for the VAM slice arithmetic.
 
+  3. CLICARS (clicars.com) — kind='cadena', source_group='chain', role='chain'. CHAIN-AS-OWNER:
+     a central online retailer (nationwide delivery); the search surface never attributes a car to a
+     physical branch, so the chain OWNS every car (owner entity == platform entity). Surface: a
+     server-rendered HTML listing. `GET .../coches-segunda-mano-ocasion?page=N` returns 12 car cards;
+     `?page=N` paginates SERVER-side. The page declares data-filter-num-rows=1494 (full stock) and
+     data-pages=125. Each clickable card `<a data-vehicle-web-id>` co-locates make/model/version,
+     the info span ({year}|{km}km|{CV}CV|{trans}), span.fuelName, data-price-web, the photo and the
+     deep link whose tail is the native id. Cloudflare fronts the host but serves NO challenge to a
+     Chrome TLS fingerprint -> t0_open. (The data.json.gz on storage.googleapis is ONLY facet
+     metadata, never stock — verified via a Playwright XHR capture.)
+
+  4. CARPLUS (carplus.es) — kind='cadena', source_group='chain', role='chain'. CHAIN-AS-OWNER (the
+     SRP does not attribute a car to a 'centro'). Surface: SSR HTML emitting 16 STANDALONE
+     schema.org `@type:Vehicle` JSON-LD blocks per page (NOT one ItemList). `GET
+     .../coches-segunda-mano/?page=N` paginates server-side; the empty-page boundary (walked live)
+     is page 27 -> 412 cars. Each Vehicle carries brand.name, model, vehicleTransmission, fuelType,
+     productionDate (ISO->year), mileageFromOdometer.value, offers.price/url and image; the deep-link
+     tail before the trailing '/' is the VIN -> the stable native listing_ref. No WAF -> t0_open.
+
+PROOF/FULL: Flexicar declares ~23,874; OcasionPlus ~14,052; Clicars 1,494; Carplus 412. Each member
+caps at MAX_PAGES (logged honestly) and records the declared full count for the VAM slice arithmetic;
+the full drain is the full governed run (pages high enough to reach each member's boundary).
+
 Run: python -m pipeline.platform.group_vo_chains_wholesale --pages 6
      python -m pipeline.platform.group_vo_chains_wholesale --members flexicar --pages 10
-     python -m pipeline.platform.group_vo_chains_wholesale --members ocasionplus --pages 8
+     python -m pipeline.platform.group_vo_chains_wholesale --members clicars --pages 130
+     python -m pipeline.platform.group_vo_chains_wholesale --members carplus --pages 30
 """
 from __future__ import annotations
 
@@ -337,6 +364,215 @@ def parse_ocasionplus_page(html: str) -> tuple[list[Vehicle], int | None]:
 
 
 # ===========================================================================
+# CLICARS member (chain-as-owner model; SSR HTML car cards)
+# ===========================================================================
+#
+# clicars.com is an online used-car RETAILER (Madrid-centric, nationwide delivery). The car a buyer
+# purchases has ONE real selling point — Clicars the chain — because the search-results surface never
+# attributes a car to a physical branch (Clicars sells centrally and ships), so the chain OWNS every
+# car (owner entity == platform entity), exactly like OcasionPlus and OK Mobility.
+#
+# Surface (probed live 2026-06-13, Playwright network capture + curl_cffi): a server-rendered HTML
+# listing. `GET https://www.clicars.com/coches-segunda-mano-ocasion?page=N` returns 12 car cards in
+# the HTML; `?page=N` paginates SERVER-side (page 2 yields a disjoint id set vs page 1). Cloudflare
+# fronts the host but serves NO challenge to a Chrome TLS fingerprint -> defense_tier t0_open. The
+# page declares `data-filter-num-rows="1494"` (full stock) and `data-pages="125"` (12*125 ~= 1494).
+# The `data.json.gz` on storage.googleapis.com is ONLY facet metadata (makers/fuels/bodies), NOT the
+# stock — verified; the cars live in the SSR HTML, parsed from the clickable card `<a>`.
+#
+# CRITICAL parse anchor: each card's CLICKABLE `<a data-vehicle-web-id="ID" ...>` co-locates every
+# field for that car (the OUTER wrapper `<div data-vehicle-web-id>` is offset by one vs the inner
+# `<a>`, so splitting on the wrapper misaligns id<->fields). We split on the inner `<a ...>` so the
+# id always equals the deep-link tail (verified 12/12 aligned).
+
+CLI_DOMAIN = "clicars.com"
+CLI_LEGAL_NAME = "Clicars"
+CLI_TRADE_NAME = "Clicars"
+CLI_SOURCE_KEY = "group_vo_chains_clicars"
+CLI_FAMILY = "clicars"
+CLI_SRP = "https://www.clicars.com/coches-segunda-mano-ocasion"
+CLI_PAGE_SIZE = 12  # cars per SSR page (data-pages * 12 ~= data-filter-num-rows).
+CLI_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "es-ES,es;q=0.9",
+    "Referer": "https://www.clicars.com/",
+}
+# Each card's clickable <a> carries data-vehicle-web-id AND all fields for that exact car.
+_CLI_CARD_RE = re.compile(r'<a\s+data-vehicle-web-id="(\d+)"(.*?)</a>', re.S)
+_CLI_HREF_RE = re.compile(
+    r'href="(https://www\.clicars\.com/coches-segunda-mano-ocasion/comprar-[^"]+?-(\d+))"')
+_CLI_MAKER_RE = re.compile(r'data-analytics-vehicle-maker="([^"]*)"')
+_CLI_MODEL_RE = re.compile(r'data-analytics-vehicle-model="([^"]*)"')
+_CLI_H2_RE = re.compile(
+    r'<h2 class="maker ellipsis"><strong>([^<]*)</strong>\s*'
+    r'<span class="version ellipsis">([^<]*)</span>\s*'
+    r'<span class="info ellipsis">\s*([^<]*)</span>', re.S)
+_CLI_FUEL_RE = re.compile(r'<span class="fuelName">([^<]*)</span>')
+_CLI_PRICE_RE = re.compile(r'data-price-web="([^"]*)"')
+_CLI_IMG_RE = re.compile(r'<img\s+class="vehicle-img"[^>]*\bsrc="([^"]+)"')
+_CLI_TOTAL_RE = re.compile(r'data-filter-num-rows="(\d+)"')
+# the info span is "{year} | {km}km | {CV}CV | {Manual|Automático}".
+_CLI_INFO_RE = re.compile(
+    r'(?P<year>\d{4})\s*\|\s*(?P<km>[\d.\s]+)km\s*\|\s*[\d.\s]+CV\s*\|\s*(?P<trans>[^|]+)$')
+
+
+def _price_eur(raw) -> float | None:
+    """Parse an ES-formatted euro string ('16.990€', '12.490 €') to a float. '.' is the thousands
+    separator; ',' (rare on these surfaces) is decimal. Returns None when not a real amount."""
+    if raw is None:
+        return None
+    s = re.sub(r"[^\d,]", "", str(raw))
+    if not s:
+        return None
+    if "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    try:
+        v = float(s)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
+def _km_int(raw) -> int | None:
+    """Parse an ES-formatted km string ('146.419') to an int (drop thousands dots)."""
+    if raw is None:
+        return None
+    digits = re.sub(r"[^\d]", "", str(raw))
+    if not digits:
+        return None
+    km = int(digits)
+    return km if 0 <= km <= 5_000_000 else None
+
+
+def parse_clicars_page(html_text: str) -> tuple[list[Vehicle], int | None]:
+    """Parse a Clicars SSR page -> (vehicles, declared_total). One Vehicle per clickable card `<a>`;
+    declared_total from data-filter-num-rows. Each card's id == its deep-link tail (kept aligned by
+    splitting on the inner `<a data-vehicle-web-id>`)."""
+    import html as _html
+    declared = None
+    m = _CLI_TOTAL_RE.search(html_text)
+    if m:
+        declared = _to_int(m.group(1))
+    vehicles: list[Vehicle] = []
+    for wid, body in _CLI_CARD_RE.findall(html_text):
+        href_m = _CLI_HREF_RE.search(body)
+        if not href_m:
+            continue
+        deep_link, tail_id = href_m.group(1), href_m.group(2)
+        # the clickable card id is the authoritative native ref; it equals the deep-link tail.
+        listing_ref = wid or tail_id
+        maker_m = _CLI_MAKER_RE.search(body)
+        model_m = _CLI_MODEL_RE.search(body)
+        h2_m = _CLI_H2_RE.search(body)
+        make = maker_m.group(1) if maker_m else (h2_m.group(1).split(" ", 1)[0] if h2_m else None)
+        model = model_m.group(1) if model_m else None
+        version = _html.unescape(h2_m.group(2).strip()) if h2_m else None
+        head = _html.unescape(h2_m.group(1).strip()) if h2_m else None  # "Make Model"
+        title = " ".join(p for p in (head, version) if p) or (model or None)
+        year = km = None
+        trans = None
+        if h2_m:
+            info_m = _CLI_INFO_RE.search(h2_m.group(3).strip())
+            if info_m:
+                year = _to_int(info_m.group("year"))
+                if year is not None and not (1900 <= year <= 2100):
+                    year = None
+                km = _km_int(info_m.group("km"))
+                trans = info_m.group("trans").strip() or None
+        fuel_m = _CLI_FUEL_RE.search(body)
+        price_m = _CLI_PRICE_RE.search(body)
+        img_m = _CLI_IMG_RE.search(body)
+        vehicles.append(Vehicle(
+            deep_link=deep_link, listing_ref=str(listing_ref), title=title,
+            make=make, model=model, year=year, km=km,
+            price=_price_eur(price_m.group(1)) if price_m else None, prev_price=None,
+            fuel=_html.unescape(fuel_m.group(1).strip()) if fuel_m else None,
+            transmission=trans, photo_url=img_m.group(1) if img_m else None,
+            branch_slug=None))
+    return vehicles, declared
+
+
+# ===========================================================================
+# CARPLUS member (chain-as-owner model; SSR JSON-LD standalone Vehicle blocks)
+# ===========================================================================
+#
+# carplus.es is a used/km0 chain. Like Clicars/OcasionPlus the search surface does not attribute a
+# car to a physical 'centro', so the chain OWNS every car (owner entity == platform entity).
+#
+# Surface (probed live 2026-06-13): SSR HTML emitting schema.org JSON-LD — but as 16 STANDALONE
+# `@type:Vehicle` script blocks per page (NOT one ItemList). `GET .../coches-segunda-mano/?page=N`
+# paginates server-side; walked to the boundary live: pages 1..25 = 16 cars, page 26 = 12, 27+ = 0
+# (= 412 cars). No WAF -> t0_open. Each Vehicle carries brand.name, model, vehicleTransmission,
+# fuelType, productionDate (ISO->year), mileageFromOdometer.value (km), offers.price (EUR),
+# offers.url (deep link), image. The deep-link tail (before the trailing '/') is the VIN -> the
+# stable native listing_ref.
+
+CP_DOMAIN = "carplus.es"
+CP_LEGAL_NAME = "Carplus"
+CP_TRADE_NAME = "Carplus"
+CP_SOURCE_KEY = "group_vo_chains_carplus"
+CP_FAMILY = "carplus"
+CP_SRP = "https://www.carplus.es/coches-segunda-mano/"
+CP_PAGE_SIZE = 16  # standalone Vehicle JSON-LD blocks per SSR page.
+CP_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "es-ES,es;q=0.9",
+    "Referer": "https://www.carplus.es/",
+}
+
+
+def _carplus_listing_ref(url: str) -> str:
+    """The Carplus deep link is '.../coche/<slug>-<vin>/'. The tail segment before the trailing '/'
+    is the VIN — the stable native id. Falls back to the whole path when no clean tail exists."""
+    clean = url.rstrip("/")
+    tail = clean.rsplit("/", 1)[-1]
+    vin = tail.rsplit("-", 1)[-1] if "-" in tail else tail
+    return vin or clean
+
+
+def parse_carplus_page(html_text: str) -> tuple[list[Vehicle], int | None]:
+    """Parse a Carplus SSR page -> (vehicles, None). Each car is a standalone `@type:Vehicle`
+    JSON-LD block; Carplus does not declare a machine-readable full stock count on the SRP, so the
+    declared total is established by the orchestrator walking to the empty-page boundary."""
+    vehicles: list[Vehicle] = []
+    for block in _LD_RE.findall(html_text):
+        try:
+            d = json.loads(block)
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(d, dict) or d.get("@type") != "Vehicle":
+            continue
+        offers = d.get("offers") or {}
+        if not isinstance(offers, dict):
+            offers = {}
+        url = offers.get("url") or d.get("url")
+        if not url:
+            continue
+        brand = d.get("brand") or {}
+        make = brand.get("name") if isinstance(brand, dict) else (brand or None)
+        price = offers.get("price")
+        try:
+            price = float(price) if price is not None else None
+        except (TypeError, ValueError):
+            price = None
+        if price is not None and price <= 0:
+            price = None
+        mileage = d.get("mileageFromOdometer") or {}
+        km = _to_int(mileage.get("value")) if isinstance(mileage, dict) else None
+        if km is not None and (km < 0 or km > 5_000_000):
+            km = None
+        vehicles.append(Vehicle(
+            deep_link=url, listing_ref=_carplus_listing_ref(url),
+            title=d.get("name") or d.get("model"),
+            make=make, model=d.get("model"),
+            year=_op_year(d.get("productionDate")), km=km, price=price,
+            prev_price=None, fuel=d.get("fuelType"),
+            transmission=d.get("vehicleTransmission"), photo_url=d.get("image"),
+            branch_slug=None))
+    return vehicles, None
+
+
+# ===========================================================================
 # Member descriptor — binds a chain's identity, owner model and fetch/parse contract.
 # ===========================================================================
 
@@ -437,6 +673,99 @@ OCASIONPLUS_RECIPE = {
 }
 
 
+CLICARS_RECIPE = {
+    "version": 1,
+    "source": "clicars.com",
+    "group": "chain",
+    "scope": "vo_chains wholesale (Clicars SSR HTML car cards, per-page paginated)",
+    "engine": "curl_cffi+chrome131_impersonate+ssr_html_cards(GET)",
+    "access": ("OPEN server-rendered HTML (Chrome TLS fingerprint; no proxy, no browser, no cookie "
+               "warm-up). Cloudflare fronts the host but serves NO challenge to chrome131 -> t0_open."),
+    "data_surface": "next_data",
+    "surface_intent": "ssr_html_cards",
+    "endpoint": "GET https://www.clicars.com/coches-segunda-mano-ocasion?page=N",
+    "enumeration": ("?page=1..N paginates SERVER-side (disjoint id set per page); 12 cards/page. The "
+                    "SRP declares data-filter-num-rows (full stock, 1494 live) and data-pages (125)."),
+    "platform_entity": ("kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, "
+                        "defense_tier=t0_open, source_group=chain, role=chain, family=clicars"),
+    "ownership": ("CHAIN-AS-OWNER: Clicars is a central online retailer (nationwide delivery); the SRP "
+                  "never attributes a car to a physical branch, so the chain OWNS every car "
+                  "(vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle."),
+    "field_map": {
+        "listing_ref": "card <a data-vehicle-web-id> (native stock id == deep-link tail)",
+        "deep_link": "card <a href> .../comprar-{slug}-{id}",
+        "make": "data-analytics-vehicle-maker (else h2 strong head)",
+        "model": "data-analytics-vehicle-model",
+        "version": "h2 span.version", "title": "h2 strong (Make Model) + version",
+        "year/km/transmission": "h2 span.info '{year} | {km}km | {CV}CV | {Manual|Automático}'",
+        "fuel": "span.fuelName (Gasolina/Diésel/Híbrido/…)",
+        "price": "data-price-web (web price EUR; ES thousands '.')",
+        "photo_url": "img.vehicle-img src",
+    },
+    "caveats": {
+        "card_anchor": ("split on the INNER clickable '<a data-vehicle-web-id>' — the OUTER wrapper "
+                        "'<div data-vehicle-web-id>' is offset by one vs the inner <a>, so splitting on "
+                        "the wrapper misaligns id<->fields. Inner-<a> split keeps id==deep-link tail."),
+        "data_json": ("storage.googleapis.com/.../others/data.json.gz is ONLY facet metadata "
+                      "(makers/fuels/bodies), NOT stock — confirmed via Playwright XHR capture."),
+        "data_surface_label": ("schema enum has no 'ssr_html' literal; data_surface stored as 'next_data' "
+                               "(the closest first-party-render literal) with surface_intent precise."),
+        "members": "see Flexicar recipe; Clicars/Carplus join Flexicar/OcasionPlus in source_group='chain'.",
+    },
+}
+
+CARPLUS_RECIPE = {
+    "version": 1,
+    "source": "carplus.es",
+    "group": "chain",
+    "scope": "vo_chains wholesale (Carplus SSR JSON-LD standalone Vehicle blocks, per-page paginated)",
+    "engine": "curl_cffi+chrome131_impersonate+ssr_jsonld_vehicles(GET)",
+    "access": ("OPEN server-rendered HTML carrying schema.org JSON-LD (Chrome TLS fingerprint; no "
+               "proxy, no browser, no cookie warm-up). No WAF -> t0_open."),
+    "data_surface": "json_ld",
+    "surface_intent": "ssr_jsonld_vehicles",
+    "endpoint": "GET https://www.carplus.es/coches-segunda-mano/?page=N",
+    "enumeration": ("?page=1..N paginates server-side; 16 standalone @type:Vehicle blocks/page (NOT an "
+                    "ItemList). Boundary walked live: pages 1..25=16, page 26=12, 27+=0 (=412 cars). "
+                    "Carplus does not declare a machine-readable full count on the SRP."),
+    "platform_entity": ("kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, "
+                        "defense_tier=t0_open, source_group=chain, role=chain, family=carplus"),
+    "ownership": ("CHAIN-AS-OWNER: the SRP does not attribute a car to a 'centro', so the chain owns "
+                  "every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle."),
+    "field_map": {
+        "deep_link": "Vehicle.offers.url (.../coche/{slug}-{vin}/)",
+        "listing_ref": "deep-link tail before trailing '/' = VIN (stable native id)",
+        "make": "Vehicle.brand.name", "model": "Vehicle.model", "title": "Vehicle.name",
+        "year": "Vehicle.productionDate (ISO -> YYYY)",
+        "km": "Vehicle.mileageFromOdometer.value", "price": "Vehicle.offers.price (EUR)",
+        "fuel": "Vehicle.fuelType", "transmission": "Vehicle.vehicleTransmission",
+        "photo_url": "Vehicle.image",
+    },
+    "caveats": {
+        "no_itemlist": "cars are 16 STANDALONE @type:Vehicle scripts per page, not one ItemList.",
+        "no_declared_total": ("the SRP exposes no offerCount/total; full stock is established by walking "
+                              "to the empty-page boundary (page where 0 Vehicle blocks return)."),
+        "members": "see Flexicar recipe; member of source_group='chain'.",
+    },
+}
+
+
+def build_clicars() -> Member:
+    return Member(
+        key=CLI_SOURCE_KEY, domain=CLI_DOMAIN, legal_name=CLI_LEGAL_NAME,
+        trade_name=CLI_TRADE_NAME, family=CLI_FAMILY, owner_model="chain",
+        data_surface="next_data", surface_intent="ssr_html_cards", endpoint=CLI_SRP,
+        host=host_of(CLI_SRP), page_size=CLI_PAGE_SIZE, recipe=CLICARS_RECIPE)
+
+
+def build_carplus() -> Member:
+    return Member(
+        key=CP_SOURCE_KEY, domain=CP_DOMAIN, legal_name=CP_LEGAL_NAME,
+        trade_name=CP_TRADE_NAME, family=CP_FAMILY, owner_model="chain",
+        data_surface="json_ld", surface_intent="ssr_jsonld_vehicles", endpoint=CP_SRP,
+        host=host_of(CP_SRP), page_size=CP_PAGE_SIZE, recipe=CARPLUS_RECIPE)
+
+
 def build_flexicar(geo_loaded_branches: dict[str, Branch] | None = None) -> Member:
     return Member(
         key=FLEXI_SOURCE_KEY, domain=FLEXI_DOMAIN, legal_name=FLEXI_LEGAL_NAME,
@@ -454,7 +783,8 @@ def build_ocasionplus() -> Member:
         host=host_of(OP_SRP), page_size=OP_PAGE_SIZE, recipe=OCASIONPLUS_RECIPE)
 
 
-MEMBER_BUILDERS = {"flexicar": build_flexicar, "ocasionplus": build_ocasionplus}
+MEMBER_BUILDERS = {"flexicar": build_flexicar, "ocasionplus": build_ocasionplus,
+                   "clicars": build_clicars, "carplus": build_carplus}
 
 
 # ===========================================================================
@@ -491,13 +821,28 @@ class ChainFetcher:
     def fetch_ocasionplus(self, url: str, *, page: int = 1, slot: int = 0) -> str:
         """Synchronous GET of one OcasionPlus SRP page on pool session `slot`. `page` rides as
         ?page=N. Returns raw HTML (the JSON-LD is embedded). Raises on non-200."""
+        return self.fetch_ssr_page(url, OP_HEADERS, page=page, slot=slot)
+
+    def fetch_ssr_page(self, url: str, headers: dict, *, page: int = 1, slot: int = 0) -> str:
+        """Synchronous GET of one server-rendered HTML SRP page on pool session `slot`. `page` rides
+        as ?page=N (>1). Returns raw HTML (Clicars cards / Carplus JSON-LD embedded). Raises on
+        non-200 so the breaker sees throttling. Generic over per-member request headers."""
         session = self._sessions[slot]
-        full = f"{url}?page={page}" if page and page > 1 else url
-        resp = session.get(full, headers=OP_HEADERS, impersonate=_IMPERSONATE, timeout=_TIMEOUT)
+        sep = "&" if "?" in url else "?"
+        full = f"{url}{sep}page={page}" if page and page > 1 else url
+        resp = session.get(full, headers=headers, impersonate=_IMPERSONATE, timeout=_TIMEOUT)
         self.last_status = resp.status_code
         if resp.status_code != 200:
             raise RuntimeError(f"HTTP {resp.status_code} on {full}")
         return resp.content.decode("utf-8", "replace")
+
+    def fetch_clicars(self, url: str, *, page: int = 1, slot: int = 0) -> str:
+        """Synchronous GET of one Clicars SSR page (?page=N) on pool session `slot`. Raw HTML."""
+        return self.fetch_ssr_page(url, CLI_HEADERS, page=page, slot=slot)
+
+    def fetch_carplus(self, url: str, *, page: int = 1, slot: int = 0) -> str:
+        """Synchronous GET of one Carplus SSR page (?page=N) on pool session `slot`. Raw HTML."""
+        return self.fetch_ssr_page(url, CP_HEADERS, page=page, slot=slot)
 
     async def fetch_async(self, governed_fetch, sync_callable, url: str, **kw) -> str:
         """Lease a pool slot, fetch THROUGH the governor on that slot, release it. `governed_fetch`
@@ -844,13 +1189,13 @@ async def harvest_member(conn: asyncpg.Connection, member_name: str, geo: GeoRes
     fetcher = ChainFetcher(pool_size=concurrency)
     gov = governor()
 
-    # build the member (Flexicar needs its branch directory loaded first).
+    # build the member (Flexicar needs its branch directory loaded first; the rest build directly).
     if member_name == "flexicar":
         governed_srp = gov.wrap_fetch_text(fetcher.fetch_ocasionplus)  # plain GET wrapper for the SRP
         branches = await _load_flexicar_branches(fetcher, governed_srp, geo)
         m = build_flexicar(branches)
     else:
-        m = build_ocasionplus()
+        m = builder()
 
     stats = {
         "member": member_name, "source_key": m.key, "owner_model": m.owner_model,
@@ -867,8 +1212,10 @@ async def harvest_member(conn: asyncpg.Connection, member_name: str, geo: GeoRes
               f"(graceful degradation, site still serves last snapshot).")
         return {**stats, "skipped": True, "reason": "breaker_open"}
 
-    # the governed fetch callable per surface (Flexicar=JSON API, OcasionPlus=SSR HTML).
-    if m.owner_model == "branch":
+    # the governed fetch callable per surface, routed by family:
+    #   flexicar    -> OPEN JSON API (GET ?page&size), per-branch owner;
+    #   ocasionplus -> SSR JSON-LD ItemList; clicars -> SSR HTML cards; carplus -> SSR JSON-LD Vehicles.
+    if m.family == FLEXI_FAMILY:
         governed = gov.wrap_fetch_text(fetcher.fetch_flexicar)
         def fetch_one(p):
             return fetcher.fetch_async(governed, fetcher.fetch_flexicar, m.endpoint,
@@ -878,6 +1225,18 @@ async def harvest_member(conn: asyncpg.Connection, member_name: str, geo: GeoRes
             results = data.get("results") or []
             declared = _to_int(data.get("total"))
             return [v for v in (parse_flexicar_vehicle(it) for it in results) if v], declared
+    elif m.family == CLI_FAMILY:
+        governed = gov.wrap_fetch_text(fetcher.fetch_clicars)
+        def fetch_one(p):
+            return fetcher.fetch_async(governed, fetcher.fetch_clicars, m.endpoint, page=p)
+        def parse_one(text):
+            return parse_clicars_page(text)
+    elif m.family == CP_FAMILY:
+        governed = gov.wrap_fetch_text(fetcher.fetch_carplus)
+        def fetch_one(p):
+            return fetcher.fetch_async(governed, fetcher.fetch_carplus, m.endpoint, page=p)
+        def parse_one(text):
+            return parse_carplus_page(text)
     else:
         governed = gov.wrap_fetch_text(fetcher.fetch_ocasionplus)
         def fetch_one(p):
@@ -1059,10 +1418,11 @@ def _force_utf8_stdout() -> None:
 def main() -> None:
     _force_utf8_stdout()
     parser = argparse.ArgumentParser(
-        description="vo_chains wholesale harvester (Flexicar JSON API + OcasionPlus SSR JSON-LD)")
-    parser.add_argument("--members", nargs="+", default=["flexicar", "ocasionplus"],
+        description=("vo_chains wholesale harvester (Flexicar JSON API + OcasionPlus/Carplus SSR "
+                     "JSON-LD + Clicars SSR HTML cards)"))
+    parser.add_argument("--members", nargs="+", default=["flexicar", "ocasionplus", "clicars", "carplus"],
                         choices=sorted(MEMBER_BUILDERS.keys()),
-                        help="which chain members to harvest; default both.")
+                        help="which chain members to harvest; default all four.")
     parser.add_argument("--pages", type=int, default=DEFAULT_MAX_PAGES,
                         help=f"pages to harvest per member; default {DEFAULT_MAX_PAGES}.")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY,

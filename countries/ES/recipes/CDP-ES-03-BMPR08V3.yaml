@@ -1,0 +1,25 @@
+# Cardeep extraction recipe — CDP-ES-03-BMPR08V3
+# Reusable; re-scrape without raw crude.
+version: 1
+source: centauro.net
+group: rentacar_vo
+scope: rentacar_vo wholesale (Centauro fully-SSR used-stock storefront, per-page paginated)
+engine: curl_cffi+chrome131_impersonate+ssr_html_form_card_markup(GET)
+access: OPEN server-rendered HTML on ventas.centauro.net (the React centauro.net app at /comprar-coche-segunda-mano/disponibilidad loads from content-api.centauro.net client-side; the SSR ventas surface needs no API/browser). t1_soft.
+endpoint: GET https://ventas.centauro.net/coches-ocasion/?pagina=N
+enumeration: ?pagina=1..N (12 cars/SSR page); page declares '<N> coches' (28 live)
+ownership: the rent-a-car COMPANY is the singular selling point -> it OWNS every ex-fleet car; platform_listing edge records the listing. owner entity == platform entity.
+field_map:
+  deep_link: a href /ficha-vehiculo-ocasion/{make-model-version-slug}/{id}
+  listing_ref: trailing numeric id in the ficha URL (stable dedup key)
+  make: hidden input marcaVehiculo
+  model: hidden input modeloVehiculo
+  version: ficha URL slug minus make+model tokens
+  price: hidden input precio (int euros)
+  prev_price: hidden input precioNuevo (factory-new price -> ex-fleet discount delta)
+  km: hidden input kilometros
+  year: hidden input mesesAntiguedad -> current_year - round(months/12)
+  photo_url: images.motorflash.com / media.staticmf.com (Centauro own-stock CDN)
+caveats:
+  no_fuel_transmission: not on the listing card (only on the PDP) -> left NULL, never faked.
+  year_is_derived: the surface exposes age-in-months, not a registration date; year is derived (current_year - round(months/12)), month/day not claimed.
