@@ -512,11 +512,23 @@ async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:
     """Mint the dealer's immutable cdp_code via the canonical generator.
 
-    Das WeltAuto dealers have no bare domain on this surface -> identity = name + location +
-    the stable VW-Group dealer number (Bnr, passed via `address` so two distinct dealers that
-    happen to share a name in one municipality never collapse to one entity)."""
+    Dealer identity is per-physical-installation, not per-vehicle.  Das WeltAuto emits the
+    InformationBnr in at least two formats for the same physical dealership depending on the
+    certified brand (VW/SEAT/SKODA/CUPRA/Audi): a 'C'-prefixed variant (e.g. C311K) and a
+    '0'-prefixed variant (e.g. 0311K), and occasionally a third pure-numeric format.  Using
+    ``address=f"bnr:{d.bnr}"`` as a discriminant caused each Bnr variant to hash to a
+    distinct cdp_code, fragmenting one physical dealer into 2-3 CARDEEP entities.
+
+    The stable, per-installation key is name + municipality_code (derived from InformationZIP
+    and InformationCity, which ARE stable for a given physical location).  The Bnr is
+    preserved as source_ref in entity_source for cross-source traceability without polluting
+    the identity hash.
+
+    Two distinct dealers that share both name and municipality are extremely rare in practice;
+    if they ever collide the entity_cluster reconciliation step will surface the conflict via
+    separate source_refs (Bnrs) attached to the same entity."""
     return cdp_code(province_code=d.province_code, domain=None, name=d.name,
-                    municipality_code=muni, address=f"bnr:{d.bnr}")
+                    municipality_code=muni, address=None)
 
 
 # ---------------------------------------------------------------------------

@@ -252,10 +252,14 @@ class DealerRef:
     """The selling Mercedes-Benz dealer parsed from a single car's card.
 
     mercedes_benz embeds the point-of-sale per card: the dealer NAME + a "<postalCode> <city>"
-    line, plus the stable dealerCode (the prefix of the "<dealerCode>-<carCode>" vehicle
-    identifier). Unlike spoticar (no postal code) the province comes from the postalCode (INE
-    first-2), and the municipality is best-effort from the city literal. dealer_id = dealerCode is
-    the stable per-dealer key for cross-source dedup and as the source_ref."""
+    line, plus a dealerCode (the prefix of the "<dealerCode>-<carCode>" vehicle identifier).
+    Unlike spoticar (no postal code) the province comes from the postalCode (INE first-2), and
+    the municipality is best-effort from the city literal.
+
+    NOTE: dealer_id (the dealerCode prefix) is NOT a stable per-installation key on this
+    surface — it varies nearly per-car in practice.  It is retained as source_ref for
+    lineage only.  The actual identity discriminant is name + postal_code + municipality
+    (see cdp_code_dealer)."""
     dealer_id: str
     name: str | None
     province_code: str | None
@@ -532,11 +536,23 @@ async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:
     """Mint the dealer's immutable cdp_code via the canonical generator.
 
-    mercedes_benz dealers have no bare domain on this surface -> identity = name + location + the
-    stable dealerCode (passed via `address` so two distinct POS that happen to share a name in one
-    municipality never collapse to one entity)."""
+    Dealer identity is per-physical-installation, not per-car. The dealerCode prefix
+    of the per-vehicle identifier ("<dealerCode>-<carCode>") looks like a stable dealer
+    key but in practice varies almost car-by-car on this surface, causing one entity per
+    vehicle (explosion ratio ~1.02 vehicles/entity, confirmed in DB: MOBILITY CENTRO =
+    480 entities / 488 cars). It is retained only as source_ref for lineage.
+
+    The conservative, never-fragmenting identity key is name + municipality_code (both
+    stable for a physical point-of-sale). ``address`` is left None so the canonical key
+    is purely name+municipality — a forward-fix must NEVER re-fragment a dealer, so the
+    postal code is deliberately kept OUT of the hash (a card that fails to parse its
+    postal would otherwise split off into a second entity). Separating two genuine
+    same-name/same-municipality installations apart (by postal or other signals) is the
+    job of the entity_cluster reconciliation step (B1.3), not the connector: the
+    connector emits a conservative identity, the cluster refines it. This matches the
+    das_weltauto OEM-VO connector, which uses the identical rule."""
     return cdp_code(province_code=d.province_code, domain=None, name=d.name,
-                    municipality_code=muni, address=f"dealer:{d.dealer_id}")
+                    municipality_code=muni, address=None)
 
 
 # ---------------------------------------------------------------------------
