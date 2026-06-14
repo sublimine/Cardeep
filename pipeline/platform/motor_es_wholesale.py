@@ -1471,11 +1471,22 @@ async def harvest(max_cells: int = DEFAULT_MAX_CELLS, limit: int = DEFAULT_LIMIT
         stats["recipe_path"] = str(recipe_path)
 
         # S-HEALTH heartbeat: record THIS run's outcome so the watchdog tracks motor.es,
-        # trips the breaker on a ban, and auto-repairs. OK when at least one unit of work
-        # landed (a facet cell drained OR an offer caged), no fetch error stopped the drain,
-        # and the VAM did not refute. (An offer-only segment drains 0 facet cells but still
-        # cages cars — so progress is measured by cars_caged, not cells alone.)
-        made_progress = stats["cells_drained"] > 0 or stats["cars_caged"] > 0
+        # trips the breaker on a ban, and auto-repairs.
+        #
+        # Progress definition (B3.4 fix — distinguishes normal cap-end from real failure):
+        #   pages_fetched > 0 : at least one listing page returned HTTP 200 from the host.
+        #       A cell that drained all 50 pages and naturally hit cap-end (no more cards,
+        #       or the loop exhausted range(1, CAP_PAGES+1)) has pages_fetched >= 1.
+        #       A ban/timeout before ANY page returns zero pages → real failure.
+        #   cars_caged > 0    : offer-segment runs (vn/catalog/renting) do NOT increment
+        #       pages_fetched (they fetch offer pages via harvest_offers, not drain_cell),
+        #       so caged cars are the correct signal for offer-only segments.
+        #
+        # A re-run of already-indexed inventory correctly returns pages_fetched > 0 with
+        # cars_caged == 0 (idempotent ingest, ON CONFLICT DO NOTHING) — run_ok stays True.
+        # A fetch_error from _harvest_facet_segment is a real network/server error and
+        # vetoes progress regardless.
+        made_progress = stats["pages_fetched"] > 0 or stats["cars_caged"] > 0
         run_ok = fetch_error is None and made_progress and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
         outcome = await record_run(
