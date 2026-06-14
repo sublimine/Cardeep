@@ -1,0 +1,22 @@
+{
+  "sample_size": 80,
+  "total_own_site_leads": 6798,
+  "counts": {
+    "MUERTO": 27,
+    "SIN_SITEMAP": 44,
+    "SITEMAP_SOLO": 9
+  },
+  "rates": {
+    "SCHEMA_ORG": 0.0,
+    "SITEMAP_SOLO": 11.2,
+    "SIN_SITEMAP": 55.0,
+    "MUERTO": 33.8
+  },
+  "projection": {
+    "SCHEMA_ORG_leads": 0,
+    "SITEMAP_SOLO_leads": 765,
+    "SIN_SITEMAP_leads": 3739,
+    "MUERTO_leads": 2294,
+    "avg_vehicle_urls_per_schema_org_site": 0
+  }
+}
