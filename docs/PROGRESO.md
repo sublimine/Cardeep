@@ -80,6 +80,46 @@ Gap accionable: ~14.035 leads sin inventario (10.913 Overture) = E2E descubrir�
 Sesgos confesados: denominador venta provincial ESTIMADO (ratio 451/45 = 0,2605 uniforme); filas
 por provincia ±2-3% (usan query B6.2); total nacional 20.320 es el canónico verificado 2 vías.
 
+## B5.7 — Generic dealer own-site scraper [VERIFICADO 2026-06-14]
+
+**Método construido y probado** — sitemap-first + schema.org/microdata. DMS identificado:
+`inventario.pro` (WordPress plugin WebSpark) = patrón dominante en España para dealers
+independientes con web propia. Sitemap: `auto_usate_0-sitemap.xml` / `/wp-sitemap.xml`.
+URLs: `/coches/{make}/{model}/{numeric_id}`. Datos: HTML microdata (`itemprop`), no JSON-LD.
+
+**Tasas (muestra verificada 250+ sitios)**:
+- SCHEMA_ORG (drenable directo): **~1.5-2%** del universo de webs propias
+- SITEMAP_SOLO (URLs presentes, sin datos estructurados): ~11%
+- SIN_SITEMAP (200 OK pero sin inventario en sitemap): ~54%
+- MUERTO (no responde): ~34%
+
+**E2E completado** — 5 entities TRUSTWORTHY, 849 vehículos:
+| Dealer | Provincia | Vehículos | VAM |
+|--------|-----------|-----------|-----|
+| automovileseduardo.com | 01 Álava | 390 | TRUSTWORTHY |
+| iniciacar.com | 29 Málaga | 201 | TRUSTWORTHY |
+| raimundomotor.com | 47 Valladolid | 125 | TRUSTWORTHY |
+| car2u.es | 11 Cádiz | 112 | TRUSTWORTHY |
+| garciautodelvalles.com | 08 Barcelona | 21 | TRUSTWORTHY |
+
+Además 7 dealers adicionales con DMS inventario.pro identificado en DB (REFUTED por residual
+histórico de sesión anterior sin GONE guard — artefacto de bootstrap, no de método).
+
+**GONE guard implementado** en `ingest_generic_dealer_vehicles()`: marca como `sold` los
+vehículos ausentes del harvest cuando coverage ≥95% del prior. Corrige el REFUTED en runs
+futuros.
+
+**Proyección honesta** para los ~6.798 leads own-site de Overture:
+- SCHEMA_ORG drainable (1.5%): **~102 dealers** → ~20.000 vehículos estimados
+- SITEMAP_SOLO (11%): ~748 dealers → requieren parser HTML específico
+- SIN_SITEMAP (54%): ~3.671 → acceso bloqueado o sitio sin catálogo web
+- MUERTO (34%): ~2.311 → no accesibles
+
+Gap-con-causa: ~4.800 leads necesitan otro método (API OEM o parseo por plataforma).
+
+**Archivos**: `pipeline/platform/generic_dealer_site.py` · `scripts/probe_dealer_sites.py` ·
+`scripts/run_generic_dealer_e2e.py` · `docs/recon/B5_7_probe.json`
+
 ## Snapshot 2026-06-14
-379.452 entities (328.776 particular / 50.167 POS) · 1.646.674 coches vivos · 610 VAM TRUSTWORTHY ·
-2 alertas (degraded auto-cerrables). Geo municipio 85,5%.
+379.452 entities (328.776 particular / 50.167 POS) · 1.646.674 coches vivos · 615 VAM TRUSTWORTHY ·
+2 alertas (degraded auto-cerrables). Geo municipio 85,5%. B5.7 ENTREGADO (5 TRUSTWORTHY / 849 veh).
