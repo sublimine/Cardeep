@@ -30,11 +30,23 @@ medido + sello. Cada agente ataca algo nuevo o muere.
 - B6.1 dedup cruzado (en vuelo, afbeff23): construye matcher OSM×Overture×digital (geo100m/web/phone,
   overlay no-destructivo) + valida en muestra. Sube m → habilita Chapman + reduce overcount compraventa.
 
-## Siguiente paso (camino al sello, tras AS24+Overture)
-**Dedup cruzado OSM×digital×Overture** por (lat/lon ±100m) OR phone_hash OR website_domain — sube el
-m de Chapman de ~20 a ~200-500 (IC útil) Y colapsa el overcount de compraventa (39.308 vs floor 1.662).
-Luego re-correr `scripts/recon/b6_chapman_final.py` → denominador por provincia con IC → sello B6.
-Es B1 territory: overlay entity_cluster NO-destructivo (reversible), VAM antes de servir.
+## Hallazgo B6 (verificado 2026-06-14) — el denominador NO sale de Chapman OSM×digital
+Dedup cruzado ✓ (`cross-source-dedup-v1`, 688 merges, 0 violaciones, vam_verified=FALSE; subió m
+OSM×milanuncios 23→191, OSM×coches_net 0→162). PERO Chapman SIGUE disparatado: N̂(OSM×mn)=789.143,
+N̂(OSM×cn)=440.795 vs CNAE oficial 39.334. CAUSA RAÍZ [VERIFICADO]: heterogeneidad de captura severa
+— OSM (físico) y digital (anuncios) capturan poblaciones casi DISJUNTAS; Chapman asume homogeneidad
+→ inviable OSM×digital. El denominador no es capture-recapture aquí.
+
+## Plan real del sello B6 (denominador = oficial + Chapman solo donde homogéneo)
+1. Denominador por segmento de cifras OFICIALES: desguace DGT 1.292 (censo exacto, SELLABLE ya) ·
+   concesionario FACONAUTO 5.358 instalaciones · venta CNAE 4511 ~39.334. Distribuir por provincia
+   (registros provinciales / prorrateo poblacional, declarado).
+2. Numerador LIMPIO: componer dedup B1 (intra-source) + cross-source-dedup-v1 (union-find) + dedup
+   intra-source más agresivo → resolver el overcount (61.397 brutos vs ~39k oficial = ~22k restantes;
+   el cross-source solo tocó 688, el grueso es intra-source no colapsado + entities sin geo).
+3. Scrapear inventario de los 10.913 leads Overture (descubiertos, POIs sin coches aún).
+4. Por provincia: cobertura = numerador_VAM / denominador_oficial + gap-con-causa → sellar 52/52.
+NO marcar cross-source vam_verified=TRUE en solitario — perdería el dedup B1 intra-source; componer 1º.
 
 ## Bucle
 leer estado → atacar cobertura nueva por la raíz → VAM gate (≥2 vías, conteo aterrizado en DB) →
