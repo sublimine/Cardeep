@@ -4,15 +4,30 @@ Serves per-entity inventory and delta over the PostgreSQL backbone.
 Consistent envelope: {ok, data, error, meta}.
 
 Run: uvicorn services.api.main:app --host 127.0.0.1 --port 8090
+
+Pagination (B3.1)
+-----------------
+Endpoints that can return unbounded rows accept:
+  page: int >= 1          (default 1)
+  size: int in [1..200]   (default 50, clamped)
+
+The ``meta`` block for paginated responses carries:
+  {page, size, returned, has_more}
+
+``has_more`` is True when the DB returned exactly ``size`` rows, meaning
+there MAY be a next page.  A full COUNT(*) is intentionally avoided on
+tables with 500 k+ rows — for wallapop 576 k listings a SELECT COUNT(*)
+costs ~40 ms extra per request and is not worth it.
 """
 from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any
 
 import asyncpg
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 
 DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep")
@@ -197,14 +212,24 @@ async def get_entity(cdp_code: str) -> JSONResponse:
 
 
 @app.get("/entities/{cdp_code}/inventory")
-async def get_inventory(cdp_code: str) -> JSONResponse:
+async def get_inventory(
+    cdp_code: str,
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+) -> JSONResponse:
     """Return available stock for ALL cluster members, deduplicated by vehicle_ulid.
 
     Changes vs pre-B1.5
     --------------------
     Resolves *cdp_code* to its cluster and returns vehicles across all member entities,
     deduped by vehicle_ulid, ordered by first_seen DESC.
+
+    Pagination (B3.1)
+    -----------------
+    Accepts ``page`` and ``size`` query params.  Returns ``has_more`` in meta.
+    DISTINCT ON + ORDER requires a subquery to apply LIMIT/OFFSET after dedup.
     """
+    offset = (page - 1) * size
     async with app.state.pool.acquire() as c:
         cluster = await resolve_cluster(c, cdp_code)
         if cluster is None:
@@ -212,58 +237,121 @@ async def get_inventory(cdp_code: str) -> JSONResponse:
 
         rows = await c.fetch(
             """
-            SELECT DISTINCT ON (vehicle_ulid)
-                   vehicle_ulid, deep_link, title, make, model, year, km, price, currency,
+            SELECT vehicle_ulid, deep_link, title, make, model, year, km, price, currency,
                    fuel, transmission, photo_url, status, first_seen, last_seen
-              FROM vehicle
-             WHERE entity_ulid = ANY($1::text[]) AND status = 'available'
-             ORDER BY vehicle_ulid, first_seen DESC
+              FROM (
+                    SELECT DISTINCT ON (vehicle_ulid)
+                           vehicle_ulid, deep_link, title, make, model, year, km, price,
+                           currency, fuel, transmission, photo_url, status, first_seen, last_seen
+                      FROM vehicle
+                     WHERE entity_ulid = ANY($1::text[]) AND status = 'available'
+                     ORDER BY vehicle_ulid, first_seen DESC
+              ) deduped
+             ORDER BY first_seen DESC, vehicle_ulid
+             LIMIT $2 OFFSET $3
             """,
             cluster.member_ulids,
+            size,
+            offset,
         )
-        # Re-sort the deduped set by first_seen DESC for the caller
-        items = sorted(
-            [
-                {
-                    **dict(r),
-                    "price": float(r["price"]) if r["price"] is not None else None,
-                    "first_seen": str(r["first_seen"]),
-                    "last_seen": str(r["last_seen"]),
-                }
-                for r in rows
-            ],
-            key=lambda x: x["first_seen"],
-            reverse=True,
+        items = [
+            {
+                **dict(r),
+                "price": float(r["price"]) if r["price"] is not None else None,
+                "first_seen": str(r["first_seen"]),
+                "last_seen": str(r["last_seen"]),
+            }
+            for r in rows
+        ]
+        return ok(
+            items,
+            page=page,
+            size=size,
+            returned=len(items),
+            has_more=len(items) == size,
         )
-        return ok(items, count=len(items))
 
 
 @app.get("/entities/{cdp_code}/delta")
-async def get_delta(cdp_code: str, since: str | None = None) -> JSONResponse:
+async def get_delta(
+    cdp_code: str,
+    since: str | None = None,
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+) -> JSONResponse:
+    """Return vehicle events for *cdp_code*.
+
+    Pagination (B3.1)
+    -----------------
+    When ``since`` is provided the window can be very large (all events from a
+    stale timestamp).  Both the ``since``-filtered and the unfiltered paths are
+    now paginated via ``page``/``size``.  The old hard-coded ``LIMIT 500`` is
+    replaced by the configurable ``size`` (max 200) so callers control depth.
+    """
+    offset = (page - 1) * size
+    # Parse ``since`` to a timezone-aware datetime so asyncpg receives the
+    # correct Python type (it rejects raw strings for timestamptz columns).
+    since_dt: datetime | None = None
+    if since:
+        try:
+            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            return err(f"invalid since format '{since}'; use ISO-8601 (e.g. 2024-01-01T00:00:00Z)", status=400)
     async with app.state.pool.acquire() as c:
         eulid = await c.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", cdp_code)
         if eulid is None:
             return err(f"entity {cdp_code} not found")
-        if since:
+        if since_dt is not None:
             rows = await c.fetch(
                 "SELECT event_type, old_value, new_value, observed_at FROM vehicle_event "
-                "WHERE entity_ulid=$1 AND observed_at >= $2::timestamptz ORDER BY observed_at DESC",
-                eulid, since)
+                "WHERE entity_ulid=$1 AND observed_at >= $2 "
+                "ORDER BY observed_at DESC, event_type LIMIT $3 OFFSET $4",
+                eulid, since_dt, size, offset,
+            )
         else:
             rows = await c.fetch(
                 "SELECT event_type, old_value, new_value, observed_at FROM vehicle_event "
-                "WHERE entity_ulid=$1 ORDER BY observed_at DESC LIMIT 500", eulid)
+                "WHERE entity_ulid=$1 ORDER BY observed_at DESC, event_type LIMIT $2 OFFSET $3",
+                eulid, size, offset,
+            )
         items = [{**dict(r), "observed_at": str(r["observed_at"])} for r in rows]
-        return ok(items, count=len(items))
+        return ok(
+            items,
+            page=page,
+            size=size,
+            returned=len(items),
+            has_more=len(items) == size,
+        )
 
 
 @app.get("/geo/{province_code}/entities")
-async def entities_by_province(province_code: str) -> JSONResponse:
+async def entities_by_province(
+    province_code: str,
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+) -> JSONResponse:
+    """List entities for a province.
+
+    Pagination (B3.1)
+    -----------------
+    Madrid (province_code='28') has 49 661 entities — an unbounded response
+    was a P0 hazard.  Now paginated via ``page``/``size``.
+    """
+    offset = (page - 1) * size
     async with app.state.pool.acquire() as c:
         rows = await c.fetch(
             "SELECT cdp_code, kind, trade_name, legal_name, municipality_code, is_tier1, status "
-            "FROM entity WHERE province_code=$1 ORDER BY trade_name", province_code)
-        return ok([dict(r) for r in rows], count=len(rows), province=province_code)
+            "FROM entity WHERE province_code=$1 ORDER BY trade_name, cdp_code LIMIT $2 OFFSET $3",
+            province_code, size, offset,
+        )
+        return ok(
+            [dict(r) for r in rows],
+            page=page,
+            size=size,
+            returned=len(rows),
+            has_more=len(rows) == size,
+            province=province_code,
+        )
 
 
 @app.get("/geo/{province_code}/tree")
@@ -363,9 +451,20 @@ async def geo_completeness() -> JSONResponse:
 
 
 @app.get("/platforms/{cdp_code}/inventory")
-async def platform_inventory(cdp_code: str) -> JSONResponse:
+async def platform_inventory(
+    cdp_code: str,
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+) -> JSONResponse:
     """Cars linked to a platform via platform_listing, each WITH its selling-dealer
-    attribution (the dual-membership proof: platform edge + singular dealer owner)."""
+    attribution (the dual-membership proof: platform edge + singular dealer owner).
+
+    Pagination (B3.1)
+    -----------------
+    Wallapop has 576 213 active listings — returning all in one request was a P0
+    hazard.  Now paginated via ``page``/``size`` (default 50, max 200).
+    """
+    offset = (page - 1) * size
     async with app.state.pool.acquire() as c:
         prow = await c.fetchrow(
             "SELECT entity_ulid, trade_name, kind FROM entity WHERE cdp_code=$1", cdp_code)
@@ -385,8 +484,10 @@ async def platform_inventory(cdp_code: str) -> JSONResponse:
                  JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                  JOIN entity d ON d.entity_ulid = v.entity_ulid
                 WHERE pl.platform_entity_ulid = $1 AND pl.status = 'listed'
-                ORDER BY pl.first_seen DESC""",
-            prow["entity_ulid"])
+                ORDER BY pl.first_seen DESC, pl.vehicle_ulid
+                LIMIT $2 OFFSET $3""",
+            prow["entity_ulid"], size, offset,
+        )
         items = []
         for r in rows:
             d = dict(r)
@@ -395,7 +496,15 @@ async def platform_inventory(cdp_code: str) -> JSONResponse:
             d["listed_first_seen"] = str(r["listed_first_seen"])
             d["listed_last_seen"] = str(r["listed_last_seen"])
             items.append(d)
-        return ok(items, count=len(items), platform=prow["trade_name"], cdp_code=cdp_code)
+        return ok(
+            items,
+            page=page,
+            size=size,
+            returned=len(items),
+            has_more=len(items) == size,
+            platform=prow["trade_name"],
+            cdp_code=cdp_code,
+        )
 
 
 @app.get("/vehicles/{vehicle_ulid}/platforms")

@@ -134,7 +134,8 @@ class TestGetInventory:
     def test_count_meta(self, client):
         r = client.get(f"/entities/{CANONICAL_CODE}/inventory")
         body = r.json()
-        assert body["meta"]["count"] == len(body["data"])
+        # B3.1 renamed the scalar 'count' to 'returned' inside the pagination meta.
+        assert body["meta"]["returned"] == len(body["data"])
 
     def test_nonexistent_returns_404(self, client):
         r = client.get("/entities/CDP-XX-00-DOESNOTEXIST/inventory")

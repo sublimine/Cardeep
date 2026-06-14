@@ -22,7 +22,7 @@
 | # | Bloque | Gate de cierre (binario, verificable en DB) | Estado |
 |---|---|---|---|
 | **B1** | Cerebro local + Identidad única | dealer↔1 cdp_code canónico (alias no-destructivo); tasa dup <0,1% por ≥2 caminos VAM | **✓ CERRADO 2026-06-14** |
-| **B2** | Latido continuo | scheduler crash-safe re-cosechando por tier (24h/7d/30d); delta GONE/NEW reales 2ª pasada; governor multiproceso | pendiente |
+| **B2** | Latido continuo | scheduler crash-safe re-cosechando por tier (24h/7d/30d); delta GONE/NEW reales 2ª pasada; governor multiproceso | **✓ CERRADO 2026-06-14** (B2.1 cadencia · B2.2 scheduler durable · B2.3 delta-GONE-guard · B2.4 silence-watchdog; governor multiproceso = deuda, no necesario con single-producer) |
 | **B3** | Auto-reparación real + API blindada | fallo inyectado→alerta origen-exacto→auto-repair cierra lazo sin caer; 7 alertas vivas cerradas; API paginada/cacheada | pendiente |
 | **B4** | Geo al átomo | geocode-gap 32,5%→<2%; cada entidad a municipio/comarca | pendiente |
 | **B5** | Cobertura total + filtrado | sells_cars resuelto; particular vs dealer decidido; Canarias/Ceuta/Melilla cerrados; cada segmento sellado o gap-con-causa | pendiente |
@@ -86,6 +86,28 @@ Sub-bloques:
 
 **Gate B2:** scheduler crash-safe re-cosechando por tier (24h/7d/30d) corriendo; delta GONE seguro verificado en 2ª pasada;
 cero repetición de la cicatriz AS24; `is_tier1`/intervalo operativos.
+
+## B3 — diseño (auto-reparación + API blindada) [2026-06-14]
+
+Reconocimiento [VERIFICADO]: `auto_repair` tiene `quarantine` (cierra lazo: breaker para la fuente, €0) + `escalate_owner`
+(honest wall); las 3 acciones de gasto (refingerprint/escalate_tier/re_receta) diferidas P10 (`succeeded=FALSE`). **GAP
+CRÍTICO**: `resolve_alerts()` existe (health.py:256) pero NINGÚN harvester la llama → las 7 alertas nunca se cierran (ruido
+permanente; varias ya recuperaron). **HAZARD API**: `/platforms/{cdp}/inventory` devuelve 576k filas sin LIMIT (wallapop),
+`/entities/{cdp}/inventory` 17k, `/geo/{prov}/entities` sin límite; sin cache/auth/rate-limit. Pool API separado del harvester
+(OK, un scraper no tumba la API). Encoding: `_force_utf8_stdout` en 35 archivos pero inconsistente (en `main()` no en `harvest()`).
+
+Sub-bloques:
+- **B3.1 — API blindada (paginación) [P0 HAZARD]:** page/size + LIMIT en `/platforms/{cdp}/inventory`, `/entities/{cdp}/inventory`,
+  `/geo/{prov}/entities`, `/entities/{cdp}/delta`. Envelope con meta de paginación.
+- **B3.2 — Cierre del lazo de alertas:** cablear `resolve_alerts()` en el path de éxito (un `record_run(ok=True)` cierra las
+  alertas abiertas de esa fuente). Cerrar las transitorias actuales.
+- **B3.3 — Encoding uniforme:** centralizar `_force_utf8_stdout` en un módulo + `PYTHONIOENCODING=utf-8` en el subprocess del
+  scheduler + guard en `harvest()` de coches_com + subastacar/wallapop_facet. Cierra el bug `Σ`.
+- **B3.4 — motor_es VAM falso:** distinguir "cap de 50 páginas" (documentado, no es fallo) de fallo real → sin alerta crítica falsa.
+- **B3.5 — Resiliencia probada + auth/rate-limit:** fallo inyectado → alerta exacta + auto-repair + API sigue; API key + rate-limit básico.
+
+**Gate B3:** fallo inyectado→alerta origen-exacto→auto-repair cierra lazo sin caer; alertas resueltas (`resolve_alerts` cableado);
+API paginada (sin hazard); encoding uniforme.
 
 ## Log
 - 2026-06-14 — Reconocimiento B1 cerrado (4 vías). Raíz explosión OEM-VO confirmada. Plan de campaña sellado.
