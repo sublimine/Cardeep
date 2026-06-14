@@ -457,9 +457,14 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
         # fetch failure is a fail that feeds the breaker + the exact-origin alert.
         run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+        # B9 coverage gate: declared_full = numberOfResults from the first SSR page.
+        # harvested_cageable = distinct (dealer_id, deep_link) pairs from the drain.
         outcome = await record_run(
             conn, AS24_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
-            error=run_error, http_status=last_http)
+            error=run_error, http_status=last_http,
+            declared_total=stats.get("declared_full"),
+            captured_distinct=stats.get("harvested_cageable"),
+            platform_ulid=platform_ulid)
         stats["health_status"] = outcome.status
         stats["breaker_state"] = outcome.breaker_state
         if not run_ok:

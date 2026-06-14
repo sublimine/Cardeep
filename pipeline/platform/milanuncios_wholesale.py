@@ -1327,9 +1327,17 @@ async def harvest(provinces: tuple[int, ...] = SPANISH_PROVINCES,
         # error stopped a partition, and the VAM did not refute.
         run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+        # B9 coverage gate: use coverage_sum (sum of partition totalHits) as declared_total —
+        # this is more precise than nat_val (national, always clamped to 10 000 by ES).
+        # coverage_sum is the FACET-partitioned sum across all province × price-band cells,
+        # each probed individually; it is the best declared oracle milanuncios exposes.
+        # captured_distinct = harvested_cageable (distinct (authorId, deep_link) tuples).
         outcome = await record_run(
             conn, MN_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
-            error=run_error, http_status=last_http)
+            error=run_error, http_status=last_http,
+            declared_total=stats.get("coverage_sum") or stats.get("declared_full"),
+            captured_distinct=stats.get("harvested_cageable"),
+            platform_ulid=platform_ulid)
         stats["health_status"] = outcome.status
         stats["breaker_state"] = outcome.breaker_state
         if not run_ok:

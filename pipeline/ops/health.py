@@ -84,6 +84,9 @@ async def record_run(
     http_status: int | None = None,
     is_tier1: bool | None = None,
     harvest_interval_hours: int | None = None,
+    declared_total: int | None = None,
+    captured_distinct: int | None = None,
+    platform_ulid: str | None = None,
 ) -> RunOutcome:
     """Record one harvest run outcome. THE single writer of source_health + source_breaker.
 
@@ -103,6 +106,14 @@ async def record_run(
     open scrape alerts for this source; a discover success closes open discover alerts. This
     ensures a scrape recovery does not inadvertently silence a separate discover fault.
     Defaults to "scrape" so all existing callers that omit the argument are backward-compatible.
+
+    `declared_total` and `captured_distinct` are optional B9 coverage-gate kwargs.
+    When ok=True and declared_total is not None, verify_coverage() is called automatically
+    after the run is persisted.  Connectors that omit these kwargs work unchanged — no
+    coverage verdict is emitted until the connector is updated (gap logged, not a crash).
+
+    `platform_ulid` is forwarded to verify_coverage() to enable the db_edges path via a
+    direct platform_listing filter.  Optional; the gate degrades gracefully when absent.
 
     Returns a RunOutcome describing the new posture (status, breaker, and whether this call
     crossed a transition edge — the signal the caller uses to fire exactly one alert).
@@ -216,7 +227,7 @@ async def record_run(
                    ON CONFLICT (source_key) DO UPDATE SET consecutive_fails = $3""",
                 source_key, new_breaker_state, new_fails)
 
-    return RunOutcome(
+    outcome = RunOutcome(
         source_key=source_key,
         status=new_status,
         consecutive_fails=new_fails,
@@ -224,6 +235,23 @@ async def record_run(
         breaker_tripped=breaker_tripped,
         status_changed=(new_status != prior_status),
     )
+
+    # B9 coverage gate — backward-compatible: only runs when the connector supplies
+    # declared_total AND the run was successful.  Connectors that omit declared_total
+    # continue to work exactly as before; no coverage verdict is emitted (gap is visible
+    # as the absence of a row in source_coverage, not a crash).
+    if ok and declared_total is not None:
+        from pipeline.ops.coverage_verify import verify_coverage  # local import avoids circular dep
+        await verify_coverage(
+            conn,
+            source_key,
+            declared_total=declared_total,
+            captured_distinct=captured_distinct,
+            platform_ulid=platform_ulid,
+            phase=phase,
+        )
+
+    return outcome
 
 
 def build_origin(source_key: str, phase: str, cdp_code: str | None = None) -> str:
