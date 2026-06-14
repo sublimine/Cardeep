@@ -98,12 +98,12 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 
 | SU | Definición | GATE binario | Estado |
 |---|---|---|---|
-| **SU-0.1** | Eliminar frontend (D2) | `cardeep-web` archivado en `docs/archive/frontend-spec/` + folder borrado + commit | ⬜ |
-| **SU-0.2** | Reconciliar ledger de migraciones | `schema_migrations` == schema vivo; 0023/24/25 registradas + .sql commiteados; rebuild en DB desechable reproduce el schema sin error | ⬜ |
-| **SU-0.3** | Commitear todo lo untracked | `git status` limpio salvo gitignored; B7(0023+cluster_vehicles.py+test)+538 recetas+code en `main`; scratch ruidoso → `.gitignore` | ⬜ |
-| **SU-0.4** | Linkar verdicts de sellos | todo `*_run` con `vam_verified=TRUE` tiene `vam_verdict_id`→`verification_verdict` no-NULL; B1 apunta a verdict 640 | ⬜ |
-| **SU-0.5** | Corregir ontología cadena | `SELECT count(*) FROM entity WHERE kind='cadena'` = 0 (reasignadas a organization) | ⬜ |
-| **SU-0.6** | Auditoría de disco + evicción | disco con ≥15% libre; política de evicción configurada + verificada; infra CARDEX evaluada | ⬜ |
+| **SU-0.1** | Eliminar frontend (D2) | `cardeep-web` archivado en `docs/archive/frontend-spec/` + folder borrado + commit | ✅ `ff88fe4` |
+| **SU-0.2** | Reconciliar ledger de migraciones | `schema_migrations` == schema vivo; 0023/24/25 registradas + .sql commiteados; rebuild en DB desechable reproduce el schema sin error | ✅ 19/19, rebuild 25t+4v OK (commit 0023 en SU-0.3) |
+| **SU-0.3** | Commitear todo lo untracked | `git status` limpio salvo gitignored; B7(0023+cluster_vehicles.py+test)+538 recetas+code en `main`; scratch ruidoso → `.gitignore` | ✅ `15550f7` (3 commits, B7 test 37✓) |
+| **SU-0.4** | Linkar verdicts de sellos | todo `*_run` con `vam_verified=TRUE` tiene `vam_verdict_id`→`verification_verdict` no-NULL; B1 apunta a verdict 640 | ✅ B1→640 linkado (único run sellado) |
+| **SU-0.5** | Corregir ontología cadena | `SELECT count(*) FROM entity WHERE kind='cadena'` = 0 (reasignadas a organization) | ✅ 0 cadena, 4 orgs, Flexicar rollup 23874 |
+| **SU-0.6** | Auditoría de disco + evicción | disco con ≥15% libre; política de evicción configurada + verificada; infra CARDEX evaluada | ✅* 21,4GB Docker reclamados; host 96%=datos ajenos+VHD WSL2 (Cardeep=307MB); evict.py=debt (data/ 161MB, baja urgencia); 15% infeasible sin acción Owner |
 
 ### A — EL PRODUCTO
 
@@ -231,4 +231,7 @@ Al retomar (sesión nueva / contexto compactado):
 3. Ejecutar su WF: RECON → BUILD → VERIFY → SEAL. Actualizar el estado de la SU aquí + PROGRESO.
 4. **Nunca parar** con una SU a medias sin bloqueo real declarado. No pasar a la siguiente sin SEAL.
 
-> Estado inicial: **2026-06-15. FASE 0 en curso, SU-0.1.** Auditoría de A + hardware = VERIFICADA.
+> Estado: **2026-06-15. FASE 0 SELLADA** (SU-0.1..0.6 ✅; residual de disco confesado, *=con causa). Árbol limpio salvo este tracker. Siguiente: **FASE 1** (confirmar puntos verdes a nivel átomo) → **SU-B1** (ledger de verificación profundo, migración 0014).
+>
+> ## Deuda declarada (tracked, no bloqueante)
+> - **evict.py / evicción de crudo**: diseñada (MISSION §6, MASTER_PLAN) pero no construida. data/ = 161MB hoy (baja urgencia). Construir cuando el harvest escale. Owner: compactar VHD WSL2 en ventana de mantenimiento para recuperar ~21GB de host.

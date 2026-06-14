@@ -245,3 +245,31 @@
   validar antes de contar una sola fila como dealer nuevo. Confesado en runbook + NOT-VALIDATED.
 - **Registrado:** `docs/runbook/04-TERRITORIAL.md` (sección canónica nueva) + árbol del README del
   runbook + `VALIDATION-INDEX.md` (bloque territorial censo-anclado) + F8 marcado `[ANCLADO]` en PLAN.md.
+
+## 2026-06-15 — SUPERPLAN A→Z · FASE 0 (cimiento) — GATE VERDE
+> Mando `/goal` del Owner: Director Soberano, hands-off, autoridad total, sellar A→F punto
+> por punto (cada uno completo + verificado + testeado antes del siguiente). Plan maestro:
+> `docs/SUPERPLAN.md` (auditoría de cobertura del prompt fundacional → backlog de unidades de
+> sellado con gate binario, workflow, agentes/skills/herramientas).
+- **Hardware verificado (D1):** Ryzen 5 5500U 6c/12t · 15,3GB RAM (~2 libres) · sin CUDA ·
+  disco C: 96%. → €0, determinista-first, Ollama qwen3:4b, sin GPU/cloud hasta orden del Owner.
+- **Auditoría átomo del verde A (identidad):** discrepancia 31.472 vs 42.259 RESUELTA — el sello
+  vivo `dealer-identity-det-v1` (vam_verified) = **61.551→42.259 canónicos**; el 31.472 era un run
+  anterior superado. 6 defectos destapados (ledger drift · 0014 ausente · verdict NULL · 4 cadena ·
+  β/B7 sin sellar · B9 4/47 fuentes).
+- **SU-0.1** Frontend eliminado (D2): `cardeep-web` archivado en `docs/archive/frontend-spec/` + borrado. `ff88fe4`.
+- **SU-0.2** Ledger de migraciones reconciliado: 0023/24/25 vivían en DB (creadas por código) sin
+  registrar. `migrate up` idempotente → **applied=19, pending=0**. Reproducibilidad PROBADA en DB
+  desechable (rebuild 0001→0025 = 25 tablas + 4 vistas, 0 errores).
+- **SU-0.3** Untracked → `main` (invariante #9): B7 (0023+cluster_vehicles+test, 37 tests ✓), 538
+  recetas, recon. Security gate: 0 secretos reales (solo claves públicas client-side). `b61639a`/`f8c758d`/`15550f7`.
+- **SU-0.4** Sello B1 enlazado a su prueba: `dealer-identity-det-v1.vam_verdict_id=640` (TRUSTWORTHY; era NULL).
+- **SU-0.5** Ontología D-11: 4 `kind='cadena'` → 4 `organization` chain_compraventa + raíces a
+  compraventa + 185 sucursales enlazadas. **Flexicar rollup nacional = 23.874 coches** ahora
+  consultable (la raíz tenía 2). Inventario intacto. `scripts/seed_chain_organizations.py` idempotente. `938a091`.
+- **SU-0.6** Disco: 21,41GB build-cache + 12 contenedores parados reclamados; vivos intactos. Host
+  sigue 96% — el repo Cardeep son **307MB** (data/ 161MB); el lleno es ~367GB ajenos + VHD WSL2 que
+  no autoreduce. **Confesado:** 15% libre infeasible sin acción del Owner; `evict.py` no existe (debt baja urgencia).
+- **GATE FASE 0 = VERDE** (residual de disco confesado con causa). Siguiente: **FASE 1** (confirmar
+  verdes a nivel átomo) → **SU-B1** (ledger de verificación profundo, migración 0014; el quorum-CHECK
+  invalidaría los TRUSTWORTHY existentes → re-juzgar a UNVERIFIED primero).
