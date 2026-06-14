@@ -38,9 +38,10 @@ N̂(OSM×cn)=440.795 vs CNAE oficial 39.334. CAUSA RAÍZ [VERIFICADO]: heterogen
 → inviable OSM×digital. El denominador no es capture-recapture aquí.
 
 ## Plan real del sello B6 (denominador = oficial + Chapman solo donde homogéneo)
-1. Denominador por segmento de cifras OFICIALES: desguace DGT 1.292 (censo exacto, SELLABLE ya) ·
-   concesionario FACONAUTO 5.358 instalaciones · venta CNAE 4511 ~39.334. Distribuir por provincia
-   (registros provinciales / prorrateo poblacional, declarado).
+1. Denominador por segmento de cifras OFICIALES: **desguace SELLADO ✓** (tenemos 1.292/1.292 del
+   censo legal DGT = 100%, 52/52 provincias, geo 99%; +603 informales aedra; N̂ Chapman dgt×aedra
+   2.061 → ~92% del universo estimado) · concesionario FACONAUTO 5.358 instalaciones (tenemos ~511,
+   ~10%) · venta CNAE 4511 ~39.334. Distribuir por provincia (registros provinciales / prorrateo).
 2. Numerador LIMPIO: componer dedup B1 (intra-source) + cross-source-dedup-v1 (union-find) + dedup
    intra-source más agresivo → resolver el overcount (61.397 brutos vs ~39k oficial = ~22k restantes;
    el cross-source solo tocó 688, el grueso es intra-source no colapsado + entities sin geo).
