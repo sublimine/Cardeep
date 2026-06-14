@@ -17,6 +17,10 @@ Covers:
   - Canonical selection: richest entity wins
   - UnionFind correctness
   - Singleton has signal='none'
+  - City guard (INE-validated): distinct city without website → blocks fingerprint
+  - City guard: same city → does NOT block
+  - City guard: non-INE token → does NOT block
+  - _city_tokens: INE-mode multi-word municipality detection
 """
 from __future__ import annotations
 
@@ -32,11 +36,26 @@ from pipeline.identity.resolve_entities import (
     UnionFind,
     _build_edges,
     _build_resolution_table,
+    _city_tokens,
     _jaccard,
+    _nfkd_lower,
     _normalize_phone,
     _normalize_website_host,
     _richness,
     _select_canonical,
+)
+
+# ---------------------------------------------------------------------------
+# Minimal INE municipality set for unit tests (no DB required).
+# Accent-folded, lowercased — mirrors what _load_ine_municipalities returns.
+# ---------------------------------------------------------------------------
+_TEST_INE: frozenset[str] = frozenset(
+    _nfkd_lower(n)
+    for n in [
+        "Madrid", "Barcelona", "Alcorcón", "Leganés", "Móstoles",
+        "Alcalá de Henares", "Sevilla", "Valencia", "Málaga",
+        "Zaragoza", "Bilbao", "Getafe", "Fuenlabrada", "Torrejón de Ardoz",
+    ]
 )
 
 
@@ -58,6 +77,7 @@ def _entity(
     n_vehicles: int = 10,
     created_at: datetime.datetime | None = None,
     source_keys: list[str] | None = None,
+    org_id: str | None = None,
 ) -> dict:
     return {
         "entity_ulid": ulid,
@@ -71,6 +91,7 @@ def _entity(
         "n_vehicles": n_vehicles,
         "created_at": created_at or _BASE_TS,
         "source_keys": source_keys or ["source_a"],
+        "org_id": org_id,
     }
 
 
@@ -560,3 +581,412 @@ class TestUnionFind:
         root = uf.find("0")
         for i in range(101):
             assert uf.find(str(i)) == root
+
+
+# ---------------------------------------------------------------------------
+# §B Chain guard — same-org siblings must NEVER merge
+# ---------------------------------------------------------------------------
+
+
+class TestChainGuard:
+    """Chain siblings (same non-null org_id) must never be merged, regardless
+    of signal strength (fingerprint, phone, website, or combination)."""
+
+    def _make_shared_fp(self, n: int = 50) -> tuple[set[str], set[str]]:
+        """Two fingerprint sets with Jaccard > θ (simulates shared central stock)."""
+        shared = {f"c{i}" for i in range(n)}
+        only_a = {f"a{i}" for i in range(5)}
+        only_b = {f"b{i}" for i in range(5)}
+        return shared | only_a, shared | only_b
+
+    def test_chain_siblings_blocked_by_fingerprint(self) -> None:
+        """Same org_id + high Jaccard (chain shares central stock) → NOT merged."""
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity("E1", trade_name="CLICARS MADRID", province_code="28", org_id="ORG1")
+        eb = _entity("E2", trade_name="CLICARS BARCELONA", province_code="08", org_id="ORG1")
+        fingerprints = {"E1": fp_a, "E2": fp_b}
+
+        edges = _build_edges([ea, eb], fingerprints)
+        rows = _build_resolution_table([ea, eb], edges)
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 2, (
+            "Chain siblings (same org_id) must NOT merge even with strong fingerprint"
+        )
+
+    def test_chain_siblings_blocked_by_phone(self) -> None:
+        """Same org + same phone (centralita) → NOT merged."""
+        phone = "900100200"
+        ea = _entity("E1", phone=phone, province_code="28", org_id="ORG1")
+        eb = _entity("E2", phone=phone, province_code="28", org_id="ORG1")
+        fingerprints: dict[str, set[str]] = {}
+
+        edges = _build_edges([ea, eb], fingerprints)
+        rows = _build_resolution_table([ea, eb], edges)
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 2, (
+            "Chain siblings (same org_id) must NOT merge even with same phone"
+        )
+
+    def test_chain_siblings_blocked_by_website(self) -> None:
+        """Same org + same website (chain domain) → NOT merged."""
+        website = "https://flexicar.es"
+        ea = _entity("E1", website=website, province_code="28", org_id="ORG_FLEX")
+        eb = _entity("E2", website=website, province_code="28", org_id="ORG_FLEX")
+        fingerprints: dict[str, set[str]] = {}
+
+        edges = _build_edges([ea, eb], fingerprints)
+        rows = _build_resolution_table([ea, eb], edges)
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 2, (
+            "Chain siblings (same org_id) must NOT merge on website alone"
+        )
+
+    def test_different_org_can_still_merge(self) -> None:
+        """Two entities from DIFFERENT orgs are NOT blocked by chain guard."""
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity("E1", province_code="28", org_id="ORG_A")
+        eb = _entity("E2", province_code="28", org_id="ORG_B")
+        fingerprints = {"E1": fp_a, "E2": fp_b}
+
+        edges = _build_edges([ea, eb], fingerprints)
+        rows = _build_resolution_table([ea, eb], edges)
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 1, (
+            "Entities from different orgs must still be mergeable by fingerprint"
+        )
+
+    def test_null_org_can_still_merge(self) -> None:
+        """Entities without org_id (null) are not blocked by chain guard."""
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity("E1", province_code="28", org_id=None)
+        eb = _entity("E2", province_code="28", org_id=None)
+        fingerprints = {"E1": fp_a, "E2": fp_b}
+
+        edges = _build_edges([ea, eb], fingerprints)
+        rows = _build_resolution_table([ea, eb], edges)
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 1, (
+            "Entities without org_id (null) must not be blocked by chain guard"
+        )
+
+
+# ---------------------------------------------------------------------------
+# §B City guard — distinct INE city tokens → blocks any fingerprint merge
+# ---------------------------------------------------------------------------
+
+
+class TestCityGuard:
+    """City guard blocks fingerprint merges when both trade names name distinct
+    INE-validated municipalities.  The guard is universal: it applies to ALL
+    fingerprint merges, not only when websites are high-collision.
+
+    Legacy tests (without ine_municipalities) use the stopword-heuristic path.
+    INE tests pass _TEST_INE to simulate the production DB-backed path.
+    """
+
+    def _make_shared_fp(self, n: int = 50) -> tuple[set[str], set[str]]:
+        shared = {f"c{i}" for i in range(n)}
+        only_a = {f"a{i}" for i in range(5)}
+        only_b = {f"b{i}" for i in range(5)}
+        return shared | only_a, shared | only_b
+
+    def _make_high_collision_entities(
+        self, n: int, website: str, province: str = "28"
+    ) -> list[dict]:
+        """Return n entities sharing a website (making it high-collision)."""
+        return [
+            _entity(f"HC{i}", website=website, province_code=province)
+            for i in range(n)
+        ]
+
+    # -- legacy tests (no ine_municipalities, stopword heuristic) -------------
+
+    def test_city_guard_blocks_distinct_cities(self) -> None:
+        """CLICARS MADRID + CLICARS BARCELONA with high-collision website → NOT merged."""
+        fp_a, fp_b = self._make_shared_fp(50)
+        shared_website = "https://clicars.com"
+        n_extra = MAX_PHONE_COLLISION_K + 1
+        bg_entities = self._make_high_collision_entities(n_extra, shared_website)
+        ea = _entity(
+            "EA", trade_name="CLICARS MADRID", website=shared_website,
+            province_code="28", org_id=None,
+        )
+        eb = _entity(
+            "EB", trade_name="CLICARS BARCELONA", website=shared_website,
+            province_code="08", org_id=None,
+        )
+        all_entities = bg_entities + [ea, eb]
+        fingerprints = {e["entity_ulid"]: set() for e in bg_entities}
+        fingerprints["EA"] = fp_a
+        fingerprints["EB"] = fp_b
+
+        edges = _build_edges(all_entities, fingerprints)
+        rows = _build_resolution_table(all_entities, edges)
+        ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
+        eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
+        assert ea_canonical != eb_canonical, (
+            "City guard must block CLICARS MADRID + CLICARS BARCELONA "
+            "even with Jaccard >= theta when website is high-collision"
+        )
+
+    def test_same_city_not_blocked(self) -> None:
+        """Two branches sharing same city token → city guard does NOT block."""
+        fp_a, fp_b = self._make_shared_fp(50)
+        shared_website = "https://flexicar.es"
+        n_extra = MAX_PHONE_COLLISION_K + 1
+        bg_entities = self._make_high_collision_entities(n_extra, shared_website)
+        ea = _entity(
+            "EA", trade_name="FLEXICAR MADRID NORTE", website=shared_website,
+            province_code="28", org_id=None,
+        )
+        eb = _entity(
+            "EB", trade_name="FLEXICAR MADRID SUR", website=shared_website,
+            province_code="28", org_id=None,
+        )
+        all_entities = bg_entities + [ea, eb]
+        fingerprints = {e["entity_ulid"]: set() for e in bg_entities}
+        fingerprints["EA"] = fp_a
+        fingerprints["EB"] = fp_b
+
+        rows = _build_resolution_table(all_entities, _build_edges(all_entities, fingerprints))
+        ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
+        eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
+        assert ea_canonical == eb_canonical, (
+            "Two branches sharing city token 'madrid' must NOT be blocked by city guard"
+        )
+
+    def test_low_collision_website_legacy_merges(self) -> None:
+        """Without INE set and non-stopword generic names → city guard inactive, fp merges.
+
+        'DEALER' is not a stopword so it appears in both token sets; both sets
+        share 'dealer' → intersection non-empty → guard does NOT block → merge.
+        """
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity(
+            "EA", trade_name="DEALER MADRID", website="https://private-dealer.es",
+            province_code="28", org_id=None,
+        )
+        eb = _entity(
+            "EB", trade_name="DEALER BARCELONA", website="https://private-dealer.es",
+            province_code="08", org_id=None,
+        )
+        fingerprints = {"EA": fp_a, "EB": fp_b}
+        edges = _build_edges([ea, eb], fingerprints)
+        rows = _build_resolution_table([ea, eb], edges)
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 1, (
+            "Legacy mode: 'DEALER' appears in both sets → intersection non-empty → merge"
+        )
+
+    # -- INE-validated tests (pass _TEST_INE, simulating production) -----------
+
+    def test_ine_distinct_cities_no_website_blocks(self) -> None:
+        """INE mode: distinct INE city tokens WITHOUT shared website → guard blocks.
+
+        This is the core regression: AutosMadrid Alcorcón + Autosmadrid Leganés
+        were wrongly merged because the old guard only fired on high-collision
+        websites. With INE mode, distinct municipalities block any fp merge.
+        """
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity(
+            "EA", trade_name="AutosMadrid Alcorcón",
+            province_code="28", website=None, org_id=None,
+        )
+        eb = _entity(
+            "EB", trade_name="Autosmadrid Leganés",
+            province_code="28", website=None, org_id=None,
+        )
+        fingerprints = {"EA": fp_a, "EB": fp_b}
+        edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
+        rows = _build_resolution_table([ea, eb], edges)
+        ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
+        eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
+        assert ea_canonical != eb_canonical, (
+            "INE guard must block 'AutosMadrid Alcorcón' + 'Autosmadrid Leganés' "
+            "(distinct INE municipalities) even without a shared website"
+        )
+
+    def test_ine_same_city_does_not_block(self) -> None:
+        """INE mode: same INE city in both names → guard does NOT block → fp merges."""
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity(
+            "EA", trade_name="AutosMadrid Alcorcón Norte",
+            province_code="28", website=None, org_id=None,
+        )
+        eb = _entity(
+            "EB", trade_name="AUTOS MADRID ALCORCÓN",
+            province_code="28", website=None, org_id=None,
+        )
+        fingerprints = {"EA": fp_a, "EB": fp_b}
+        edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
+        rows = _build_resolution_table([ea, eb], edges)
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 1, (
+            "INE guard: same municipality 'alcorcon' → intersection non-empty → merge"
+        )
+
+    def test_ine_non_ine_token_does_not_block(self) -> None:
+        """INE mode: trade names without valid INE city tokens → no block → fp merges.
+
+        'Motor', 'Auto', 'Gabilondo', 'SL' are not INE municipalities.
+        Neither name has a city token → city_a or city_b is empty → guard skipped.
+        """
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity(
+            "EA", trade_name="AGR Motor SL",
+            province_code="28", website=None, org_id=None,
+        )
+        eb = _entity(
+            "EB", trade_name="APC Motor SL",
+            province_code="28", website=None, org_id=None,
+        )
+        fingerprints = {"EA": fp_a, "EB": fp_b}
+        edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
+        rows = _build_resolution_table([ea, eb], edges)
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 1, (
+            "INE guard: no valid INE city token in either name → guard skipped → merge"
+        )
+
+    def test_ine_multiword_municipality_blocks(self) -> None:
+        """INE mode: multi-word name 'Alcalá de Henares' matched correctly → blocks."""
+        fp_a, fp_b = self._make_shared_fp(50)
+        ea = _entity(
+            "EA", trade_name="Autos Madrid Alcalá de Henares",
+            province_code="28", website=None, org_id=None,
+        )
+        eb = _entity(
+            "EB", trade_name="Autosmadrid Leganés",
+            province_code="28", website=None, org_id=None,
+        )
+        fingerprints = {"EA": fp_a, "EB": fp_b}
+        edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
+        rows = _build_resolution_table([ea, eb], edges)
+        ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
+        eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
+        assert ea_canonical != eb_canonical, (
+            "INE multi-word 'Alcalá de Henares' must be detected and block merge with Leganés"
+        )
+
+
+# ---------------------------------------------------------------------------
+# §C B1 edge seeding — composition B1 ∘ β
+# ---------------------------------------------------------------------------
+
+
+class TestB1Seeding:
+    """B1 edges are seeded into the union-find before β edges."""
+
+    def test_b1_seeds_transitive_union(self) -> None:
+        """A-B in B1 + B-C in beta → all three in same cluster."""
+        fp_b = {f"c{i}" for i in range(50)} | {f"b{i}" for i in range(5)}
+        fp_c = {f"c{i}" for i in range(50)} | {f"cc{i}" for i in range(5)}
+        ea = _entity("A", province_code="28")
+        eb = _entity("B", province_code="28")
+        ec = _entity("C", province_code="28")
+        fingerprints = {"B": fp_b, "C": fp_c}
+        b1_edges = [("A", "B")]  # B1 merges A and B
+
+        edges = _build_edges([ea, eb, ec], fingerprints)
+        rows = _build_resolution_table([ea, eb, ec], edges, b1_edges=b1_edges)
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 1, (
+            "B1 seed A-B + beta edge B-C must collapse A, B, C to one dealer"
+        )
+
+    def test_b1_chain_guard_skips_org_siblings(self) -> None:
+        """B1 edge between same-org siblings is skipped even in seeding phase."""
+        ea = _entity("A", org_id="ORG1", province_code="28")
+        eb = _entity("B", org_id="ORG1", province_code="28")
+        b1_edges = [("A", "B")]  # Would merge org siblings via B1
+        org_map = {"A": "ORG1", "B": "ORG1"}
+
+        edges = _build_edges([ea, eb], {})
+        rows = _build_resolution_table([ea, eb], edges, b1_edges=b1_edges, org_map=org_map)
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 2, (
+            "B1 seeding must not unite chain siblings (same org_id)"
+        )
+
+    def test_b1_absent_gives_same_result_as_before(self) -> None:
+        """Without B1 edges, resolution is identical to original β-only behavior."""
+        fp_a = {f"c{i}" for i in range(50)} | {f"a{i}" for i in range(5)}
+        fp_b = {f"c{i}" for i in range(50)} | {f"b{i}" for i in range(5)}
+        ea = _entity("E1", province_code="28")
+        eb = _entity("E2", province_code="28")
+        fingerprints = {"E1": fp_a, "E2": fp_b}
+
+        edges = _build_edges([ea, eb], fingerprints)
+        rows_no_b1 = _build_resolution_table([ea, eb], edges, b1_edges=None)
+        rows_empty_b1 = _build_resolution_table([ea, eb], edges, b1_edges=[])
+
+        assert (
+            {r["resolved_dealer_ulid"] for r in rows_no_b1}
+            == {r["resolved_dealer_ulid"] for r in rows_empty_b1}
+        )
+
+
+# ---------------------------------------------------------------------------
+# _city_tokens
+# ---------------------------------------------------------------------------
+
+
+class TestCityTokens:
+    # Legacy stopword-heuristic path (ine_municipalities=None)
+
+    def test_extracts_city_from_chain_name(self) -> None:
+        tokens = _city_tokens("CLICARS MADRID SL")
+        assert "madrid" in tokens
+        assert "clicars" not in tokens
+        assert "sl" not in tokens
+
+    def test_strips_accents(self) -> None:
+        tokens = _city_tokens("FLEXICAR MALAGA")
+        assert "malaga" in tokens
+
+    def test_empty_returns_empty(self) -> None:
+        assert _city_tokens(None) == frozenset()
+        assert _city_tokens("") == frozenset()
+
+    def test_stopwords_excluded(self) -> None:
+        tokens = _city_tokens("OCASIONPLUS DE LA CORUNA")
+        assert "ocasionplus" not in tokens
+        assert "de" not in tokens
+        assert "la" not in tokens
+
+    # INE-validated path (ine_municipalities=_TEST_INE)
+
+    def test_ine_single_word_municipality(self) -> None:
+        """Single-word INE municipality detected correctly."""
+        tokens = _city_tokens("AutosMadrid Alcorcón Norte", _TEST_INE)
+        assert "alcorcon" in tokens
+        # Generic words absent from INE set must not appear
+        assert "autosmadrid" not in tokens
+        assert "norte" not in tokens
+
+    def test_ine_multiword_municipality(self) -> None:
+        """Multi-word INE municipality 'alcala de henares' detected as one token."""
+        tokens = _city_tokens("Autos Madrid Alcalá de Henares", _TEST_INE)
+        assert "alcala de henares" in tokens
+        # Constituent words should NOT appear separately
+        assert "alcala" not in tokens
+        assert "de" not in tokens
+        assert "henares" not in tokens
+
+    def test_ine_non_municipality_word_absent(self) -> None:
+        """Words not in INE set are absent from INE-mode output."""
+        tokens = _city_tokens("AGR Motor SL", _TEST_INE)
+        assert len(tokens) == 0, (
+            "No INE city token: result must be empty, got %r" % tokens
+        )
+
+    def test_ine_empty_returns_empty(self) -> None:
+        assert _city_tokens(None, _TEST_INE) == frozenset()
+        assert _city_tokens("", _TEST_INE) == frozenset()

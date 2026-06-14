@@ -23,6 +23,17 @@ Methodology (mirrors cluster_dealers.py, espejo metodológico):
        Alone it does NOT merge.
      - Cross-province merge requires fingerprint Jaccard >= JACCARD_THETA (strong
        signal). Phone-only or website-only cross-province is BLOCKED.
+     - [NEW §B] Chain guard: two entities of the same org (same non-null org_id)
+       are ALWAYS blocked from merging. Chain branches share stock and phone/website
+       but are distinct physical POS. No signal — fingerprint, phone, or website —
+       can override this guard.
+     - [NEW §B] City-name guard (INE-validated): if both trade names contain a
+       distinct city token validated against geo_municipality.name AND those tokens
+       differ between the two entities, they are distinct POS (branches in different
+       municipalities) and the fingerprint merge is BLOCKED. This applies to ALL
+       fingerprint merges (not just high-collision websites). Only tokens matching
+       a real INE municipality name are considered city tokens — prevents false
+       positives from generic words like "motor" or "auto".
 
   4. BLOCKING (O(n²) viable for P ~59k):
      - Fingerprint block: entities sharing at least 1 used-car canonical_vehicle_ulid
@@ -34,6 +45,11 @@ Methodology (mirrors cluster_dealers.py, espejo metodológico):
   5. UNION-FIND: deterministic transitive closure over accepted edges.
      Canonical: richest entity (highest field count) → most vehicles → oldest
      created_at → lexicographic entity_ulid (deterministic tiebreak).
+
+  6. [NEW §C] B1 SEEDING: before applying β edges, the union-find is seeded with
+     B1 (dealer-identity-det-v1) aristas from v_canonical. This composes B1 ∘ β
+     so that entities already merged by the geo-blocking step are preserved in β.
+     Chain guard applies to B1 edges too: no two org-siblings are united via B1.
 
 Run:
     python -m pipeline.identity.resolve_entities
@@ -75,6 +91,9 @@ RESOLVER = "inventory-fingerprint-v1"
 
 # B7 vehicle-cluster run that provides canonical_vehicle_ulid
 VEHICLE_CLUSTER_RUN = "vehicle-identity-det-v1"
+
+# B1 dealer-cluster run (geo-blocking step) — used for B1 edge seeding
+DEALER_CLUSTER_RUN = "dealer-identity-det-v1"
 
 # P-stratum kinds (never touches particular=R, never touches plataforma/cadena=C)
 P_KINDS = ("compraventa", "concesionario_oficial", "garaje")
@@ -139,6 +158,98 @@ def _normalize_website_host(website: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# City-token extraction (INE-validated, for city-guard §B)
+# ---------------------------------------------------------------------------
+
+# Normalise a trade name to ASCII lowercase tokens for city detection.
+_RE_NON_WORD = re.compile(r"[^a-z0-9]+")
+
+
+def _nfkd_lower(text: str) -> str:
+    """Fold accents, lowercase — maps 'MÁLAGA' → 'malaga'."""
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", text.lower())
+        if not unicodedata.combining(c)
+    )
+
+
+def _city_tokens(
+    trade_name: str | None,
+    ine_municipalities: frozenset[str] | None = None,
+) -> frozenset[str]:
+    """Return a frozenset of city tokens found in a trade name.
+
+    When ine_municipalities is provided (accent-folded, lowercased set of INE
+    municipality names), only tokens / token sequences that match a real
+    municipality name are returned. This prevents generic words like "motor",
+    "auto", or "sl" from being treated as cities.
+
+    Multi-word municipality names (e.g. "alcala de henares") are matched by
+    checking all possible n-grams of the trade name tokens in descending length
+    order (longest match wins, consuming the matched tokens).
+
+    When ine_municipalities is None (legacy / test mode without DB), falls back
+    to the old stopword-based heuristic for backward compatibility with tests
+    that do not inject the INE set.
+    """
+    if not trade_name:
+        return frozenset()
+    normalized = _nfkd_lower(trade_name)
+    tokens = [t for t in _RE_NON_WORD.split(normalized) if t]
+    if not tokens:
+        return frozenset()
+
+    if ine_municipalities is None:
+        # Legacy fallback: stopword-based heuristic (used by unit tests that
+        # do not pass an INE set).
+        _STOPWORDS = {
+            "flexicar", "clicars", "ocasionplus", "carplus",
+            "sl", "sa", "slu", "motor", "auto", "cars", "coches",
+            "segunda", "mano", "ocasion", "grupo", "concesionario",
+            "de", "del", "la", "el", "los", "las", "y",
+        }
+        return frozenset(t for t in tokens if t and t not in _STOPWORDS)
+
+    # INE-validated path: scan for the longest matching municipality name
+    # using a sliding n-gram window (greedy, longest first).
+    found: list[str] = []
+    n = len(tokens)
+    consumed: list[bool] = [False] * n
+    # Try all start positions; at each position try longest n-gram first.
+    for start in range(n):
+        if consumed[start]:
+            continue
+        matched = False
+        for end in range(min(n, start + 6), start, -1):  # max 6-word municipality
+            candidate = " ".join(tokens[start:end])
+            if candidate in ine_municipalities:
+                found.append(candidate)
+                for idx in range(start, end):
+                    consumed[idx] = True
+                matched = True
+                break
+        # Single-word fallback already covered by the loop above (end = start+1)
+        # Nothing extra needed here.
+        _ = matched  # suppress unused warning
+
+    return frozenset(found)
+
+
+def _load_ine_municipalities(conn: Any) -> frozenset[str]:
+    """Load all INE municipality names, accent-folded and lowercased.
+
+    Returns a frozenset of strings like {'madrid', 'alcorcon', 'leganes',
+    'alcala de henares', ...} suitable for direct membership testing.
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT name FROM geo_municipality")
+        rows = cur.fetchall()
+    result = frozenset(_nfkd_lower(r[0]) for r in rows if r[0])
+    log.info("INE municipality set loaded: %d names", len(result))
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Union-Find (path-compressed, union-by-rank) — identical to cluster_dealers
 # ---------------------------------------------------------------------------
 
@@ -186,7 +297,7 @@ class UnionFind:
 
 
 def _load_p_entities(conn: Any) -> list[dict]:
-    """Load all P-stratum entities with their source keys."""
+    """Load all P-stratum entities with their source keys and org_id."""
     log.info("Loading P-stratum entities from PG ...")
     query = """
         SELECT
@@ -199,6 +310,7 @@ def _load_p_entities(conn: Any) -> list[dict]:
             e.phone,
             e.website,
             e.created_at,
+            e.org_id,
             ARRAY_AGG(DISTINCT es.source_key ORDER BY es.source_key)
                 FILTER (WHERE es.source_key IS NOT NULL) AS source_keys,
             COUNT(DISTINCT v.vehicle_ulid) AS n_vehicles
@@ -208,7 +320,7 @@ def _load_p_entities(conn: Any) -> list[dict]:
         WHERE e.kind IN ('compraventa', 'concesionario_oficial', 'garaje')
         GROUP BY e.entity_ulid, e.cdp_code, e.trade_name, e.kind,
                  e.province_code, e.municipality_code, e.phone, e.website,
-                 e.created_at
+                 e.created_at, e.org_id
     """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(query)
@@ -284,6 +396,41 @@ def _load_fingerprints(conn: Any, entity_ulids: list[str]) -> dict[str, set[str]
     return dict(fingerprints)
 
 
+def _load_b1_edges(conn: Any, all_ulids: set[str]) -> list[tuple[str, str]]:
+    """Load B1 (dealer-identity-det-v1) edges from v_canonical.
+
+    Returns a list of (entity_ulid, canonical_ulid) pairs where both members
+    are in the P-scope (all_ulids) and entity_ulid != canonical_ulid.
+
+    These edges seed the union-find BEFORE β edges are applied, composing B1∘β.
+    """
+    log.info("Loading B1 edges from v_canonical (run=%s) ...", DEALER_CLUSTER_RUN)
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT entity_ulid, canonical_ulid
+            FROM v_canonical
+            WHERE entity_ulid != canonical_ulid
+              AND cluster_run_id = %s
+            """,
+            (DEALER_CLUSTER_RUN,),
+        )
+        rows = cur.fetchall()
+
+    # Filter to P-scope only
+    b1_edges = [
+        (r[0], r[1])
+        for r in rows
+        if r[0] in all_ulids and r[1] in all_ulids
+    ]
+    log.info(
+        "B1 edges loaded: %d total in v_canonical, %d in P-scope",
+        len(rows),
+        len(b1_edges),
+    )
+    return b1_edges
+
+
 # ---------------------------------------------------------------------------
 # Edge generation
 # ---------------------------------------------------------------------------
@@ -304,8 +451,18 @@ def _jaccard(set_a: set[str], set_b: set[str]) -> float:
 def _build_edges(
     entities: list[dict],
     fingerprints: dict[str, set[str]],
+    ine_municipalities: frozenset[str] | None = None,
 ) -> list[EdgeType]:
     """Build all accepted merger edges with their signals.
+
+    Args:
+        entities: All P-stratum entity dicts.
+        fingerprints: {entity_ulid: set of canonical_vehicle_ulid}.
+        ine_municipalities: Accent-folded, lowercased set of INE municipality
+            names (from _load_ine_municipalities). When provided, the city-guard
+            (§B Guard 2) validates city tokens against real municipality names,
+            preventing false positives from generic words. When None, the guard
+            falls back to a stopword-exclusion heuristic (used in unit tests).
 
     Blocking strategy (avoids O(n²) global product):
       Block 1 — fingerprint: entities sharing ≥1 used-car canonical → candidate pair.
@@ -325,6 +482,10 @@ def _build_edges(
     }
     website_map: dict[str, str | None] = {
         uid: _normalize_website_host(e.get("website"))
+        for uid, e in entity_by_ulid.items()
+    }
+    org_map: dict[str, str | None] = {
+        uid: e.get("org_id")
         for uid, e in entity_by_ulid.items()
     }
 
@@ -417,11 +578,22 @@ def _build_edges(
     n_combo_accepted = 0
     n_fp_blocked = 0
     n_id_blocked = 0
+    n_chain_blocked = 0
+    n_city_blocked = 0
 
     for pair in all_candidates:
         uid_a, uid_b = pair
         ea = entity_by_ulid[uid_a]
         eb = entity_by_ulid[uid_b]
+
+        # ── §B Guard 1: chain siblings (same non-null org_id) → NEVER merge ──
+        org_a = org_map.get(uid_a)
+        org_b = org_map.get(uid_b)
+        if org_a is not None and org_a == org_b:
+            # Both are branches of the same chain organization: distinct POS,
+            # even if they share stock or identifiers. Hard block, no exception.
+            n_chain_blocked += 1
+            continue
 
         # Compute signals
         fp_a = fingerprints.get(uid_a, set())
@@ -450,10 +622,32 @@ def _build_edges(
         )
         cross_province = not same_province
 
+        # ── §B Guard 2: city-name guard (INE-validated, universal) ──────────
+        # If both trade names name DISTINCT, non-empty municipalities (validated
+        # against the real INE geo_municipality set), the entities are different
+        # physical POS (branches in different towns). Block ANY fingerprint merge.
+        #
+        # This replaces the old gated version that only applied when the website
+        # was high-collision. The root bug: two branches like "AutosMadrid Alcorcón"
+        # and "Autosmadrid Leganés" share Jaccard 1.0 (same virtual stock pool)
+        # but are distinct POS in different municipalities — fingerprint alone is
+        # insufficient proof of co-location.
+        #
+        # Pairs that lack city tokens in either name, or share the same city
+        # token, pass through as before (legitimate cross-channel dedup).
+        if fp_ok:
+            city_a = _city_tokens(ea.get("trade_name"), ine_municipalities)
+            city_b = _city_tokens(eb.get("trade_name"), ine_municipalities)
+            # Distinct city = non-empty, non-overlapping INE-validated tokens.
+            if city_a and city_b and not city_a.intersection(city_b):
+                n_city_blocked += 1
+                continue
+
         # Adjudication rules:
         #
         # Rule 1: fingerprint alone is sufficient IF Jaccard >= θ.
         #   No source-equality constraint: the whole point is cross-source merge.
+        #   (Chain guard §B already blocked same-org pairs above.)
         #
         # Rule 2: phone alone is sufficient ONLY IF:
         #   - phone is NOT a centralita (not high collision), AND
@@ -522,9 +716,12 @@ def _build_edges(
         n_combo_accepted,
     )
     log.info(
-        "Blocked: cross-province-without-fp=%d  insufficient-signal=%d",
+        "Blocked: cross-province-without-fp=%d  insufficient-signal=%d  "
+        "chain-siblings=%d  city-guard=%d",
         n_fp_blocked,
         n_id_blocked,
+        n_chain_blocked,
+        n_city_blocked,
     )
     return accepted_edges
 
@@ -575,23 +772,49 @@ def _select_canonical(
 def _build_resolution_table(
     entities: list[dict],
     edges: list[EdgeType],
+    b1_edges: list[tuple[str, str]] | None = None,
+    org_map: dict[str, str | None] | None = None,
 ) -> list[dict]:
     """Apply union-find over accepted edges → resolution rows.
+
+    §C: If b1_edges is provided, seed the union-find with B1 aristas FIRST
+    (before applying β edges), composing B1∘β. Chain guard applies to B1
+    edges as well: org-siblings from B1 are skipped.
 
     For each entity: which canonical dealer it resolves to,
     the strongest signal in its component, and the max Jaccard in the component.
     """
     entity_by_ulid: dict[str, dict] = {e["entity_ulid"]: e for e in entities}
     all_ulids = set(entity_by_ulid.keys())
+    _org_map = org_map or {}
 
     log.info(
-        "Running union-find: %d entities, %d edges ...",
+        "Running union-find: %d entities, %d beta-edges, %d B1-edges ...",
         len(all_ulids),
         len(edges),
+        len(b1_edges) if b1_edges else 0,
     )
     uf = UnionFind()
     for uid in all_ulids:
         uf._init(uid)
+
+    # ── §C: seed B1 edges first ───────────────────────────────────────────────
+    n_b1_chain_blocked = 0
+    if b1_edges:
+        for uid_a, uid_b in b1_edges:
+            if uid_a not in all_ulids or uid_b not in all_ulids:
+                continue
+            # Chain guard: skip if same non-null org
+            oa = _org_map.get(uid_a)
+            ob = _org_map.get(uid_b)
+            if oa is not None and oa == ob:
+                n_b1_chain_blocked += 1
+                continue
+            uf.union(uid_a, uid_b)
+        if n_b1_chain_blocked:
+            log.info("B1 edges skipped (chain siblings): %d", n_b1_chain_blocked)
+
+    # ── apply β edges ─────────────────────────────────────────────────────────
     for uid_a, uid_b, _signal, _prob in edges:
         if uid_a in all_ulids and uid_b in all_ulids:
             uf.union(uid_a, uid_b)
@@ -910,25 +1133,39 @@ def main() -> None:
     conn.autocommit = False
 
     try:
-        # Step 1: Load P-stratum entities
+        # Step 1: Load P-stratum entities (now includes org_id)
         entities = _load_p_entities(conn)
         n_in = len(entities)
         entity_ulids = [e["entity_ulid"] for e in entities]
+        all_ulids = set(entity_ulids)
+
+        # Build org_map for chain guard reuse in _build_resolution_table
+        org_map: dict[str, str | None] = {
+            e["entity_ulid"]: e.get("org_id") for e in entities
+        }
 
         # Step 2: Load inventory fingerprints (B7, used-car canonicals only)
         fingerprints = _load_fingerprints(conn, entity_ulids)
 
-        # Step 3: Build and adjudicate candidate edges
-        edges = _build_edges(entities, fingerprints)
+        # Step 3: Load INE municipality set for city-guard (§B Guard 2)
+        ine_municipalities = _load_ine_municipalities(conn)
 
-        # Step 4: Union-find → resolution rows
-        resolution_rows = _build_resolution_table(entities, edges)
+        # Step 4: Load B1 edges for seeding (§C)
+        b1_edges = _load_b1_edges(conn, all_ulids)
+
+        # Step 5: Build and adjudicate candidate β edges (with chain guard §B)
+        edges = _build_edges(entities, fingerprints, ine_municipalities=ine_municipalities)
+
+        # Step 6: Union-find → resolution rows (B1 seeded, then β applied)
+        resolution_rows = _build_resolution_table(
+            entities, edges, b1_edges=b1_edges, org_map=org_map
+        )
 
         assert len(resolution_rows) == n_in, (
             f"Row count mismatch: {len(resolution_rows)} != {n_in}"
         )
 
-        # Step 5: Collect notes for audit
+        # Step 7: Collect notes for audit
         signal_counts: dict[str, int] = defaultdict(int)
         for r in resolution_rows:
             signal_counts[r["signal"]] += 1
@@ -938,13 +1175,15 @@ def main() -> None:
             "max_entity_collision_k": MAX_ENTITY_COLLISION_K,
             "max_phone_collision_k": MAX_PHONE_COLLISION_K,
             "vehicle_cluster_run": VEHICLE_CLUSTER_RUN,
+            "dealer_cluster_run": DEALER_CLUSTER_RUN,
+            "b1_edges_seeded": len(b1_edges),
             "signal_counts": dict(signal_counts),
         }
 
-        # Step 6: Write to PG (idempotent, single transaction)
+        # Step 8: Write to PG (idempotent, single transaction)
         _write_to_pg(conn, resolution_rows, n_in, notes)
 
-        # Step 7: Verify (read-only)
+        # Step 9: Verify (read-only)
         conn.autocommit = True
         _verify_and_report(conn)
 
