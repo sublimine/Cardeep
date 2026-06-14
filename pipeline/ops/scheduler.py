@@ -321,15 +321,22 @@ def _run_source(source_key: str) -> int:
     Returns the exit code. stdout/stderr are inherited (the connector prints its own
     progress; the scheduler's log wraps it with timestamps). The connector is
     responsible for writing its own record_run row — the scheduler does NOT.
+
+    PYTHONIOENCODING=utf-8 is injected into the child environment so that ALL
+    connectors launched by this scheduler use UTF-8 I/O regardless of the
+    platform default (Windows cp1252 otherwise).  This is the single-point fix
+    for the B3.3 encoding bug (alert id 6: coches_com Sigma crash).
     """
     entry = REGISTRY[source_key]
     cmd = _build_cmd(entry)
-    log.info("LAUNCH %s → %s", source_key, " ".join(cmd))
+    log.info("LAUNCH %s -> %s", source_key, " ".join(cmd))
+    child_env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     try:
         result = subprocess.run(
             cmd,
             timeout=SUBPROCESS_TIMEOUT_SEC,
             check=False,   # do not raise on non-zero; we log the exit code
+            env=child_env,
         )
         exit_code = result.returncode
     except subprocess.TimeoutExpired:
@@ -437,7 +444,7 @@ def _dry_run() -> None:
 
     print()
     print("=" * 72)
-    print("CARDEEP SCHEDULER — DRY RUN")
+    print("CARDEEP SCHEDULER - DRY RUN")
     print(f"  DB:        {_RAW_DSN}")
     print(f"  Tick:      every {TICK_INTERVAL_MINUTES} min")
     print(f"  Timeout:   {SUBPROCESS_TIMEOUT_SEC}s per subprocess")
@@ -449,7 +456,7 @@ def _dry_run() -> None:
     print(f"  Mapped to a module       : {len(mapped_keys)}")
     print(f"  UNMAPPED (gap)           : {len(unmapped_keys)}")
     if unmapped_keys:
-        print("\n  ⚠ UNMAPPED SOURCE KEYS (excluded from scheduling):")
+        print("\n  [!] UNMAPPED SOURCE KEYS (excluded from scheduling):")
         for k in sorted(unmapped_keys):
             print(f"    - {k}")
 
@@ -507,9 +514,9 @@ def _check_silence() -> None:
 
     print()
     print("=" * 72)
-    print("CARDEEP SCHEDULER — SILENCE CHECK (read-only, no alerts fired)")
+    print("CARDEEP SCHEDULER - SILENCE CHECK (read-only, no alerts fired)")
     print(f"  DB:        {_RAW_DSN}")
-    print(f"  Threshold: > 2× harvest_interval_hours without last_ok or last_fail")
+    print(f"  Threshold: > 2x harvest_interval_hours without last_ok or last_fail")
     print(f"  Timestamp: {datetime.now(timezone.utc).isoformat()}")
     print("=" * 72)
 

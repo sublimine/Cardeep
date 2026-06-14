@@ -68,6 +68,7 @@ from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
+from pipeline.util.encoding import force_utf8_stdout
 from pipeline.verify import record_count_verdict
 from services.api.codes import _base32, cdp_code
 
@@ -1282,6 +1283,10 @@ async def harvest(limit: int = DEFAULT_LIMIT, concurrency: int = DEFAULT_CONCURR
     """Harvest ONE segment. VO/km0 use the per-make SRP drain; VN/catalog and renting use
     their dedicated paginated/offer drains. --segment all is handled by harvest_all() which
     fans these out in sequence under the SAME governor/breaker (one host, no collision)."""
+    # Guard stdout/stderr early so any progress print (Sigma summary, accented titles)
+    # never crashes a harvest invoked without going through main() — e.g. in tests or
+    # when called directly from another orchestrator.  Idempotent; no-op if already UTF-8.
+    force_utf8_stdout()
     segment = segment.lower()
     if segment in (SEGMENT_VN, SEGMENT_CATALOG):
         return await harvest_vn(limit, concurrency, drain_all)
