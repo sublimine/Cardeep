@@ -3,6 +3,7 @@ asyncpg>=0.29,<0.31
 fastapi>=0.110
 uvicorn[standard]>=0.29
 openpyxl>=3.1
+apscheduler>=3.10,<4   # B2.2 durable scheduler (SQLAlchemyJobStore → PG); NOT 4.0 alpha
 
 # Scraping arsenal (F3+; install as fronts come online)
 # scrapling>=0.4.9
