@@ -1,5 +1,10 @@
-# Ephemeral raw harvests — evicted by capacity policy, never versioned
-data/
+# Ephemeral raw harvests — evicted by capacity policy, never versioned.
+# Pattern is data/* (not data/) so a parent-dir exclusion does not block the re-include
+# below — git cannot re-include a file whose parent directory is excluded outright.
+data/*
+# EXCEPTION: static INE reference gazetteers the resolver reads at runtime
+# (Nomenclátor de núcleos, INE dictionaries) — versioned reference data, not harvests.
+!data/geo/
 
 # Secrets
 .env
