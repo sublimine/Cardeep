@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cardeep · Sistema de diseño (preview Fase 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0B0D12; --void-2:#0E1117; --dusk:#161A24; --dusk-2:#1B2130;
+  --steel:#7B8AA3;
+  --ink-hi:#F4F1EC; --ink-lo:rgba(244,241,236,.56); --ink-faint:rgba(244,241,236,.34);
+  --accent:#3FCF8E; --accent-hot:#6BE6AC; --accent-press:#2FB87B; --accent-soft:rgba(63,207,142,.14);
+  --ok:#3FCF8E; --warn:#E8B14C; --err:#E27D6B;
+  --amber-ambient:#EDA350; --amber-ambient-hot:#F7C277;
+  --line:rgba(244,241,236,.10); --line-strong:rgba(244,241,236,.16);
+  --font-display:"Space Grotesk",sans-serif; --font-text:"Manrope",sans-serif; --font-mono:"JetBrains Mono",monospace;
+  --r-root:32px; --r-card:22px; --r-el:14px; --r-pill:999px;
+  --shadow-float:0 40px 90px -28px rgba(0,0,0,.72);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-text); color:var(--ink-hi); background:var(--void);
+  line-height:1.5; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  position:relative; min-height:100vh;
+}
+/* ===== AMBIENT cinematic light: amber golden-hour ONLY in the atmosphere ===== */
+body::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(120% 90% at 88% -10%, rgba(237,163,80,.22) 0%, rgba(237,163,80,.06) 26%, transparent 52%),
+    radial-gradient(90% 70% at 8% 8%, rgba(123,138,163,.10) 0%, transparent 50%),
+    linear-gradient(180deg, #0E1117 0%, #0B0D12 40%, #090A0E 100%);
+}
+body::after{ /* film grain + vignette */
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.wrap{position:relative; z-index:1; max-width:1120px; margin:0 auto; padding:64px 32px 120px}
+.data{font-family:var(--font-mono); font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+
+/* glass */
+.glass{
+  background:rgba(18,22,31,.42); backdrop-filter:blur(40px) saturate(135%); -webkit-backdrop-filter:blur(40px) saturate(135%);
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16), inset 0 -1px 0 rgba(0,0,0,.28), var(--shadow-float);
+  border-radius:var(--r-root);
+}
+.glass-light{
+  background:rgba(255,255,255,.18); backdrop-filter:blur(36px) saturate(125%) brightness(1.05); -webkit-backdrop-filter:blur(36px) saturate(125%) brightness(1.05);
+  border:1px solid rgba(255,255,255,.40);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 30px 70px -30px rgba(40,45,60,.18);
+  border-radius:var(--r-root); color:#10141c;
+}
+
+/* header */
+.brand{display:flex; align-items:center; gap:12px; margin-bottom:8px}
+.logo{font-family:var(--font-display); font-weight:700; font-size:1.4rem; letter-spacing:-.04em}
+.logo b{color:var(--accent)}
+.kick{font-family:var(--font-mono); font-size:.74rem; color:var(--accent); letter-spacing:.16em; text-transform:uppercase}
+h1{font-family:var(--font-display); font-weight:700; font-size:var(--text-2xl,3rem); letter-spacing:-.03em; line-height:1.02; margin:14px 0 10px; font-size:clamp(2.2rem,1.6rem + 2.6vw,3.4rem)}
+.lede{color:var(--ink-lo); max-width:60ch; font-size:1.05rem}
+.section-label{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-faint); margin:56px 0 18px; display:flex; align-items:center; gap:14px}
+.section-label::after{content:""; flex:1; height:1px; background:var(--line)}
+
+/* palette */
+.swatches{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px}
+.sw{border-radius:var(--r-el); padding:14px; border:1px solid var(--line); min-height:96px; display:flex; flex-direction:column; justify-content:space-between}
+.sw .nm{font-family:var(--font-mono); font-size:.72rem}
+.sw .hex{font-family:var(--font-mono); font-size:.7rem; color:var(--ink-lo)}
+.role{font-size:.7rem; color:var(--ink-faint); margin-top:2px}
+
+/* type scale */
+.type-row{display:flex; align-items:baseline; gap:18px; padding:10px 0; border-bottom:1px solid var(--line)}
+.type-row .tag{font-family:var(--font-mono); font-size:.7rem; color:var(--ink-faint); width:120px; flex:none}
+
+/* pills / buttons */
+.controls{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+.btn{font-family:var(--font-text); font-weight:600; font-size:.92rem; border:none; border-radius:var(--r-pill); padding:12px 22px; cursor:pointer; transition:transform .24s cubic-bezier(.16,1,.3,1), box-shadow .24s, background .24s}
+.btn-primary{background:var(--accent); color:#07120c; box-shadow:0 8px 30px -10px rgba(63,207,142,.6)}
+.btn-primary:hover{background:var(--accent-hot); transform:translateY(-2px)}
+.btn-ghost{background:rgba(255,255,255,.04); color:var(--ink-hi); border:1px solid var(--line-strong)}
+.pill{font-family:var(--font-mono); font-size:.72rem; padding:7px 14px; border-radius:var(--r-pill); border:1px solid var(--line-strong); color:var(--ink-lo)}
+.pill.active{background:var(--accent-soft); border-color:rgba(63,207,142,.4); color:var(--accent-hot)}
+
+/* deal rating chip */
+.deal{display:inline-flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:.74rem; padding:6px 12px; border-radius:var(--r-pill); font-weight:500}
+.deal::before{content:""; width:8px; height:8px; border-radius:50%}
+.deal.great{background:rgba(63,207,142,.16); color:var(--accent-hot)} .deal.great::before{background:var(--accent)}
+.deal.fair{background:rgba(232,177,76,.14); color:#F0C674} .deal.fair::before{background:var(--warn)}
+.deal.high{background:rgba(226,125,107,.14); color:#EE9C8C} .deal.high::before{background:var(--err)}
+
+/* layout helpers */
+.row{display:grid; grid-template-columns:1.15fr .85fr; gap:24px; align-items:start}
+@media(max-width:820px){.row{grid-template-columns:1fr}}
+.pad{padding:28px}
+
+/* signature dossier card */
+.dossier{padding:0; overflow:hidden}
+.dossier .spin{height:200px; background:
+  radial-gradient(80% 120% at 50% 120%, rgba(63,207,142,.10), transparent 60%),
+  linear-gradient(135deg,#1B2130,#0E1117);
+  display:flex; align-items:flex-end; justify-content:space-between; padding:18px; position:relative}
+.dossier .spin .tag{font-family:var(--font-mono); font-size:.68rem; color:var(--ink-faint); border:1px solid var(--line); border-radius:var(--r-pill); padding:5px 11px}
+.verdict{position:absolute; top:16px; left:16px; display:flex; flex-direction:column; gap:6px}
+.vline{display:flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:.74rem; background:rgba(11,13,18,.5); backdrop-filter:blur(12px); padding:5px 10px; border-radius:var(--r-pill); border:1px solid var(--line)}
+.vok{color:var(--accent)} .vwarn{color:var(--warn)}
+.dossier .body{padding:22px 22px 24px}
+.price{display:flex; align-items:baseline; gap:14px; margin-bottom:4px}
+.price .big{font-family:var(--font-mono); font-size:2rem; font-weight:500; letter-spacing:-.02em}
+.bar{height:6px; border-radius:99px; background:rgba(255,255,255,.07); position:relative; margin:14px 0 6px; overflow:hidden}
+.bar i{position:absolute; left:0; top:0; bottom:0; width:62%; background:linear-gradient(90deg,var(--accent),var(--accent-hot)); border-radius:99px}
+.bar b{position:absolute; left:62%; top:-4px; bottom:-4px; width:2px; background:var(--ink-hi)}
+.kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px}
+.kpi{border:1px solid var(--line); border-radius:var(--r-el); padding:12px}
+.kpi .l{font-size:.68rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.1em}
+.kpi .v{font-family:var(--font-mono); font-size:1.15rem; margin-top:4px}
+.src{margin-top:16px; font-size:.72rem; color:var(--ink-faint)} .src b{color:var(--accent); font-weight:500}
+
+/* note callouts */
+.note{font-size:.82rem; color:var(--ink-lo); border-left:2px solid var(--accent); padding-left:14px; margin-top:14px}
+.foot{margin-top:80px; padding-top:24px; border-top:1px solid var(--line); color:var(--ink-faint); font-size:.78rem; font-family:var(--font-mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="logo">car<b>deep</b></span></div>
+  <span class="kick">Sistema de diseño · preview Fase 2</span>
+  <h1>Spatial glass cinemático,<br>minimalismo riguroso.</h1>
+  <p class="lede">Paneles de vidrio que flotan sobre atmósfera viva. Acento verde para la acción; el ámbar golden-hour vive solo en la luz del fondo, nunca en la UI. El dato indexado es mono: la estructura codifica el significado.</p>
+
+  <div class="section-label">Color · roles</div>
+  <div class="swatches">
+    <div class="sw" style="background:var(--void)"><span class="nm">void</span><div><div class="hex">#0B0D12</div><div class="role">fondo profundo</div></div></div>
+    <div class="sw" style="background:var(--dusk)"><span class="nm">dusk</span><div><div class="hex">#161A24</div><div class="role">base panel</div></div></div>
+    <div class="sw" style="background:var(--dusk-2)"><span class="nm">dusk-2</span><div><div class="hex">#1B2130</div><div class="role">panel elevado</div></div></div>
+    <div class="sw" style="background:var(--steel); color:#0B0D12"><span class="nm">steel</span><div><div class="hex" style="color:#0B0D12">#7B8AA3</div><div class="role" style="color:#0B0D12">neutro frío</div></div></div>
+    <div class="sw" style="background:var(--accent); color:#07120c"><span class="nm">accent</span><div><div class="hex" style="color:#07120c">#3FCF8E</div><div class="role" style="color:#07120c">ACCIÓN · UI</div></div></div>
+    <div class="sw" style="background:var(--accent-hot); color:#07120c"><span class="nm">accent-hot</span><div><div class="hex" style="color:#07120c">#6BE6AC</div><div class="role" style="color:#07120c">hover/glow</div></div></div>
+    <div class="sw" style="background:var(--warn); color:#1a1206"><span class="nm">warn</span><div><div class="hex" style="color:#1a1206">#E8B14C</div><div class="role" style="color:#1a1206">aviso (estado)</div></div></div>
+    <div class="sw" style="background:var(--err); color:#1a0a08"><span class="nm">err</span><div><div class="hex" style="color:#1a0a08">#E27D6B</div><div class="role" style="color:#1a0a08">error</div></div></div>
+    <div class="sw" style="background:linear-gradient(120deg,var(--amber-ambient),var(--amber-ambient-hot)); color:#1a1206"><span class="nm">amber-ambient</span><div><div class="hex" style="color:#1a1206">#EDA350</div><div class="role" style="color:#1a1206">SOLO atmósfera</div></div></div>
+    <div class="sw" style="background:var(--ink-hi); color:#0B0D12"><span class="nm">ink-hi</span><div><div class="hex" style="color:#0B0D12">#F4F1EC</div><div class="role" style="color:#0B0D12">texto</div></div></div>
+  </div>
+  <p class="note">El ámbar (esquina superior derecha de esta página) es <b style="color:var(--amber-ambient)">luz de fondo</b>: nunca pinta un control, texto, borde ni icono. La acción es siempre verde.</p>
+
+  <div class="section-label">Tipografía · jerarquía por tamaño y peso, jamás por color</div>
+  <div class="type-row"><span class="tag">Display 700</span><span style="font-family:var(--font-display); font-weight:700; font-size:2.4rem; letter-spacing:-.03em">Space Grotesk</span></div>
+  <div class="type-row"><span class="tag">Texto 400/600</span><span style="font-family:var(--font-text); font-size:1.2rem">Manrope — limpio, geométrico, legible</span></div>
+  <div class="type-row"><span class="tag">Datos · mono</span><span class="data" style="font-size:1.2rem">24.900 € · 78.450 km · 9.2 MDS · VIN VF7…</span></div>
+
+  <div class="section-label">Material glass · controles flotan sobre contenido</div>
+  <div class="row">
+    <div class="glass pad">
+      <div class="kick" style="color:var(--ink-faint)">glass · spatial dark</div>
+      <p style="margin:10px 0 16px; color:var(--ink-lo)">Blur 40px, doble rim interno (luz arriba / sombra abajo) = grosor de cristal. La sombra única, enorme y fría, lo hace flotar.</p>
+      <div class="controls">
+        <button class="btn btn-primary">Explorar el índice</button>
+        <button class="btn btn-ghost">Ver una demo</button>
+        <span class="pill active">Reservable</span>
+        <span class="pill">ITV ✓</span>
+      </div>
+      <div class="controls" style="margin-top:14px">
+        <span class="deal great">Gran precio</span>
+        <span class="deal fair">Precio justo</span>
+        <span class="deal high">Precio alto</span>
+      </div>
+    </div>
+    <div class="glass-light pad">
+      <div class="kick" style="color:#3a6b53">glass · light (dashboards densos)</div>
+      <p style="margin:10px 0 14px; color:#2a3340; font-size:.92rem">Velo blanco, sombra fría (nunca negra). Para superficies muy densas de datos del dealer.</p>
+      <div class="data" style="font-size:1.6rem; color:#10141c">+15% <span style="font-size:.8rem; color:#3a6b53">margen / operación</span></div>
+    </div>
+  </div>
+
+  <div class="section-label">Dossier · la pieza signature (verdict header → profundidad)</div>
+  <div class="row">
+    <div class="glass dossier">
+      <div class="spin">
+        <div class="verdict">
+          <span class="vline vok">✓ Transferible · sin cargas</span>
+          <span class="vline vok">✓ Km coherente vía ITV</span>
+          <span class="vline vwarn">⚠ 1 daño reparado</span>
+        </div>
+        <span class="tag">◖ 360° · arrastra para rotar ◗</span>
+        <span class="deal great">Gran precio</span>
+      </div>
+      <div class="body">
+        <div class="price"><span class="big">24.900 €</span><span class="data" style="color:var(--ink-lo); font-size:.9rem">312 €/mes</span></div>
+        <div style="font-family:var(--font-display); font-weight:500; font-size:1.1rem; letter-spacing:-.02em">Tesla Model 3 · Long Range AWD</div>
+        <div class="bar"><i></i><b></b></div>
+        <div class="data" style="font-size:.72rem; color:var(--ink-faint)">posición vs mercado UE · −6% bajo la media</div>
+        <div class="kpis">
+          <div class="kpi"><div class="l">MDS</div><div class="v">9 d</div></div>
+          <div class="kpi"><div class="l">RV fin contrato</div><div class="v">14.2k</div></div>
+          <div class="kpi"><div class="l">Demanda</div><div class="v" style="color:var(--accent)">alta</div></div>
+        </div>
+        <div class="src">fuentes: <b>DGT</b> · carVertical · índice Cardeep — reconciliado</div>
+      </div>
+    </div>
+    <div class="glass pad">
+      <div class="kick" style="color:var(--ink-faint)">la tesis</div>
+      <p style="margin:12px 0; color:var(--ink-lo)">El historial <b style="color:var(--ink-hi)">mueve la banda de precio</b> y genera la recomendación de compra. Valor de mercado − reparación = precio real; + RV a fin de contrato (ES) + MDS + demanda regional. <b style="color:var(--accent)">Ningún competidor fusiona las cinco capas.</b></p>
+      <p class="note">Radios concéntricos: panel 32 · card 22 · elemento 14 · pill 999. Lo redondo del todo = clicable (jerarquía táctil iOS&nbsp;26).</p>
+    </div>
+  </div>
+
+  <div class="foot">cardeep-web · packages/design/tokens.css · preview estático (la atmósfera real va en canvas WebGL; Higgsfield cuando vuelva el MCP)</div>
+</div>
+</body>
+</html>

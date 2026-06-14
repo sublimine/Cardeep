@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Cardeep — hero (prueba de techo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0B0D12; --dusk:#161A24; --dusk-2:#1B2130; --steel:#7B8AA3;
+  --ink-hi:#F4F1EC; --ink-lo:rgba(244,241,236,.58); --ink-faint:rgba(244,241,236,.34);
+  --accent:#3FCF8E; --accent-hot:#6BE6AC; --warn:#E8B14C; --err:#E27D6B;
+  --line:rgba(244,241,236,.10); --line-2:rgba(244,241,236,.16);
+  --fd:"Space Grotesk",sans-serif; --ft:"Manrope",sans-serif; --fm:"JetBrains Mono",monospace;
+  --r-root:32px; --r-card:22px; --r-el:14px; --r-pill:999px;
+  --shadow:0 50px 110px -30px rgba(0,0,0,.78);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--ft); color:var(--ink-hi); background:var(--void); overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  /* guaranteed atmospheric substrate even if WebGL fails (brief §6.2) */
+  background:
+    radial-gradient(115% 85% at 86% -8%, rgba(237,163,80,.20), rgba(237,163,80,.05) 30%, transparent 56%),
+    radial-gradient(90% 70% at 10% 18%, rgba(63,207,142,.05), transparent 55%),
+    linear-gradient(180deg,#141A26 0%,#0E1117 42%,#08090D 100%);
+}
+#bg{position:fixed; inset:0; z-index:0; display:block}
+.grain{position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.vig{position:fixed; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(120% 100% at 50% 38%, transparent 55%, rgba(0,0,0,.45) 100%)}
+
+.shell{position:relative; z-index:2}
+nav{display:flex; align-items:center; justify-content:space-between; padding:22px clamp(20px,4vw,56px); max-width:1320px; margin:0 auto}
+.logo{font-family:var(--fd); font-weight:700; font-size:1.35rem; letter-spacing:-.045em}
+.logo b{color:var(--accent)}
+.navpill{display:flex; gap:6px; align-items:center; padding:6px;
+  background:rgba(18,22,31,.42); backdrop-filter:blur(30px) saturate(135%); -webkit-backdrop-filter:blur(30px) saturate(135%);
+  border:1px solid var(--line); border-radius:var(--r-pill);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 -1px 0 rgba(0,0,0,.25)}
+.navpill a{font-size:.86rem; color:var(--ink-lo); text-decoration:none; padding:8px 16px; border-radius:var(--r-pill); transition:color .2s,background .2s}
+.navpill a:hover{color:var(--ink-hi); background:rgba(255,255,255,.05)}
+.navpill a.is{color:var(--ink-hi)}
+.nav-cta{font-family:var(--ft); font-weight:600; font-size:.86rem; color:#07120c; background:var(--accent); border:none; padding:10px 20px; border-radius:var(--r-pill); cursor:pointer; transition:transform .25s cubic-bezier(.16,1,.3,1),background .25s; box-shadow:0 8px 26px -10px rgba(63,207,142,.55)}
+.nav-cta:hover{background:var(--accent-hot); transform:translateY(-2px)}
+
+.hero{max-width:1320px; margin:0 auto; padding:clamp(20px,2.4vw,40px) clamp(20px,4vw,56px) 56px;
+  display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(28px,4vw,72px); align-items:center; min-height:calc(100vh - 92px)}
+@media(max-width:900px){.hero{grid-template-columns:1fr; min-height:auto}}
+
+.kick{font-family:var(--fm); font-size:.74rem; letter-spacing:.2em; text-transform:uppercase; color:var(--accent); display:flex; align-items:center; gap:12px}
+.kick::before{content:""; width:26px; height:1px; background:var(--accent)}
+h1{font-family:var(--fd); font-weight:700; letter-spacing:-.035em; line-height:.98;
+  font-size:clamp(2.6rem,1.2rem + 5.6vw,5.6rem); margin:20px 0 22px}
+h1 .ln{display:block; overflow:hidden}
+h1 .ln > span{display:block}
+h1 em{font-style:normal; color:var(--accent)}
+.lede{color:var(--ink-lo); font-size:clamp(1rem,.95rem + .3vw,1.18rem); max-width:46ch; line-height:1.55}
+.cta-row{display:flex; gap:14px; flex-wrap:wrap; margin:32px 0 38px}
+.btn{font-family:var(--ft); font-weight:600; font-size:.95rem; border-radius:var(--r-pill); padding:15px 28px; cursor:pointer; border:none; transition:transform .28s cubic-bezier(.16,1,.3,1),background .28s,box-shadow .28s}
+.btn-1{background:var(--accent); color:#07120c; box-shadow:0 12px 36px -12px rgba(63,207,142,.6)}
+.btn-1:hover{background:var(--accent-hot); transform:translateY(-3px)}
+.btn-2{background:rgba(255,255,255,.045); color:var(--ink-hi); border:1px solid var(--line-2)}
+.btn-2:hover{background:rgba(255,255,255,.09); transform:translateY(-3px)}
+.stats{display:flex; gap:clamp(20px,3vw,44px)}
+.stat .n{font-family:var(--fm); font-size:clamp(1.3rem,1rem + 1vw,1.8rem); letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.stat .n b{color:var(--accent); font-weight:500}
+.stat .l{font-size:.74rem; color:var(--ink-faint); margin-top:4px; letter-spacing:.04em}
+
+/* floating dossier */
+.stage{perspective:1400px; display:flex; justify-content:center}
+.dossier{width:min(420px,100%); border-radius:var(--r-root); overflow:hidden; transform-style:preserve-3d;
+  background:rgba(18,22,31,.46); backdrop-filter:blur(42px) saturate(140%); -webkit-backdrop-filter:blur(42px) saturate(140%);
+  border:1px solid var(--line-2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.32), var(--shadow)}
+.viz{height:176px; position:relative; display:flex; align-items:flex-end; justify-content:space-between; padding:16px; overflow:hidden;
+  background:radial-gradient(90% 120% at 50% 130%, rgba(63,207,142,.16), transparent 60%), linear-gradient(150deg,#202738,#0C0F16)}
+.viz::after{content:""; position:absolute; inset:0; background:radial-gradient(60% 80% at 78% 12%, rgba(237,163,80,.16), transparent 60%)}
+.viz .car{position:absolute; left:50%; bottom:-2px; transform:translateX(-50%); width:88%; height:auto; z-index:1; opacity:.9; filter:drop-shadow(0 14px 26px rgba(0,0,0,.5))}
+.viz .floor{position:absolute; left:8%; right:8%; bottom:14px; height:14px; z-index:0; border-radius:50%;
+  background:radial-gradient(closest-side, rgba(63,207,142,.22), transparent 80%); filter:blur(5px)}
+.verdict{position:absolute; top:16px; left:16px; display:flex; flex-direction:column; gap:7px; z-index:2}
+.vl{display:inline-flex; align-items:center; gap:8px; font-family:var(--fm); font-size:.72rem; padding:6px 11px; border-radius:var(--r-pill);
+  background:rgba(8,10,14,.5); backdrop-filter:blur(10px); border:1px solid var(--line); width:fit-content}
+.vl.ok{color:var(--accent)} .vl.wn{color:var(--warn)}
+.spin{position:relative; z-index:2; font-family:var(--fm); font-size:.66rem; color:var(--ink-faint); border:1px solid var(--line); border-radius:var(--r-pill); padding:6px 12px}
+.deal{position:relative; z-index:2; font-family:var(--fm); font-size:.72rem; padding:6px 12px; border-radius:var(--r-pill); background:rgba(63,207,142,.18); color:var(--accent-hot); display:inline-flex; align-items:center; gap:7px}
+.deal::before{content:""; width:8px;height:8px;border-radius:50%; background:var(--accent)}
+.body{padding:18px 20px 20px}
+.row1{display:flex; align-items:baseline; gap:14px}
+.row1 .p{font-family:var(--fm); font-size:2rem; font-weight:500; letter-spacing:-.025em}
+.row1 .mo{font-family:var(--fm); font-size:.9rem; color:var(--ink-lo)}
+.name{font-family:var(--fd); font-weight:500; font-size:1.08rem; letter-spacing:-.02em; margin-top:2px}
+.bar{height:6px; border-radius:99px; background:rgba(255,255,255,.07); position:relative; margin:18px 0 7px; overflow:visible}
+.bar i{position:absolute; inset:0 38% 0 0; background:linear-gradient(90deg,var(--accent),var(--accent-hot)); border-radius:99px}
+.bar b{position:absolute; left:62%; top:-3px; bottom:-3px; width:2px; background:var(--ink-hi)}
+.posn{font-family:var(--fm); font-size:.7rem; color:var(--ink-faint)}
+.kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:18px}
+.kpi{border:1px solid var(--line); border-radius:var(--r-el); padding:12px 12px 11px}
+.kpi .l{font-size:.62rem; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.1em}
+.kpi .v{font-family:var(--fm); font-size:1.1rem; margin-top:5px}
+.kpi .v.g{color:var(--accent)}
+.src{margin-top:16px; font-size:.7rem; color:var(--ink-faint)} .src b{color:var(--accent); font-weight:500}
+
+.scrollhint{position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:3; font-family:var(--fm); font-size:.66rem; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-faint); display:flex; flex-direction:column; align-items:center; gap:8px}
+.scrollhint .ln{width:1px; height:30px; background:linear-gradient(var(--accent),transparent)}
+
+/* intro hidden state */
+.reveal{opacity:0; transform:translateY(26px)}
+@media (prefers-reduced-motion: reduce){ .reveal{opacity:1; transform:none} }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="grain"></div>
+<div class="vig"></div>
+
+<div class="shell">
+  <nav>
+    <div class="logo reveal">car<b>deep</b></div>
+    <div class="navpill reveal">
+      <a class="is" href="#">Índice</a>
+      <a href="#">Inteligencia</a>
+      <a href="#">Garaje 360</a>
+      <a href="#">Precios</a>
+    </div>
+    <button class="nav-cta reveal">Solicitar demo</button>
+  </nav>
+
+  <section class="hero">
+    <div class="copy">
+      <div class="kick reveal">Índice nacional · Inteligencia europea</div>
+      <h1>
+        <span class="ln"><span>El mercado que</span></span>
+        <span class="ln"><span>nadie tiene <em>entero</em>.</span></span>
+      </h1>
+      <p class="lede reveal">Cada coche de España, vivo y verificado: precio justo, demanda y valor cruzados contra 27 mercados. La inteligencia que el concesionario necesita para decidir — no otro tablón de anuncios.</p>
+      <div class="cta-row reveal">
+        <button class="btn btn-1">Explorar el índice</button>
+        <button class="btn btn-2">Ver una demo</button>
+      </div>
+      <div class="stats">
+        <div class="stat reveal"><div class="n"><b>1,49</b>M</div><div class="l">coches indexados</div></div>
+        <div class="stat reveal"><div class="n">52<b>/52</b></div><div class="l">provincias vivas</div></div>
+        <div class="stat reveal"><div class="n"><b>9,2</b>d</div><div class="l">MDS medio</div></div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="dossier reveal" id="dossier">
+        <div class="viz">
+          <div class="floor"></div>
+          <svg class="car" viewBox="0 0 240 92" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#2A3346"/><stop offset="1" stop-color="#0E131C"/>
+              </linearGradient>
+              <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#6BE6AC" stop-opacity=".28"/><stop offset="1" stop-color="#3FCF8E" stop-opacity=".05"/>
+              </linearGradient>
+            </defs>
+            <path d="M14,64 C18,50 30,47 44,46 C52,35 68,27 98,27 C124,27 142,31 156,42 C178,44 214,47 226,62 L226,66 C226,69 223,71 219,71 L20,71 C16,71 13,69 13,66 Z" fill="url(#body)" stroke="#3FCF8E" stroke-opacity=".35" stroke-width="1"/>
+            <path d="M62,44 C70,33 84,30 100,30 C118,30 134,33 146,42 C140,44 80,44 62,44 Z" fill="url(#glass)"/>
+            <line x1="104" y1="30" x2="100" y2="44" stroke="#6BE6AC" stroke-opacity=".25"/>
+            <circle cx="64" cy="71" r="13" fill="#0B0D12" stroke="#3FCF8E" stroke-opacity=".45" stroke-width="1.4"/>
+            <circle cx="180" cy="71" r="13" fill="#0B0D12" stroke="#3FCF8E" stroke-opacity=".45" stroke-width="1.4"/>
+            <circle cx="64" cy="71" r="5" fill="#1B2130"/><circle cx="180" cy="71" r="5" fill="#1B2130"/>
+          </svg>
+          <div class="verdict">
+            <span class="vl ok">✓ Transferible · sin cargas</span>
+            <span class="vl ok">✓ Km coherente vía ITV</span>
+            <span class="vl wn">⚠ 1 daño reparado</span>
+          </div>
+          <span class="spin">◖ 360° ◗</span>
+          <span class="deal">Gran precio</span>
+        </div>
+        <div class="body">
+          <div class="row1"><span class="p">24.900 €</span><span class="mo">312 €/mes</span></div>
+          <div class="name">Tesla Model 3 · Long Range AWD</div>
+          <div class="bar"><i></i><b></b></div>
+          <div class="posn">posición vs mercado UE · −6% bajo la media</div>
+          <div class="kpis">
+            <div class="kpi"><div class="l">MDS</div><div class="v">9 d</div></div>
+            <div class="kpi"><div class="l">RV fin contr.</div><div class="v">14,2k</div></div>
+            <div class="kpi"><div class="l">Demanda</div><div class="v g">alta</div></div>
+          </div>
+          <div class="src">fuentes: <b>DGT</b> · carVertical · índice Cardeep — reconciliado</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas = document.getElementById('bg');
+let renderer, scene, cam, mat, pts, clock;
+const mouse = {x:.5, y:.4, tx:.5, ty:.4};
+
+try {
+  renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  scene = new THREE.Scene();
+  cam = new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  clock = new THREE.Clock();
+
+  // --- living atmosphere: dusk -> blue hour with a breathing amber glow ---
+  const frag = `
+    precision highp float;
+    varying vec2 vUv; uniform float uT; uniform vec2 uRes; uniform vec2 uMouse;
+    float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+    void main(){
+      vec2 uv = vUv;
+      // base vertical dusk gradient (warm-cool top -> deep bottom)
+      vec3 top = vec3(0.078,0.102,0.149);
+      vec3 mid = vec3(0.055,0.067,0.092);
+      vec3 bot = vec3(0.031,0.035,0.051);
+      vec3 col = mix(bot, mix(mid, top, smoothstep(0.35,1.0,uv.y)), smoothstep(0.0,1.0,uv.y));
+      // breathing amber golden-hour glow, upper-right (AMBIENT light only)
+      float br = 0.5 + 0.5*sin(uT*0.35);
+      vec2 ap = vec2(0.84,0.92) + uMouse*0.04;
+      float ad = distance(uv*vec2(uRes.x/uRes.y,1.0), ap*vec2(uRes.x/uRes.y,1.0));
+      float ag = smoothstep(0.95,0.0,ad);
+      col += vec3(0.95,0.62,0.30) * ag*ag * (0.20+0.07*br);
+      // faint cool steel glow lower-left for depth
+      vec2 sp = vec2(0.08,0.18) - uMouse*0.03;
+      float sd = distance(uv*vec2(uRes.x/uRes.y,1.0), sp*vec2(uRes.x/uRes.y,1.0));
+      col += vec3(0.18,0.30,0.42) * smoothstep(0.7,0.0,sd) * 0.10;
+      // grain + vignette
+      col += (hash(uv*uRes + uT)-0.5)*0.025;
+      col *= smoothstep(1.35,0.35,distance(uv,vec2(0.5,0.42)));
+      gl_FragColor = vec4(col,1.0);
+    }`;
+  const vert = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position,1.0); }`;
+  mat = new THREE.ShaderMaterial({ vertexShader:vert, fragmentShader:frag,
+    uniforms:{ uT:{value:0}, uRes:{value:new THREE.Vector2()}, uMouse:{value:new THREE.Vector2(0,0)} }});
+  scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2), mat));
+
+  // --- drifting dust ---
+  const N=420, posArr=new Float32Array(N*3), spd=new Float32Array(N);
+  for(let i=0;i<N;i++){ posArr[i*3]=(Math.random()*2-1); posArr[i*3+1]=(Math.random()*2-1); posArr[i*3+2]=0; spd[i]=0.01+Math.random()*0.03; }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(posArr,3));
+  pts=new THREE.Points(g, new THREE.PointsMaterial({ color:0xEDC79A, size:0.006, transparent:true, opacity:0.35, depthWrite:false, blending:THREE.AdditiveBlending }));
+  pts.userData.spd=spd; scene.add(pts);
+
+  function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false); mat.uniforms.uRes.value.set(w,h); }
+  addEventListener('resize', resize); resize();
+
+  function tick(){
+    const t=clock.getElapsedTime();
+    mat.uniforms.uT.value=t;
+    mouse.x+=(mouse.tx-mouse.x)*0.05; mouse.y+=(mouse.ty-mouse.y)*0.05;
+    mat.uniforms.uMouse.value.set((mouse.x-0.5)*2,(mouse.y-0.5)*2);
+    const p=pts.geometry.attributes.position.array;
+    for(let i=0;i<N;i++){ p[i*3+1]+=pts.userData.spd[i]*0.004; if(p[i*3+1]>1.05)p[i*3+1]=-1.05; p[i*3]+=Math.sin(t*0.1+i)*0.0002; }
+    pts.geometry.attributes.position.needsUpdate=true;
+    pts.position.x=(mouse.x-0.5)*0.12; pts.position.y=-(mouse.y-0.5)*0.12;
+    renderer.render(scene,cam);
+    if(!reduce) requestAnimationFrame(tick);
+  }
+  tick();
+} catch(e){ /* WebGL unavailable -> CSS substrate already guarantees atmosphere */ console.warn('webgl off', e); }
+
+// --- cursor parallax on dossier + shader ---
+const dossier=document.getElementById('dossier');
+addEventListener('pointermove', e=>{
+  mouse.tx=e.clientX/innerWidth; mouse.ty=e.clientY/innerHeight;
+  if(dossier && !reduce){ const rx=(mouse.ty-0.5)*-7, ry=(mouse.tx-0.5)*9;
+    dossier.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg) translateZ(0)`; }
+});
+
+// --- orchestrated reveal (Motion-style; GSAP-free, native WAAPI for the proto) ---
+function intro(){
+  const seq=[...document.querySelectorAll('.reveal')];
+  const lines=[...document.querySelectorAll('h1 .ln > span')];
+  lines.forEach(l=>{ l.style.transform='translateY(105%)'; });
+  if(reduce){ seq.forEach(el=>{el.style.opacity=1; el.style.transform='none';}); lines.forEach(l=>l.style.transform='none'); return; }
+  const ease='cubic-bezier(.16,1,.3,1)';
+  lines.forEach((l,i)=> l.animate([{transform:'translateY(105%)'},{transform:'translateY(0)'}],{duration:1000,delay:120+i*110,easing:ease,fill:'forwards'}));
+  seq.forEach((el,i)=>{ el.animate([{opacity:0,transform:'translateY(26px)'},{opacity:1,transform:'translateY(0)'}],{duration:900,delay:260+i*70,easing:ease,fill:'forwards'}); });
+  // perpetual float on the dossier
+  if(dossier) dossier.animate([{translate:'0 0'},{translate:'0 -10px'},{translate:'0 0'}],{duration:6000,iterations:Infinity,easing:'ease-in-out',delay:1200});
+}
+intro();
+</script>
+</body>
+</html>
