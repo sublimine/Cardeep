@@ -1,0 +1,244 @@
+﻿======================================================================
+B6 FINAL � Chapman capture-recapture (READ-ONLY)
+======================================================================
+
+SECCION 1 � Fuentes en entity_source para dealers
+------------------------------------------------------------
+
+  source_key                                     n_dealers  ortogonalidad
+  --------------------------------------------- ----------  ------------------------------
+  milanuncios_wholesale                              15216  DIGITAL-ANUNCIO (plataforma C2C/B2C)
+  osm                                                 9956  FISICO-GEO (OpenStreetMap voluntarios)
+  coches_net_wholesale                                7215  DIGITAL-ANUNCIO (plataforma B2C)
+  mercedes_benz_wholesale                             4750  OEM LOCATOR (solo marca)
+  wallapop_wholesale                                  4187  DIGITAL-ANUNCIO (plataforma C2C/B2C)
+  autocasion_wholesale                                2584  DIGITAL-ANUNCIO (plataforma B2C)
+  dgt_cat                                             1292  CENSO LEGAL (registro DGT, solo desguaces)
+  aedra                                                586  DIRECTORIO-ASOCIACION (solo desguaces)
+  motor_es_wholesale                                   530  DIGITAL-ANUNCIO (plataforma B2C)
+  coches_com_wholesale                                 522  DIGITAL-ANUNCIO (plataforma B2C)
+  oem_dacia                                            482  desconocida/especializada
+  as24                                                 262  desconocida/especializada
+  faciliteacoches_wholesale                            248  desconocida/especializada
+  oem_mercedes                                         242  desconocida/especializada
+  motorflash_wholesale                                 200  desconocida/especializada
+  oem_skoda                                            196  desconocida/especializada
+  group_vo_chains_flexicar                             186  desconocida/especializada
+  oem_hyundai                                          174  desconocida/especializada
+  oem_seat_cupra_new_stock                             163  desconocida/especializada
+  spoticar_wholesale                                   137  desconocida/especializada
+  oem_toyota_lexus_wholesale                           130  desconocida/especializada
+  renew_wholesale                                      116  desconocida/especializada
+  oem_seat                                             108  desconocida/especializada
+  oem_volvo_jlr_suzuki_wholesale                        99  desconocida/especializada
+  acevas                                                98  desconocida/especializada
+  oem_byd                                               90  desconocida/especializada
+  oem_seat_cupra_wholesale                              88  desconocida/especializada
+  oem_mini_next_wholesale                               84  desconocida/especializada
+  oem_mg                                                70  desconocida/especializada
+  aecs                                                  68  desconocida/especializada
+  geo_sweep                                             68  desconocida/especializada
+  as24_wholesale                                        68  desconocida/especializada
+  oem_kia_wholesale                                     64  desconocida/especializada
+  oem_hyundai_wholesale                                 64  desconocida/especializada
+  dasweltauto_wholesale                                 57  desconocida/especializada
+  oem_audi_wholesale                                    57  desconocida/especializada
+  group_subastas_wholesale                              54  desconocida/especializada
+  oem_bmw_premium_selection_wholesale                   52  desconocida/especializada
+  miclasico_wholesale                                   50  desconocida/especializada
+  family_dealerk_wp                                     43  desconocida/especializada
+  nissan_intelligent_choice_wholesale                   42  desconocida/especializada
+  oem_ford_wholesale                                    32  desconocida/especializada
+  carandclassic_wholesale                               31  desconocida/especializada
+  family_dms_vendor_platforms                           27  desconocida/especializada
+  group_subastas_bca                                    20  desconocida/especializada
+  group_subastas_autorola                               20  desconocida/especializada
+  family_cms_wp                                         13  desconocida/especializada
+  family_generic_custom                                 10  desconocida/especializada
+  family_builder_wholesale                               9  desconocida/especializada
+  family_framework_webbuilder                            7  desconocida/especializada
+  localizavo_wholesale                                   2  desconocida/especializada
+  group_vo_chains_clicars                                1  desconocida/especializada
+  group_vo_chains_ocasionplus                            1  desconocida/especializada
+  group_rentacar_vo_centauro                             1  desconocida/especializada
+  group_rentacar_vo_athlon                               1  desconocida/especializada
+  group_rentacar_vo_arval                                1  desconocida/especializada
+  group_importador_modrive                               1  desconocida/especializada
+  subastacar_wholesale                                   1  desconocida/especializada
+  family_unreachable                                     1  desconocida/especializada
+  group_rentacar_vo_recordgo                             1  desconocida/especializada
+  racc_ocasion_wholesale                                 1  desconocida/especializada
+  group_rentacar_vo_okmobility                           1  desconocida/especializada
+  group_vo_chains_carplus                                1  desconocida/especializada
+  group_rentacar_vo_northgate                            1  desconocida/especializada
+
+SECCION 2 � Analisis de solapamiento (m) entre pares clave
+------------------------------------------------------------
+
+  Par                                                         n1     n2  m (entity_ulid)  m (canonical)
+  ------------------------------------------------------- ------ ------ ---------------- --------------
+  FISICO x DIGITAL-C2C                                      9956   4187                0             20
+  FISICO x DIGITAL-C2C                                      9956  15216               23             90
+  FISICO x DIGITAL-B2C                                      9956   7215                0             70
+  DIGITAL x DIGITAL [NO ortogonal]                          4187  15216                0            600
+  DIGITAL x DIGITAL [NO ortogonal]                          4187   7215                0            613
+  LEGAL x DIRECTORIO [solo desguaces]                       1292    586              232            367
+
+SECCION 3 � Estimaciones Chapman globales (m = canonical overlap)
+------------------------------------------------------------
+
+  Numerador nacional (dealers en DB): 50364
+
+  Par                                                        N_hat   IC95_low  IC95_high    Cob% Valid
+  ------------------------------------------------------- -------- ---------- ---------- ------- ------
+  FISICO x DIGITAL-C2C                                     1985709    1158890    2812529    2.5% OK
+  FISICO x DIGITAL-C2C                                     1665006    1327344    2002668    3.0% OK
+  FISICO x DIGITAL-B2C                                     1011967     780198    1243736    5.0% OK
+  DIGITAL x DIGITAL [NO ortogonal]                          106037      98354     113720   47.5% OK
+  DIGITAL x DIGITAL [NO ortogonal]                           49218      45781      52656  102.3% OK
+  LEGAL x DIRECTORIO [solo desguaces]                         2061       1953       2170 2443.1% OK
+
+SECCION 4 � Chapman por provincia (OSM x wallapop_wholesale, canonical_ulid)
+------------------------------------------------------------
+
+  NOTA: m via canonical_ulid (entidad fisica real, no entity_ulid)
+
+  Prov  Nombre                  n_OSM   n_WP  m_raw  m_can    N_hat   IC_low   IC_high  Num_DB    Cob% Valid
+  ----- ---------------------- ------ ------ ------ ------ -------- -------- --------- ------- ------- ------
+  01    Araba/�lava                67     20      0      0     1427        0      3344     306   21.4% m=0
+  02    Albacete                  140     21      0      0     3101        0      7286     476   15.3% m=0
+  03    Alicante/Alacant          373    185      0      0    69563        0    165586    2068    3.0% m=0
+  04    Almer�a                   174     33      0      0     5949        0     14050     570    9.6% m=0
+  05    �vila                      33     10      0      0      373        0       860     137   36.7% m=0
+  06    Badajoz                   145     45      0      0     6715        0     15890     889   13.2% m=0
+  07    Balears, Illes            415     54      0      0    22879        0     54262    1042    4.6% m=0
+  08    Barcelona                 804    732      0      1   295032        0    628022    5064    1.7% OK
+  09    Burgos                    394     19      0      0     7899        0     18557     718    9.1% m=0
+  10    C�ceres                   103     17      0      0     1871        0      4380     374   20.0% m=0
+  11    C�diz                     173     62      0      0    10961        0     25989    1045    9.5% m=0
+  12    Castell�n/Castell�         79     52      0      0     4239        0     10023     513   12.1% m=0
+  13    Ciudad Real                87     40      0      0     3607        0      8518     547   15.2% m=0
+  14    C�rdoba                    83     72      0      1     3065        0      6446     666   21.7% OK
+  15    Coru�a, A                 483    100      0      0    48883        0    116227    1445    3.0% m=0
+  16    Cuenca                     37     10      0      0      417        0       962     191   45.8% m=0
+  17    Girona                    179    103      0      0    18719        0     44467     879    4.7% m=0
+  18    Granada                   274     65      0      0    18149        0     43067    1010    5.6% m=0
+  19    Guadalajara                24     21      0      0      549        0      1279     165   30.1% m=0
+  20    Gipuzkoa                  201     33      0      2     2288      162      4415     564   24.6% OK
+  21    Huelva                     40     17      0      0      737        0      1719     317   43.0% m=0
+  22    Huesca                    102     22      0      0     2368        0      5563     274   11.6% m=0
+  23    Ja�n                      245     69      0      1     8609        0     18173     984   11.4% OK
+  24    Le�n                      148     19      0      0     2979        0      6991     489   16.4% m=0
+  25    Lleida                    238     67      0      4     3249      772      5726     711   21.9% OK
+  26    Rioja, La                  33     26      0      0      917        0      2147     317   34.6% m=0
+  27    Lugo                      140     30      0      0     4370        0     10308     608   13.9% m=0
+  28    Madrid                   1286    722      0      4   186099    37992    334206    8059    4.3% OK
+  29    M�laga                    240    182      0      0    44102        0    104932    1898    4.3% m=0
+  30    Murcia                    146    163      0      0    24107        0     57303    1566    6.5% m=0
+  31    Navarra                   149     40      0      2     2049      134      3964     689   33.6% OK
+  32    Ourense                    82     30      0      0     2572        0      6059     407   15.8% m=0
+  33    Asturias                  222     61      0      0    13825        0     32789    1194    8.6% m=0
+  34    Palencia                   50      4      0      0      254        0       567     150   59.1% m=0
+  35    Palmas, Las               159      8      0      0     1439        0      3315     790   54.9% m=0
+  36    Pontevedra                186     60      0      0    11406        0     27043     969    8.5% m=0
+  37    Salamanca                 152     35      0      0     5507        0     13009     631   11.5% m=0
+  38    Santa Cruz de Tenerife    180      5      0      0     1085        0      2455     753   69.4% m=0
+  39    Cantabria                 247     50      0      2     4215      231      8199     731   17.3% OK
+  40    Segovia                    30      8      0      0      278        0       637     133   47.8% m=0
+  41    Sevilla                   211    157      0      0    33495        0     79662    2126    6.3% m=0
+  42    Soria                      30      6      0      0      216        0       490     102   47.2% m=0
+  43    Tarragona                 211    118      0      0    25227        0     59962     952    3.8% m=0
+  44    Teruel                     44      8      0      0      404        0       927     133   32.9% m=0
+  45    Toledo                    107     64      0      0     7019        0     16628     847   12.1% m=0
+  46    Valencia/Val�ncia         382    314      0      1    60322        0    128188    2852    4.7% OK
+  47    Valladolid                162     25      0      0     4237        0      9979     590   13.9% m=0
+  48    Bizkaia                   214    108      0      0    23434        0     55689    1063    4.5% m=0
+  49    Zamora                     59     13      0      2      279       42       516     248   88.9% OK
+  50    Zaragoza                  185     60      0      0    11345        0     26898     761    6.7% m=0
+  51    Ceuta                       3      1      0      0        7        0        14       9  128.6% m=0
+  52    Melilla                     5      1      0      0       11        0        22      17  154.5% m=0
+
+SECCION 5 � Resumen ejecutivo y diagnostico
+======================================================================
+
+ESTADO ACTUAL DEL DENOMINADOR CHAPMAN (CARDEEP, 2026-06-14):
+
+1. FUENTES DISPONIBLES EN entity_source:
+   - wallapop_wholesale:      4187 dealers (digital, plataforma anuncios)
+   - milanuncios_wholesale:  15216 dealers (digital, plataforma anuncios)
+   - osm:                     9956 dealers (fisico-geografico)
+   - coches_net_wholesale:    7215 dealers (digital, Tier-1)
+   - dgt_cat:                 1292 desguaces (censo legal DGT)
+
+2. SOLAPAMIENTO (m) REAL ENTRE FUENTES:
+   - entity_ulid overlap (mismo canonical): OSM x wallapop = 0 (sin merge)
+   - canonical_ulid overlap (fisica real):  OSM x wallapop = 10 global
+   - IC95 resultante: [0, ~4.5M] � INUTILIZABLE como denominador
+
+3. CAUSA DEL m~0:
+   - entity_source asigna UN entity_ulid por (fuente, dealer)
+   - Los mismos dealers fisicos en OSM y wallapop tienen entity_ulid DISTINTOS
+   - entity_cluster ha mergeado solo 10 casos OSM+wallapop de ~4.187 posibles
+   - => El dedup B1 NO ha cruzado OSM contra wallapop sistematicamente
+   - => m_canonical = 10 es una COTA INFERIOR del solapamiento real
+
+4. PROVINCIAS CON CHAPMAN VALIDO (m_can >= 1, n1>=5, n2>=5):
+   Total provincias validas: 10 de 52
+   08(Barcelon), 14(C�rdoba), 20(Gipuzkoa), 23(Ja�n), 25(Lleida), 28(Madrid), 31(Navarra), 39(Cantabri), 46(Valencia), 49(Zamora)
+
+5. PROVINCIAS CON m=0 (Chapman no calculable con precision):
+   Total: 42 provincias
+   01, 02, 03, 04, 05, 06, 07, 09, 10, 11, 12, 13, 15, 16, 17, 18, 19, 21, 22, 24...
+
+6. PROVINCIAS SIN DATOS OSM O WALLAPOP:
+   Total: 0 provincias
+   
+
+7. CONTRASTE vs CIFRAS OFICIALES:
+   Dealers en DB:                 50364
+   CNAE 4511 total empresas:   ~27.284  (incluye todo tipo, ceiling maximo)
+   FACONAUTO instalaciones:      5.358  (concesionarios franquiciados)
+   DGT desguaces CATs:           1.292  (exacto, sellado)
+   Compraventas PA floor:        1.662  (minimo declarado)
+   Chapman N_hat OSM x WP:   ~151.840  IC95=[0, 303.679]  [m=10, n_osm=9956, n_wp=4187]
+
+   DIAGNOSTICO DE ORDEN DE MAGNITUD:
+   El N_hat = 151.840 es plausible como ceiling del universo dealer+garaje+compraventa:
+   - Mayor que los 50.167 dealers actuales en DB => hay cobertura pendiente
+   - Mayor que el CNAE 4511 de 27.284 empresas => sobreestimacion probable
+   - El IC [0, 303k] es demasiado ancho para ser util => m=10 insuficiente
+   INTERPRETACION: Chapman da rango PLAUSIBLE pero no preciso. El N_hat ~152k
+   esta probablemente SOBREESTIMADO porque el supuesto de independencia se viola
+   parcialmente (bias hacia arriba cuando hay heterogeneidad de captura).
+
+8. QUE FALTA PARA CHAPMAN ROBUSTO:
+   IMPRESCINDIBLE:
+   a) Ingestar OVERTURE MAPS (cat_dealer + automotive, Espana) -> ~10k+ POIs
+      ORTOGONAL a wallapop (mecanismo distinto: mapas comerciales Google/Meta/Apple)
+      Forma: DuckDB + Parquet dump mensual, �0, licencia permisiva CC BY 4.0
+      Resultado esperado: m_canonical >> 10 -> IC estrechado a +/-20% de N_hat
+
+   b) Ejecutar dedup B1 cruzando OSM contra wallapop/milanuncios por
+      (lat,lon +/- 100m) O (phone_hash) O (website_domain) para encontrar
+      el solapamiento real latente (m real estimado: 200-500 globals)
+      => Esto mejora el Chapman con datos ya existentes, sin nueva ingestion
+
+   DESEABLE:
+   c) Paginas Amarillas como directorio fisico adicional (~1.662 compraventas)
+   d) CNAE registry publico (IAE declarations) como fuente administrativa
+
+9. DENOMINADOR B6 PROVISIONAL (sin Chapman robusto):
+   SEGMENTO              DENOMINADOR OFICIAL    DB ACTUAL   COBERTURA
+   Concesionarios of.    5.358 instalaciones       1.844      34.4%
+   Desguaces CATs        1.292 (exacto DGT)        1.645     >100% (overcount)
+   Compraventas POS      1.662-27.284 (range)     39.308     >100% floor
+   Garajes (activos)     indefinido               7.220      inmensurable
+   Total dealer          ~10.312-39.296            50.167    estim. 50-100%+
+
+   => Sello 52/52 requiere denominador MEDIDO con IC por provincia.
+   => HOY: denominador = floor+ceiling sin IC valido excepto desguaces (sellado).
+   => CAMINO AL SELLO: ingestar Overture Maps + dedup cruzado OSM x plataformas.
+
+======================================================================
+FIN � zero writes, zero commits.
+======================================================================
