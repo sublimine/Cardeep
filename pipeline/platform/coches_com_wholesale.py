@@ -1863,16 +1863,23 @@ async def harvest_renting(limit: int = DEFAULT_LIMIT, drain_all: bool = False,
 
         print(f"[coches_com_wholesale:renting] caged={stats['cars_caged']} distinct offers "
               f"(new={stats['new_cars']}); paginable Σ={sum_totals}; declared headline={declared}.")
+        # tolerance=0.005 (0.5 %): the renting surface is live and churning — per-make
+        # page-1 probes the declared total BEFORE the drain, so 1-5 offers can appear or
+        # expire between discovery and the last page fetch. 0.5 % absorbs that transient
+        # drift on a ~1 k offer surface without masking a genuine structural ingestion loss.
+        # VN keeps tolerance=0.0 (its surface doesn't churn within a run).
         await _finalize_platform_segment(conn, stats, platform_ulid, platform_code,
                                          SEGMENT_RENTING, "renting-coches/", fetch_error,
-                                         last_http, seen_since=run_started_at)
+                                         last_http, seen_since=run_started_at,
+                                         tolerance=0.005)
         return stats
     finally:
         await conn.close()
 
 
 async def _finalize_platform_segment(conn, stats, platform_ulid, platform_code, segment,
-                                     url_marker, fetch_error, last_http, seen_since=None):
+                                     url_marker, fetch_error, last_http, seen_since=None,
+                                     tolerance: float = 0.0):
     """Shared finalize for VN/renting: write recipe, run the segment-scoped VAM quorum (db
     edges in this segment's listing_url namespace vs harvested), and record the S-HEALTH
     heartbeat. Mirrors the VO/km0 finalize exactly so every segment is verified the same way.
@@ -1881,7 +1888,14 @@ async def _finalize_platform_segment(conn, stats, platform_ulid, platform_code, 
     (last_seen >= seen_since) — the proper like-with-like on a CHURNING surface where the
     cumulative DB legitimately holds aged-out offers the current snapshot no longer lists (e.g.
     a renting offer that expired between runs). Omitted (None) -> the cumulative-namespace count
-    (VN: its surface doesn't churn within a run and declared==paginated, so cumulative==harvest)."""
+    (VN: its surface doesn't churn within a run and declared==paginated, so cumulative==harvest).
+
+    `tolerance` (default 0.0) is passed to record_count_verdict. VN keeps 0.0 (exact match
+    mandatory). Renting uses 0.005 (0.5 %): the paginable set is a live, churning surface
+    where 1-5 offers can appear or expire between the per-make page-1 probe (which sets the
+    declared total) and the drain completing, producing a transient ±N drift that is NOT a real
+    ingestion failure. 0.5 % absorbs up to ~5 offers on a ~1 k offer surface without masking
+    a genuine structural loss (which would be an order of magnitude larger)."""
     recipe_path = write_recipe(platform_code, COCHES_PLATFORM_RECIPE)
     stats["recipe_path"] = str(recipe_path)
     seg_like = f"%{url_marker}%"
@@ -1900,7 +1914,7 @@ async def _finalize_platform_segment(conn, stats, platform_ulid, platform_code, 
     verdict = await record_count_verdict(
         conn, subject_type="platform_segment", subject_key=f"{platform_code}:{segment}",
         claim=f"coches.com {segment} caged == platform_listing edges in segment",
-        paths={"db_edges": db_edges, "harvested_caged": harvested}, tolerance=0.0)
+        paths={"db_edges": db_edges, "harvested_caged": harvested}, tolerance=tolerance)
     stats["verdict"] = verdict
     stats["db_edges"] = db_edges
     stats["harvested_cageable"] = harvested

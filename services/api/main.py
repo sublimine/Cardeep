@@ -27,10 +27,37 @@ from datetime import datetime, timezone
 from typing import Any
 
 import asyncpg
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep")
+
+
+# ---------------------------------------------------------------------------
+# B3.5 — API key authentication (backward-compatible).
+#
+# Behaviour:
+#   CARDEEP_API_KEY not set in environment  ->  public mode; all callers pass (no change
+#                                               to existing behaviour — all existing tests
+#                                               pass without providing a key).
+#   CARDEEP_API_KEY set in environment      ->  protected mode; callers must send the
+#                                               'X-API-Key' header with the correct value.
+#                                               Missing or wrong key -> HTTP 401.
+#
+# Applied via Depends(require_api_key) on data endpoints only (entities / platforms / geo /
+# vehicles). NOT applied to /health so that liveness probes and monitoring always reach it.
+# ---------------------------------------------------------------------------
+
+def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
+    """FastAPI dependency: enforce the API key when CARDEEP_API_KEY is set in the
+    environment. No-op (public) when the env var is absent so all existing callers and
+    tests continue to work without any modification."""
+    configured_key = os.environ.get("CARDEEP_API_KEY")
+    if configured_key is None:
+        # Public mode — key not configured; grant access unconditionally.
+        return
+    if x_api_key != configured_key:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 @asynccontextmanager
@@ -147,7 +174,7 @@ async def health() -> JSONResponse:
 
 
 @app.get("/entities/{cdp_code}/canonical")
-async def get_entity_canonical(cdp_code: str) -> JSONResponse:
+async def get_entity_canonical(cdp_code: str, _: None = Depends(require_api_key)) -> JSONResponse:
     """Resolve *cdp_code* to its canonical and expose the full cluster.
 
     Response fields
@@ -174,7 +201,7 @@ async def get_entity_canonical(cdp_code: str) -> JSONResponse:
 
 
 @app.get("/entities/{cdp_code}")
-async def get_entity(cdp_code: str) -> JSONResponse:
+async def get_entity(cdp_code: str, _: None = Depends(require_api_key)) -> JSONResponse:
     """Return the CANONICAL entity for *cdp_code* with aggregated cluster inventory.
 
     Changes vs pre-B1.5
@@ -216,6 +243,7 @@ async def get_inventory(
     cdp_code: str,
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+    _: None = Depends(require_api_key),
 ) -> JSONResponse:
     """Return available stock for ALL cluster members, deduplicated by vehicle_ulid.
 
@@ -278,6 +306,7 @@ async def get_delta(
     since: str | None = None,
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+    _: None = Depends(require_api_key),
 ) -> JSONResponse:
     """Return vehicle events for *cdp_code*.
 
@@ -329,6 +358,7 @@ async def entities_by_province(
     province_code: str,
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+    _: None = Depends(require_api_key),
 ) -> JSONResponse:
     """List entities for a province.
 
@@ -355,7 +385,7 @@ async def entities_by_province(
 
 
 @app.get("/geo/{province_code}/tree")
-async def province_inventory_tree(province_code: str) -> JSONResponse:
+async def province_inventory_tree(province_code: str, _: None = Depends(require_api_key)) -> JSONResponse:
     """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad, with a
     clean count tree and zero NULL-geo noise (only municipality-resolved entities,
     inner-joined through the comarca layer)."""
@@ -410,7 +440,7 @@ async def province_inventory_tree(province_code: str) -> JSONResponse:
 
 
 @app.get("/geo/completeness")
-async def geo_completeness() -> JSONResponse:
+async def geo_completeness(_: None = Depends(require_api_key)) -> JSONResponse:
     """National geo-completeness report: how many entities/vehicles carry the full
     pais+PROVINCIA+COMARCA+ciudad grid vs partial, every number from a live query."""
     async with app.state.pool.acquire() as c:
@@ -455,6 +485,7 @@ async def platform_inventory(
     cdp_code: str,
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+    _: None = Depends(require_api_key),
 ) -> JSONResponse:
     """Cars linked to a platform via platform_listing, each WITH its selling-dealer
     attribution (the dual-membership proof: platform edge + singular dealer owner).
@@ -508,7 +539,7 @@ async def platform_inventory(
 
 
 @app.get("/vehicles/{vehicle_ulid}/platforms")
-async def vehicle_platforms(vehicle_ulid: str) -> JSONResponse:
+async def vehicle_platforms(vehicle_ulid: str, _: None = Depends(require_api_key)) -> JSONResponse:
     """The platforms a car is listed on (its platform_listing edges), plus the car's
     singular owning dealer — proving ownership and membership are distinct axes."""
     async with app.state.pool.acquire() as c:
