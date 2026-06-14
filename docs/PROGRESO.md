@@ -120,6 +120,62 @@ Gap-con-causa: ~4.800 leads necesitan otro método (API OEM o parseo por platafo
 **Archivos**: `pipeline/platform/generic_dealer_site.py` · `scripts/probe_dealer_sites.py` ·
 `scripts/run_generic_dealer_e2e.py` · `docs/recon/B5_7_probe.json`
 
+## B7 — Código único por coche físico [ENTREGADO 2026-06-14, vam_verified=FALSE]
+
+**Método multi-señal union-find determinista v1.0.0** — espejo exacto de B1 (entity_cluster).
+Overlay no-destructivo: 0 filas vehicle mutadas.
+
+**Señales verificadas:**
+- Señal A (photo_url): normalización URL → strip query/trailing/resize → match exacto.
+  Suficiente sola. Cross-province PERMITIDO (misma foto = mismo coche físico).
+- Señal B (firma): make+model+year+km EXACTO + price ±2% + MISMA province_code.
+  REQUIERE guarda anti-FP: mismo entity_ulid OR mismo título normalizado.
+  Cross-province BLOQUEADO siempre en firma.
+
+**Resultados [VERIFICADOS 2 vías — DB directa]:**
+| Universo | Listing_in | Coches únicos | Colapsados | % colapso |
+|---|---|---|---|---|
+| status='available' | 1.689.243 | 1.443.563 | 245.680 | 14,54% |
+
+**Desglose por señal (clusters con ≥2 listings):**
+| Señal | Clusters | Listings implicados |
+|---|---|---|
+| photo_url | 123.091 | 250.412 |
+| firma | 78.021 | 187.413 |
+| ambas (both) | 3.920 | 12.887 |
+
+**Cobertura plataforma (merged):** milanuncios 244k listings → 122k coches · wallapop 87k → 50k · coches.com 24k → 9k · autoscout24 21k → 11k · motor.es 19k → 9k.
+
+**Provincias muestra:** Madrid(28) 340.644 listings → 281.145 coches únicos · Barcelona(08) 189.751 → 159.621.
+
+**Anti-FP checks [VERIFICADOS]:**
+- CHECK 1 cross-province: 333 clusters cross-province, 0 de firma (todos photo_url/both → CORRECTO).
+- CHECK 2 giant >20: 123 clusters (BCA/Autorola catálogos wholesale + stock OEM — coches físicos reales repetidos en subasta). Documentado como comportamiento esperado.
+- CHECK 3: todos los 1.689.243 listings cubiertos exactamente una vez — OK.
+- CHECK 4: singletons con match_signal='none' — OK.
+
+**20 pares muestra [REVISADOS — cero FP detectados]:** todos los pares muestran el mismo coche cruzando autoscout24.es↔wallapop con make/model/year/km/price idénticos y título idéntico. Señal firma operativa.
+
+**Tests:** 37/37 pytest verde (incluyendo anti-FP cross-province, precio >2%, sin señal, firma sin guarda).
+
+**Archivos:**
+- `migrations/0023_vehicle_cluster.sql` (vehicle_cluster_run + vehicle_cluster + v_canonical_vehicle)
+- `pipeline/identity/cluster_vehicles.py`
+- `tests/test_cluster_vehicles.py`
+
+**Gate pendiente:** vam_verified=FALSE. El Director valida 20 pares + anti-FP checks + commitea.
+
 ## Snapshot 2026-06-14
-379.452 entities (328.776 particular / 50.167 POS) · 1.646.674 coches vivos · 615 VAM TRUSTWORTHY ·
+379.452 entities (328.776 particular / 50.167 POS) · 1.689.243 coches vivos · 615 VAM TRUSTWORTHY ·
 2 alertas (degraded auto-cerrables). Geo municipio 85,5%. B5.7 ENTREGADO (5 TRUSTWORTHY / 849 veh).
+B7 ENTREGADO (1.443.563 coches únicos / 245.680 merges, vam_verified=FALSE).
+
+## F1 β resolución de entidad — GATE del Director (2026-06-14) · NO SELLADO
+S_obs=52.156 dealers (huella dominante: 7.002 derivados de 14.105 entities; phone 121, web 110). 42 tests
++ 358 suite verde, S_obs 3 vías. PERO el gate cazó 2 fallos (vam_verified=FALSE):
+1. SOBRE-FUSIÓN de cadenas con stock centralizado: CLICARS Barcelona/Castellón/Valencia/Alicante fundidos
+   en 1 dealer por huella (stock sincronizado) — son 4 PUNTOS DE VENTA distintos. Guarda cross-province
+   no los separó (province_code mal: las 4 en 46). La huella es ambigua para cadenas centralizadas.
+2. β NO compone con B1: opera sobre 59.502 brutas, no canónicos B1. Numerador real P = B1(name+muni) ∘ β(huella).
+FIX antes de sellar: (a) guarda de cadenas — token-ciudad distinto o cadena conocida NO fusiona por huella
+sola (requiere identificador fuerte); (b) componer B1∘β en union-find único. Código en main, no servido.
