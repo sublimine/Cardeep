@@ -81,6 +81,8 @@ async def record_run(
     rows: int | None = None,
     error: str | None = None,
     http_status: int | None = None,
+    is_tier1: bool | None = None,
+    harvest_interval_hours: int | None = None,
 ) -> RunOutcome:
     """Record one harvest run outcome. THE single writer of source_health + source_breaker.
 
@@ -89,6 +91,12 @@ async def record_run(
     an exponential cool-down after BREAKER_TRIP_AT consecutive fails. Idempotent per call;
     concurrent callers for the same source serialize on the source_health row (FOR UPDATE)
     so consecutive_fails is never lost-update-corrupted (06 §2.3 isolation, law #5).
+
+    `is_tier1` and `harvest_interval_hours` are written into source_health using COALESCE:
+    when the argument is None the existing DB value is preserved (or the migration default on
+    insert — FALSE / 168 h respectively). This means callers that omit either argument never
+    revert a cadence row that was populated by the B2.1 migration or a scheduler maintenance
+    path.
 
     Returns a RunOutcome describing the new posture (status, breaker, and whether this call
     crossed a transition edge — the signal the caller uses to fire exactly one alert).
@@ -113,25 +121,40 @@ async def record_run(
         trip_at = _tuning_int(tuning, "fail_threshold", BREAKER_TRIP_AT)
         cooldown_sec = _tuning_int(tuning, "cooldown_sec", BREAKER_COOLDOWN_SEC)
 
+        # COALESCE preserves the existing DB value (or migration default on insert) when the
+        # argument is None. This ensures callers that omit is_tier1 or harvest_interval_hours
+        # never revert cadence rows populated by migrations or a scheduler maintenance path.
         if ok:
             new_fails = 0
             new_status = "healthy"
             await conn.execute(
-                """INSERT INTO source_health (source_key, last_ok, consecutive_fails, status)
-                   VALUES ($1, now(), 0, 'healthy')
+                """INSERT INTO source_health
+                       (source_key, last_ok, consecutive_fails, status,
+                        is_tier1, harvest_interval_hours)
+                   VALUES ($1, now(), 0, 'healthy',
+                           COALESCE($2::boolean, FALSE),
+                           COALESCE($3::integer, 168))
                    ON CONFLICT (source_key) DO UPDATE
-                     SET last_ok = now(), consecutive_fails = 0, status = 'healthy'""",
-                source_key)
+                     SET last_ok = now(), consecutive_fails = 0, status = 'healthy',
+                         is_tier1 = COALESCE($2::boolean, source_health.is_tier1),
+                         harvest_interval_hours = COALESCE($3::integer, source_health.harvest_interval_hours)""",
+                source_key, is_tier1, harvest_interval_hours)
         else:
             new_fails = prior_fails + 1
             new_status = "down" if new_fails >= down_at else (
                 "degraded" if new_fails >= degrade_at else "healthy")
             await conn.execute(
-                """INSERT INTO source_health (source_key, last_fail, consecutive_fails, status)
-                   VALUES ($1, now(), $2, $3)
+                """INSERT INTO source_health
+                       (source_key, last_fail, consecutive_fails, status,
+                        is_tier1, harvest_interval_hours)
+                   VALUES ($1, now(), $2, $3,
+                           COALESCE($4::boolean, FALSE),
+                           COALESCE($5::integer, 168))
                    ON CONFLICT (source_key) DO UPDATE
-                     SET last_fail = now(), consecutive_fails = $2, status = $3""",
-                source_key, new_fails, new_status)
+                     SET last_fail = now(), consecutive_fails = $2, status = $3,
+                         is_tier1 = COALESCE($4::boolean, source_health.is_tier1),
+                         harvest_interval_hours = COALESCE($5::integer, source_health.harvest_interval_hours)""",
+                source_key, new_fails, new_status, is_tier1, harvest_interval_hours)
 
         # 3) circuit breaker (06 §5). Trip to OPEN once consecutive fails reach the
         # threshold; cool-down is exponential per consecutive trip. A success closes it.
