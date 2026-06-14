@@ -17,8 +17,11 @@ medido + sello. Cada agente ataca algo nuevo o muere.
 - B6 sello 52/52 — pendiente (denominador medido + numerador VAM + gap-con-causa por provincia).
 
 ## Frentes
-- AS24 scale (en vuelo, b6rd99ih5): verificado vivo chrome131 Tier-0 €0; ROI 1.440-2.940 compraventas
-  nuevas con geo 96% + cierra 13 provincias huecas. `scale_as24 200 1200` descubre+cosecha vía slug.
+- AS24 scale ✓ (b6rd99ih5): +41.194 coches inventario, 379 dealers cosechados (364 TRUSTWORTHY / 15
+  refuted), +31 entities netas nuevas + 7 provincias (39→46), geo 96,7%. APRENDIZAJE honesto: el
+  1-sort RE-COSECHA dealers conocidos (inventario fresco = valor de delta) pero descubre POCOS nuevos
+  (+31, no los 1.440 del recon). DESCUBRIMIENTO masivo de dealers = Overture (10.913); AS24 =
+  INVENTARIO. No martillar AS24 a mano — el scheduler B2 lo recosecha en cadencia.
 - Overture ✓ (4e7209f): 10.913 puntos de venta NUEVOS limpios (compraventa 10.659 + desguace 250 +
   subasta 4), geo 99,9%. GATE cazó+borró 21.346 talleres-ruido (automotive_repair mal mapeado a
   garaje); script arreglado en raíz. Leads sin inventario (a scrapear su web), ortogonales p/Chapman.
