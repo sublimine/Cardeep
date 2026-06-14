@@ -19,9 +19,13 @@ medido + sello. Cada agente ataca algo nuevo o muere.
 ## Frentes
 - AS24 scale (en vuelo, b6rd99ih5): verificado vivo chrome131 Tier-0 €0; ROI 1.440-2.940 compraventas
   nuevas con geo 96% + cierra 13 provincias huecas. `scale_as24 200 1200` descubre+cosecha vía slug.
-- Overture Maps (en vuelo, a1658951): POIs físicos long-tail, fuente ORTOGONAL real (Google+Meta+Apple).
+- Overture ✓ (4e7209f): 10.913 puntos de venta NUEVOS limpios (compraventa 10.659 + desguace 250 +
+  subasta 4), geo 99,9%. GATE cazó+borró 21.346 talleres-ruido (automotive_repair mal mapeado a
+  garaje); script arreglado en raíz. Leads sin inventario (a scrapear su web), ortogonales p/Chapman.
 - Chapman ✓ (08cd270): denominador robusto NO calculable hoy — dedup B1 no cruza OSM↔digital (m~20,
   83% clusters de 1 sola fuente) → N̂ disparatado. SELLABLE ya: desguaces (N̂2061 vs censo DGT 1292).
+- B6.1 dedup cruzado (en vuelo, afbeff23): construye matcher OSM×Overture×digital (geo100m/web/phone,
+  overlay no-destructivo) + valida en muestra. Sube m → habilita Chapman + reduce overcount compraventa.
 
 ## Siguiente paso (camino al sello, tras AS24+Overture)
 **Dedup cruzado OSM×digital×Overture** por (lat/lon ±100m) OR phone_hash OR website_domain — sube el
