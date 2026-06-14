@@ -273,3 +273,22 @@
 - **GATE FASE 0 = VERDE** (residual de disco confesado con causa). Siguiente: **FASE 1** (confirmar
   verdes a nivel átomo) → **SU-B1** (ledger de verificación profundo, migración 0014; el quorum-CHECK
   invalidaría los TRUSTWORTHY existentes → re-juzgar a UNVERIFIED primero).
+
+## 2026-06-15 — FASE 1 + SU-A2: SU-A1 confirmado · β SELLADO (S_obs 38.555)
+- **SU-A1 (identidad B1)** confirmado a nivel átomo por vía ortogonal independiente del sello:
+  0 under-merge (host+muni), 0 bosque roto, verdict 640 linkado (SU-0.4). Hallazgo destapado:
+  **cluster AS24** — 511 dealers mis-kindeados `concesionario_oficial` (L7 «ingest.py:52 hardcoded»,
+  infla el segmento oficial ~24%); tracked → clasificador/type-ladder.
+- **SU-A2 β SELLADO** (3 iteraciones bajo gate del Director, verdict 1093 TRUSTWORTHY):
+  - v1: chain-guard (org_id) + composición B1∘β (siembra `v_canonical`). 52.156→38.359.
+  - v2: city-guard INE desgateada — el gate del Director cazó over-merge transitivo (AutosMadrid
+    Alcorcón+Leganés, MuyCar Sevilla+Alcalá, Stellantis Alcorcón/Madrid/Móstoles). 65 tests.
+  - v3: **constrained union-find** (city_set+org_set por componente; rechaza unión cross-ciudad/
+    cross-org transitivamente, 225 rechazos). Over-merge city-name ELIMINADO. **S_obs=38.555**. 74 tests.
+  - Modelo de cadenas completado (SU-0.5b): org-link por dominio + re-kind 42 AS24 `concesionario→
+    compraventa`. Flexicar rollup 304 POS.
+  - Residuo declarado: 131 clusters multi-muni = geocoding-noise del scraper + variantes-de-nombre del
+    mismo negocio + clase ínfima de cadena abreviada sin org_id. Gated en geo-cleanup (SU-A6).
+  - commits `fa1286b` (v2) / `c92ca07` (v3); `v_resolved_dealer` sirve 38.555 dealers.
+- **GATE β = VERDE** (sellado-con-gap-declarado). Pend SU-A2: **φ** (DIRCE ∩ β → fracción-ocasión →
+  N_prof) · **F3 Chao2** ortogonal (fiscal × canal × geo) + cierre contra saturación → N̂(P) con CI.
