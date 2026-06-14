@@ -292,6 +292,95 @@ class UnionFind:
 
 
 # ---------------------------------------------------------------------------
+# Constrained Union-Find — propagates city/org constraints transitively
+# ---------------------------------------------------------------------------
+
+
+class ConstrainedUnionFind:
+    """Union-find that carries city_set and org_set metadata per component.
+
+    Two components are allowed to merge ONLY if the resulting merged component
+    would have:
+      - len(city_set) <= 1  (no two distinct INE-validated city tokens)
+      - len(org_set) <= 1   (no two distinct non-null org_id values)
+
+    This prevents transitivity from silently uniting entities that cannot be
+    co-located (e.g. A—C—B where C lacks a city token but A and B are in
+    different municipalities). The constraint propagates: once a component
+    contains a city token, any future union with a component containing a
+    *different* city token is rejected.
+
+    city_set values: accent-folded, lowercased INE municipality names (same
+    representation as _city_tokens returns). org_set values: org_id strings.
+    """
+
+    def __init__(self) -> None:
+        self._parent: dict[str, str] = {}
+        self._rank: dict[str, int] = {}
+        # Metadata stored on the *root* node of each component.
+        self._city_set: dict[str, frozenset[str]] = {}  # root -> frozenset of city tokens
+        self._org_set: dict[str, frozenset[str]] = {}   # root -> frozenset of non-null org_ids
+        self.n_constrained_rejections: int = 0
+
+    def _init(
+        self,
+        x: str,
+        city: frozenset[str] = frozenset(),
+        org: frozenset[str] = frozenset(),
+    ) -> None:
+        if x not in self._parent:
+            self._parent[x] = x
+            self._rank[x] = 0
+            self._city_set[x] = city
+            self._org_set[x] = org
+
+    def find(self, x: str) -> str:
+        self._init(x)
+        while self._parent[x] != x:
+            self._parent[x] = self._parent[self._parent[x]]  # path halving
+            x = self._parent[x]
+        return x
+
+    def constrained_union(self, a: str, b: str) -> bool:
+        """Attempt to merge components of a and b.
+
+        Returns True if merged, False if rejected by constraint.
+
+        Constraint: merged city_set must have ≤1 distinct city token AND
+        merged org_set must have ≤1 distinct org_id.
+        """
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return True  # Already same component — trivially OK.
+
+        merged_city = self._city_set[ra] | self._city_set[rb]
+        merged_org = self._org_set[ra] | self._org_set[rb]
+
+        if len(merged_city) > 1 or len(merged_org) > 1:
+            self.n_constrained_rejections += 1
+            return False
+
+        # Merge by rank (higher rank becomes root).
+        if self._rank[ra] < self._rank[rb]:
+            ra, rb = rb, ra
+        self._parent[rb] = ra
+        if self._rank[ra] == self._rank[rb]:
+            self._rank[ra] += 1
+
+        # Update root metadata.
+        self._city_set[ra] = merged_city
+        self._org_set[ra] = merged_org
+        return True
+
+    def components(self) -> dict[str, list[str]]:
+        """Return {root: [members]} for all registered IDs."""
+        groups: dict[str, list[str]] = defaultdict(list)
+        for node in self._parent:
+            groups[self.find(node)].append(node)
+        return dict(groups)
+
+
+# ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
 
@@ -774,55 +863,63 @@ def _build_resolution_table(
     edges: list[EdgeType],
     b1_edges: list[tuple[str, str]] | None = None,
     org_map: dict[str, str | None] | None = None,
-) -> list[dict]:
-    """Apply union-find over accepted edges → resolution rows.
+    ine_municipalities: frozenset[str] | None = None,
+) -> tuple[list[dict], int]:
+    """Apply constrained union-find over accepted edges → resolution rows.
 
-    §C: If b1_edges is provided, seed the union-find with B1 aristas FIRST
-    (before applying β edges), composing B1∘β. Chain guard applies to B1
-    edges as well: org-siblings from B1 are skipped.
+    Uses ConstrainedUnionFind to propagate city/org constraints transitively,
+    preventing over-merge via bridge entities (the A—C—B transitivity bug).
 
-    For each entity: which canonical dealer it resolves to,
-    the strongest signal in its component, and the max Jaccard in the component.
+    §C: B1 edges are seeded FIRST (B1∘β composition), also through the
+    constrained union so that cross-city B1 edges are rejected too.
+
+    Edges are processed in descending confidence order:
+      1. fingerprint+phone+website (highest)
+      2. fingerprint+phone / fingerprint+website
+      3. fingerprint
+      4. phone+website
+      5. phone / website
+      6. B1 exact (after β, lower confidence — already geo-blocked upstream)
+
+    Returns (resolution_rows, n_constrained_rejections).
     """
     entity_by_ulid: dict[str, dict] = {e["entity_ulid"]: e for e in entities}
     all_ulids = set(entity_by_ulid.keys())
     _org_map = org_map or {}
 
     log.info(
-        "Running union-find: %d entities, %d beta-edges, %d B1-edges ...",
+        "Running constrained union-find: %d entities, %d beta-edges, %d B1-edges ...",
         len(all_ulids),
         len(edges),
         len(b1_edges) if b1_edges else 0,
     )
-    uf = UnionFind()
+
+    # Pre-compute city/org metadata for each entity for the constrained UF.
+    # city_set: INE-validated city tokens from trade_name.
+    #   IMPORTANT: only populated when ine_municipalities is provided (production).
+    #   In legacy/test mode (ine_municipalities=None) city_set is always empty so
+    #   the city constraint is inactive — the stopword-heuristic fallback in
+    #   _build_edges already handles that path, and its output is pairwise-only.
+    #   The constrained UF city constraint is a second-line defence against
+    #   transitivity, which only makes sense with INE-validated tokens.
+    # org_set: singleton {org_id} if org_id is not null, else empty.
+    entity_city: dict[str, frozenset[str]] = {}
+    entity_org: dict[str, frozenset[str]] = {}
+    for e in entities:
+        uid = e["entity_ulid"]
+        if ine_municipalities is not None:
+            entity_city[uid] = _city_tokens(e.get("trade_name"), ine_municipalities)
+        else:
+            entity_city[uid] = frozenset()
+        org_id = _org_map.get(uid)
+        entity_org[uid] = frozenset([org_id]) if org_id is not None else frozenset()
+
+    cuf = ConstrainedUnionFind()
     for uid in all_ulids:
-        uf._init(uid)
+        cuf._init(uid, city=entity_city.get(uid, frozenset()), org=entity_org.get(uid, frozenset()))
 
-    # ── §C: seed B1 edges first ───────────────────────────────────────────────
-    n_b1_chain_blocked = 0
-    if b1_edges:
-        for uid_a, uid_b in b1_edges:
-            if uid_a not in all_ulids or uid_b not in all_ulids:
-                continue
-            # Chain guard: skip if same non-null org
-            oa = _org_map.get(uid_a)
-            ob = _org_map.get(uid_b)
-            if oa is not None and oa == ob:
-                n_b1_chain_blocked += 1
-                continue
-            uf.union(uid_a, uid_b)
-        if n_b1_chain_blocked:
-            log.info("B1 edges skipped (chain siblings): %d", n_b1_chain_blocked)
-
-    # ── apply β edges ─────────────────────────────────────────────────────────
-    for uid_a, uid_b, _signal, _prob in edges:
-        if uid_a in all_ulids and uid_b in all_ulids:
-            uf.union(uid_a, uid_b)
-
-    # Accumulate max probability per root (for signal reporting)
-    root_signal: dict[str, str] = {}
-    root_prob: dict[str, float] = {}
-    _SIGNAL_RANK = {
+    # ── Signal rank for ordering β edges (higher rank → applied first) ────────
+    _SIGNAL_RANK: dict[str, int] = {
         "none": 0,
         "phone": 1,
         "website": 1,
@@ -833,10 +930,50 @@ def _build_resolution_table(
         "fingerprint+phone+website": 5,
     }
 
+    # Sort β edges descending by signal rank then by probability (both desc).
+    sorted_edges = sorted(
+        edges,
+        key=lambda e: (_SIGNAL_RANK.get(e[2], 0), e[3]),
+        reverse=True,
+    )
+
+    # ── Apply β edges (highest confidence first) ──────────────────────────────
+    for uid_a, uid_b, _signal, _prob in sorted_edges:
+        if uid_a in all_ulids and uid_b in all_ulids:
+            cuf.constrained_union(uid_a, uid_b)
+
+    # ── §C: seed B1 edges AFTER β (lower priority, also constrained) ─────────
+    # NOTE: B1 is placed AFTER β so that the high-confidence β edges win
+    # when there is a conflict with a cross-city B1 edge.
+    n_b1_chain_blocked = 0
+    if b1_edges:
+        for uid_a, uid_b in b1_edges:
+            if uid_a not in all_ulids or uid_b not in all_ulids:
+                continue
+            # Chain guard: skip if same non-null org (hard block, not constrained).
+            oa = _org_map.get(uid_a)
+            ob = _org_map.get(uid_b)
+            if oa is not None and oa == ob:
+                n_b1_chain_blocked += 1
+                continue
+            cuf.constrained_union(uid_a, uid_b)
+        if n_b1_chain_blocked:
+            log.info("B1 edges skipped (chain siblings): %d", n_b1_chain_blocked)
+
+    n_rejected = cuf.n_constrained_rejections
+    log.info(
+        "ConstrainedUnionFind: %d unions rejected (city/org constraint)",
+        n_rejected,
+    )
+
+    # ── Accumulate max signal/prob per root ───────────────────────────────────
+    root_signal: dict[str, str] = {}
+    root_prob: dict[str, float] = {}
+
     for uid_a, uid_b, signal, prob in edges:
         if uid_a not in all_ulids or uid_b not in all_ulids:
             continue
-        root = uf.find(uid_a)
+        root = cuf.find(uid_a)
         cur_rank = _SIGNAL_RANK.get(root_signal.get(root, "none"), 0)
         new_rank = _SIGNAL_RANK.get(signal, 0)
         if new_rank > cur_rank:
@@ -844,7 +981,7 @@ def _build_resolution_table(
         if prob > root_prob.get(root, 0.0):
             root_prob[root] = prob
 
-    components = uf.components()
+    components = cuf.components()
     result: list[dict] = []
     for _root, members in components.items():
         in_scope = [m for m in members if m in all_ulids]
@@ -852,7 +989,7 @@ def _build_resolution_table(
             continue
         canonical = _select_canonical(in_scope, entity_by_ulid)
         sz = len(in_scope)
-        root = uf.find(canonical)
+        root = cuf.find(canonical)
         sig = root_signal.get(root, "none")
         prob = root_prob.get(root, None)
         if sz == 1:
@@ -869,7 +1006,7 @@ def _build_resolution_table(
 
     n_dealers = len({r["resolved_dealer_ulid"] for r in result})
     log.info("Union-find: %d rows, %d resolved dealers", len(result), n_dealers)
-    return result
+    return result, n_rejected
 
 
 # ---------------------------------------------------------------------------
@@ -1156,9 +1293,13 @@ def main() -> None:
         # Step 5: Build and adjudicate candidate β edges (with chain guard §B)
         edges = _build_edges(entities, fingerprints, ine_municipalities=ine_municipalities)
 
-        # Step 6: Union-find → resolution rows (B1 seeded, then β applied)
-        resolution_rows = _build_resolution_table(
-            entities, edges, b1_edges=b1_edges, org_map=org_map
+        # Step 6: Constrained union-find → resolution rows (β first, then B1)
+        resolution_rows, n_constrained_rejections = _build_resolution_table(
+            entities,
+            edges,
+            b1_edges=b1_edges,
+            org_map=org_map,
+            ine_municipalities=ine_municipalities,
         )
 
         assert len(resolution_rows) == n_in, (
@@ -1177,6 +1318,7 @@ def main() -> None:
             "vehicle_cluster_run": VEHICLE_CLUSTER_RUN,
             "dealer_cluster_run": DEALER_CLUSTER_RUN,
             "b1_edges_seeded": len(b1_edges),
+            "n_constrained_rejections": n_constrained_rejections,
             "signal_counts": dict(signal_counts),
         }
 

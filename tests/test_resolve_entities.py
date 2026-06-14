@@ -33,6 +33,7 @@ from pipeline.identity.resolve_entities import (
     MAX_ENTITY_COLLISION_K,
     MAX_PHONE_COLLISION_K,
     JACCARD_THETA,
+    ConstrainedUnionFind,
     UnionFind,
     _build_edges,
     _build_resolution_table,
@@ -209,7 +210,7 @@ class TestFingerprintMerge:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, "Fingerprint above θ must merge"
@@ -224,7 +225,7 @@ class TestFingerprintMerge:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, "Fingerprint below θ must NOT merge"
@@ -237,7 +238,7 @@ class TestFingerprintMerge:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, "Fingerprint must merge cross-province"
@@ -250,7 +251,7 @@ class TestFingerprintMerge:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         for r in rows:
             if r["signal"] != "none":
@@ -271,7 +272,7 @@ class TestPhoneMerge:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, "Clean phone same province must merge"
@@ -284,7 +285,7 @@ class TestPhoneMerge:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, "Phone-only cross-province must NOT merge"
@@ -309,7 +310,7 @@ class TestAntiCollisionPhone:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges(entities, fingerprints)
-        rows = _build_resolution_table(entities, edges)
+        rows, _ = _build_resolution_table(entities, edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         # Each entity must remain its own dealer — centralita alone must not merge
@@ -336,7 +337,7 @@ class TestAntiCollisionPhone:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges(entities, fingerprints)
-        rows = _build_resolution_table(entities, edges)
+        rows, _ = _build_resolution_table(entities, edges)
 
         # All share phone AND website → they should merge (unless website is also
         # high-collision, which it is here since all n share it).
@@ -368,7 +369,7 @@ class TestAntiCollisionPhone:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges(entities, fingerprints)
-        rows = _build_resolution_table(entities, edges)
+        rows, _ = _build_resolution_table(entities, edges)
 
         # EA and EB share high-collision phone + clean website → should merge
         # Background entities have no website corroboration → remain separate
@@ -393,7 +394,7 @@ class TestWebsiteMerge:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, "Clean website same province must merge"
@@ -406,7 +407,7 @@ class TestWebsiteMerge:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, "Website-only cross-province must NOT merge"
@@ -433,7 +434,7 @@ class TestTransitiveClosure:
         fingerprints = {"A": fp_ab, "B": fp_b | fp_bc, "C": fp_bc}
 
         edges = _build_edges([ea, eb, ec], fingerprints)
-        rows = _build_resolution_table([ea, eb, ec], edges)
+        rows, _ = _build_resolution_table([ea, eb, ec], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, (
@@ -452,7 +453,7 @@ class TestTransitiveClosure:
         fingerprints = {"A": fp_a, "B": fp_b, "C": fp_c}
 
         edges = _build_edges([ea, eb, ec], fingerprints)
-        rows = _build_resolution_table([ea, eb, ec], edges)
+        rows, _ = _build_resolution_table([ea, eb, ec], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, "C must remain separate (no overlap)"
@@ -468,7 +469,7 @@ class TestSingleton:
         """An entity not matched to any other must have signal='none'."""
         ea = _entity("E1")
         edges = _build_edges([ea], {})
-        rows = _build_resolution_table([ea], edges)
+        rows, _ = _build_resolution_table([ea], edges)
 
         assert len(rows) == 1
         assert rows[0]["signal"] == "none"
@@ -477,7 +478,7 @@ class TestSingleton:
     def test_singleton_probability_is_none(self) -> None:
         ea = _entity("E1")
         edges = _build_edges([ea], {})
-        rows = _build_resolution_table([ea], edges)
+        rows, _ = _build_resolution_table([ea], edges)
 
         assert rows[0]["probability"] is None
 
@@ -607,7 +608,7 @@ class TestChainGuard:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, (
@@ -622,7 +623,7 @@ class TestChainGuard:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, (
@@ -637,7 +638,7 @@ class TestChainGuard:
         fingerprints: dict[str, set[str]] = {}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, (
@@ -652,7 +653,7 @@ class TestChainGuard:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, (
@@ -667,7 +668,7 @@ class TestChainGuard:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, (
@@ -726,7 +727,7 @@ class TestCityGuard:
         fingerprints["EB"] = fp_b
 
         edges = _build_edges(all_entities, fingerprints)
-        rows = _build_resolution_table(all_entities, edges)
+        rows, _ = _build_resolution_table(all_entities, edges)
         ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
         eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
         assert ea_canonical != eb_canonical, (
@@ -753,7 +754,7 @@ class TestCityGuard:
         fingerprints["EA"] = fp_a
         fingerprints["EB"] = fp_b
 
-        rows = _build_resolution_table(all_entities, _build_edges(all_entities, fingerprints))
+        rows, _ = _build_resolution_table(all_entities, _build_edges(all_entities, fingerprints))
         ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
         eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
         assert ea_canonical == eb_canonical, (
@@ -777,7 +778,7 @@ class TestCityGuard:
         )
         fingerprints = {"EA": fp_a, "EB": fp_b}
         edges = _build_edges([ea, eb], fingerprints)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, (
             "Legacy mode: 'DEALER' appears in both sets → intersection non-empty → merge"
@@ -803,7 +804,7 @@ class TestCityGuard:
         )
         fingerprints = {"EA": fp_a, "EB": fp_b}
         edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
         ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
         eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
         assert ea_canonical != eb_canonical, (
@@ -824,7 +825,7 @@ class TestCityGuard:
         )
         fingerprints = {"EA": fp_a, "EB": fp_b}
         edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, (
             "INE guard: same municipality 'alcorcon' → intersection non-empty → merge"
@@ -847,7 +848,7 @@ class TestCityGuard:
         )
         fingerprints = {"EA": fp_a, "EB": fp_b}
         edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, (
             "INE guard: no valid INE city token in either name → guard skipped → merge"
@@ -866,7 +867,7 @@ class TestCityGuard:
         )
         fingerprints = {"EA": fp_a, "EB": fp_b}
         edges = _build_edges([ea, eb], fingerprints, ine_municipalities=_TEST_INE)
-        rows = _build_resolution_table([ea, eb], edges)
+        rows, _ = _build_resolution_table([ea, eb], edges)
         ea_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EA")
         eb_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "EB")
         assert ea_canonical != eb_canonical, (
@@ -893,7 +894,7 @@ class TestB1Seeding:
         b1_edges = [("A", "B")]  # B1 merges A and B
 
         edges = _build_edges([ea, eb, ec], fingerprints)
-        rows = _build_resolution_table([ea, eb, ec], edges, b1_edges=b1_edges)
+        rows, _ = _build_resolution_table([ea, eb, ec], edges, b1_edges=b1_edges)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 1, (
@@ -908,7 +909,7 @@ class TestB1Seeding:
         org_map = {"A": "ORG1", "B": "ORG1"}
 
         edges = _build_edges([ea, eb], {})
-        rows = _build_resolution_table([ea, eb], edges, b1_edges=b1_edges, org_map=org_map)
+        rows, _ = _build_resolution_table([ea, eb], edges, b1_edges=b1_edges, org_map=org_map)
 
         canonicals = {r["resolved_dealer_ulid"] for r in rows}
         assert len(canonicals) == 2, (
@@ -924,8 +925,8 @@ class TestB1Seeding:
         fingerprints = {"E1": fp_a, "E2": fp_b}
 
         edges = _build_edges([ea, eb], fingerprints)
-        rows_no_b1 = _build_resolution_table([ea, eb], edges, b1_edges=None)
-        rows_empty_b1 = _build_resolution_table([ea, eb], edges, b1_edges=[])
+        rows_no_b1, _ = _build_resolution_table([ea, eb], edges, b1_edges=None)
+        rows_empty_b1, _ = _build_resolution_table([ea, eb], edges, b1_edges=[])
 
         assert (
             {r["resolved_dealer_ulid"] for r in rows_no_b1}
@@ -990,3 +991,205 @@ class TestCityTokens:
     def test_ine_empty_returns_empty(self) -> None:
         assert _city_tokens(None, _TEST_INE) == frozenset()
         assert _city_tokens("", _TEST_INE) == frozenset()
+
+
+# ---------------------------------------------------------------------------
+# ConstrainedUnionFind unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestConstrainedUnionFind:
+    """Unit tests for ConstrainedUnionFind metadata propagation."""
+
+    def test_same_city_merges(self) -> None:
+        """Two components with the same city → allowed."""
+        cuf = ConstrainedUnionFind()
+        cuf._init("A", city=frozenset(["madrid"]), org=frozenset())
+        cuf._init("B", city=frozenset(["madrid"]), org=frozenset())
+        assert cuf.constrained_union("A", "B") is True
+        assert cuf.find("A") == cuf.find("B")
+
+    def test_different_city_rejected(self) -> None:
+        """Two components with distinct cities → rejected."""
+        cuf = ConstrainedUnionFind()
+        cuf._init("A", city=frozenset(["madrid"]), org=frozenset())
+        cuf._init("B", city=frozenset(["barcelona"]), org=frozenset())
+        assert cuf.constrained_union("A", "B") is False
+        assert cuf.find("A") != cuf.find("B")
+        assert cuf.n_constrained_rejections == 1
+
+    def test_one_city_one_empty_merges(self) -> None:
+        """Component with a city + component without → allowed (|merged| = 1)."""
+        cuf = ConstrainedUnionFind()
+        cuf._init("A", city=frozenset(["madrid"]), org=frozenset())
+        cuf._init("B", city=frozenset(), org=frozenset())
+        assert cuf.constrained_union("A", "B") is True
+        assert cuf.find("A") == cuf.find("B")
+
+    def test_different_org_rejected(self) -> None:
+        """Two components with distinct non-null orgs → rejected."""
+        cuf = ConstrainedUnionFind()
+        cuf._init("A", city=frozenset(), org=frozenset(["ORG1"]))
+        cuf._init("B", city=frozenset(), org=frozenset(["ORG2"]))
+        assert cuf.constrained_union("A", "B") is False
+        assert cuf.n_constrained_rejections == 1
+
+    def test_transitive_city_constraint_propagates(self) -> None:
+        """A—C—B where C has no city but A=Madrid and B=Barcelona.
+
+        A-C merges (C has no city → merged city_set = {'madrid'}).
+        C-B is now rejected because merged component {A,C} has city 'madrid'
+        and B has city 'barcelona' → |merged_city| = 2 → rejected.
+        A and B must end in DIFFERENT components.
+        """
+        cuf = ConstrainedUnionFind()
+        cuf._init("A", city=frozenset(["madrid"]), org=frozenset())
+        cuf._init("C", city=frozenset(), org=frozenset())          # bridge, no city
+        cuf._init("B", city=frozenset(["barcelona"]), org=frozenset())
+
+        # A-C: allowed (merges, component gets city 'madrid')
+        assert cuf.constrained_union("A", "C") is True
+        assert cuf.find("A") == cuf.find("C")
+
+        # C-B: rejected — component {A,C} already has 'madrid', B has 'barcelona'
+        assert cuf.constrained_union("C", "B") is False
+        assert cuf.find("A") != cuf.find("B")
+        assert cuf.n_constrained_rejections == 1
+
+    def test_transitive_org_constraint_propagates(self) -> None:
+        """A—C—B where C has no org but A=ORG1 and B=ORG2 → B stays separate."""
+        cuf = ConstrainedUnionFind()
+        cuf._init("A", city=frozenset(), org=frozenset(["ORG1"]))
+        cuf._init("C", city=frozenset(), org=frozenset())
+        cuf._init("B", city=frozenset(), org=frozenset(["ORG2"]))
+
+        assert cuf.constrained_union("A", "C") is True
+        assert cuf.constrained_union("C", "B") is False
+        assert cuf.find("A") != cuf.find("B")
+
+
+# ---------------------------------------------------------------------------
+# Constrained transitive closure — integration with _build_resolution_table
+# ---------------------------------------------------------------------------
+
+
+class TestConstrainedTransitiveClosure:
+    """Integration tests: constrained union-find blocks A-C-B over-merge.
+
+    These test the exact bug: pairwise guards in _build_edges block A↔B directly
+    but the old plain union-find united them via a bridge entity C (no city token).
+    The constrained union-find must reject the second merge (C-B) because after
+    merging A-C the component already carries city 'madrid', and B has 'barcelona'.
+    """
+
+    def _make_shared_fp(self, n: int = 50) -> set[str]:
+        return {f"c{i}" for i in range(n)}
+
+    def test_bridge_entity_does_not_transmit_cross_city_merge(self) -> None:
+        """A (Madrid) — C (no city) — B (Barcelona): A and B must stay separate.
+
+        Fingerprint edges:
+          A-C: Jaccard > C-B (A-C has higher overlap → processed first)
+          C-B: Jaccard >= θ but lower than A-C
+          A-B: blocked by pairwise city guard in _build_edges
+
+        We control Jaccard so that A-C > C-B: A-C processes first, component
+        {A,C} gains city 'madrid', then C-B is rejected (would give 2 cities).
+        """
+        fp_shared_ac = self._make_shared_fp(80)  # A-C share 80 canonicals
+        fp_shared_cb = {f"s{i}" for i in range(50)}  # C-B share only 50
+        fp_a = fp_shared_ac | {f"a{i}" for i in range(5)}
+        fp_c = fp_shared_ac | fp_shared_cb | {f"cc{i}" for i in range(5)}
+        fp_b = fp_shared_cb | {f"b{i}" for i in range(5)}
+
+        ea = _entity("A", trade_name="Dealer Madrid", province_code="28")
+        ec = _entity("C", trade_name="Dealer Central", province_code="28")  # no city token in INE
+        eb = _entity("B", trade_name="Dealer Barcelona", province_code="08")
+        fingerprints = {"A": fp_a, "C": fp_c, "B": fp_b}
+
+        # Pairwise edges: A-B blocked by city guard; A-C and C-B pass.
+        edges = _build_edges([ea, ec, eb], fingerprints, ine_municipalities=_TEST_INE)
+
+        # Verify the setup: confirm A-C edge exists and A-B does not
+        edge_pairs = {(e[0], e[1]) for e in edges} | {(e[1], e[0]) for e in edges}
+        assert ("A", "C") in edge_pairs, "Setup: A-C edge must exist"
+        assert ("C", "B") in edge_pairs, "Setup: C-B edge must exist"
+        # A-B must be blocked by pairwise city guard
+        assert ("A", "B") not in edge_pairs, "Setup: A-B must be blocked by pairwise guard"
+
+        # Constrained UF: A-C merges first (higher Jaccard), component gets 'madrid'.
+        # Then C-B is rejected: would give city_set={'madrid','barcelona'} (size 2).
+        rows, n_rejected = _build_resolution_table(
+            [ea, ec, eb], edges, ine_municipalities=_TEST_INE
+        )
+
+        a_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "A")
+        b_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "B")
+        c_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "C")
+
+        assert a_canonical != b_canonical, (
+            "Constrained UF must prevent A (Madrid) and B (Barcelona) from merging "
+            "even via bridge entity C (no city). Got same canonical: %r" % a_canonical
+        )
+        # C must be in A's cluster (A-C had higher Jaccard → merged first).
+        assert a_canonical == c_canonical, (
+            "C (bridge) should be in A's cluster since A-C Jaccard > C-B Jaccard"
+        )
+        assert n_rejected >= 1, "At least one constrained rejection expected"
+
+    def test_bridge_same_city_chain_merges_correctly(self) -> None:
+        """A (Madrid) — C (no city) — D (Madrid): all three should merge."""
+        fp_shared = self._make_shared_fp(50)
+        fp_a = fp_shared | {f"a{i}" for i in range(5)}
+        fp_c = fp_shared | {f"cc{i}" for i in range(5)}
+        fp_d = fp_shared | {f"d{i}" for i in range(5)}
+
+        ea = _entity("A", trade_name="Dealer Madrid Norte", province_code="28")
+        ec = _entity("C", trade_name="Dealer Central", province_code="28")
+        ed = _entity("D", trade_name="Dealer Madrid Sur", province_code="28")
+        fingerprints = {"A": fp_a, "C": fp_c, "D": fp_d}
+
+        edges = _build_edges([ea, ec, ed], fingerprints, ine_municipalities=_TEST_INE)
+        rows, _ = _build_resolution_table(
+            [ea, ec, ed], edges, ine_municipalities=_TEST_INE
+        )
+
+        canonicals = {r["resolved_dealer_ulid"] for r in rows}
+        assert len(canonicals) == 1, (
+            "A (Madrid) — C (no city) — D (Madrid): all same city → must merge to 1 cluster"
+        )
+
+    def test_b1_bridge_cross_city_rejected(self) -> None:
+        """B1 edge C-B (bridge C → Barcelona B) is rejected after A-C merges via β.
+
+        β merges A-C (both from INE fingerprint, A=Madrid, C=no city).
+        B1 seeds C-B (C linked to B=Barcelona in the geo-blocking step).
+        Constrained UF must reject C-B because component {A,C} carries 'madrid'
+        and B carries 'barcelona'.
+        """
+        fp_shared = self._make_shared_fp(50)
+        fp_a = fp_shared | {f"a{i}" for i in range(5)}
+        fp_c = fp_shared | {f"cc{i}" for i in range(5)}
+
+        ea = _entity("A", trade_name="Dealer Madrid", province_code="28")
+        ec = _entity("C", trade_name="Dealer Central", province_code="28")
+        eb = _entity("B", trade_name="Dealer Barcelona", province_code="08")
+        fingerprints = {"A": fp_a, "C": fp_c}
+
+        # β edge: A-C (fingerprint) — C-B has no β edge (B has no shared fingerprint)
+        edges = _build_edges([ea, ec, eb], fingerprints, ine_municipalities=_TEST_INE)
+
+        # B1 edge: C-B (geo-blocking step merged them previously)
+        b1 = [("C", "B")]
+
+        rows, n_rejected = _build_resolution_table(
+            [ea, ec, eb], edges, b1_edges=b1, ine_municipalities=_TEST_INE
+        )
+
+        a_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "A")
+        b_canonical = next(r["resolved_dealer_ulid"] for r in rows if r["entity_ulid"] == "B")
+
+        assert a_canonical != b_canonical, (
+            "B1 bridge C-B must be rejected: component {A,C} has 'madrid', B has 'barcelona'"
+        )
+        assert n_rejected >= 1
