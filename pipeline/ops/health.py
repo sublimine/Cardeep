@@ -78,6 +78,7 @@ async def record_run(
     source_key: str,
     *,
     ok: bool,
+    phase: str = "scrape",
     rows: int | None = None,
     error: str | None = None,
     http_status: int | None = None,
@@ -97,6 +98,11 @@ async def record_run(
     insert — FALSE / 168 h respectively). This means callers that omit either argument never
     revert a cadence row that was populated by the B2.1 migration or a scheduler maintenance
     path.
+
+    `phase` scopes which open alerts are auto-resolved on success: a scrape success closes
+    open scrape alerts for this source; a discover success closes open discover alerts. This
+    ensures a scrape recovery does not inadvertently silence a separate discover fault.
+    Defaults to "scrape" so all existing callers that omit the argument are backward-compatible.
 
     Returns a RunOutcome describing the new posture (status, breaker, and whether this call
     crossed a transition edge — the signal the caller uses to fire exactly one alert).
@@ -139,6 +145,11 @@ async def record_run(
                          is_tier1 = COALESCE($2::boolean, source_health.is_tier1),
                          harvest_interval_hours = COALESCE($3::integer, source_health.harvest_interval_hours)""",
                 source_key, is_tier1, harvest_interval_hours)
+            # Close any open alerts for the exact origin (source:phase) that just recovered.
+            # Scoped to the phase of this run: a scrape success resolves scrape alerts only;
+            # it must never silence a concurrent discover fault on the same source (06 §3.4).
+            _ok_origin = build_origin(source_key, phase)
+            await resolve_alerts(conn, _ok_origin)
         else:
             new_fails = prior_fails + 1
             new_status = "down" if new_fails >= down_at else (
