@@ -42,9 +42,13 @@ N̂(OSM×cn)=440.795 vs CNAE oficial 39.334. CAUSA RAÍZ [VERIFICADO]: heterogen
    censo legal DGT = 100%, 52/52 provincias, geo 99%; +603 informales aedra; N̂ Chapman dgt×aedra
    2.061 → ~92% del universo estimado) · concesionario FACONAUTO 5.358 instalaciones (tenemos ~511,
    ~10%) · venta CNAE 4511 ~39.334. Distribuir por provincia (registros provinciales / prorrateo).
-2. Numerador LIMPIO: componer dedup B1 (intra-source) + cross-source-dedup-v1 (union-find) + dedup
-   intra-source más agresivo → resolver el overcount (61.397 brutos vs ~39k oficial = ~22k restantes;
-   el cross-source solo tocó 688, el grueso es intra-source no colapsado + entities sin geo).
+2. Numerador LIMPIO ✓ (2026-06-14): re-corrido `dealer-identity-det-v1` sobre 61.551 dealers
+   actuales → 19.292 merges, numerador **61.551→42.259 canónicos** (overcount −31%), vam_verified=TRUE,
+   v_canonical sirviendo. Checks 1-6 OK (recall 100%, 0 FP cross-muni, Flexicar/OcasionPlus/MOBILITY
+   correctos, Megar≠Vegar); check-7 conservador (~4 residual, variantes de marca, confesado).
+   Cobertura nacional vs oficial: **venta** (compraventa 32.501 + conces 1.854 = 34.355) / CNAE 39.334
+   = **87%** · **desguace** 1.678 > censo DGT 1.292 = **SELLADO** · **concesionario** 1.854 / FACONAUTO
+   5.358 = 35% (gap real). Deuda: componer cross-source-dedup-v1 (688 OSM×digital, marginal).
 3. Scrapear inventario de los 10.913 leads Overture (descubiertos, POIs sin coches aún).
 4. Por provincia: cobertura = numerador_VAM / denominador_oficial + gap-con-causa → sellar 52/52.
 NO marcar cross-source vam_verified=TRUE en solitario — perdería el dedup B1 intra-source; componer 1º.
