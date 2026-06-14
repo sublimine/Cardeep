@@ -14,10 +14,14 @@ Architecture (from CAMPAIGN_TO_100.md §B2):
   - Each due source is launched as a subprocess (python -m <module> [args]) with a
     generous timeout. The subprocess writes its own record_run — the scheduler does NOT
     write health rows.
+  - B2.4 silence_watchdog job runs every hour and fires one alert per source that has
+    been silent for > 2× its harvest_interval_hours. Alert dedup is built into the
+    watchdog (UPDATE on existing unresolved alert, INSERT only for new silences).
 
 Usage:
-    python -m pipeline.ops.scheduler             # start the live scheduler (blocking)
-    python -m pipeline.ops.scheduler --dry-run   # print what is DUE right now, then exit
+    python -m pipeline.ops.scheduler                # start the live scheduler (blocking)
+    python -m pipeline.ops.scheduler --dry-run      # print DUE sources, then exit
+    python -m pipeline.ops.scheduler --check-silence  # list silent sources READ-ONLY, then exit
 """
 from __future__ import annotations
 
@@ -30,6 +34,11 @@ from datetime import datetime, timezone
 from typing import NamedTuple
 
 import psycopg2
+
+from pipeline.ops.silence_watchdog import (
+    find_silent_sources,
+    run_silence_watchdog,
+)
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -378,6 +387,35 @@ def heartbeat_tick() -> None:
 
 
 # ---------------------------------------------------------------------------
+# B2.4 — Silence watchdog job (runs every hour)
+# ---------------------------------------------------------------------------
+
+def silence_watchdog_job() -> None:
+    """Hourly job: detect sources that have been silent for > 2× their interval.
+
+    Fires one dedup-aware alert per silent source (UPDATE existing open alert or
+    INSERT new). Never raises: a DB error is logged and the job exits cleanly so
+    the scheduler continues.
+    """
+    log.info("=== silence_watchdog START ===")
+    conn: psycopg2.extensions.connection | None = None
+    try:
+        conn = psycopg2.connect(_RAW_DSN)
+        alerted = run_silence_watchdog(conn)
+        log.info(
+            "silence_watchdog: %d alert(s) fired/updated: %s",
+            len(alerted),
+            alerted or "(none)",
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.error("silence_watchdog: unexpected error: %s", exc)
+    finally:
+        if conn is not None:
+            conn.close()
+    log.info("=== silence_watchdog END ===")
+
+
+# ---------------------------------------------------------------------------
 # Dry-run mode
 # ---------------------------------------------------------------------------
 
@@ -449,6 +487,60 @@ def _dry_run() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check-silence mode (B2.4 read-only CLI)
+# ---------------------------------------------------------------------------
+
+def _check_silence() -> None:
+    """Print sources that are SILENT right now.
+
+    READ-ONLY: does NOT fire alerts, does NOT modify any DB row.
+    A source is silent when its last event (last_ok or last_fail) is older than
+    2 × harvest_interval_hours.
+    """
+    conn: psycopg2.extensions.connection | None = None
+    try:
+        conn = psycopg2.connect(_RAW_DSN)
+        silent = find_silent_sources(conn)
+    finally:
+        if conn is not None:
+            conn.close()
+
+    print()
+    print("=" * 72)
+    print("CARDEEP SCHEDULER — SILENCE CHECK (read-only, no alerts fired)")
+    print(f"  DB:        {_RAW_DSN}")
+    print(f"  Threshold: > 2× harvest_interval_hours without last_ok or last_fail")
+    print(f"  Timestamp: {datetime.now(timezone.utc).isoformat()}")
+    print("=" * 72)
+
+    if not silent:
+        print("\n  (no silent sources detected)")
+    else:
+        print(f"\nSILENT SOURCES ({len(silent)} total, most-overdue first):")
+        print("-" * 72)
+        for src in silent:
+            source_key = src["source_key"]
+            hours_silent = src["hours_silent"]
+            interval_h = src["harvest_interval_hours"]
+            is_tier1 = src["is_tier1"]
+            last_ok = src["last_ok"]
+            last_fail = src["last_fail"]
+            severity = "CRITICAL" if is_tier1 else "WARNING"
+            threshold_h = 2 * interval_h
+            print(f"  [{severity:8s}] {source_key}")
+            print(f"               silent={hours_silent:.1f}h | threshold={threshold_h}h | interval={interval_h}h")
+            print(f"               last_ok={last_ok} | last_fail={last_fail}")
+            print(f"               is_tier1={is_tier1}")
+            print()
+
+    print("-" * 72)
+    print(f"SUMMARY: {len(silent)} silent source(s) detected")
+    print("  (run without --check-silence to start the scheduler and fire real alerts)")
+    print("=" * 72)
+    print()
+
+
+# ---------------------------------------------------------------------------
 # Live scheduler
 # ---------------------------------------------------------------------------
 
@@ -465,12 +557,11 @@ def _start_scheduler() -> None:
     # Replace any stale job definition with the current one on each start.
     # This ensures cadence changes (TICK_INTERVAL_MINUTES) take effect on restart
     # without manual DB cleanup.
-    job_id = "heartbeat_tick"
     scheduler.add_job(
         heartbeat_tick,
         trigger="interval",
         minutes=TICK_INTERVAL_MINUTES,
-        id=job_id,
+        id="heartbeat_tick",
         name="cardeep heartbeat tick",
         replace_existing=True,
         max_instances=1,   # enforce single-producer: never two ticks overlapping
@@ -478,8 +569,23 @@ def _start_scheduler() -> None:
         misfire_grace_time=300,  # allow 5 min of slippage before skipping a misfired tick
     )
 
+    # B2.4 — silence watchdog: independent hourly job, separate from the heartbeat.
+    # Detects sources that stop running (no record_run → S-HEALTH blind spot).
+    # max_instances=1 and coalesce=True prevent pile-up if a check takes too long.
+    scheduler.add_job(
+        silence_watchdog_job,
+        trigger="interval",
+        hours=1,
+        id="silence_watchdog",
+        name="cardeep silence watchdog",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,  # 10 min slippage allowed before skipping
+    )
+
     log.info(
-        "Scheduler started — heartbeat every %d min — jobstore: %s",
+        "Scheduler started — heartbeat every %d min, silence watchdog every 1h — jobstore: %s",
         TICK_INTERVAL_MINUTES, DB_URL,
     )
     log.info("Press Ctrl+C to stop.")
@@ -510,10 +616,22 @@ def main() -> None:
             "launched, then exit WITHOUT running anything."
         ),
     )
+    parser.add_argument(
+        "--check-silence",
+        action="store_true",
+        help=(
+            "Print sources that have been silent for > 2× their harvest interval. "
+            "READ-ONLY: does NOT fire alerts or modify any DB row, then exit."
+        ),
+    )
     args = parser.parse_args()
 
     if args.dry_run:
         _dry_run()
+        return
+
+    if args.check_silence:
+        _check_silence()
         return
 
     _start_scheduler()
