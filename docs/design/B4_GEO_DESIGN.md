@@ -108,3 +108,23 @@ CONTINUO vía el latido (B2 scheduler), acelerable con una pasada completa dirig
 residual declarado = irresolubles (pedanías fuera del Nomenclátor + ambiguos confesados) +
 rotación de inventario (lo cierra el scheduler en ciclos sucesivos). El gap de municipio NO es un
 número estático que se "sella" una vez: es un equilibrio que el latido mantiene bajo.
+
+## Balance geo tras B5.1 (2026-06-14) — POS vs C2C
+
+Tras el wallapop exhaustivo (`--target 100k`: 3.851 nuevos de 100.011 cageados = rendimiento
+fuertemente decreciente. Causa [VERIFICADO]: wallapop es API keyword/geo-scoped SIN catálogo plano;
+el cursor-newest + keyword-sweep alcanza recientes/populares pero NO el long-tail histórico activo.
+LÍMITE DE PLATAFORMA, no del mecanismo). El gap se separa honestamente:
+
+| Segmento | gap | resuelto |
+|---|---|---|
+| POS físicos (compraventa/garaje/concesionario/desguace) | 6.587 | 86,7% — garaje 99,6%, concesionario 96,1%, desguace 98,8%, **compraventa 83,6%** rezagado |
+| C2C particular | 47.078 | 85,7% — límite API wallapop + filtrable (B5.2) |
+| Plataformas nacionales (~133) | N/A | province NULL por diseño (sentinel '00', sin municipio físico) |
+
+**Lectura**: el geo de los PUNTOS DE VENTA físicos está esencialmente cerrado salvo compraventa
+(6.463: sus dealers encierran el muni en el cdp → no se benefician del COALESCE B4.4 que es solo
+particulares; milanuncios no da lat/lon → necesitarían re-mint de identidad [B1] o re-captura del
+city). El residual de geo lo domina el C2C particular (límite de enumerabilidad de wallapop) — que
+el FILTRADO B5.2 separa del producto servido. El geo "al átomo" de los puntos de venta está
+logrado; el gap C2C es ruido confesado por causa, no un fallo del resolver.
