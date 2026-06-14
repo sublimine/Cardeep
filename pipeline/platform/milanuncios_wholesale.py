@@ -665,6 +665,12 @@ ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()
 # only where it MUST: kind='particular', and role is left NULL (a private human is not a
 # point-of-sale role). sells_cars=TRUE (the car is for sale). Idempotent ON CONFLICT (cdp_code);
 # a re-run only ADDs new humans and never UPDATEs a non-mutated row beyond last_seen.
+#
+# B4.4: ON CONFLICT fills municipality_code / province_code ONLY when NULL in the existing
+# row (COALESCE pattern). A re-scrape with the improved B4.2 fuzzy resolver will backfill
+# the municipality that the old exact-only resolver left NULL, without ever overwriting a
+# value that was already resolved. DEALERS are intentionally excluded: their cdp_code
+# embeds municipality_code in the identity hash, so changing muni would change identity.
 _BULK_UPSERT_PARTICULARS = """
 INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
         province_code, municipality_code, is_tier1, status, kind_source,
@@ -675,7 +681,10 @@ SELECT u.entity_ulid, u.cdp_code, 'particular', u.name, u.name,
   FROM unnest($1::text[], $2::text[], $3::text[], $4::char(2)[], $5::char(5)[],
               $6::text[]) AS u(entity_ulid, cdp_code, name, province_code,
                                municipality_code, source_ref)
-ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
+ON CONFLICT (cdp_code) DO UPDATE SET
+    last_seen         = now(),
+    municipality_code = COALESCE(entity.municipality_code, EXCLUDED.municipality_code),
+    province_code     = COALESCE(entity.province_code,     EXCLUDED.province_code)
 """
 
 _BULK_UPSERT_PARTICULAR_SOURCES = """

@@ -557,8 +557,21 @@ def cdp_code_dealer(s: SellerRef, province_code: str, muni: str | None) -> str:
 # The bulk statements — ONE round-trip per table per window (unnest-based multi-row upsert),
 # the SAME idempotency the per-row path would use (ON CONFLICT byte-for-byte), so a re-run of
 # an already-harvested window adds 0 rows and 0 events. Mirrors coches_net_wholesale.
+#
+# B4.4: OWNERS is split into two separate statements by kind so that geo backfill logic
+# can be applied selectively:
+#
+# • DEALERS (compraventa): behaviour unchanged — DO UPDATE only touches last_seen.
+#   Their cdp_code embeds municipality_code in the identity hash; updating muni would
+#   corrupt identity for any future re-discovery. STRICTLY DO NOT apply COALESCE here.
+#
+# • PARTICULARS: DO UPDATE fills municipality_code / province_code / lat / lon ONLY
+#   when the existing row has NULL in those columns (COALESCE pattern). A re-scrape with
+#   the B4.2 fuzzy resolver backfills what the old exact-only resolver left NULL, without
+#   ever overwriting a value that was already resolved. lat/lon are persisted so the
+#   B4.3 reverse-geocoder can close wallapop particulars in-place in the future.
 
-_BULK_UPSERT_OWNERS = """
+_BULK_UPSERT_OWNERS_DEALERS = """
 INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
         province_code, municipality_code, is_tier1, status, kind_source,
         sells_cars, role, first_discovered_source, last_seen)
@@ -570,6 +583,26 @@ SELECT u.entity_ulid, u.cdp_code, u.kind::entity_kind, u.name, u.name,
        AS u(entity_ulid, cdp_code, name, province_code, municipality_code,
             kind, sells_cars, role)
 ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
+"""
+
+_BULK_UPSERT_OWNERS_PARTICULARS = """
+INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
+        province_code, municipality_code, lat, lon,
+        is_tier1, status, kind_source,
+        sells_cars, first_discovered_source, last_seen)
+SELECT u.entity_ulid, u.cdp_code, 'particular'::entity_kind, u.name, u.name,
+       u.province_code, u.municipality_code, u.lat, u.lon,
+       FALSE, 'active', 'platform_label',
+       TRUE, $1, now()
+  FROM unnest($2::text[], $3::text[], $4::text[], $5::char(2)[], $6::char(5)[],
+              $7::double precision[], $8::double precision[])
+       AS u(entity_ulid, cdp_code, name, province_code, municipality_code, lat, lon)
+ON CONFLICT (cdp_code) DO UPDATE SET
+    last_seen         = now(),
+    municipality_code = COALESCE(entity.municipality_code, EXCLUDED.municipality_code),
+    province_code     = COALESCE(entity.province_code,     EXCLUDED.province_code),
+    lat               = COALESCE(entity.lat,               EXCLUDED.lat),
+    lon               = COALESCE(entity.lon,               EXCLUDED.lon)
 """
 
 _BULK_UPSERT_OWNER_SOURCES = """
@@ -631,12 +664,21 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::js
 class _CageRow:
     """One fully-resolved car ready for the bulk cage — owner already attributed + geo-anchored,
     before any SQL. Carries everything the batched upserts need so the DB phase touches no
-    per-item Python logic, only set-based statements."""
+    per-item Python logic, only set-based statements.
+
+    owner_lat / owner_lon: item-level coordinates (Vehicle.item_lat/item_lon) carried forward
+    for wallapop PARTICULARS only. They are persisted via COALESCE in entity.lat/lon so the
+    B4.3 reverse-geocoder can later close municipality gaps in-place without a re-scrape.
+    Dealers do NOT use these (their lat/lon come from a separate geo path, and their upsert
+    statement is intentionally unchanged).
+    """
     owner_cdp: str             # dealer cdp OR per-seller particular cdp (the entity_ulid owner)
     owner_kind: str            # 'compraventa' (PRO) | 'particular' (private per-seller)
     owner_name: str | None
     owner_province: str
     owner_muni: str | None
+    owner_lat: float | None    # item lat (particulars only); None for dealers
+    owner_lon: float | None    # item lon (particulars only); None for dealers
     owner_sells_cars: bool
     owner_role: str | None     # 'standalone_pos' (PRO) | None (particular, per mandate)
     source_ref: str            # web_slug (PRO) | user_id (particular) for entity_source
@@ -824,7 +866,9 @@ async def _build_cage(items: list, fetcher: WallapopFetcher, governed_fetch, geo
             owner_cdp = cdp_code_dealer(seller, prov, muni)
             cage = _CageRow(
                 owner_cdp=owner_cdp, owner_kind="compraventa", owner_name=seller.name,
-                owner_province=prov, owner_muni=muni, owner_sells_cars=True,
+                owner_province=prov, owner_muni=muni,
+                owner_lat=None, owner_lon=None,   # dealers: lat/lon not backfilled via this path
+                owner_sells_cars=True,
                 owner_role="standalone_pos",
                 source_ref=(seller.web_slug or seller.user_id),
                 is_professional=True, featured=seller.featured, vehicle=v)
@@ -834,12 +878,16 @@ async def _build_cage(items: list, fetcher: WallapopFetcher, governed_fetch, geo
             # human = one entity; a private with N cars is one multi-car seller. The car IS
             # for sale -> sells_cars=TRUE. role left NULL (per mandate); kind_source mirrors
             # the dealer rows. trade_name = the seller's micro_name/handle, else "Particular".
+            # B4.4: carry item_lat/item_lon forward so entity.lat/lon is persisted via COALESCE
+            # in _BULK_UPSERT_OWNERS_PARTICULARS; enables B4.3 reverse-geocode in-place.
             owner_cdp = _particular_cdp(prov, seller.user_id)
             owner_name = seller.name or seller.web_slug or PARTICULAR_DEFAULT_NAME
             cage = _CageRow(
                 owner_cdp=owner_cdp, owner_kind=PARTICULAR_KIND,
                 owner_name=owner_name,
-                owner_province=prov, owner_muni=muni, owner_sells_cars=True,
+                owner_province=prov, owner_muni=muni,
+                owner_lat=v.item_lat, owner_lon=v.item_lon,
+                owner_sells_cars=True,
                 owner_role=None, source_ref=seller.user_id,
                 is_professional=False, featured=seller.featured, vehicle=v)
 
@@ -869,21 +917,44 @@ async def _ingest_window(conn: asyncpg.Connection, platform_ulid: str, cage: lis
         return
 
     async with conn.transaction():
-        # ---- OWNERS: dedup by cdp within the window, bulk-upsert, resolve ulids.
+        # ---- OWNERS: dedup by cdp within the window, bulk-upsert SPLIT BY KIND.
+        # B4.4: dealers and particulars use separate upsert statements so geo backfill
+        # (COALESCE for municipality_code / province_code / lat / lon) is applied only
+        # to particulars. Dealers are unchanged: their cdp encodes municipality identity.
         owners: dict[str, _CageRow] = {}
         for r in cage:
             owners.setdefault(r.owner_cdp, r)  # first occurrence wins (deterministic)
-        o_cdps = list(owners.keys())
-        o_ulids = [ulid() for _ in o_cdps]
-        o_names = [owners[c].owner_name for c in o_cdps]
-        o_provs = [owners[c].owner_province for c in o_cdps]
-        o_munis = [owners[c].owner_muni for c in o_cdps]
-        o_kinds = [owners[c].owner_kind for c in o_cdps]
-        o_sells = [owners[c].owner_sells_cars for c in o_cdps]
-        o_roles = [owners[c].owner_role for c in o_cdps]
+
+        dealer_cdps = [c for c, r in owners.items() if r.owner_kind == "compraventa"]
+        particular_cdps = [c for c, r in owners.items() if r.owner_kind == "particular"]
+
+        if dealer_cdps:
+            d_ulids = [ulid() for _ in dealer_cdps]
+            d_names = [owners[c].owner_name for c in dealer_cdps]
+            d_provs = [owners[c].owner_province for c in dealer_cdps]
+            d_munis = [owners[c].owner_muni for c in dealer_cdps]
+            d_kinds = [owners[c].owner_kind for c in dealer_cdps]
+            d_sells = [owners[c].owner_sells_cars for c in dealer_cdps]
+            d_roles = [owners[c].owner_role for c in dealer_cdps]
+            await conn.execute(
+                _BULK_UPSERT_OWNERS_DEALERS,
+                WP_SOURCE_KEY, d_ulids, dealer_cdps, d_names,
+                d_provs, d_munis, d_kinds, d_sells, d_roles)
+
+        if particular_cdps:
+            p_ulids = [ulid() for _ in particular_cdps]
+            p_names = [owners[c].owner_name for c in particular_cdps]
+            p_provs = [owners[c].owner_province for c in particular_cdps]
+            p_munis = [owners[c].owner_muni for c in particular_cdps]
+            p_lats = [owners[c].owner_lat for c in particular_cdps]
+            p_lons = [owners[c].owner_lon for c in particular_cdps]
+            await conn.execute(
+                _BULK_UPSERT_OWNERS_PARTICULARS,
+                WP_SOURCE_KEY, p_ulids, particular_cdps, p_names,
+                p_provs, p_munis, p_lats, p_lons)
+
+        o_cdps = dealer_cdps + particular_cdps
         o_refs = [owners[c].source_ref for c in o_cdps]
-        await conn.execute(_BULK_UPSERT_OWNERS, WP_SOURCE_KEY, o_ulids, o_cdps, o_names,
-                           o_provs, o_munis, o_kinds, o_sells, o_roles)
         await conn.execute(_BULK_UPSERT_OWNER_SOURCES, o_cdps, o_refs, WP_SOURCE_KEY)
         cdp_to_ulid: dict[str, str] = {
             row["cdp_code"]: row["entity_ulid"]
