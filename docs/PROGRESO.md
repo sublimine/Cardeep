@@ -38,10 +38,16 @@ N̂(OSM×cn)=440.795 vs CNAE oficial 39.334. CAUSA RAÍZ [VERIFICADO]: heterogen
 → inviable OSM×digital. El denominador no es capture-recapture aquí.
 
 ## Plan real del sello B6 (denominador = oficial + Chapman solo donde homogéneo)
-1. Denominador por segmento de cifras OFICIALES: **desguace SELLADO ✓** (tenemos 1.292/1.292 del
-   censo legal DGT = 100%, 52/52 provincias, geo 99%; +603 informales aedra; N̂ Chapman dgt×aedra
-   2.061 → ~92% del universo estimado) · concesionario FACONAUTO 5.358 instalaciones (tenemos ~511,
-   ~10%) · venta CNAE 4511 ~39.334. Distribuir por provincia (registros provinciales / prorrateo).
+1. SELLOS por segmento (denominador oficial). REGLA DEL GATE: el sello es sobre puntos de venta
+   SERVIDOS (con inventario scrapeado), NO sobre leads descubiertos sin coches (Overture aportó
+   10.913 leads = descubrimiento, no inventario).
+   · **desguace SELLADO 52/52 ✓** (1.292/1.292 censo legal DGT, 0 gaps).
+   · **venta**: servido ~22.074 (con inventario) / DIRCE-451 23.085 = **~96% nacional**. [GATE corrigió
+     el 147,9% del agente B6.2: 12.281 de los 32.501 compraventa son LEADS sin inventario —10.088 de
+     Overture— descubiertos, no servidos.] Denominador provincial ESTIMADO (INE NO publica 4511×
+     provincia; ratio 451/45 = 0,2605 prorrateado — confesado, no es "medido" exacto). Gap venta =
+     12.281 leads sin scrapear (E2E: descubrir✓ → scrapear inventario PENDIENTE). Doc: docs/recon/B6_venta_sello.md.
+   · **concesionario** 1.854 / FACONAUTO 5.358 instalaciones = 35% (gap real, faltan concesionarios).
 2. Numerador LIMPIO ✓ (2026-06-14): re-corrido `dealer-identity-det-v1` sobre 61.551 dealers
    actuales → 19.292 merges, numerador **61.551→42.259 canónicos** (overcount −31%), vam_verified=TRUE,
    v_canonical sirviendo. Checks 1-6 OK (recall 100%, 0 FP cross-muni, Flexicar/OcasionPlus/MOBILITY
