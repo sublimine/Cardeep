@@ -24,7 +24,7 @@
 | **B1** | Cerebro local + Identidad única | dealer↔1 cdp_code canónico (alias no-destructivo); tasa dup <0,1% por ≥2 caminos VAM | **✓ CERRADO 2026-06-14** |
 | **B2** | Latido continuo | scheduler crash-safe re-cosechando por tier (24h/7d/30d); delta GONE/NEW reales 2ª pasada; governor multiproceso | **✓ CERRADO 2026-06-14** (B2.1 cadencia · B2.2 scheduler durable · B2.3 delta-GONE-guard · B2.4 silence-watchdog; governor multiproceso = deuda, no necesario con single-producer) |
 | **B3** | Auto-reparación real + API blindada | fallo inyectado→alerta origen-exacto→auto-repair cierra lazo sin caer; alertas vivas cerradas; API paginada | **✓ CERRADO 2026-06-14** (B3.1 paginación · B3.2 resolve_alerts cableado a record_run · B3.3 encoding utf-8 scheduler · B3.4 motor_es false-cap-error + coches_com VAM diagnosticado · B3.5 prueba de resiliencia 5-tests + auth API-key + tolerance renting 0.005; 5/7 alertas cerradas, 2 degraded activas se auto-cierran al recuperar; rate-limit/cache = deuda P3) |
-| **B4** | Geo al átomo | geocode-gap 32,5%→<2%; cada entidad a municipio/comarca | pendiente |
+| **B4** | Geo al átomo | gap municipio RECUPERABLE→<2%; cada entidad a municipio/comarca; residual de-fuente confesado | **en curso** (gap real medido 21,66% no 32,5%; causa raíz = match exacto sin fuzzy + city crudo no persistido, NO muro de fuente; diseño `docs/design/B4_GEO_DESIGN.md`; B4.1 probe empírico lanzado) |
 | **B5** | Cobertura total + filtrado | sells_cars resuelto; particular vs dealer decidido; Canarias/Ceuta/Melilla cerrados; cada segmento sellado o gap-con-causa | pendiente |
 | **B6** | Sello 52/52 + separación física | SPAIN-SEALED (denominador medido + numerador VAM por provincia); `platforms/_tier1/` separado | pendiente |
 
