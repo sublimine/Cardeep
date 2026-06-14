@@ -84,3 +84,27 @@ El "32,5%→<2%" del brief asumía que todo el gap era geocodificable; el códig
   suelo de fuente declarado.
 - **Meta cuantitativa exacta**: la fija B4.1. El gap de municipio baja del 21,66% al residual-de-fuente
   medido; el gap RECUPERABLE cae a <2%.
+
+## B4.4/B4.5 — validación del lazo + naturaleza del cierre (2026-06-14)
+
+**El lazo funciona [VERIFICADO]**: re-scrape de prueba de milanuncios prov 42 (Soria) con el
+resolver B4.2 + upsert COALESCE B4.4 bajó el gap de particulares 120→86 en UNA pasada (34
+municipios rellenados: Soria, Almazán, San Esteban de Gormaz, Ólvega, Burgo de Osma...), VAM
+TRUSTWORTHY, sin tocar identidad ni dealers.
+
+**Naturaleza del gap [VERIFICADO DB]**: los 65.852 particulares sin municipio NO son fantasmas —
+el 100% tiene vehicle `available` y last_seen <7d. Es inventario VIVO, recuperable. El city se
+resolvió en su día con el resolver viejo (exacto-only) y quedó NULL; B4.2 lo resuelve cuando el
+particular re-aparece en un drain. (Nota: el primer intento de medición usó status='active' —
+valor inexistente, el real es 'available'; cazado por el GROUP BY status. Los números son humo,
+incluido el propio.)
+
+**Mecánica del cierre**: el inventario C2C (wallapop/milanuncios) ROTA — un drain trae el
+inventario del momento, no el acumulado. Un re-scrape único no cierra todo el backlog de golpe:
+cada particular se cierra cuando re-aparece en un drain con el resolver B4.2. El cierre es
+CONTINUO vía el latido (B2 scheduler), acelerable con una pasada completa dirigida (B4.5).
+
+**Gate B4 honesto**: mecanismo probado (✓) + gap tras una pasada completa de re-scrape medido +
+residual declarado = irresolubles (pedanías fuera del Nomenclátor + ambiguos confesados) +
+rotación de inventario (lo cierra el scheduler en ciclos sucesivos). El gap de municipio NO es un
+número estático que se "sella" una vez: es un equilibrio que el latido mantiene bajo.
