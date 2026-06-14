@@ -8,7 +8,7 @@
 
 ## Método de ejecución (mando)
 
-- **Cadena de mando:** Director + Inquisidor en Opus 4.8; **constructores en Fable 5** (`model: fable`).
+- **Cadena de mando:** Director + Inquisidor en Opus 4.8; **constructores en Sonnet** (Fable 5 sin acceso Mythos).
 - **Workflows átomo:** cada bloque se monta como workflow(s) verificados; el E2E por dealer cubre
   descubrir → scrapear → receta → API → evicción. Nada se da por bueno sin verificar por ≥2 caminos.
 - **Huella:** todo a GitHub `main`, documentado (recetas, estado, decisiones). Estructura en carpetas.
@@ -21,7 +21,7 @@
 
 | # | Bloque | Gate de cierre (binario, verificable en DB) | Estado |
 |---|---|---|---|
-| **B1** | Cerebro local + Identidad única | dealer↔1 cdp_code canónico (alias no-destructivo); tasa dup <0,1% por ≥2 caminos VAM | **EN CURSO** |
+| **B1** | Cerebro local + Identidad única | dealer↔1 cdp_code canónico (alias no-destructivo); tasa dup <0,1% por ≥2 caminos VAM | **✓ CERRADO 2026-06-14** |
 | **B2** | Latido continuo | scheduler crash-safe re-cosechando por tier (24h/7d/30d); delta GONE/NEW reales 2ª pasada; governor multiproceso | pendiente |
 | **B3** | Auto-reparación real + API blindada | fallo inyectado→alerta origen-exacto→auto-repair cierra lazo sin caer; 7 alertas vivas cerradas; API paginada/cacheada | pendiente |
 | **B4** | Geo al átomo | geocode-gap 32,5%→<2%; cada entidad a municipio/comarca | pendiente |
@@ -67,4 +67,9 @@ nissan, kia, seat_cupra, renew, ford). 18 tests verdes. Forward-fix; lo históri
 - 2026-06-14 — Fable 5 sin acceso (Mythos restringido). Routing efectivo de la campaña: **Sonnet construye, Opus dirige y verifica**.
 - 2026-06-14 — B1.0 CERRADO: `mercedes_benz` + `das_weltauto` arreglados (clave `name+municipio`); 11 conectores OEM-VO restantes auditados sanos; 18 tests verdes.
 - 2026-06-14 — MISSION.md sellado (super-prompt maestro, asignado como /goal). Splink 4.0.16 instalado y verificado (importa con pandas 3.0.3).
-- 2026-06-14 — B1.2: migración `0020_entity_cluster` aplicada y verificada (overlay no-destructivo `entity_cluster` + `entity_cluster_run` + vista `v_canonical`; FK por `entity_ulid` porque `cdp_code` solo tiene unique index; `vam_verdict_id`→`verification_verdict(id)`). Falso positivo descartado: `migrate.py` está limpio (no tiene el NameError que un agente reportó). Siguiente: B1.3 (job Splink sobre el overlay) → B1.1 (dedup drain milanuncios).
+- 2026-06-14 — B1.2: migración `0020_entity_cluster` aplicada y verificada (overlay no-destructivo `entity_cluster` + `entity_cluster_run` + vista `v_canonical`; FK por `entity_ulid` porque `cdp_code` solo tiene unique index; `vam_verdict_id`→`verification_verdict(id)`). Falso positivo descartado: `migrate.py` está limpio (no tiene el NameError que un agente reportó).
+- 2026-06-14 — B1.1 CERRADO: milanuncios `authorId` per-sesión fuera del hash → clave `name+municipio` (29 tests, particulares intactos). commit `bcee353`.
+- 2026-06-14 — B1.3/B1.4: Splink 4.0.16 (DuckDB) dio recall 61% (el modelo probabilístico pierde los exactos `name+muni` con cif 0%/web 4%). Refinado a determinista; **hallazgo: Splink aportaba ~1%, prescindible**.
+- 2026-06-14 — Pipeline CONSOLIDADO a un solo script determinista, reproducible, SIN Splink (`pipeline/identity/cluster_dealers.py`). FIX A: fuzzy levenshtein guardado a `len≥8` (`Megar`≠`Vegar`). FIX B: normalización de sufijos societarios (`S.A.`/`S.L.` → variantes unidas por la arista exacta).
+- 2026-06-14 — **B1 SELLADO** (commit `89eb8e0`). Run `dealer-identity-det-v1` `vam_verified` (verdict 640): 42.898→**31.472 canónicos** (11.426 alias→canónico), recall intra-fuente **100%**, **0 FP** cross-muni, cadenas preservadas. API resuelve a canónico + inventario agregado (13 tests). `v_canonical` activo. Reproducible, cero `cdp_code` reescrito; run Splink purgado. Lecciones (higiene de locks; FK por `entity_ulid`) en `MISSION.md`.
+- **SIGUIENTE → B2 (latido continuo):** scheduler durable + governor multiproceso + delta GONE/NEW real en 2ª pasada.
