@@ -1,0 +1,20 @@
+# Cardeep extraction recipe — CDP-ES-31-EE3B6VED
+# Reusable; re-scrape without raw crude.
+version: 1
+source: autoscout24
+engine: http+next_data
+access: open (Chrome UA; SSR __NEXT_DATA__)
+enumeration: /profesionales/{slug}?atype=C&page=N until numberOfResults reached
+field_map:
+  deep_link: listing.url (prefixed with host)
+  vin_ref: listing.id
+  make: listing.vehicle.make
+  model: listing.vehicle.model
+  year: listing.tracking.firstRegistration (MM-YYYY -> YYYY)
+  km: listing.tracking.mileage
+  price: listing.tracking.price
+  fuel: listing.vehicle.fuel
+  transmission: listing.vehicle.transmission
+  photo_url: listing.images[0]
+  dealer: listing.seller {id, companyName, links.infoPage->slug}
+  location: listing.location {zip->province, city, street}
