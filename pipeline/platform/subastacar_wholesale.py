@@ -102,7 +102,8 @@ from curl_cffi import requests as cffi_requests
 
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
-from pipeline.ops.health import auto_repair, is_open, record_run
+from pipeline.delta_guard import should_emit_gone
+from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
 from services.api.codes import _base32, cdp_code
@@ -720,7 +721,7 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
         "pages_fetched": 0, "detail_links_seen": 0, "details_fetched": 0,
         "no_ld_skipped": 0, "cars_caged": 0, "new_cars": 0, "edges_created": 0, "new_events": 0,
         "declared_full": None, "retired_vehicles": 0, "retired_listings": 0,
-        "concurrency": concurrency,
+        "gone_suppressed": 0, "concurrency": concurrency,
     }
     harvested: set[str] = set()  # deep_links seen this run (for the aged-out reconcile + VAM truth).
 
@@ -810,7 +811,27 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
                       f"new={stats['new_cars']} edges={stats['edges_created']}")
 
         # ---- (3) Reconcile aged-out cars — ONLY on a clean full drain (no fetch_error).
-        if fetch_error is None:
+        # B2.3: delta guard — blocks GONE sweep on silent partial drains (harvest-ratio check).
+        # declared_full = site's "N resultados" from page-1 listing (authoritative denominator).
+        # previous_available = all platform_listing rows before this run (fetched above as vehicles_before).
+        _gone_allow, _gone_reason = should_emit_gone(
+            harvested=len(harvested),
+            declared=stats["declared_full"],
+            previous_available=len(vehicles_before),
+        )
+        if not _gone_allow:
+            stats["gone_suppressed"] = len(vehicles_before)
+            print(f"[subastacar_wholesale] GONE sweep suppressed: {_gone_reason}")
+            await fire_alert(
+                conn,
+                origin=build_origin(SC_SOURCE_KEY, "gone_guard"),
+                severity="warning",
+                message=f"GONE sweep suppressed (Subastacar): {_gone_reason}",
+                payload={"harvested": len(harvested),
+                         "declared": stats["declared_full"],
+                         "previous_available": len(vehicles_before)},
+            )
+        elif fetch_error is None:
             await _reconcile_aged_out(conn, platform_ulid, vehicles_before, harvested, stats)
             if stats["retired_vehicles"]:
                 print(f"[subastacar_wholesale] retired {stats['retired_vehicles']} aged-out cars.")

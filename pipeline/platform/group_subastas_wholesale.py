@@ -114,7 +114,8 @@ from curl_cffi import requests as cffi_requests
 
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
-from pipeline.ops.health import auto_repair, is_open, record_run
+from pipeline.delta_guard import should_emit_gone
+from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
 from services.api.codes import _base32, cdp_code
@@ -898,6 +899,7 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
         "new_sales": 0, "cars_caged": 0, "new_cars": 0, "edges_created": 0, "new_events": 0,
         "declared_full": None, "dup_ids_collapsed": 0, "sales_distinct": 0,
         "aggregate_count": None, "es_sales_seen": 0, "retired_vehicles": 0, "retired_listings": 0,
+        "gone_suppressed": 0,
         "concurrency": concurrency,
     }
     # Harvest-side truth for the VAM: distinct CAGEABLE cars = distinct (sale_cdp, deep_link) pairs.
@@ -1002,7 +1004,27 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
         # AND _ingest_lots DB errors — so a mid-drain failure (network OR ingest) sets fetch_error and
         # skips this reconcile. If that try/except is ever split, this guard must be revisited or a
         # partial ingest could wrongly retire the un-fetched tail.
-        if fetch_error is None and stats["cars_caged"] > 0:
+        # B2.3: delta guard — blocks GONE sweep on silent partial drains (harvest-ratio check).
+        # declared_full = aggregate_count from the GraphQL gateway (the gateway's exact denominator).
+        # previous_available = all platform_listing rows before this run (fetched above as vehicles_before).
+        _gone_allow, _gone_reason = should_emit_gone(
+            harvested=stats["cars_caged"],
+            declared=stats["declared_full"],
+            previous_available=len(vehicles_before),
+        )
+        if not _gone_allow:
+            stats["gone_suppressed"] = len(vehicles_before)
+            print(f"[group_subastas_wholesale] GONE sweep suppressed: {_gone_reason}")
+            await fire_alert(
+                conn,
+                origin=build_origin(AYVENS_SOURCE_KEY, "gone_guard"),
+                severity="warning",
+                message=f"GONE sweep suppressed (Ayvens/Carmarket): {_gone_reason}",
+                payload={"harvested": stats["cars_caged"],
+                         "declared": stats["declared_full"],
+                         "previous_available": len(vehicles_before)},
+            )
+        elif fetch_error is None and stats["cars_caged"] > 0:
             seen_vehicle_ulids = {vehicle_ulid_seen
                                   for vehicle_ulid_seen in await _seen_vehicle_ulids(
                                       conn, platform_ulid, harvested_cageable)}
