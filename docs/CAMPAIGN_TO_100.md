@@ -62,6 +62,31 @@ nissan, kia, seat_cupra, renew, ford). 18 tests verdes. Forward-fix; lo históri
 - `entity_cluster_run(cluster_run_id, splink_version, threshold, n_in, n_clusters, vam_verified, ...)`
 - vista `v_canonical` resuelve `cdp_code → canonical_cdp_code` en query-time (solo el run con `vam_verified=TRUE`).
 
+## B2 — diseño (latido continuo) [2026-06-14]
+
+Reconocimiento del motor [VERIFICADO]: NO hay scheduler (todo manual `python -m`); governor single-process asyncio
+(multiproceso = cicatriz AS24 repetible); delta NEW/PRICE/KM/PHOTO/GONE implementado en `ingest.py` (1.499.942 NEW /
+1.912 GONE / 1.375 `status='gone'`) PERO cableado solo a AS24 (los conectores wholesale tienen su cage propia); S-HEALTH
+pasivo (bibliotecas que el conector llama, sin watchdog en cadencia); 7 alertas abiertas; Redis solo de CARDEX; `is_tier1`
+a `false` en las 47 fuentes.
+
+**Decisión arquitectónica:** scheduler **single-producer** (un conector por ventana, en serie) — en este PC débil evita
+saturación Y la cicatriz AS24 (sin 2 procesos pisando el governor), por lo que el governor single-process ACTUAL basta y
+**Redis-GCRA NO es necesario en B2** (deuda registrada para cuando se paralelice).
+
+Sub-bloques:
+- **B2.1 — Tier + intervalos:** migración 0021 (añadir `harvest_interval_hours` o categoría de tier a `source_health`);
+  poblar `is_tier1` y el intervalo por fuente; setear `is_tier1` en `record_run`. Prerequisito del scheduler.
+- **B2.2 — Scheduler durable:** APScheduler 3.x + `SQLAlchemyJobStore` sobre `cardeep-pg`. Single-producer: itera fuentes
+  donde `now - last_ok >= interval`, lanza el conector como **subprocess** (aislamiento crash-safe), registra. Jobs en PG
+  → sobrevive reinicio.
+- **B2.3 — Delta 2ª-pasada verificada:** guard de GONE — emitir GONE solo si `harvested >= declared * 0.95` (evita GONEs
+  falsos por paginación parcial / timeout a media página). Uniformar el delta en los conectores wholesale.
+- **B2.4 — Watchdog de silencio:** job de salud que detecta fuentes sin `last_ok` en > 2× su intervalo → `fire_alert`.
+
+**Gate B2:** scheduler crash-safe re-cosechando por tier (24h/7d/30d) corriendo; delta GONE seguro verificado en 2ª pasada;
+cero repetición de la cicatriz AS24; `is_tier1`/intervalo operativos.
+
 ## Log
 - 2026-06-14 — Reconocimiento B1 cerrado (4 vías). Raíz explosión OEM-VO confirmada. Plan de campaña sellado.
 - 2026-06-14 — Fable 5 sin acceso (Mythos restringido). Routing efectivo de la campaña: **Sonnet construye, Opus dirige y verifica**.
