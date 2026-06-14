@@ -8,6 +8,10 @@ Upserts the dealer entity and reconciles its inventory against the harvest:
   KM_CHANGE     -> km differs -> update + event
 Unchanged rows only refresh last_seen (never an UPDATE of non-mutated data).
 Closes with a VAM count quorum (declared == available in DB).
+
+B2.3 — GONE guard: the sweep only fires when harvested >= declared * 0.95.
+A partial drain (timeout/error at page N of M) skips the sweep and fires an alert
+instead, preventing false GONEs from corrupting the inventory.
 """
 from __future__ import annotations
 
@@ -19,6 +23,8 @@ from pipeline.ids import ulid
 from pipeline.sources.autoscout24 import DealerHarvest, RECIPE_VERSION
 from pipeline.geo import GeoResolver
 from pipeline.verify import record_count_verdict
+from pipeline.delta_guard import should_emit_gone
+from pipeline.ops.health import fire_alert, build_origin
 from services.api.codes import cdp_code
 
 
@@ -101,12 +107,45 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
             await conn.execute("UPDATE vehicle SET last_seen=now() WHERE vehicle_ulid=$1", vulid)
             counts["unchanged"] += int(not changed)
 
-    # GONE: available rows in DB not in this harvest
-    for link, row in existing.items():
-        if link not in harvested_links and row["status"] == "available":
-            await conn.execute("UPDATE vehicle SET status='gone' WHERE vehicle_ulid=$1", row["vehicle_ulid"])
-            await _event(conn, row["vehicle_ulid"], eulid, "GONE", {"price": float(row["price"]) if row["price"] else None}, None)
-            counts["gone"] += 1
+    # GONE: available rows in DB not in this harvest — guarded by B2.3 delta_guard.
+    # The sweep only fires when the harvest is demonstrably complete (>=95% of declared).
+    # A partial drain (timeout/error cutting pagination early) would otherwise mark the
+    # un-fetched pages' vehicles as gone — a false GONE that corrupts the inventory.
+    previous_available = sum(1 for r in existing.values() if r["status"] == "available")
+    allow_gone, gone_reason = should_emit_gone(
+        harvested=len(harvested_links),
+        declared=harvest.declared_count,
+        previous_available=previous_available,
+    )
+    if allow_gone:
+        for link, row in existing.items():
+            if link not in harvested_links and row["status"] == "available":
+                await conn.execute("UPDATE vehicle SET status='gone' WHERE vehicle_ulid=$1", row["vehicle_ulid"])
+                await _event(conn, row["vehicle_ulid"], eulid, "GONE",
+                             {"price": float(row["price"]) if row["price"] else None}, None)
+                counts["gone"] += 1
+    else:
+        counts["gone_suppressed"] = previous_available - len(
+            harvested_links.intersection(
+                {lk for lk, r in existing.items() if r["status"] == "available"}
+            )
+        )
+        await fire_alert(
+            conn,
+            origin=build_origin("as24", "gone_guard", code),
+            severity="warning",
+            message=(
+                f"GONE sweep suppressed for dealer {code}: {gone_reason}"
+            ),
+            payload={
+                "cdp_code": code,
+                "harvested": len(harvested_links),
+                "declared": harvest.declared_count,
+                "previous_available": previous_available,
+                "gone_suppressed": counts["gone_suppressed"],
+                "reason": gone_reason,
+            },
+        )
 
     available = await conn.fetchval(
         "SELECT count(*) FROM vehicle WHERE entity_ulid=$1 AND status='available'", eulid)
