@@ -63,6 +63,23 @@ NO marcar cross-source vam_verified=TRUE en solitario — perdería el dedup B1 
 leer estado → atacar cobertura nueva por la raíz → VAM gate (≥2 vías, conteo aterrizado en DB) →
 commit+push main → actualizar este archivo → siguiente frente. Sin volver a base con gate a medias.
 
+## Sello 52 — estado real [VERIFICADO B6.3, 2026-06-14] · doc: docs/recon/B6_SELLO_52.md
+Venta SERVIDA nacional **88%** (20.320 POS con inventario / DIRCE-451 23.085). Por provincia:
+- **SELLADO (≥85%): 19/52** (Madrid 112%, Valencia 108%, Murcia 116%, Barcelona 93%, Sevilla 97%...).
+- COBERTURA-PARCIAL (50-84%): 26/52.
+- GAP-CON-CAUSA (<50%): 7/52 (Ávila, Cáceres, Cuenca, Huelva, Teruel, Ceuta 4%, Melilla 5%).
+Desguace: **52/52 entidades SELLADO** (censo DGT); inventario 0/52 (workflow E2E desguace no existe).
+Gap accionable: ~14.035 leads sin inventario (10.913 Overture) = E2E descubrir✓ → scrapear PENDIENTE.
+
+## Ruta crítica a SPAIN-SEALED (de 19 → 52 selladas)
+1. E2E leads Overture (10.913) → +~7.600 servidos → mayoría de las 26 parciales a SELLADO.
+2. Canarias (Las Palmas 61%, Tenerife 63%): fuentes insulares locales.
+3. Ceuta/Melilla (<50 dealers): censo manual (OEM locators + cámara).
+4. Workflow E2E desguace (1.292 CATs en DB listos) → inventario 52/52.
+5. Concesionario FACONAUTO desglose provincial.
+Sesgos confesados: denominador venta provincial ESTIMADO (ratio 451/45 = 0,2605 uniforme); filas
+por provincia ±2-3% (usan query B6.2); total nacional 20.320 es el canónico verificado 2 vías.
+
 ## Snapshot 2026-06-14
 379.452 entities (328.776 particular / 50.167 POS) · 1.646.674 coches vivos · 610 VAM TRUSTWORTHY ·
 2 alertas (degraded auto-cerrables). Geo municipio 85,5%.
