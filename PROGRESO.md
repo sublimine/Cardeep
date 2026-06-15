@@ -1090,3 +1090,27 @@
   - 9 MEDIO + 6 BAJO restantes: A-sourceless-entities (overture_ingest + entity_source backfill), A-zero-tiny-prices
     (price_trap lado-bajo/filtro), A-junk-sentinel-prices [ALTO, ingest-guard hot-path], + menores codes/health/sources.
   Todos con fix concreto en AUDIT_PHASE2.md. Atacar uno por uno con la calidad que cada uno merece.
+
+### 2026-06-15 (cont.) — 20 findings P2 sellados (data-quality + coherencia + atestación)
+- **A-junk-sentinel-prices** (0fb7785, ALTO): `pipeline/price_sanity.py` (NULL precios <=0 o >€10M; techo calibrado
+  — máx legítimo ~€2.2M Lamborghini) + cableado en los 6 puntos de price de ingest + backfill 2.712. La basura
+  gama-media model-implausible + low-side queda para el price_trap model-aware (diferido). 34 tests.
+- **A-sourceless-entities** (17ab33c, MEDIO): overture_ingest cablea entity_source (GERS id) + backfill 10.913 →
+  0 entidades sin atestación.
+- **A-gone-listed-desync** (ebdeed4, MEDIO, migración 0037): trigger vehicle 'gone' → platform_listing.removed +
+  backfill 5. desync 5→0.
+- **E-geo-tree** (782f8db, MEDIO): /geo tree province-only count scoped a active non-particular (Madrid 4.563→932).
+- **E-platforms-status** (62eba71, MEDIO): documentada la divergencia by-design geo(curado)/inventory(todo-stock) +
+  corregido el docstring stale de /health post-split-P1.
+- **TOTAL P2 este turno: 20 sellados** (10 CRÍT + 6 ALTO [D-supersession, recipe×2, A-make-model, D-audit-chain,
+  A-junk-sentinel] + 4 MEDIO [A-gone-listed, A-sourceless, E-geo-tree, E-platforms-status]). Migraciones 0034-0037.
+- **Restante (17, trabajo deliberado / fresh-context):**
+  - 3 ALTO identidad (alto-valor, ALTO-RIESGO en contexto profundo — rebuild de la vista core v_dealer_resolved que
+    consume resolve_cluster+API; certificación de merges = tarea Inquisidor): A-cross-entity-dup (mitigado server-side,
+    residual se auto-cura en próxima cluster-run), B-particular-split (extender dedup deep-link sobre 703), B-beta-resolver
+    (componer entity_resolution/β en v_dealer_resolved o retirar v_resolved_dealer).
+  - Features diferidas: A-zero-tiny-prices + D-inquisition-never-ran (price_trap model-aware + prosecutor wiring),
+    C-as24/C-cochesnet-segments-unscheduled (registrar en scheduler — AS24 ban-sensitive, decisión cadencia).
+  - No-código: F-scheduler-never-deployed (deploy del owner, alineado con "sin VPS aún").
+  - LOW bounded: A-km-year (ingest clamp), B-canonical-key (persistir+backfill 391k), E-cache-key/E-ratelimit/F-0033
+    (doc-flags), F-spend-gated (aceptado), D-gestion-proof (nota positiva, sin fix).
