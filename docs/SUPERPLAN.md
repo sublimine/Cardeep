@@ -133,7 +133,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 |---|---|---|---|
 | **SU-C1** | P0.5 anti-detección spike | re-prueba 5 OPEN + 2 walled targets; ClientHello byte-diff vs Chrome actual; Wallapop firma + Adevinta token resueltos → `state/tier1-blocked.json` | ⬜ |
 | **SU-C2** | Cazar receta de cada Tier-1 | cada Tier-1: receta reproducible en `platforms/_tier1/<n>/` + 2-way count + field-VAM, O muro declarado | ⬜ |
-| **SU-C3** | Sellar B7 (dedup coches) | fix 0km; gate cero-sobre-fusión; `vehicle-identity-det-v1` vam_verified=TRUE; `v_canonical_vehicle` sirve | 🔵 km=0 guard coded+commit `0f8a6e9` (53 tests): señales A/B OFF para km=0/NULL salvo VIN compartido; sesgo over-count declarado. Re-run B7 en background → gate+sello pend |
+| **SU-C3** | Sellar B7 (dedup coches) | fix 0km; gate cero-sobre-fusión; `vehicle-identity-det-v1` vam_verified=TRUE; `v_canonical_vehicle` sirve | ✅ **B7 SELLADO** (verdict 1102): 4 guardas (km=0/VIN, photo-high-collision K=12, firma non-null-price, firma cross-entity). Giants 89→9 (máx 207→36). **1.486.285 coches únicos** servidos. Residuo 9 cross-entity (0,015%)+292 cross-province photo declarados. Suite 416✓. +AS24-kind fix (`aa68fc7`) |
 
 ### D — COSTE / LLM (€0, hardware-bound)
 
@@ -235,7 +235,7 @@ Al retomar (sesión nueva / contexto compactado):
 >
 > ## Deuda declarada + hallazgos de auditoría (tracked, no bloqueante)
 > - **evict.py / evicción de crudo**: diseñada (MISSION §6, MASTER_PLAN) pero no construida. data/ = 161MB hoy (baja urgencia). Owner: compactar VHD WSL2 en ventana de mantenimiento (~21GB host).
-> - **AS24 kind mis-class [SU-A1] — unidad lista**: 469 entidades `as24` siguen `concesionario_oficial` (42 ya re-kindeadas por cadenas). Recon: solo **10%** con marca OEM, **90% compraventa independiente** (ACR Automóviles, Adricars, Almogàvers Ocasión, 81 Motor). El default oficial es falso → infla el segmento. **Fix honesto** (no clasificador completo): (a) connector AS24 default `concesionario_oficial`→`compraventa` + `kind_source` low-conf (raíz), (b) backfill 469. El clasificador refina los oficiales genuinos después. INDEPENDIENTE de B7.
+> - **AS24 kind mis-class [SU-A1] — ✅ HECHO** (commit `aa68fc7`): root-cause `ingest.py` default `concesionario_oficial`→`compraventa`+`kind_source='platform_label'`; backfill 469 (`scripts/reclassify_as24_kind.py`, idempotente). Segmento concesionario 2.058→**1.589**, oem_* intactos (1.525), AS24-concesionario=**0**. ~10% posibles oficiales genuinos marcados low-conf → el clasificador/OEM-locator los re-eleva (under-claim → re-certificar).
 > - **Geocoding sucio del scraper [SU-A2/A6]**: `municipality_code` erróneo en algunas fuentes (ej AutosMadrid Alcorcón con muni de Leganés). Corrompe constraints geo. Causa del residuo multimuni de β. → SU-A6.
 > - **1.629 clusters β same-muni multi-nombre**: clase ambigua (multi-marca / nombres históricos / wholesaler relistando). Decisión arquitectural pendiente del Director.
 > - **Cadena abreviada sin org_id [β residuo micro]**: OcasionPlus «A./P./S.» (ciudad abreviada no-INE-matchable, sin domain) escapa los guards. Fix: extender org-link por patrón de nombre.

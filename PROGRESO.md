@@ -308,3 +308,14 @@
   off; elbow real cnt11→12, 63 URLs stock verificadas) + firma exige **precio NO-NULL** (7.274 km>0
   price-NULL, 0,45%). Re-run v2 en curso → gate (giants caídos, km=0 intacto, fusiones legítimas
   cross-platform preservadas) → sello B7. **SU-C3 casi cerrado.**
+- **B7 v3** [commit `6667139`]: firma exige **CROSS-ENTITY** (elimina el over-merge de flota same-entity:
+  207 Renault Zoe de un dealer → 207 coches distintos). Giants 89→**9** (máx 207→36). Re-run:
+  unique_cars 1.453.967→**1.486.285** (+32k). **B7 SELLADO** (verdict 1102, vam_verified=TRUE):
+  km=0 over-merge=0, photo-stock fuera, firma null-price+fleet fuera. Residuo declarado: 9 giants
+  cross-entity (~225 coches, **0,015%**, colisión modelo-genérico cross-dealer) + 292 cross-province
+  photo-legítimo. `v_canonical_vehicle` sirve **1.486.285** coches únicos. Suite completa **416 verde**.
+- **AS24-kind** [commit `aa68fc7`]: root-cause `ingest.py:58` default `concesionario_oficial`→`compraventa`
+  + `kind_source='platform_label'`; backfill 469 (`scripts/reclassify_as24_kind.py` idempotente).
+  Segmento concesionario 2.058→**1.589** (−469), oem_* intactos (1.525). ~10% posibles oficiales
+  marcados low-conf → re-certifica el clasificador (under-claim, no over-claim).
+- **GATE SU-C3 = VERDE.** B7 sellado (1.486.285 coches únicos) + AS24-kind corregido. Pend SU-A2: φ + Chao2.
