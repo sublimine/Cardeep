@@ -231,7 +231,12 @@ Al retomar (sesión nueva / contexto compactado):
 3. Ejecutar su WF: RECON → BUILD → VERIFY → SEAL. Actualizar el estado de la SU aquí + PROGRESO.
 4. **Nunca parar** con una SU a medias sin bloqueo real declarado. No pasar a la siguiente sin SEAL.
 
-> Estado: **2026-06-15. FASE 0 SELLADA** (SU-0.1..0.6 ✅; residual de disco confesado, *=con causa). Árbol limpio salvo este tracker. Siguiente: **FASE 1** (confirmar puntos verdes a nivel átomo) → **SU-B1** (ledger de verificación profundo, migración 0014).
+> **Estado [reconciliado 2026-06-15, cont.]:** este puntero §9 se había quedado stale; **`docs/PROGRESO.md` es el log vivo más actual** (avanzó más allá de este tracker). Reconciliación verificada por git log + `migrate verify` (migraciones aplicadas hasta **0040**, 34 match / 0 drift):
+> - **FASE 0 + identidad + deep-ledger SELLADOS**: SU-B1 (ledger de verificación profundo) se construyó como **migración 0026** (`verification_deep` — verdict_audit hash-chain + quorum CHECK), NO como 0014. La nota de deuda de abajo que decía "0014 NO construido" quedó OBSOLETA.
+> - **Auditoría P2 (workflow 48 agentes, 37 findings)**: 24 sellados (10 CRÍT + 6 ALTO + 4 MED + 4 LOW) + 3 ALTO-identidad decididos vía **ADR 11** (`docs/architecture/11-IDENTITY-RESOLUTION-AUTHORITY.md`).
+> - **Campaign de 4 features vetados** (workflow 9 agentes → `docs/architecture/feature-designs/`): scheduler_source_expansion, canonical_key (cdp_pair + backfill auto-verificante + **forward-coverage como job de cadencia**), inquisition_wiring (prosecutor cableado), price_trap v2 (cohort robust-z, QUARANTINE-only, 347 HIGH / 18.808 LOW validados, migración 0040). Todos construidos + verificados + commiteados + INERTES-hasta-deploy.
+> - **Deploy-readiness**: `docs/RUNBOOK.md` actualizado A-Z (los 6 jobs del scheduler, price_trap con gate dry-run + work_mem, prosecución, forward-coverage, flujo de migraciones).
+> - **Frontera €0-autónoma agotada.** Restante = (a) certificación de merges de identidad (3 ALTO, ADR 11 — alto riesgo, exige review per-merge riguroso); (b) **harvest/spend/hardware-gated** (la fase que el Owner abre tras validar config A-Z). Siguiente paso real cae en el gate de spend/deploy.
 >
 > ## Deuda declarada + hallazgos de auditoría (tracked, no bloqueante)
 > - **evict.py / evicción de crudo**: diseñada (MISSION §6, MASTER_PLAN) pero no construida. data/ = 161MB hoy (baja urgencia). Owner: compactar VHD WSL2 en ventana de mantenimiento (~21GB host).
@@ -239,4 +244,4 @@ Al retomar (sesión nueva / contexto compactado):
 > - **Geocoding sucio del scraper [SU-A2/A6]**: `municipality_code` erróneo en algunas fuentes (ej AutosMadrid Alcorcón con muni de Leganés). Corrompe constraints geo. Causa del residuo multimuni de β. → SU-A6.
 > - **1.629 clusters β same-muni multi-nombre**: clase ambigua (multi-marca / nombres históricos / wholesaler relistando). Decisión arquitectural pendiente del Director.
 > - **Cadena abreviada sin org_id [β residuo micro]**: OcasionPlus «A./P./S.» (ciudad abreviada no-INE-matchable, sin domain) escapa los guards. Fix: extender org-link por patrón de nombre.
-> - **Deep verification ledger 0014 (SU-B1) NO construido**: el quorum-CHECK (≥2 familias/orígenes) no existe en DB; los sellos actuales (B1 v640, β v1093, B7) son VAM-light. 0014 los re-juzgará. `denominator_estimate` (necesaria para F3 Chao2) vive en 0014 → SU-B1 precede a F3.
+> - **Deep verification ledger (SU-B1) — ✅ CONSTRUIDO como migración 0026** (`verification_deep`, no 0014): verdict_audit hash-chain (`cdp_audit_append`), `chk_trustworthy_needs_quorum` CHECK (VALIDATED este turno) + columnas GENERATED `quorum_n`/`family_n`/`origin_n`. Esta sesión: 1.039 filas de cadena backfilled (`backfill_audit_chain.py`, 0 bad_chain) + 987 verdicts grandfathered reformados a array/quorum (`reform_grandfathered_verdicts.py`, 994 TRUSTWORTHY 0-sin-quorum). `denominator_estimate` (F3 Chao2) vive aquí. [nota original "0014 NO construido" era stale.]
