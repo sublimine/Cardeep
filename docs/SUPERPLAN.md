@@ -163,7 +163,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 |---|---|---|---|
 | **SU-R1** | Desguace E2E (numerador) | workflow E2E desguace (1.292 CATs, Opisto/own-site); inventario >0 con VAM; ≥1 provincia sellada en desguace | ⬜ RECON: 1.895 desguaces (1.292 DGT+603), 283 con web, **0 inventario**. Greenfield (sin receta). Fuente=Opisto/own-sites. NOTA Director: inventario desguace=despiece/scrap (valor consumidor < venta); rendimiento limitado por techo schema.org ~1,5%. Frontera del numerador €0. |
 | **SU-R2** | Concesionario harvest | cosecha FACONAUTO más allá de OEM-VO; servido sube de 11,6% con VAM | ⬜ |
-| **SU-R3** | Filtrado sells_cars (sin ruido) | `sells_cars` resuelto en 100% de `kind=garaje`; ruido fuera; particular/POS coherente | ⬜ |
+| **SU-R3** | Filtrado sells_cars (sin ruido) | `sells_cars` resuelto en 100% de `kind=garaje`; ruido fuera; particular/POS coherente | 🟡 **€0-sliver hecho** (06-15): 6 garajes CON inventario → `sells_cars=true` determinista (verificado 0-sin-inventario). Los **7.195 sin inventario = ambiguos DATA-gated** (necesitan labels externos/plataforma; "mejor hueco que mentira" — no se marcan a ciegas). 100%-resuelto inalcanzable a €0. |
 | **SU-R4** | Cobertura 100% + cierre | cada segmento sellado o gap-con-causa; Canarias/Ceuta/Melilla cerrados | ⬜ |
 
 ### TERMINAL

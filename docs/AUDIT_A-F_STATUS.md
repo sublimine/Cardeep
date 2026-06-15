@@ -120,5 +120,13 @@ F1 46→62 tests — son snapshot-drift esperado, no defectos; cdp uniqueness/co
   R3 (DATA), SEAL (MIXED CAPA-B).
 - **Todo lo GATED es la fase de cosecha/gasto que TÚ diferiste.** La infraestructura €0 que la habilita
   (recetas, runbook, jobs, detectores, identidad servida, verificación) está construida y verificada.
+- **Sondeo €0 de los gated (06-15, post-certificado):** se probó cada punto gated buscando porción
+  €0-doable-y-verificable-AHORA y se ejecutó lo confiable: **A6 = 5 munis** backfilleados (de 141 con
+  señal; 30 latlon-vs-provincia en conflicto + 106 postcode-ambiguo + 6.636 sin-señal = rechazados por
+  "no mentira"); **R3 = 6 garajes** `sells_cars=true` (con inventario; 7.195 sin inventario = ambiguos).
+  Hallazgo EMPÍRICO: las porciones €0-doables de los gated son diminutas (5-6) — el grueso falla por
+  falta de señal €0 (data/harvest), confirmando que el gate es real, no evitación. Lo único €0-restante
+  no-ejecutado = A3/A4 (instrumentar 42 fuentes + cablear delta en 43 conectores): config-PARA-harvest,
+  solo verificable estructuralmente (no end-to-end sin correr scrape=spend) → FASE-2, no a ciegas.
 - **Próximo paso real = tu decisión de gasto** (abrir harvest a escala) o el rebuild union-find de
   cross-source/β (sub-1%, fresh-context). No queda trabajo seguro-Y-valioso a €0 sin abrir esos gates.
