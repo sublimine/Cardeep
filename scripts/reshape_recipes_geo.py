@@ -329,21 +329,44 @@ def _print_dry_run_report(
 
 
 def _git_mv(src: Path, dst: Path, repo_root: Path) -> None:
-    """Execute git mv src dst, creating parent directory first."""
+    """Execute git mv -f src dst, creating parent directory first.
+
+    The -f (force) overwrites an existing target: this is the staging→canonical
+    reconcile. write_recipe writes fresh recipes to the flat staging dir
+    (countries/ES/recipes/<cdp>.yaml); re-running the reshape moves each into its
+    geo-tree home, OVERWRITING any stale copy a prior reshape left there. Without
+    -f, `git mv` fails when the target exists (a re-harvested dealer) and the flat
+    duplicate would linger — exactly the coherence bug the local harvest validation
+    surfaced (an audi run re-created the flat recipe alongside its geo-tree copy).
+    """
     dst.parent.mkdir(parents=True, exist_ok=True)
     src_rel = str(PurePosixPath(src.relative_to(repo_root)))
     dst_rel = str(PurePosixPath(dst.relative_to(repo_root)))
     result = subprocess.run(
-        ["git", "mv", src_rel, dst_rel],
+        ["git", "mv", "-f", src_rel, dst_rel],
         cwd=str(repo_root),
         capture_output=True,
         text=True,
         timeout=30,
     )
     if result.returncode != 0:
+        stderr = result.stderr.strip()
+        # write_recipe writes fresh recipes to the flat staging dir UNTRACKED; git mv
+        # only moves tracked files. For an untracked source, do a plain filesystem move
+        # (overwriting any stale tracked target) + stage the result, so the reconcile
+        # still lands the recipe in its geo-tree home.
+        if "not under version control" in stderr or "not under source control" in stderr:
+            import shutil
+            shutil.move(str(src), str(dst))
+            add = subprocess.run(
+                ["git", "add", dst_rel], cwd=str(repo_root),
+                capture_output=True, text=True, timeout=30,
+            )
+            if add.returncode != 0:
+                raise RuntimeError(f"git add after untracked move failed: {add.stderr.strip()}")
+            return
         raise RuntimeError(
-            f"git mv failed: {result.stderr.strip()}\n"
-            f"  src={src_rel}\n  dst={dst_rel}"
+            f"git mv failed: {stderr}\n  src={src_rel}\n  dst={dst_rel}"
         )
 
 
