@@ -319,3 +319,19 @@
   Segmento concesionario 2.058→**1.589** (−469), oem_* intactos (1.525). ~10% posibles oficiales
   marcados low-conf → re-certifica el clasificador (under-claim, no over-claim).
 - **GATE SU-C3 = VERDE.** B7 sellado (1.486.285 coches únicos) + AS24-kind corregido. Pend SU-A2: φ + Chao2.
+
+## 2026-06-15 — SU-B1 deep ledger 0026 + SU-A2 φ/Chao2: GATE del Director
+- **SU-B1 CORE** [commit `39a9a2e`, migración **0026**]: deep verification ledger. Quorum-CHECK
+  `chk_trustworthy_needs_quorum (≥2 familias ∧ ≥2 orígenes)` **NOT VALID** (grandfatherea los sellos
+  light-VAM B1/β/B7 sin invalidarlos; enforce en nuevos — verificado: INSERT TRUSTWORTHY sin quorum
+  FALLA). Audit hash-chain append-only (UPDATE/DELETE fallan). `denominator_estimate` + rol read-only
+  `cardeep_inquisitor`. Rebuild 0001→0026 reproducible, suite 416✓. +`migrate.py split_statements`
+  (bug DDL multi-statement arreglado). Deferido: v_latest_verdict materializada, gestionador, V2/V3/V4.
+- **SU-A2 φ/Chao2** [recon+borrador gateado, verdict **1111 REFUTED**]: el Chao2 sobre 3 familias
+  ortogonales (fiscal×comercial×geográfico) **COLAPSA** — Q1/Q2=43,3 (cross-coverage 2,3%, capturas
+  casi-disjuntas), N̂=852.617 = **9,8× el techo CNAE-45 (87.229) → REFUTED**. El diseño es correcto
+  pero los datos no tienen el solape cross-familia que Chao2 exige. **Decisión de Director** (confesar,
+  no vender N̂ falso): denominador del sello = **ancla oficial CNAE-451** (F8 94,3% = 21.759/23.085);
+  β S_obs=38.555 = floor (en denominator_estimate). Chao2 sellable DEFERIDO; prereq declarados:
+  Overture→entity_source (25% del universo P sin captura formal), fuente fiscal cross-covering,
+  filtro sells_cars en garaje, estratificar por kind.

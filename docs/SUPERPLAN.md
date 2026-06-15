@@ -110,7 +110,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 | SU | Punto | Definición | GATE | Estado |
 |---|---|---|---|---|
 | **SU-A1** | Código único (B1) | confirmar átomo + mejorar | dup<0,1% por ≥2 vías sobre datos vivos; `v_canonical` íntegra; verdict linkado (SU-0.4) | ✅ 0 under-merge host+muni, 0 bosque roto, verdict 640 → **HALLAZGO cluster AS24** (kind mis-class, prov-bug Clicars, 147 cadena sin org-link) → SU-A2 |
-| **SU-A2** | Descubrir — denominador P | arco β→φ→Chao2 | β sellado (guarda cadenas + B1∘β, gate cero-sobre-fusión); φ con DIRCE; Chao2 ortogonal + cierre saturación; N̂(P) con CI membership-filtered | 🔵 **β SELLADO** (verdict 1093; S_obs=**38.555**). **φ/Chao2 PENDIENTE = unidad de esfuerzo focalizado**. φ recon: DIRCE=agregado-locales (no firm-level); marco oficial F8=**CNAE-451 23.085 venta-locales**; β 38.555 P es población MÁS AMPLIA (+garajes). Decisión arquitectural: reconciliar β-pop vs CNAE-451 + medir φ(fracción-ocasión) por sub-muestra etiquetada → N_prof. `numerador_venta` STALE post-AS24, regenerar. |
+| **SU-A2** | Descubrir — denominador P | arco β→φ→Chao2 | β sellado (guarda cadenas + B1∘β, gate cero-sobre-fusión); φ con DIRCE; Chao2 ortogonal + cierre saturación; N̂(P) con CI membership-filtered | 🟡 **β SELLADO** (verdict 1093, S_obs **38.555**). **φ/Chao2 GATEADO**: Chao2 sobre 3 familias = **REFUTED** (verdict 1111; capturas disjuntas, Q1/Q2=43, N̂ 852k >techo 10×). Denominador del sello = **ancla oficial CNAE-451** (F8 94,3%). `denominator_estimate` poblada (floor 38.555). **Chao2 sellable DEFERIDO** (prereq: Overture→entity_source, fuente fiscal cross-cover, sells_cars, estratificar). |
 | **SU-A3** | Scrapear TODO el stock | exhaustividad universal | B9 coverage gate corrido en **47/47** fuentes; cada drain `Σleaf==declared` o causa; AS24/milanuncios REFUTED resueltos | ⬜ |
 | **SU-A4** | Delta uniforme | altas/bajas/Δprecio/Δfoto/historial en TODOS los conectores | cada conector wholesale emite NEW/GONE/PRICE/PHOTO/KM verificado en 2ª pasada; no solo AS24 | ⬜ |
 | **SU-A5** | Receta guardada | formato bundle per-dealer | receta YAML v3 versionada por dealer en su path geo; 100% en `main`; reproducible | ⬜ |
@@ -123,7 +123,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 
 | SU | Definición | GATE | Estado |
 |---|---|---|---|
-| **SU-B1** | Ledger de verificación profundo (0014 / V1-V6) | migración 0014 aplicada+registrada: CHECK `chk_trustworthy_needs_quorum (family_n≥2 AND origin_n≥2)` rechaza un INSERT inválido; rol `cardeep_inquisitor` read-only DB-rechaza escritura; `verdict_audit` hash-chain íntegro; `v_latest_verdict` materializada | ⬜ |
+| **SU-B1** | Ledger de verificación profundo (0014 / V1-V6) | migración aplicada+registrada: CHECK `chk_trustworthy_needs_quorum (family_n≥2 AND origin_n≥2)` rechaza un INSERT inválido; rol `cardeep_inquisitor` read-only DB-rechaza escritura; `verdict_audit` hash-chain íntegro | ✅ **CORE** (migración **0026**, `39a9a2e`): quorum CHECK NOT-VALID (grandfather B1/β/B7), audit hash-chain append-only, `denominator_estimate`, rol inquisitor. CHECK rechaza no-quorum verificado; rebuild 0001→0026 OK; suite 416✓. **Deferido**: `v_latest_verdict` materializada, gestionador, publish-gate views, V2/V3/V4. +migrate.py `split_statements` |
 | **SU-B2** | Inquisición + completion (V2/V3/V4) | WF-INQUISITION en cadencia; detector V4 + state machine; entidad COMPLETED solo por 5 gates binarios | ⬜ |
 | **SU-B3** | Confesar gaps | UNVERIFIED/REFUTED/QUARANTINED first-class servidos etiquetados o retenidos | ✅ doctrina (re-confirmar en VERIFY) |
 
