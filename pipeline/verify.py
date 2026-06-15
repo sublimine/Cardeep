@@ -150,13 +150,14 @@ async def record_count_verdict(
         # transaction as created_at.  asyncpg maps timedelta → Postgres INTERVAL
         # (OID 1186) natively.  We use ``now() + $12`` — no explicit cast needed
         # because the client codec resolves the INTERVAL type from the Python value.
-        await conn.execute(
+        new_id = await conn.fetchval(
             """INSERT INTO verification_verdict
                  (subject_type, subject_key, claim, primary_value, primary_path,
                   verifier_paths, independent_values, divergence, verdict, evidence,
                   claim_kind, expires_at)
                VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,
-                       $11, now() + $12)""",
+                       $11, now() + $12)
+               RETURNING id""",
             subject_type, subject_key, claim, str(primary_value), primary_path,
             verifier_paths_json, independent_values_json, divergence, verdict,
             f"paths={paths}",
@@ -164,16 +165,28 @@ async def record_count_verdict(
         )
     else:
         # Eternal seal (expires_at=NULL): structural verdicts that should never expire.
-        await conn.execute(
+        new_id = await conn.fetchval(
             """INSERT INTO verification_verdict
                  (subject_type, subject_key, claim, primary_value, primary_path,
                   verifier_paths, independent_values, divergence, verdict, evidence,
                   claim_kind)
-               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11)""",
+               VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11)
+               RETURNING id""",
             subject_type, subject_key, claim, str(primary_value), primary_path,
             verifier_paths_json, independent_values_json, divergence, verdict,
             f"paths={paths}",
             claim_kind,
         )
+
+    # D-supersession (audit P2): the newest verdict for a (subject_type, subject_key, claim) is the
+    # ONLY active one. Mark all prior actives as superseded so the read-side filter
+    # `superseded_by IS NULL` (evict Gate-1, inquisition scheduler, idx_verdict_latest) sees exactly
+    # one current verdict instead of an unbounded accumulation of historical TRUSTWORTHY/REFUTED.
+    await conn.execute(
+        """UPDATE verification_verdict SET superseded_by = $1
+            WHERE subject_type = $2 AND subject_key = $3 AND claim = $4
+              AND id <> $1 AND superseded_by IS NULL""",
+        new_id, subject_type, subject_key, claim,
+    )
 
     return verdict
