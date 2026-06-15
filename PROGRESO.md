@@ -1052,3 +1052,24 @@
   o repuntar resolve_cluster) + B-crosssource-ungated (VAM-verificar tras revisar 13 merges), D-audit-chain-backfill
   (append hash-encadenado para 1039 pre-genesis — delicado), F-scheduler-never-deployed (despliegue infra, no-código).
   + 11 MEDIO + 6 BAJO. Siguiente sesión: atacar uno por uno con la calidad que cada uno merece.
+
+### 2026-06-15 (cont.) — A-make-model + trilogía-D completa: 15 findings P2 sellados
+- **A-make-model SELLADO** (a3410ea): `pipeline/identity/make_normalizer.py` (mapa canónico ~70 marcas
+  data-grounded, alta precisión, 9 tests) + backfill (`scripts/backfill_make.py`): null-recovery 398.141 (marca
+  desde título) + casing-consolidation 483.957 → **make-null 402k→4.373**, VW consolidado a 1 forma. Cableado en
+  `ingest.py` (normalize_make en INSERT = prevención durable). VACUUM aplicado. 40 tests verdes.
+- **D-audit-chain SELLADO** (7b317f8): `scripts/backfill_audit_chain.py` anexó 1039 filas hash-encadenadas (hashes
+  computados por PG = match exacto al trigger, verify-before-commit) → **unaudited=0, bad_chain=0, total=1085,
+  genesis=1**. **Trilogía de verificación COMPLETA** (grandfathered + supersession + audit-chain): el ledger
+  "Inquisidor" es coherente + tamper-evident de extremo a extremo.
+- **HITO: 15 findings P2 sellados+verificados+commiteados este turno** (los 10 CRÍTICOS + D-supersession +
+  recipe-collision + A-make-model + D-audit-chain). Commits: 9755ffa·5d1f782·bd6c485·9655cf3·b124d5a·532af8e·
+  1721e63·a3410ea·7b317f8.
+- **Restante = trabajo deliberado (identidad + deploy + MEDIO/BAJO):**
+  - 3 ALTO identidad-completitud (interrelacionados, decisión-Director): A-cross-entity-dup (140k dup deep_link,
+    MITIGADO server-side por vistas canónicas; resta dedup nivel-vehicle + 2.242 sin-cluster), B-particular-split
+    (extender v_dealer_resolved con señal deep-link sobre 703), B-beta-resolver (componer β/entity_resolution en la
+    ruta servida o retirar v_resolved_dealer muerta) + B-crosssource-ungated MEDIO (VAM-verificar tras revisar 13).
+  - 1 ALTO no-código: F-scheduler-never-deployed (desplegar el scheduler como productor único — acción infra).
+  - 10 MEDIO + 6 BAJO (A-sourceless-entities backfill, A-gone-listed-desync trigger, A-zero-tiny-prices price_trap,
+    codes/health/sources menores, etc.) — todos en AUDIT_PHASE2.md con fix concreto.
