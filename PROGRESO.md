@@ -500,3 +500,8 @@
   entity_completion, corrida controlada) → γ (0031 gestion + gestionador detect/route, V4) → δ (expires_at en
   verify.py + scheduler WF-INQUISITION cadencia) → ε (0032 + inquisition V3, lentes A/B/D/E €0, C=scraping).
   G5 requiere 2ª corrida (delta). La tabla está VACÍA (sin datos erróneos antes de la refinación).
+- **β-refine✓** (aplicadas las 3 decisiones a `complete.py`, **50 tests✓**): G1=entity+cdp_code+province
+  (sin lat/lon), G2=field_integrity sobre deep_link (sin recipe_version), G3=`v_dealer_recipe`≠none (git
+  solo sub-señal per_dealer). Re-demo de 20: ahora G1/G2/G3/G4=T, verdict INCOMPLETE **solo por G5-pendiente**
+  (no por gate-defs espurios) → **COMPLETED es alcanzable**. Decisión G2-VAM: opción 2 (G2=field_integrity;
+  la completitud D=S es per-source de B9, no se duplica per-dealer). B2-foundation CORRECTA y sellada.

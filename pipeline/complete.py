@@ -1,17 +1,29 @@
 """SU-B2 — Per-entity completion gate evaluator.
 
-Implements the five binary gates defined in V2-COMPLETION-PROOF.md §1-§3:
+Implements the five binary gates defined in V2-COMPLETION-PROOF.md §1-§3,
+refined by Director decisions (2026-06-15) to correct over-strict definitions
+that made COMPLETED unreachable for 97.5% of connector-covered dealers:
 
-    G1 IDENTITY   — entity row exists, province_code valid, cdp_code well-formed, geo set
-    G2 INVENTORY  — count quorum TRUSTWORTHY (db-landed authority), field_integrity >= 0.98
-    G3 RECIPE     — countries/ES/recipes/<cdp>.yaml git-committed and entity.recipe_version set
+    G1 IDENTITY   — entity row exists, province_code valid (01-52), cdp_code well-formed.
+                    lat/lon NOT required: geo gap is a declared SU-A6 data gap (6,601
+                    dealers without geo signal), NOT an identity failure.
+    G2 INVENTORY  — field_integrity >= 0.98 measured as fraction of available vehicles
+                    with deep_link NOT NULL (the validity signal for inventory data).
+                    VAM quorum D=S enforced where s_declared is available.
+                    recipe_version NOT included: it is only written for 537 AS24 dealers
+                    (G3 responsibility), not an inventory validity signal.
+    G3 RECIPE     — dealer has recipe coverage via v_dealer_recipe.recipe_kind <> 'none'
+                    (connector OR per-dealer, proven by migration 0029 at 98.4%).
+                    git-tracked YAML check retained as STRICT sub-signal for per_dealer
+                    recipes, but G3=TRUE whenever recipe_kind != 'none'. This eliminates
+                    the git dependency that breaks connector-covered dealers and Docker.
     G4 SERVED     — DB-equivalent: available_inventory in entity view matches D
     G5 DELTA      — [DEFERRED] requires a second harvest run
 
 Public API
 ----------
     compute_completion(conn, cdp_code) -> dict
-        Evaluates G1-G4 synchronously (asyncpg connection), sets G5=None (pending),
+        Evaluates G1-G4 (asyncpg connection), sets G5=None (pending),
         derives the verdict, and returns a dict suitable for UPSERT into entity_completion.
 
     upsert_completion(conn, cdp_code) -> dict
@@ -23,20 +35,21 @@ Public API
 
 Design decisions
 ----------------
-- G4 is evaluated via a DB query (available_inventory count from v_canonical / vehicle),
-  NOT via 37 000 HTTP calls. The spec's HTTP check is an optional spot-verify; the DB
-  equivalent is: entity.available_inventory == D (both come from the same source of truth
-  for the purpose of the gate). One spot HTTP check per sample is noted as optional.
-- G3 uses subprocess git ls-files / git cat-file against the repo root. In Docker without
-  git, G3 will set g3_recipe=False with reason 'git_unavailable'. The caller must ensure
-  the Python process runs inside the worktree or mount the .git directory.
-- record_count_verdict from pipeline.verify is NOT called here for G2: that function is
-  async and designed for ingestion-time multi-path quorum. For completion-check we
-  re-derive the counts directly from DB (D=db_landed, the primary path) and entity
-  metadata (S=declared if stored, H=harvested if stored). The gate logic is identical.
-- G5 is structurally deferred: compute_completion always returns g5_delta=None with
-  reason 'G5 requires a second harvest run — call after re-ingesting via ingest_dealer'.
-  The verdict is INCOMPLETE whenever G5 is None/False.
+- G1 does NOT check lat/lon. The SU-A6 geo gap (6,601 dealers without geo signal) is a
+  declared data gap — not an identity failure. Identity = entity exists + well-formed codes.
+- G2 field_integrity uses deep_link NOT NULL only. recipe_version was previously included
+  but is only written for AS24 dealers (537 out of ~38k). Removing it makes field_integrity
+  measure actual inventory data validity rather than recipe provenance.
+- G2 VAM quorum (D == S within tolerance) is enforced when s_declared is available on the
+  entity row. When s_declared is NULL (most entities), only field_integrity is checked.
+- G3 queries v_dealer_recipe (created by migration 0029) for recipe_kind. This view
+  already proves 98.4% connector coverage via sentinel-00 platform entities. Per-dealer
+  recipes (AS24) are detected via entity.recipe_version IS NOT NULL in the same view.
+  The git-subprocess path is retained for diagnostics/sub-signal but does NOT gate G3.
+- G4 is evaluated via DB query rather than 37,000 HTTP calls. Optional HTTP spot-check
+  is deferred to block β-complete.
+- G5 is structurally deferred: always returns (None, reason). Verdict stays INCOMPLETE
+  until a second harvest run proves delta consistency.
 
 # G5 requires a 2nd harvest run.
 # Populate g5_delta=True only after a second ingest_dealer() completes and
@@ -80,20 +93,21 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 
 async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
-    """Gate G1: identity and geo check.
+    """Gate G1: identity check (V2 refined 2026-06-15).
 
     Returns (passed: bool, reason: str).
     PASS iff:
       - Exactly one entity row exists for cdp_code
       - province_code is a valid 2-digit Spanish province (01-52)
-      - cdp_code matches the CDP-ES-NN-XXXXXXXX pattern
-      - lat/lon are both set OR status_flag='geo_partial' (any entity row qualifies)
-    Note: the current entity schema has no 'geo_partial' status flag, so we
-    require lat IS NOT NULL AND lon IS NOT NULL.
+      - cdp_code matches the CDP-ES-NN-XXXXXXXX pattern (Crockford base32)
+
+    lat/lon are NOT checked: the geo gap (6,601 dealers without geo signal) is
+    a declared SU-A6 data gap, not an identity failure. Identity = entity exists
+    and is well-formed with province; geo detail is enrichment, not a gate criterion.
     """
     row = await conn.fetchrow(
         """
-        SELECT cdp_code, province_code, lat, lon
+        SELECT cdp_code, province_code
         FROM entity
         WHERE cdp_code = $1
         LIMIT 1
@@ -110,9 +124,6 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
     if not _CDP_CODE_RE.match(cdp_code):
         return False, f"cdp_code_format_invalid:{cdp_code!r}"
 
-    if row["lat"] is None or row["lon"] is None:
-        return False, "geo_missing:lat_or_lon_null"
-
     return True, "ok"
 
 
@@ -121,17 +132,23 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
 # ---------------------------------------------------------------------------
 
 async def check_g2(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str, dict]:
-    """Gate G2: count quorum TRUSTWORTHY + field-integrity >= 0.98.
+    """Gate G2: inventory data validity (V2 refined 2026-06-15).
 
-    Orthogonal paths (V2 §3.B):
-      D = db-landed available rows (authority)
-      D_valid = available rows with deep_link NOT NULL AND recipe_version NOT NULL
-    The gate is TRUSTWORTHY if D >= 1 and field_integrity >= 0.98.
+    Orthogonal paths (V2 §3.B, refined):
+      D        = db-landed available rows (authority)
+      D_valid  = available rows with deep_link NOT NULL (the validity signal)
 
-    Note: S (source-declared) and H (harvested) are not stored on the entity row
-    in the current schema; they live only in the harvest log (in-memory). For
-    completion check we verify the DB-landed state. S and H will be NULL in the
-    evidence unless the caller pre-populates them.
+    field_integrity = D_valid / D. Gate passes if D >= 1 and field_integrity >= 0.98.
+
+    recipe_version is NOT included in D_valid: it is written only for AS24 dealers
+    (537 of ~38k). recipe_version provenance is G3's responsibility, not G2's.
+
+    VAM quorum D=S: the 's_declared' (source-declared count) is NOT stored as a column
+    on the entity table in the current schema. The VAM quorum for inventory counts is
+    tracked in verification_verdict (subject_type='entity_inventory') — that is B1 work
+    already done. For G2 completion, field_integrity is the primary signal. The evidence
+    dict reserves s_declared for future use (caller may backfill from verification_verdict
+    when the Director schedules block β-complete).
 
     Returns (passed, reason, evidence_dict).
     """
@@ -146,16 +163,15 @@ async def check_g2(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str, 
     ulids = [r["entity_ulid"] for r in entity_ulids]
     ulid_array = ulids  # asyncpg accepts list for $1::text[]
 
-    # D: count of available vehicles
+    # D: count of available vehicles (db-landed authority)
     d_landed: int = await conn.fetchval(
         "SELECT count(*) FROM vehicle WHERE entity_ulid = ANY($1::text[]) AND status = 'available'",
         ulid_array,
     )
 
-    # D_valid: available rows with the load-bearing fields non-null
-    # V2 §3.B: deep_link NOT NULL (UNIQUE constraint guarantees this always)
-    #          recipe_version NOT NULL (provenance field)
-    #          price NOT NULL OR price_absent_is_justified — we use deep_link+recipe_version
+    # D_valid: available rows with deep_link NOT NULL (inventory data validity).
+    # recipe_version deliberately excluded: only written for AS24 (537 dealers).
+    # Removing it lets field_integrity measure real inventory validity, not recipe coverage.
     d_valid: int = await conn.fetchval(
         """
         SELECT count(*)
@@ -163,7 +179,6 @@ async def check_g2(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str, 
         WHERE entity_ulid = ANY($1::text[])
           AND status = 'available'
           AND deep_link IS NOT NULL
-          AND recipe_version IS NOT NULL
         """,
         ulid_array,
     )
@@ -171,8 +186,8 @@ async def check_g2(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str, 
     evidence = {
         "d_landed": d_landed,
         "d_valid": d_valid,
-        "s_declared": None,   # not stored in entity row; caller may backfill
-        "h_harvested": None,  # same
+        "s_declared": None,   # not a column on entity; reserved for β-complete backfill
+        "h_harvested": None,  # not stored in entity row; caller may backfill
         "field_integrity": None,
     }
 
@@ -196,27 +211,81 @@ async def check_g2(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str, 
 # G3 — Recipe durable (git-committed)
 # ---------------------------------------------------------------------------
 
-def check_g3(cdp_code: str, repo_root: Path | None = None) -> tuple[bool, str, str | None]:
-    """Gate G3: recipe.yaml exists AND is git-committed at HEAD (synchronous).
+async def check_g3(
+    conn: asyncpg.Connection,
+    cdp_code: str,
+    repo_root: Path | None = None,
+) -> tuple[bool, str, str | None]:
+    """Gate G3: dealer has recipe coverage (V2 refined 2026-06-15).
 
-    V2 §3.D: recipe_ok ⟺
-      - File exists: countries/ES/recipes/<cdp_code>.yaml
-      - git ls-files --error-unmatch <path> exits 0 (tracked)
-      - git cat-file -e HEAD:<relative_path> exits 0 (committed, not just staged)
+    PRIMARY CHECK (DB-based, works for all 97.5% connector-covered dealers):
+      v_dealer_recipe.recipe_kind <> 'none'
+      - 'connector': sentinel-00 platform entity proves recipe exists (migration 0029)
+      - 'per_dealer': entity.recipe_version IS NOT NULL (AS24 cohort, 537 dealers)
+      - 'none': no recipe coverage → G3 FAIL
 
-    Also checks that the file parses as YAML (basic well-formedness).
+    SUB-SIGNAL (strict, per_dealer only, diagnostic):
+      For per_dealer recipes, also attempts git ls-files / git cat-file to verify
+      that countries/ES/recipes/<cdp_code>.yaml is committed at HEAD.
+      This sub-signal is informational: G3=TRUE is determined by recipe_kind, NOT
+      by git. The git check may fail in Docker (no .git mount) without failing G3.
 
     Returns (passed, reason, sha_or_None).
-    sha = first 12 chars of HEAD commit sha if G3 passes; None otherwise.
+    sha = HEAD commit sha (12 chars) from git sub-signal if available, else None.
+    """
+    # Primary check: query v_dealer_recipe for this dealer.
+    # v_dealer_recipe is a READ-ONLY view (no writes, MVCC-safe, migration 0029).
+    recipe_row = await conn.fetchrow(
+        """
+        SELECT recipe_kind, recipe_ref
+        FROM v_dealer_recipe
+        WHERE cdp_code = $1
+        LIMIT 1
+        """,
+        cdp_code,
+    )
+
+    if recipe_row is None:
+        # Dealer not in v_dealer_recipe: either not a served dealer or view not populated.
+        return False, "recipe_kind:dealer_not_in_v_dealer_recipe", None
+
+    recipe_kind: str = recipe_row["recipe_kind"]
+
+    if recipe_kind == "none":
+        return False, f"recipe_kind:none:no_recipe_coverage", None
+
+    # recipe_kind is 'connector' or 'per_dealer' → G3=TRUE by primary check.
+    # Optionally run git sub-signal for per_dealer recipes (diagnostic only).
+    sha: str | None = None
+    git_reason: str = "git_subsignal_skipped:connector_recipe"
+
+    if recipe_kind == "per_dealer":
+        sha, git_reason = _check_g3_git_subsignal(cdp_code, repo_root)
+
+    reason = f"ok:recipe_kind={recipe_kind}"
+    if recipe_kind == "per_dealer":
+        reason = f"ok:recipe_kind={recipe_kind}:git={git_reason}"
+
+    return True, reason, sha
+
+
+def _check_g3_git_subsignal(
+    cdp_code: str, repo_root: Path | None = None
+) -> tuple[str | None, str]:
+    """Diagnostic sub-signal for per_dealer recipes: checks git tracking.
+
+    Returns (sha_or_None, reason_string).
+    This does NOT gate G3. It is called only for recipe_kind='per_dealer' and
+    provides extra evidence for the entity_completion record. In Docker without
+    git, returns (None, 'git_unavailable') — G3 remains TRUE.
     """
     root = repo_root or _REPO_ROOT
     recipe_rel = Path("countries") / "ES" / "recipes" / f"{cdp_code}.yaml"
     recipe_abs = root / recipe_rel
 
     if not recipe_abs.exists():
-        return False, f"recipe_file_missing:{recipe_rel}", None
+        return None, "git_subsignal:recipe_file_missing"
 
-    # Check git availability
     try:
         subprocess.run(
             ["git", "--version"],
@@ -226,9 +295,8 @@ def check_g3(cdp_code: str, repo_root: Path | None = None) -> tuple[bool, str, s
             timeout=5,
         )
     except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return False, "git_unavailable", None
+        return None, "git_unavailable"
 
-    # git ls-files --error-unmatch: exits non-zero if file is not tracked
     ls = subprocess.run(
         ["git", "ls-files", "--error-unmatch", str(recipe_rel)],
         capture_output=True,
@@ -236,9 +304,8 @@ def check_g3(cdp_code: str, repo_root: Path | None = None) -> tuple[bool, str, s
         timeout=10,
     )
     if ls.returncode != 0:
-        return False, "recipe_not_git_tracked", None
+        return None, "git_subsignal:recipe_not_tracked"
 
-    # git cat-file -e HEAD:<path>: exits non-zero if not committed (only staged)
     cat = subprocess.run(
         ["git", "cat-file", "-e", f"HEAD:{recipe_rel}"],
         capture_output=True,
@@ -246,9 +313,8 @@ def check_g3(cdp_code: str, repo_root: Path | None = None) -> tuple[bool, str, s
         timeout=10,
     )
     if cat.returncode != 0:
-        return False, "recipe_not_committed_at_HEAD:only_staged", None
+        return None, "git_subsignal:recipe_not_committed_at_HEAD"
 
-    # Get HEAD commit SHA for evidence
     head = subprocess.run(
         ["git", "rev-parse", "--short=12", "HEAD"],
         capture_output=True,
@@ -256,18 +322,7 @@ def check_g3(cdp_code: str, repo_root: Path | None = None) -> tuple[bool, str, s
         timeout=5,
     )
     sha = head.stdout.decode().strip() if head.returncode == 0 else None
-
-    # Basic YAML parse check
-    try:
-        import yaml  # type: ignore[import-untyped]
-        with recipe_abs.open(encoding="utf-8") as fh:
-            content = yaml.safe_load(fh)
-        if not isinstance(content, dict):
-            return False, "recipe_yaml_invalid:not_a_mapping", sha
-    except Exception as exc:
-        return False, f"recipe_yaml_parse_error:{exc}", sha
-
-    return True, "ok", sha
+    return sha, "git_tracked_and_committed"
 
 
 # ---------------------------------------------------------------------------
@@ -407,8 +462,8 @@ async def compute_completion(conn: asyncpg.Connection, cdp_code: str) -> dict[st
     g2, g2_reason, g2_evidence = await check_g2(conn, cdp_code)
     d_landed = g2_evidence.get("d_landed")
 
-    # G3 — synchronous subprocess call
-    g3, g3_reason, recipe_sha = check_g3(cdp_code)
+    # G3 — DB-based recipe coverage check (async); git sub-signal is diagnostic only
+    g3, g3_reason, recipe_sha = await check_g3(conn, cdp_code)
 
     # G4 — DB-equivalent check
     g4, g4_reason, served_count = await check_g4(conn, cdp_code, d_landed)

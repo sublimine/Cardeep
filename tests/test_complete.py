@@ -10,8 +10,18 @@ Test design:
   - G5 stub always returns (None, reason), so verdict is always INCOMPLETE
     until G5 is implemented (correct per spec).
 
+Gate definitions (V2 refined 2026-06-15):
+  G1: entity exists + cdp_code well-formed + province_code 01-52.
+      lat/lon NOT required (SU-A6 declared geo gap).
+  G2: field_integrity = D_valid/D >= 0.98 where D_valid = deep_link NOT NULL.
+      recipe_version NOT included (G3 responsibility, only 537 AS24 dealers).
+      VAM quorum D==S enforced when s_declared available.
+  G3: v_dealer_recipe.recipe_kind <> 'none' (connector OR per_dealer).
+      git sub-signal is diagnostic only, does NOT gate G3.
+  G4: entity in v_dealer_resolved + served_count > 0.
+
 No live DB, no HTTP, no filesystem git calls needed for the unit suite.
-G3 filesystem/git calls are tested by mocking subprocess.run and Path.exists.
+G3 uses AsyncMock for v_dealer_recipe query (no subprocess mock needed for primary check).
 """
 from __future__ import annotations
 
@@ -52,20 +62,35 @@ def _make_conn() -> AsyncMock:
 
 
 # ---------------------------------------------------------------------------
-# G1 — Identity & geo
+# G1 — Identity (no lat/lon required per V2 refined 2026-06-15)
 # ---------------------------------------------------------------------------
 
 class TestCheckG1:
-    """G1: entity row exists, province_code valid, cdp_code well-formed, lat/lon set."""
+    """G1: entity row exists, province_code valid (01-52), cdp_code well-formed.
+
+    lat/lon are NOT required: geo gap is declared SU-A6 data gap, not an identity failure.
+    """
 
     @pytest.mark.asyncio
-    async def test_g1_pass_all_fields_valid(self) -> None:
+    async def test_g1_pass_minimal_fields(self) -> None:
+        """G1 passes with only cdp_code and province_code — no lat/lon needed."""
         conn = _make_conn()
         conn.fetchrow = AsyncMock(return_value={
             "cdp_code": _VALID_CDP,
             "province_code": _VALID_PROV,
-            "lat": 40.4168,
-            "lon": -3.7038,
+        })
+        passed, reason = await check_g1(conn, _VALID_CDP)
+        assert passed is True
+        assert reason == "ok"
+
+    @pytest.mark.asyncio
+    async def test_g1_pass_without_lat_lon(self) -> None:
+        """G1 passes even when lat/lon are null — geo is SU-A6 gap, not identity."""
+        conn = _make_conn()
+        conn.fetchrow = AsyncMock(return_value={
+            "cdp_code": _VALID_CDP,
+            "province_code": _VALID_PROV,
+            # lat and lon deliberately absent from the row
         })
         passed, reason = await check_g1(conn, _VALID_CDP)
         assert passed is True
@@ -85,8 +110,6 @@ class TestCheckG1:
         conn.fetchrow = AsyncMock(return_value={
             "cdp_code": _VALID_CDP,
             "province_code": None,
-            "lat": 40.4168,
-            "lon": -3.7038,
         })
         passed, reason = await check_g1(conn, _VALID_CDP)
         assert passed is False
@@ -98,8 +121,6 @@ class TestCheckG1:
         conn.fetchrow = AsyncMock(return_value={
             "cdp_code": _VALID_CDP,
             "province_code": "99",  # invalid: Spain has 01-52
-            "lat": 40.4168,
-            "lon": -3.7038,
         })
         passed, reason = await check_g1(conn, _VALID_CDP)
         assert passed is False
@@ -112,38 +133,10 @@ class TestCheckG1:
         conn.fetchrow = AsyncMock(return_value={
             "cdp_code": bad_code,
             "province_code": "28",
-            "lat": 40.4168,
-            "lon": -3.7038,
         })
         passed, reason = await check_g1(conn, bad_code)
         assert passed is False
         assert "cdp_code_format_invalid" in reason
-
-    @pytest.mark.asyncio
-    async def test_g1_fail_lat_null(self) -> None:
-        conn = _make_conn()
-        conn.fetchrow = AsyncMock(return_value={
-            "cdp_code": _VALID_CDP,
-            "province_code": "28",
-            "lat": None,
-            "lon": -3.7038,
-        })
-        passed, reason = await check_g1(conn, _VALID_CDP)
-        assert passed is False
-        assert "geo_missing" in reason
-
-    @pytest.mark.asyncio
-    async def test_g1_fail_lon_null(self) -> None:
-        conn = _make_conn()
-        conn.fetchrow = AsyncMock(return_value={
-            "cdp_code": _VALID_CDP,
-            "province_code": "28",
-            "lat": 40.4168,
-            "lon": None,
-        })
-        passed, reason = await check_g1(conn, _VALID_CDP)
-        assert passed is False
-        assert "geo_missing" in reason
 
     def test_province_regex_valid_range(self) -> None:
         """Province codes 01–52 all match; 00 and 53+ do not."""
@@ -177,11 +170,15 @@ class TestCheckG1:
 
 
 # ---------------------------------------------------------------------------
-# G2 — Inventory completeness
+# G2 — Inventory completeness (deep_link only, no recipe_version)
 # ---------------------------------------------------------------------------
 
 class TestCheckG2:
-    """G2: db-landed count >= 1, field_integrity >= 0.98."""
+    """G2: db-landed count >= 1, field_integrity >= 0.98 (deep_link NOT NULL only).
+
+    recipe_version excluded: only written for 537 AS24 dealers (G3 responsibility).
+    VAM quorum D==S enforced when s_declared available.
+    """
 
     def _build_conn(
         self,
@@ -202,9 +199,10 @@ class TestCheckG2:
 
         conn.fetch = AsyncMock(return_value=[_fake_row(r) for r in entity_rows])
 
-        # fetchval: first call = d_landed, second = d_valid
+        # fetchval: first call = d_landed, second = d_valid (deep_link only now)
         calls = iter([d_landed, d_valid])
         conn.fetchval = AsyncMock(side_effect=lambda *a, **kw: next(calls))
+
         return conn
 
     @pytest.mark.asyncio
@@ -222,6 +220,19 @@ class TestCheckG2:
         passed, reason, evidence = await check_g2(conn, _VALID_CDP)
         assert passed is True
         assert evidence["field_integrity"] == pytest.approx(_FIELD_INTEGRITY_FLOOR)
+
+    @pytest.mark.asyncio
+    async def test_g2_pass_with_deep_link_only_no_recipe_version(self) -> None:
+        """G2 passes when all vehicles have deep_link even if recipe_version is NULL.
+
+        This is the key change: recipe_version is G3's concern, not G2's.
+        A dealer with 100% deep_link coverage but 0% recipe_version should pass G2.
+        """
+        # d_landed=100 vehicles; d_valid=100 (all have deep_link, recipe_version ignored)
+        conn = self._build_conn(d_landed=100, d_valid=100)
+        passed, reason, evidence = await check_g2(conn, _VALID_CDP)
+        assert passed is True
+        assert evidence["field_integrity"] == pytest.approx(1.0)
 
     @pytest.mark.asyncio
     async def test_g2_fail_no_available_vehicles(self) -> None:
@@ -256,108 +267,166 @@ class TestCheckG2:
         assert "d_valid" in evidence
         assert "field_integrity" in evidence
 
+    @pytest.mark.asyncio
+    async def test_g2_pass_s_declared_always_none_in_evidence(self) -> None:
+        """s_declared is not a column on entity table; evidence always None.
+
+        VAM quorum D=S for entity_inventory lives in verification_verdict (B1 work).
+        G2 field_integrity is the primary gate signal; s_declared is reserved for
+        future backfill from verification_verdict at block β-complete time.
+        """
+        conn = self._build_conn(d_landed=100, d_valid=99)
+        passed, reason, evidence = await check_g2(conn, _VALID_CDP)
+        assert passed is True
+        assert evidence["s_declared"] is None  # not a column on entity
+
 
 # ---------------------------------------------------------------------------
-# G3 — Recipe durable (git-committed)
+# G3 — Recipe coverage via v_dealer_recipe (DB-based, async)
 # ---------------------------------------------------------------------------
 
 class TestCheckG3:
-    """G3: recipe.yaml exists and is git-committed at HEAD."""
+    """G3: v_dealer_recipe.recipe_kind <> 'none'.
 
-    def _mock_git_ok(self, fake_root: Path) -> dict[str, Any]:
-        """Return a patcher context for a fully passing G3."""
-        return {}
+    Primary check is a DB query — no git required.
+    git sub-signal is diagnostic only (tested via _check_g3_git_subsignal separately).
+    """
+
+    def _make_recipe_row(self, kind: str, ref: str | None = None) -> MagicMock:
+        row = MagicMock()
+        row.__getitem__ = lambda self, k: kind if k == "recipe_kind" else ref
+        row["recipe_kind"] = kind
+        row["recipe_ref"] = ref
+        return row
+
+    @pytest.mark.asyncio
+    async def test_g3_pass_connector_recipe(self) -> None:
+        """G3 passes for connector-covered dealer (97.5% of fleet)."""
+        conn = _make_conn()
+        conn.fetchrow = AsyncMock(return_value=self._make_recipe_row("connector", "coches_net_wholesale"))
+        passed, reason, sha = await check_g3(conn, _VALID_CDP)
+        assert passed is True
+        assert "ok" in reason
+        assert "connector" in reason
+        # sha is None for connector (git sub-signal skipped)
+        assert sha is None
+
+    @pytest.mark.asyncio
+    async def test_g3_pass_per_dealer_recipe(self) -> None:
+        """G3 passes for per_dealer recipe (AS24 cohort, 537 dealers).
+
+        G3 is TRUE based on recipe_kind; git sub-signal is attempted but does not gate.
+        We mock the git subprocess to avoid filesystem dependency.
+        """
+        conn = _make_conn()
+        conn.fetchrow = AsyncMock(return_value=self._make_recipe_row("per_dealer", None))
+
+        # Mock the git sub-signal: simulate git unavailable (Docker scenario).
+        # G3 must still pass because recipe_kind='per_dealer' is the primary check.
+        with patch("pipeline.complete.subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            passed, reason, sha = await check_g3(conn, _VALID_CDP)
+
+        assert passed is True
+        assert "ok" in reason
+        assert "per_dealer" in reason
+        # sha is None because git unavailable (sub-signal failed but gate is TRUE)
+        assert sha is None
+
+    @pytest.mark.asyncio
+    async def test_g3_fail_recipe_kind_none(self) -> None:
+        """G3 fails when recipe_kind='none' (0.2% of fleet with no recipe coverage)."""
+        conn = _make_conn()
+        conn.fetchrow = AsyncMock(return_value=self._make_recipe_row("none", None))
+        passed, reason, sha = await check_g3(conn, _VALID_CDP)
+        assert passed is False
+        assert "none" in reason or "recipe_kind" in reason
+        assert sha is None
+
+    @pytest.mark.asyncio
+    async def test_g3_fail_dealer_not_in_view(self) -> None:
+        """G3 fails when dealer is absent from v_dealer_recipe (not a served dealer)."""
+        conn = _make_conn()
+        conn.fetchrow = AsyncMock(return_value=None)
+        passed, reason, sha = await check_g3(conn, _VALID_CDP)
+        assert passed is False
+        assert "dealer_not_in_v_dealer_recipe" in reason
+        assert sha is None
+
+    @pytest.mark.asyncio
+    async def test_g3_pass_connector_git_unavailable_does_not_fail_gate(self) -> None:
+        """Connector recipe: git sub-signal is skipped entirely; G3 is TRUE regardless."""
+        conn = _make_conn()
+        conn.fetchrow = AsyncMock(return_value=self._make_recipe_row("connector"))
+        # Even if we patch subprocess to raise, G3 should still pass (git not called for connector)
+        with patch("pipeline.complete.subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            passed, reason, sha = await check_g3(conn, _VALID_CDP)
+
+        assert passed is True
+        # subprocess.run should NOT have been called for connector recipes
+        mock_run.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# G3 git sub-signal (diagnostic only — _check_g3_git_subsignal)
+# ---------------------------------------------------------------------------
+
+class TestCheckG3GitSubsignal:
+    """Tests for the git sub-signal function (diagnostic, does not gate G3)."""
+
+    from pipeline.complete import _check_g3_git_subsignal  # import here to be explicit
 
     @patch("pipeline.complete.subprocess.run")
-    @patch("pipeline.complete.Path.exists")
-    def test_g3_pass(self, mock_exists: MagicMock, mock_run: MagicMock, tmp_path: Path) -> None:
+    def test_subsignal_pass(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """All checks pass: file exists, git available, tracked, committed, YAML valid."""
-        # Create a real YAML file in a temp dir
         recipe_dir = tmp_path / "countries" / "ES" / "recipes"
         recipe_dir.mkdir(parents=True)
-        recipe_file = recipe_dir / f"{_VALID_CDP}.yaml"
-        recipe_file.write_text("version: 1\nurl: https://example.com\n", encoding="utf-8")
+        (recipe_dir / f"{_VALID_CDP}.yaml").write_text("version: 1\nurl: https://example.com\n", encoding="utf-8")
 
-        # mock subprocess.run: git --version, ls-files, cat-file, rev-parse all succeed
         mock_run.return_value = MagicMock(returncode=0, stdout=b"abc123def456\n")
-        mock_exists.return_value = True
 
-        passed, reason, sha = check_g3(_VALID_CDP, repo_root=tmp_path)
-        assert passed is True, f"Expected pass but got reason={reason!r}"
-        assert reason == "ok"
-
-    @patch("pipeline.complete.subprocess.run")
-    def test_g3_fail_file_missing(self, mock_run: MagicMock, tmp_path: Path) -> None:
-        """Recipe file does not exist → G3 FAIL before git check."""
-        # No file created — path does not exist
-        passed, reason, sha = check_g3(_VALID_CDP, repo_root=tmp_path)
-        assert passed is False
-        assert "recipe_file_missing" in reason
-        mock_run.assert_not_called()  # git never called if file missing
+        from pipeline.complete import _check_g3_git_subsignal
+        sha, reason = _check_g3_git_subsignal(_VALID_CDP, repo_root=tmp_path)
+        assert sha is not None
+        assert "tracked_and_committed" in reason
 
     @patch("pipeline.complete.subprocess.run")
-    def test_g3_fail_git_unavailable(self, mock_run: MagicMock, tmp_path: Path) -> None:
-        """git not in PATH → G3 FAIL with git_unavailable."""
+    def test_subsignal_git_unavailable(self, mock_run: MagicMock, tmp_path: Path) -> None:
         recipe_dir = tmp_path / "countries" / "ES" / "recipes"
         recipe_dir.mkdir(parents=True)
         (recipe_dir / f"{_VALID_CDP}.yaml").write_text("version: 1\n", encoding="utf-8")
 
-        import subprocess as sp
         mock_run.side_effect = FileNotFoundError("git not found")
 
-        passed, reason, sha = check_g3(_VALID_CDP, repo_root=tmp_path)
-        assert passed is False
+        from pipeline.complete import _check_g3_git_subsignal
+        sha, reason = _check_g3_git_subsignal(_VALID_CDP, repo_root=tmp_path)
+        assert sha is None
         assert "git_unavailable" in reason
 
     @patch("pipeline.complete.subprocess.run")
-    def test_g3_fail_not_tracked(self, mock_run: MagicMock, tmp_path: Path) -> None:
-        """File exists but not git-tracked (ls-files exits 1)."""
-        recipe_dir = tmp_path / "countries" / "ES" / "recipes"
-        recipe_dir.mkdir(parents=True)
-        (recipe_dir / f"{_VALID_CDP}.yaml").write_text("version: 1\n", encoding="utf-8")
-
-        # git --version ok, ls-files FAILS (returncode=1)
-        mock_run.side_effect = [
-            MagicMock(returncode=0),   # git --version
-            MagicMock(returncode=1),   # ls-files: not tracked
-        ]
-        passed, reason, sha = check_g3(_VALID_CDP, repo_root=tmp_path)
-        assert passed is False
-        assert "recipe_not_git_tracked" in reason
+    def test_subsignal_file_missing(self, mock_run: MagicMock, tmp_path: Path) -> None:
+        from pipeline.complete import _check_g3_git_subsignal
+        sha, reason = _check_g3_git_subsignal(_VALID_CDP, repo_root=tmp_path)
+        assert sha is None
+        assert "file_missing" in reason
+        mock_run.assert_not_called()
 
     @patch("pipeline.complete.subprocess.run")
-    def test_g3_fail_not_committed(self, mock_run: MagicMock, tmp_path: Path) -> None:
-        """File is tracked (staged) but not committed (cat-file exits 1)."""
+    def test_subsignal_not_tracked(self, mock_run: MagicMock, tmp_path: Path) -> None:
         recipe_dir = tmp_path / "countries" / "ES" / "recipes"
         recipe_dir.mkdir(parents=True)
         (recipe_dir / f"{_VALID_CDP}.yaml").write_text("version: 1\n", encoding="utf-8")
 
         mock_run.side_effect = [
             MagicMock(returncode=0),  # git --version
-            MagicMock(returncode=0),  # ls-files ok
-            MagicMock(returncode=1),  # cat-file: not at HEAD
+            MagicMock(returncode=1),  # ls-files: not tracked
         ]
-        passed, reason, sha = check_g3(_VALID_CDP, repo_root=tmp_path)
-        assert passed is False
-        assert "recipe_not_committed_at_HEAD" in reason
 
-    @patch("pipeline.complete.subprocess.run")
-    def test_g3_fail_yaml_invalid(self, mock_run: MagicMock, tmp_path: Path) -> None:
-        """File exists and is tracked but YAML is malformed."""
-        recipe_dir = tmp_path / "countries" / "ES" / "recipes"
-        recipe_dir.mkdir(parents=True)
-        (recipe_dir / f"{_VALID_CDP}.yaml").write_text(
-            "---\n: invalid: [unclosed\n", encoding="utf-8"
-        )
-        mock_run.side_effect = [
-            MagicMock(returncode=0, stdout=b""),   # git --version
-            MagicMock(returncode=0, stdout=b""),   # ls-files
-            MagicMock(returncode=0, stdout=b""),   # cat-file
-            MagicMock(returncode=0, stdout=b"abc123\n"),  # rev-parse
-        ]
-        passed, reason, sha = check_g3(_VALID_CDP, repo_root=tmp_path)
-        assert passed is False
-        assert "recipe_yaml" in reason
+        from pipeline.complete import _check_g3_git_subsignal
+        sha, reason = _check_g3_git_subsignal(_VALID_CDP, repo_root=tmp_path)
+        assert sha is None
+        assert "not_tracked" in reason
 
 
 # ---------------------------------------------------------------------------
@@ -517,7 +586,7 @@ class TestDeriveVerdict:
 # ---------------------------------------------------------------------------
 
 class TestComputeCompletion:
-    """compute_completion: full gate pipeline with mocked DB and git."""
+    """compute_completion: full gate pipeline with mocked DB (G3 now async DB-based)."""
 
     def _build_full_conn(
         self,
@@ -527,6 +596,7 @@ class TestComputeCompletion:
         d_valid: int = 100,
         in_resolved: bool = True,
         served_count: int = 100,
+        recipe_kind: str = "connector",
     ) -> AsyncMock:
         conn = _make_conn()
 
@@ -534,14 +604,25 @@ class TestComputeCompletion:
             entity_row = {
                 "cdp_code": _VALID_CDP,
                 "province_code": "28",
-                "lat": 40.4168,
-                "lon": -3.7038,
+                # No lat/lon — tests the new G1 definition
             }
 
-        # fetchrow: G1 entity lookup, then G4 v_dealer_resolved
+        def _make_recipe_row(kind: str) -> MagicMock:
+            r = MagicMock()
+            r.__getitem__ = lambda self, k: kind if k == "recipe_kind" else None
+            r["recipe_kind"] = kind
+            r["recipe_ref"] = None
+            return r
+
+        # fetchrow calls in order:
+        #   1. G1: entity lookup
+        #   2. G3: v_dealer_recipe lookup
+        #   3. G4: v_dealer_resolved lookup
+        # (G2 no longer issues a fetchrow — s_declared not a column on entity)
         fetchrow_results = [
-            entity_row,
-            MagicMock() if in_resolved else None,
+            entity_row,                                             # G1
+            _make_recipe_row(recipe_kind),                          # G3
+            MagicMock() if in_resolved else None,                   # G4
         ]
         fetchrow_iter = iter(fetchrow_results)
         conn.fetchrow = AsyncMock(side_effect=lambda *a, **kw: next(fetchrow_iter))
@@ -561,12 +642,8 @@ class TestComputeCompletion:
         return conn
 
     @pytest.mark.asyncio
-    @patch("pipeline.complete.check_g3")
-    async def test_compute_g1_to_g4_all_pass_verdict_incomplete(
-        self, mock_g3: MagicMock
-    ) -> None:
-        """G1-G4 all pass, G5 deferred → INCOMPLETE (correct per spec)."""
-        mock_g3.return_value = (True, "ok", "abc123")
+    async def test_compute_g1_to_g4_all_pass_verdict_incomplete(self) -> None:
+        """G1-G4 all pass (connector recipe, no lat/lon), G5 deferred → INCOMPLETE."""
         conn = self._build_full_conn()
         result = await compute_completion(conn, _VALID_CDP)
 
@@ -578,16 +655,50 @@ class TestComputeCompletion:
         assert result["verdict"] == "INCOMPLETE"  # G5 not proven yet
         assert result["d_landed"] == 100
         assert result["field_integrity"] == pytest.approx(1.0)
-        assert result["recipe_sha"] == "abc123"
+        # recipe_sha is None for connector (git sub-signal skipped)
+        assert result["recipe_sha"] is None
         assert result["served_count"] == 100
 
     @pytest.mark.asyncio
-    @patch("pipeline.complete.check_g3")
-    async def test_compute_g1_fail_propagates(self, mock_g3: MagicMock) -> None:
+    async def test_compute_g1_pass_without_lat_lon(self) -> None:
+        """G1 passes even with no lat/lon in entity row (geo gap is SU-A6, not identity)."""
+        conn = self._build_full_conn(entity_row={
+            "cdp_code": _VALID_CDP,
+            "province_code": "28",
+            # no lat, no lon
+        })
+        result = await compute_completion(conn, _VALID_CDP)
+        assert result["g1_identity"] is True
+
+    @pytest.mark.asyncio
+    async def test_compute_g2_pass_with_deep_link_no_recipe_version(self) -> None:
+        """G2 passes when D_valid counts only deep_link (recipe_version irrelevant)."""
+        # d_valid=100 means all vehicles have deep_link; recipe_version is ignored
+        conn = self._build_full_conn(d_landed=100, d_valid=100)
+        result = await compute_completion(conn, _VALID_CDP)
+        assert result["g2_inventory"] is True
+        assert result["field_integrity"] == pytest.approx(1.0)
+
+    @pytest.mark.asyncio
+    async def test_compute_g3_pass_with_connector_recipe(self) -> None:
+        """G3 passes for connector-covered dealer without any git check."""
+        conn = self._build_full_conn(recipe_kind="connector")
+        result = await compute_completion(conn, _VALID_CDP)
+        assert result["g3_recipe"] is True
+
+    @pytest.mark.asyncio
+    async def test_compute_g3_fail_recipe_kind_none(self) -> None:
+        """G3 fails when v_dealer_recipe returns 'none'."""
+        conn = self._build_full_conn(recipe_kind="none")
+        result = await compute_completion(conn, _VALID_CDP)
+        assert result["g3_recipe"] is False
+        assert result["verdict"] == "INCOMPLETE"
+
+    @pytest.mark.asyncio
+    async def test_compute_g1_fail_propagates(self) -> None:
         """If G1 fails (entity not found), verdict must be INCOMPLETE."""
-        mock_g3.return_value = (True, "ok", "sha")
         conn = _make_conn()
-        conn.fetchrow = AsyncMock(side_effect=[None, None])
+        conn.fetchrow = AsyncMock(side_effect=[None, None, None, None])
         conn.fetch = AsyncMock(return_value=[])
         conn.fetchval = AsyncMock(return_value=0)
         result = await compute_completion(conn, _VALID_CDP)
@@ -595,21 +706,8 @@ class TestComputeCompletion:
         assert result["verdict"] == "INCOMPLETE"
 
     @pytest.mark.asyncio
-    @patch("pipeline.complete.check_g3")
-    async def test_compute_g3_fail_propagates(self, mock_g3: MagicMock) -> None:
-        """G3 failure (recipe not committed) → verdict INCOMPLETE."""
-        mock_g3.return_value = (False, "recipe_not_committed_at_HEAD", None)
-        conn = self._build_full_conn()
-        result = await compute_completion(conn, _VALID_CDP)
-        assert result["g3_recipe"] is False
-        assert result["recipe_sha"] is None
-        assert result["verdict"] == "INCOMPLETE"
-
-    @pytest.mark.asyncio
-    @patch("pipeline.complete.check_g3")
-    async def test_compute_result_has_all_required_keys(self, mock_g3: MagicMock) -> None:
+    async def test_compute_result_has_all_required_keys(self) -> None:
         """compute_completion result must include all entity_completion columns."""
-        mock_g3.return_value = (True, "ok", "sha")
         conn = self._build_full_conn()
         result = await compute_completion(conn, _VALID_CDP)
         required_keys = {
@@ -623,10 +721,8 @@ class TestComputeCompletion:
         )
 
     @pytest.mark.asyncio
-    @patch("pipeline.complete.check_g3")
-    async def test_compute_g5_always_deferred(self, mock_g3: MagicMock) -> None:
+    async def test_compute_g5_always_deferred(self) -> None:
         """G5 is always stored as False (deferred); check that _reasons reflects this."""
-        mock_g3.return_value = (True, "ok", "sha")
         conn = self._build_full_conn()
         result = await compute_completion(conn, _VALID_CDP)
         assert result["g5_delta"] is False
