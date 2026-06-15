@@ -639,3 +639,17 @@
   ε4 (prosecutor + router §7). Router reusa γ (open_or_refresh) + `alert`. **B2 = 🟢 €0-COMPLETO**; resto harvest-gated
   (G5 2ª corrida, Lens C live, emisión de claims sobre 1.044 verdicts VAM). §Deuda: Lens A delta-handler,
   entity_field B/C/D, supersesión post-RESOLVED. Próximo: SU-C/D/E/F/R o §Deuda según dependencia.
+
+## 2026-06-15 — SU-E1: verification stack documentado A-Z + RUNBOOK de-staled
+- Recon: árbol git **LIMPIO** (todo commiteado/pusheado); `RUNBOOK.md` existe y es excelente PERO scoped
+  al lado de cosecha (45 conectores validados, fechado 2026-06-13) — NO cubría la maquinaria de verificación
+  construida esta sesión; §7.7 decía "migraciones 0001-0019" (stale, vamos por 0032).
+- Escrito `docs/architecture/10-VERIFICATION-STACK.md` (A-Z de las 4 capas: **L1** VAM 0004 → **L2** deep
+  ledger 0026 (quorum DB-enforced + audit hash-chain + denominador + TTL/δ) → **L3** gestionador V4 0031 →
+  **L4** Inquisición V3 0032 (ε1 schema+invariante / ε2 motores / ε3 lentes / ε4 prosecutor+router); el lazo
+  claim→lentes→quórum→router→gestionador; la **frontera €0/harvest** [Lens C live, G5, emisión de claims =
+  harvest-gated, declarado honesto]; la deuda). Exactitud autoritativa — documenté lo que acabo de
+  construir+gatear, cero alucinación.
+- `RUNBOOK.md` de-staled: §7.4 (VAM=L1 + puntero al stack) + §7.7 (0019→0032 + familia de verificación
+  0026/0031/0032). NO toqué las cifras de cosecha fechadas (587 verdicts etc. = 2026-06-13; su disciplina manda).
+- SU-E1 €0 sustancialmente cubierto: árbol limpio + el subsistema que faltaba (verificación) documentado A-Z.

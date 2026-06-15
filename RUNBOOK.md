@@ -386,9 +386,13 @@ open · `source_health` 33 healthy / 2 degraded / 0 down · `harvest_run` 170 ok
   (`entity.comarca_id` directo) == Path B (vía muni) = 240.245; 52/52 prov, 322/323 comarcas,
   8.130/8.132 muni con comarca (los 2 sin = Ceuta/Melilla).
 - **7.4 VAM** (`verification_verdict`, `migrations/0004`) — el juez: ≥2 caminos ortogonales +
-  invariante landed-count. Ledger vivo (recontado esta sesión): **587 veredictos, 577 TRUSTWORTHY,
+  invariante landed-count. Ledger vivo (recontado 2026-06-13): **587 veredictos, 577 TRUSTWORTHY,
   10 REFUTED**. `global_count` ids **577-580** (vehicle/entity/platform_listing/vehicle_event
-  totals, `count*` == Σ partición, div 0).
+  totals, `count*` == Σ partición, div 0). El VAM es la **capa L1** (pre-check optimista);
+  sobre él se construyó el stack de verificación completo — deep ledger (0026: quorum
+  DB-enforced + audit hash-chain + denominador Chapman + TTL), gestionador V4 (0031) e
+  **Inquisición V3** (0032: cadena adversarial default-REFUTED, 5 lentes, invariante DB). A-Z en
+  [`docs/architecture/10-VERIFICATION-STACK.md`](docs/architecture/10-VERIFICATION-STACK.md).
 - **7.5 S-HEALTH** (`pipeline/ops/health.py` + `migrations/0013`) — watchdog: `record_run` (único
   escritor, breaker trip a 3 fallos), `build_origin` (origen exacto machine-readable), `fire_alert`
   (dedup: 138 dealers = 1 alerta), `classify_failure` (€0 determinista), `auto_repair`. Validado:
@@ -397,7 +401,9 @@ open · `source_health` 33 healthy / 2 degraded / 0 down · `harvest_run` 170 ok
   (health/entities/inventory/delta/geo-tree/completeness/platforms/vehicle-platforms). **Verdict
   `api_serves` id=583**: `/geo/28/tree` API `entities_geo_clean` == DB Path B exacto (reconcile
   A==B vivo). Arranque confirmado vivo esta sesión.
-- **7.7 ESQUEMA** — migraciones `0001-0019` (huecos 0008/0010-0012/0014-0015 intencionados).
+- **7.7 ESQUEMA** — migraciones `0001-0032` (26 aplicadas; huecos intencionados). La familia de
+  verificación **0026** (deep ledger) · **0031** (gestionador V4) · **0032** (Inquisición V3) se
+  documenta en [`docs/architecture/10-VERIFICATION-STACK.md`](docs/architecture/10-VERIFICATION-STACK.md).
   Enums vivos: `entity_kind` (13 valores), `defense_tier` (t0..t4), `source_group` (11),
   `entity_role` (6). `platform_listing` = arista dual-membership (PK `(vehicle, platform)`,
   `segment` used/new/km0/renting). `vehicle_event` delta append-only.

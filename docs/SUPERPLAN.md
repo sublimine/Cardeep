@@ -146,7 +146,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 
 | SU | Definición | GATE | Estado |
 |---|---|---|---|
-| **SU-E1** | Todo a `main` documentado | (post SU-0.3) árbol limpio; recetas/estado/decisiones commiteados; runbook A-Z | ⬜ |
+| **SU-E1** | Todo a `main` documentado | (post SU-0.3) árbol limpio; recetas/estado/decisiones commiteados; runbook A-Z | 🟢 €0 (árbol LIMPIO, todo en main): **verification stack documentado A-Z** (`docs/architecture/10-VERIFICATION-STACK.md`: L1 VAM 0004→L2 deep ledger 0026→L3 gestionador 0031→L4 Inquisición V3 0032; lazo claim→lentes→quórum→router; frontera €0/harvest + deuda) + RUNBOOK de-staled (§7.4 VAM=L1+puntero, §7.7 0019→0032). Harvest-runbook (45 unidades) vigente 2026-06-13. La pieza que faltaba (maquinaria de verificación) ya documentada. |
 | **SU-E2** | Separación física Tier-1 + reshape geo (B6.1) | `git mv` a `countries/ES/<prov>/<comarca>/<city>/dealers/<cdp>/` + `platforms/_tier1/`; count(after)==count(before); CI estructural verde | ⬜ |
 
 ### F — MÉTODO (los poderes)
