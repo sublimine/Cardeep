@@ -133,7 +133,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 |---|---|---|---|
 | **SU-C1** | P0.5 anti-detección spike | re-prueba 5 OPEN + 2 walled targets; ClientHello byte-diff vs Chrome actual; Wallapop firma + Adevinta token resueltos → `state/tier1-blocked.json` | ⬜ |
 | **SU-C2** | Cazar receta de cada Tier-1 | cada Tier-1: receta reproducible en `platforms/_tier1/<n>/` + 2-way count + field-VAM, O muro declarado | ⬜ |
-| **SU-C3** | Sellar B7 (dedup coches) | fix 0km; gate cero-sobre-fusión; `vehicle-identity-det-v1` vam_verified=TRUE; `v_canonical_vehicle` sirve | ⬜ |
+| **SU-C3** | Sellar B7 (dedup coches) | fix 0km; gate cero-sobre-fusión; `vehicle-identity-det-v1` vam_verified=TRUE; `v_canonical_vehicle` sirve | 🔵 km=0 guard coded+commit `0f8a6e9` (53 tests): señales A/B OFF para km=0/NULL salvo VIN compartido; sesgo over-count declarado. Re-run B7 en background → gate+sello pend |
 
 ### D — COSTE / LLM (€0, hardware-bound)
 
@@ -233,5 +233,10 @@ Al retomar (sesión nueva / contexto compactado):
 
 > Estado: **2026-06-15. FASE 0 SELLADA** (SU-0.1..0.6 ✅; residual de disco confesado, *=con causa). Árbol limpio salvo este tracker. Siguiente: **FASE 1** (confirmar puntos verdes a nivel átomo) → **SU-B1** (ledger de verificación profundo, migración 0014).
 >
-> ## Deuda declarada (tracked, no bloqueante)
-> - **evict.py / evicción de crudo**: diseñada (MISSION §6, MASTER_PLAN) pero no construida. data/ = 161MB hoy (baja urgencia). Construir cuando el harvest escale. Owner: compactar VHD WSL2 en ventana de mantenimiento para recuperar ~21GB de host.
+> ## Deuda declarada + hallazgos de auditoría (tracked, no bloqueante)
+> - **evict.py / evicción de crudo**: diseñada (MISSION §6, MASTER_PLAN) pero no construida. data/ = 161MB hoy (baja urgencia). Owner: compactar VHD WSL2 en ventana de mantenimiento (~21GB host).
+> - **AS24 kind mis-class [SU-A1]**: las **511** entidades `first_discovered_source='as24'` están TODAS `concesionario_oficial` (L7 hardcode). Infla el segmento oficial ~24%. Fix correcto = type-resolution ladder / clasificador (unidad propia, NO re-kind ciego). Afecta números de cobertura de segmento.
+> - **Geocoding sucio del scraper [SU-A2/A6]**: `municipality_code` erróneo en algunas fuentes (ej AutosMadrid Alcorcón con muni de Leganés). Corrompe constraints geo. Causa del residuo multimuni de β. → SU-A6.
+> - **1.629 clusters β same-muni multi-nombre**: clase ambigua (multi-marca / nombres históricos / wholesaler relistando). Decisión arquitectural pendiente del Director.
+> - **Cadena abreviada sin org_id [β residuo micro]**: OcasionPlus «A./P./S.» (ciudad abreviada no-INE-matchable, sin domain) escapa los guards. Fix: extender org-link por patrón de nombre.
+> - **Deep verification ledger 0014 (SU-B1) NO construido**: el quorum-CHECK (≥2 familias/orígenes) no existe en DB; los sellos actuales (B1 v640, β v1093, B7) son VAM-light. 0014 los re-juzgará. `denominator_estimate` (necesaria para F3 Chao2) vive en 0014 → SU-B1 precede a F3.
