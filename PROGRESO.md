@@ -455,3 +455,14 @@
   hash coherente. Verificado: 23 migraciones, 0 hashes malos.
 - **A5 config SANO**: 98,4% dealers servidos con receta documentada. Gap = 23.894 dealers SIN inventario
   = recipe-hunting Tier-1 (Fase-B cosecha, deferido).
+
+## 2026-06-15 — SU-A6 geo: recon gateado — 3/4 GREEN; muni-gap DATA-BLOCKED €0
+- Recon (`docs/recon/SUA6_GEO_RECON.md`): **comarca 99,93%** asignada (40 sin = Ceuta/Melilla, correcto) ✓;
+  **sentinel-drift CERO** ✓; **errores within-province CERO hard** (FK+CHECK los previene; 38 CP-vs-CCAA
+  mismatch = 0,07%, flagged no-críticos) ✓.
+- **muni-gap servido 17,6%** (6.619 sin muni): solo **~131 €0-resolvable** (44 lat/lon KNN + ~87 postcode
+  unívoco); **6.601 sin NINGUNA señal geo** (sin address-city/latlon/postcode) → gate "<2%" **DATA-BLOCKED
+  €0** (necesita fuente externa Overture/Geonames/API correos = Fase-B).
+- **A6 = comarca/sentinel/errores SELLADOS GREEN; muni-gap <2% = gap-declarado-data-blocked**. §Deuda €0
+  menor (negligible, queued): backfill 131 con-señal + revisar 38 CP-CCAA (0,1%). El recon recomienda no
+  bloquear otros SUs por este gate de datos.
