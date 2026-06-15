@@ -614,3 +614,28 @@
   necesitan B/C/D (harvest-gated) para verificación real — A-solo da INDEP<2→REFUTED (honesto, nunca TRUSTWORTHY
   falso); duck-typing `claim: object` en _lens_a/_lens_d evita import circular (mover ClaimEnvelope a models.py sería
   más limpio — menor). Pend B2: ε4 (prosecutor+manager router→γ); G5=corrida.
+
+## 2026-06-15 — SU-B2 ε4: prosecutor + manager router — V3 Inquisición COMPLETA a techo €0
+- ε4 build (Sonnet; Fable no disponible): `pipeline/inquisition/prosecutor.py` (prosecute_claim, prosecute_pending,
+  emit_claim_from_verdict, CLI) + `router.py` (manager router §7, 13 filas reason_code→lane→`open_or_refresh` de γ
+  + `alert` para critical). El lazo V3: poll PENDING→`run_applicable_lenses`→`decide()`→persist skeptic/verdict→
+  router→gestion_item→DECIDED. 9 tests; sweep inquisition **139✓**. CLI smoke real: 0 PENDING (honesto — nada
+  emite claims a €0). E2E real (province:28=52.668): A=ASSERT, B/C/D=ABSTAIN → 1 assert → REFUTED:NO_INDEPENDENT_PATH
+  → escalate (honesto: sin Lens C no hay independencia; Ley I). TRUSTWORTHY probado vía skeptics inyectados (DB
+  acepta el invariante con quórum real).
+- **EL GATE (Opus) CAZÓ 3 DEFECTOS DE RAÍZ del agente** (no "deuda aceptable"):
+  (1) **prosecute_claim NO era atómico** y el docstring MENTÍA: afirmaba SAVEPOINTs por-claim y "status queda PENDING
+  porque la transacción externa hace rollback" — pero `prosecute_pending` NO abría ninguna transacción → asyncpg
+  autocommitea cada write → en crash a mitad, claim huérfano en PROSECUTING con skeptics parciales. **Fix raíz**:
+  `prosecute_claim` envuelve todo en `conn.transaction()` (anida como SAVEPOINT en tests, top-level en prod);
+  docstrings corregidos a la verdad.
+  (2) **`regime_for` omitía `entity_field` y `delta`** (2 de los 7 subject_types válidos del 0032 CHECK) → lanzaba
+  ValueError, tapado con un fallback defensivo en el prosecutor. **Fix raíz**: añadidos a _EXACT_TYPES (verificado:
+  los 7 mapean sin excepción).
+  (3) **`test_all_router_rows` era VACUO** (confesado por el agente): `raise _Rollback` dentro del `for` con el
+  `except` fuera → la 1ª fila salía del bucle → solo 1 de 13 filas del router probada. **Fix raíz**: savepoint
+  por-fila rolled-back independiente + `assert tested == len(rows)` (guarda anti-skip-silencioso).
+- **V3 Inquisición COMPLETA a techo €0**: ε1 (schema 0032 + invariante DB) · ε2 (motores §4/§5.4) · ε3 (5 lentes) ·
+  ε4 (prosecutor + router §7). Router reusa γ (open_or_refresh) + `alert`. **B2 = 🟢 €0-COMPLETO**; resto harvest-gated
+  (G5 2ª corrida, Lens C live, emisión de claims sobre 1.044 verdicts VAM). §Deuda: Lens A delta-handler,
+  entity_field B/C/D, supersesión post-RESOLVED. Próximo: SU-C/D/E/F/R o §Deuda según dependencia.

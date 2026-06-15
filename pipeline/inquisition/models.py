@@ -50,20 +50,25 @@ class Regime(Enum):
     DRIFT = "DRIFT"
 
 
-# Subject types that map to EXACT regime:
-#   - 'registral'  → official registry records, zero tolerance
-#   - 'official'   → official published figures
-#   - 'cif'        → legal tax-ID, deterministic
-#   - 'kind'       → entity category tag, deterministic
-#   - 'coverage'   → §5.6 example explicitly labels this EXACT
-#   - 'denominator'→ reference denominator for ratios; official, no drift expected
+# Regime per subject_type. MUST cover every subject_type the 0032 CHECK allows
+# (count, entity_field, inventory, coverage, kind, delta, denominator) so the
+# prosecutor never hits the unknown-type path for a valid claim.
 #
-# Subject types that map to DRIFT regime:
+# EXACT regime (any deviation is a refutation):
+#   - 'kind'        → entity category tag, deterministic
+#   - 'coverage'    → §5.6 example explicitly labels this EXACT
+#   - 'denominator' → reference denominator for ratios; official, no drift expected
+#   - 'entity_field'→ a field value (cif/phone/…) either matches source bytes or not (§5.2)
+#   - 'delta'       → NEW/GONE/Δprice are discrete events; Lens E hash is byte-exact
+#   - 'registral'/'official'/'cif' → forward-compat (not yet in the 0032 CHECK), zero tolerance
+#
+# DRIFT regime (tol(v) = max(τ_rel·v, τ_abs), legitimate live fluctuation):
 #   - 'count'      → live platform inventory count; fluctuates by ±thousands per hour
 #   - 'inventory'  → synonym for live stock count
 
 _EXACT_TYPES: frozenset[str] = frozenset(
-    {"registral", "official", "cif", "kind", "coverage", "denominator"}
+    {"registral", "official", "cif", "kind", "coverage", "denominator",
+     "entity_field", "delta"}
 )
 _DRIFT_TYPES: frozenset[str] = frozenset({"count", "inventory"})
 
