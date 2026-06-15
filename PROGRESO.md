@@ -1073,3 +1073,20 @@
   - 1 ALTO no-código: F-scheduler-never-deployed (desplegar el scheduler como productor único — acción infra).
   - 10 MEDIO + 6 BAJO (A-sourceless-entities backfill, A-gone-listed-desync trigger, A-zero-tiny-prices price_trap,
     codes/health/sources menores, etc.) — todos en AUDIT_PHASE2.md con fix concreto.
+
+### 2026-06-15 (cont.) — A-gone-listed-desync sellado: 16 findings P2 cerrados
+- **A-gone-listed-desync SELLADO** (ebdeed4, migración 0037): trigger `AFTER UPDATE OF status ON vehicle` (un punto
+  de verdad para todos los gone-paths) propaga vehicle.status='gone' → platform_listing.removed; backfill de las 5
+  desync. Verificado: desync 5→0, trigger probado (gone→removed), verify 31 match/0 drift.
+- **HITO ACTUALIZADO: 16 findings P2 sellados este turno** (10 CRÍTICOS + 5 ALTOS + 1 MEDIO). Migraciones aplicadas:
+  0034 (TRUNCATE guards) · 0035 (row guards) · 0036 (RESOLVED-proof) · 0037 (gone→listing). Esquema 31 match/0 drift.
+- **Restante (21 findings, trabajo deliberado en contexto fresco):**
+  - 3 ALTO identidad-completitud (decision-Director, interrelacionados): A-cross-entity-dup (dedup nivel-vehicle +
+    2.242 sin-cluster; MITIGADO server-side), B-particular-split (merge 703 particulares por deep-link), B-beta-resolver
+    (componer entity_resolution/β en v_dealer_resolved o retirar v_resolved_dealer) + B-crosssource-ungated MEDIO
+    (VAM-verificar 13 merges). Requieren revisar/certificar merges de identidad (tarea Inquisidor cuidadosa) + rebuild
+    de vista — NO crank de contexto profundo.
+  - 1 ALTO no-código: F-scheduler-never-deployed (desplegar el scheduler como productor — acción infra del owner).
+  - 9 MEDIO + 6 BAJO restantes: A-sourceless-entities (overture_ingest + entity_source backfill), A-zero-tiny-prices
+    (price_trap lado-bajo/filtro), A-junk-sentinel-prices [ALTO, ingest-guard hot-path], + menores codes/health/sources.
+  Todos con fix concreto en AUDIT_PHASE2.md. Atacar uno por uno con la calidad que cada uno merece.
