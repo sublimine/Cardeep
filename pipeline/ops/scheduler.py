@@ -86,6 +86,11 @@ INQUISITION_PROSECUTE_CADENCE_HOURS: int = 6
 INQUISITION_PROSECUTE_BATCH: int = int(os.environ.get("CARDEEP_INQUISITION_PROSECUTE_BATCH", "200"))
 INQUISITION_EMIT_BATCH: int = int(os.environ.get("CARDEEP_INQUISITION_EMIT_BATCH", "200"))
 
+# Gestionador price_trap detector (audit P2 price_trap v2): daily cohort price-anomaly scan.
+# QUARANTINE-only + reversible. Ships behind a one-run dry-run review before being relied on in prod
+# (docs/architecture/feature-designs/price_trap.md §Risks); inert until the scheduler is deployed.
+GESTIONADOR_DETECT_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_GESTIONADOR_CADENCE_HOURS", "24"))
+
 # Circuit breaker: skip sources with consecutive_fails >= this threshold
 BREAKER_TRIP_AT: int = 3
 
@@ -524,6 +529,40 @@ def inquisition_prosecute_job() -> None:
     log.info("=== inquisition_prosecute END ===")
 
 
+def gestionador_detect_job() -> None:
+    """Daily job (audit P2 price_trap v2): run the cohort price-anomaly detector + route flags.
+
+    QUARANTINE-only: opens reversible gestion_items that hide cohort-implausible-priced cars from
+    servable_vehicle — NEVER NULLs or DELETEs vehicle.price (close the item to re-show). DB reads +
+    gestion_item upserts only (€0); run_price_trap bumps work_mem so the cohort percentile scan does
+    not spill to disk. Never raises: a DB error is logged and the job exits so the scheduler continues.
+
+    Ships behind a one-run dry-run review (docs/architecture/feature-designs/price_trap.md §Risks):
+    review the flagged set via `python -m pipeline.gestionador.run` before relying on it in prod.
+    """
+    import asyncio
+
+    import asyncpg
+
+    from pipeline.gestionador.run import run_price_trap
+
+    log.info("=== gestionador_detect (price_trap) START ===")
+
+    async def _run() -> dict:
+        conn = await asyncpg.connect(_ASYNCPG_DSN)
+        try:
+            return await run_price_trap(conn)
+        finally:
+            await conn.close()
+
+    try:
+        summary = asyncio.run(_run())
+        log.info("gestionador_detect: %s", summary)
+    except Exception as exc:  # noqa: BLE001
+        log.error("gestionador_detect: unexpected error: %s", exc)
+    log.info("=== gestionador_detect (price_trap) END ===")
+
+
 # ---------------------------------------------------------------------------
 # Dry-run mode
 # ---------------------------------------------------------------------------
@@ -736,6 +775,21 @@ def _start_scheduler() -> None:
         hours=INQUISITION_PROSECUTE_CADENCE_HOURS,
         id="inquisition_prosecute",
         name="cardeep inquisition prosecution (adjudicate pending claims)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
+    )
+
+    # audit P2 price_trap v2: daily cohort price-anomaly detector. QUARANTINE-only + reversible;
+    # opens gestion_items that hide cohort-implausible-priced cars from servable_vehicle. €0 (DB
+    # reads + upserts). Additive job id — does NOT touch SourceEntry/source_health/connector keys.
+    scheduler.add_job(
+        gestionador_detect_job,
+        trigger="interval",
+        hours=GESTIONADOR_DETECT_CADENCE_HOURS,
+        id="gestionador_detect",
+        name="cardeep gestionador price_trap detector",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

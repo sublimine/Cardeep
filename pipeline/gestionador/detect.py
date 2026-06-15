@@ -13,7 +13,7 @@ Detector status:
   3.4 staleness            LIVE — entity.last_seen vs TTL per kind
   3.5 fabrication          LIVE — out-of-band values + distinct-collapse check
   3.6 coverage_gap         LIVE — covered count vs anchor floors
-  3.7 price_trap           LIVE — implausible-low price / monthly-band cross-check
+  3.7 price_trap           LIVE — model-aware cohort robust-z (median+MAD), two-sided QUARANTINE
   3.8 geo_resolution_drift STUB — requires sentinel placement tracking (no data yet)
   3.9 classifier_drift     STUB — requires golden-set evaluation harness (no data yet)
 
@@ -84,7 +84,9 @@ COVERAGE_ANCHORS: dict[str, int] = {
 COVERAGE_RELGAP_INFO = 0.10
 COVERAGE_RELGAP_WARN = 0.40
 
-# 3.7 price_trap
+# 3.7 price_trap — model-aware cohort robust-z (median + MAD on ln price).
+# Low-side deposit floor per kind: a flagged-LOW car at/below this absolute price has a
+# deposit/finance/placeholder shape -> 'critical'; above it (still a cohort outlier) -> 'warning'.
 PRICE_TRAP_FLOOR: dict[str, float] = {
     "compraventa":           300.0,
     "concesionario_oficial": 300.0,
@@ -96,8 +98,13 @@ PRICE_TRAP_FLOOR: dict[str, float] = {
     "oem_vo_portal":         300.0,
     "subasta":               300.0,
 }
-PRICE_TRAP_MONTHLY_LOW = 49
-PRICE_TRAP_MONTHLY_HIGH = 999
+PRICE_TRAP_COHORT_Z = 6.0              # robust-z threshold, both sides (|z| >= 6)
+PRICE_TRAP_COHORT_MIN_A = 15           # min cohort size, Tier-A (make, model, year)
+PRICE_TRAP_COHORT_MIN_B = 30           # min cohort size, Tier-B fallback (make, year; model NULL)
+PRICE_TRAP_MAD_FLOOR = 0.05            # skip near-degenerate cohorts (log-price MAD < 5%) — Law I
+PRICE_TRAP_HIGH_ABS_FLOOR = 150_000.0  # HIGH flag ALSO requires price >= this (Law I co-guard)
+PRICE_TRAP_LOW_MEDIAN_FRAC = 0.25      # LOW flag ALSO requires price < 0.25 * cohort median (Law I)
+PRICE_TRAP_MAX_ROWS = 5000             # hard cap on flags per run
 
 
 # ---------------------------------------------------------------------------
@@ -746,81 +753,129 @@ async def detect_coverage_gap(conn: asyncpg.Connection) -> list[AnomalyResult]:
 # ---------------------------------------------------------------------------
 
 async def detect_price_trap(conn: asyncpg.Connection) -> list[AnomalyResult]:
-    """Detect finance/monthly rate stored as the vehicle price.
+    """Model-aware cohort price-anomaly detector (two-sided robust-z on ln price).
 
-    Fires when: price < segment floor OR price in monthly band [49,999]
-    AND price < 5% of cohort median (make+year cohort, if available).
-    """
-    # Cohort median: median price per kind (broad proxy without make/model join)
-    median_sql = """
-        SELECT e.kind, percentile_cont(0.5) WITHIN GROUP (ORDER BY v.price) AS median_price
-        FROM vehicle v
-        JOIN entity e ON e.entity_ulid = v.entity_ulid
-        WHERE v.status = 'available' AND v.price IS NOT NULL AND v.price > 0
-        GROUP BY e.kind
-    """
-    median_rows = await conn.fetch(median_sql)
-    kind_median: dict[str, float] = {
-        r["kind"]: float(r["median_price"]) for r in median_rows
-    }
+    Cohort = (make, model, year) Tier-A (fire at n>=PRICE_TRAP_COHORT_MIN_A); a (make, year)
+    Tier-B fallback (model NULL, n>=PRICE_TRAP_COHORT_MIN_B) covers rows missing model. Robust
+    z = (ln price - median ln price) / (1.4826 * MAD ln price) — MAD not stddev, so a single junk
+    outlier (e.g. 9M EUR) cannot inflate the scale and mask its siblings (MAD has ~50% breakdown).
 
-    # Candidate vehicles
-    trap_sql = """
-        SELECT
-            v.vehicle_ulid,
-            e.cdp_code,
-            e.kind,
-            v.price
-        FROM vehicle v
-        JOIN entity e ON e.entity_ulid = v.entity_ulid
-        WHERE v.status = 'available'
-          AND v.price IS NOT NULL
-          AND v.price > 0
-          AND v.price < $1
-        LIMIT 1000
+    Fires QUARANTINE-only (reversible — NEVER NULLs or DELETEs vehicle.price; an open quarantining
+    item just hides the car from servable_vehicle until closed):
+      HIGH  z >= +Z  AND price >= HIGH_ABS_FLOOR     (the >1M EUR monsters; abs-floor is a Law I co-guard)
+      LOW   z <= -Z  AND price <  LOW_MEDIAN_FRAC * cohort_median   (deposit / finance / placeholder)
+    Near-degenerate cohorts (MAD < MAD_FLOOR) are SKIPPED on BOTH sides (Law I): a tight cohort must
+    never amplify a normal-priced car's small deviation into a spurious z and quarantine legit stock.
+    Pure async DB-only (zero external cost). Idempotent within a UTC day via dedupe_key.
     """
-    trap_rows = await conn.fetch(trap_sql, float(max(PRICE_TRAP_FLOOR.values()) + 1))
-    results: list[AnomalyResult] = []
+    # One cohort pass. NULL-safe join (IS NOT DISTINCT FROM) so the Tier-B model-NULL group joins
+    # back to itself. Tier min-size is chosen per-row in the HAVING (model present -> A, else B).
+    sql = """
+        WITH base AS (
+            SELECT vehicle_ulid, price::float8 AS price, ln(price::float8) AS lp,
+                   make, model, year
+              FROM vehicle
+             WHERE status = 'available' AND price IS NOT NULL AND price > 0
+               AND make IS NOT NULL AND year IS NOT NULL
+        ),
+        med AS (
+            SELECT make, model, year, count(*) AS n,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY lp)    AS med_lp,
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY price) AS med_price
+              FROM base
+             GROUP BY make, model, year
+            HAVING count(*) >= CASE WHEN model IS NOT NULL THEN $1 ELSE $2 END
+        ),
+        mad AS (
+            SELECT * FROM (
+                SELECT b.make, b.model, b.year, m.n, m.med_lp, m.med_price,
+                       percentile_cont(0.5) WITHIN GROUP (ORDER BY abs(b.lp - m.med_lp)) AS mad_lp
+                  FROM base b
+                  JOIN med m ON b.make = m.make AND b.year = m.year
+                            AND COALESCE(b.model, '§§NULL§§') = COALESCE(m.model, '§§NULL§§')
+                 GROUP BY b.make, b.model, b.year, m.n, m.med_lp, m.med_price
+            ) q WHERE mad_lp >= $3
+        ),
+        scored AS (
+            SELECT b.vehicle_ulid, b.price, b.make, b.model, b.year, mad.n, mad.med_price,
+                   (b.lp - mad.med_lp) / (1.4826 * mad.mad_lp) AS z,
+                   (mad.model IS NULL) AS tier_b
+              FROM base b
+              JOIN mad ON b.make = mad.make AND b.year = mad.year
+                      AND COALESCE(b.model, '§§NULL§§') = COALESCE(mad.model, '§§NULL§§')
+        )
+        SELECT vehicle_ulid, price, make, model, year, n, med_price, z, tier_b,
+               CASE WHEN z >=  $4 AND price >= $5            THEN 'high'
+                    WHEN z <= -$4 AND price <  $6 * med_price THEN 'low' END AS side
+          FROM scored
+         WHERE (z >=  $4 AND price >= $5)
+            OR (z <= -$4 AND price <  $6 * med_price)
+         ORDER BY abs(z) DESC
+         LIMIT $7
+    """
+    rows = await conn.fetch(
+        sql,
+        PRICE_TRAP_COHORT_MIN_A, PRICE_TRAP_COHORT_MIN_B, PRICE_TRAP_MAD_FLOOR,
+        PRICE_TRAP_COHORT_Z, PRICE_TRAP_HIGH_ABS_FLOOR, PRICE_TRAP_LOW_MEDIAN_FRAC,
+        PRICE_TRAP_MAX_ROWS,
+    )
+    if not rows:
+        return []
+
+    # Resolve kind for ONLY the flagged rows (<=MAX_ROWS, indexed lookup) so the cohort scan above
+    # stays a single lean pass over vehicle without an entity join on 1.27M rows.
+    vids = [str(r["vehicle_ulid"]) for r in rows]
+    kind_rows = await conn.fetch(
+        "SELECT v.vehicle_ulid, e.kind FROM vehicle v "
+        "JOIN entity e ON e.entity_ulid = v.entity_ulid "
+        "WHERE v.vehicle_ulid = ANY($1::text[])",
+        vids,
+    )
+    kind_by_vid: dict[str, str] = {str(r["vehicle_ulid"]): r["kind"] for r in kind_rows}
+
     bucket = _daily_bucket()
-
-    for row in trap_rows:
-        kind = row["kind"]
-        price = float(row["price"])
-        floor_price = PRICE_TRAP_FLOOR.get(kind)
-
-        if floor_price is None:
-            # Desguace or unknown segment: exempt
-            continue
-
-        implausible_low = price < floor_price
-        in_monthly_band = PRICE_TRAP_MONTHLY_LOW <= price <= PRICE_TRAP_MONTHLY_HIGH
-
-        med = kind_median.get(kind, 0.0)
-        ratio_outlier = (med > 0) and (price < 0.05 * med)
-
-        if not (implausible_low or (in_monthly_band and ratio_outlier)):
-            continue
-
+    results: list[AnomalyResult] = []
+    for row in rows:
         vid = str(row["vehicle_ulid"])
+        price = float(row["price"])
+        z = float(row["z"])
+        side = row["side"]
+        kind = kind_by_vid.get(vid)
+        # HIGH is always critical (the >1M monsters). LOW is critical at a deposit shape
+        # (price <= the per-kind deposit floor) else a warning (cheap-but-real outlier).
+        if side == "high":
+            severity = "critical"
+        else:
+            deposit_floor = PRICE_TRAP_FLOOR.get(kind or "", 300.0)
+            severity = "critical" if price <= deposit_floor else "warning"
         results.append(AnomalyResult(
             detector="price_trap",
             subject_type="vehicle",
             subject_key=vid,
-            severity="critical",
-            score=1.0,
-            measured={"price": price, "kind": kind,
-                      "kind_median": round(med, 2),
-                      "implausible_low": implausible_low,
-                      "in_monthly_band": in_monthly_band,
-                      "ratio_outlier": ratio_outlier,
-                      "cdp_code": row["cdp_code"]},
-            baseline={"floor_price": floor_price,
-                      "monthly_band": [PRICE_TRAP_MONTHLY_LOW, PRICE_TRAP_MONTHLY_HIGH]},
-            lane="RESEARCH",
+            severity=severity,
+            score=min(1.0, abs(z) / (2.0 * PRICE_TRAP_COHORT_Z)),
+            measured={
+                "price": round(price, 2),
+                "robust_z": round(z, 2),
+                "side": side,
+                "make": row["make"],
+                "model": row["model"],
+                "year": row["year"],
+                "cohort_median": round(float(row["med_price"]), 2),
+                "cohort_n": int(row["n"]),
+                "cohort_tier": "B" if row["tier_b"] else "A",
+                "kind": kind,
+            },
+            baseline={
+                "cohort_z_threshold": PRICE_TRAP_COHORT_Z,
+                "high_abs_floor": PRICE_TRAP_HIGH_ABS_FLOOR,
+                "low_median_frac": PRICE_TRAP_LOW_MEDIAN_FRAC,
+                "mad_floor": PRICE_TRAP_MAD_FLOOR,
+            },
+            lane="QUARANTINE",
             quarantines=True,
             dedupe_key=f"price_trap|{vid}|{bucket}",
         ))
-
     return results
 
 

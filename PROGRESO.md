@@ -1150,3 +1150,31 @@
   0034-0038, verify 32/0 drift. Resto = features a construir (price_trap A-zero-tiny, prosecutor-wiring
   D-inquisition, scheduler-reg C-as24[ban-sensitive]/C-cochesnet-segments), owner-deploy (F-scheduler), backfill
   bloqueado (B-canonical-key), deuda aceptada (F-spend-gated). Todo deliberado/owner/fresh-context.
+
+### 2026-06-15 (cont.) — CAMPAIGN DE FEATURES P2: 4 diseños vetados (workflow 9 agentes) → 4 construidos
+- **Diseño**: workflow 9-agentes produjo 4 diseños átomo-nivel en `docs/architecture/feature-designs/`
+  (ranking: 1 scheduler_source_expansion · 2 canonical_key · 3 inquisition_wiring · 4 price_trap). Construidos en orden.
+- **#1 scheduler_source_expansion** (cc06ff4): Tier-1 → conectores facet/full; +coches_net_segments(24h)+
+  as24_wholesale(168h) sembrados en source_health con last_fail-sentinel (DUE-no-silent); singleton advisory lock
+  0x43415244. LECCIÓN re-confirmada: source_key DEBE == *_SOURCE_KEY del conector (cicatriz autocasion-orphan).
+- **#2 canonical_key** (43a307e): `cdp_pair()` expone el canonical_key pre-imagen (cdp_code delega byte-idéntico,
+  golden tests). Backfill auto-verificante (escribe SOLO si re-hash re-produce el cdp_code → key errónea imposible):
+  365.573/391.944 (93,3%), 0 erróneas. Forward-write 40 conectores diferido (mecánico; backfill = interim).
+- **#3 inquisition_wiring** (a500cba): cierra D-inquisition-never-ran. emit re-keya VAM entity_inventory→
+  `inventory:<ulid>` (Lens A mide conteo REAL no provincias→0→falso-REFUTE); SKIP shapes no soportados; idempotente.
+  prosecute_job 6h SIEMPRE drena PENDING; emisión opt-in+acotada. Ship INERT. 34+3 tests, verificado rolled-back vivo.
+- **#4 price_trap** (este commit): cierra A-junk-sentinel-prices + A-zero-tiny. detect_price_trap REESCRITO a
+  **cohort robust-z** (z=(ln price−median)/(1.4826·MAD); make+model+year Tier-A n≥15 / make+year Tier-B n≥30).
+  QUARANTINE-only reversible (item abierto oculta de servable_vehicle, jamás NULL/DELETE). HIGH z≥6∧price≥150k ·
+  LOW z≤−6∧price<0.25·median; MAD-floor 0.05 salta cohortes degeneradas (Law I ambos lados). +run.py +
+  gestionador_detect_job(24h INERT) +migración 0040 (guard price>0 servable_vehicle, defense-in-depth: 0 filas hoy,
+  14.011 NULL preservadas) +6 tests mapping. VALIDADO DB viva: **347 HIGH / 18.808 LOW = 1,15%** (banda LOW 17-19k
+  del diseño EXACTA; HIGH=347 no 3.709 ⇒ floor 150k aplicado=Law I OK), muestras = basura inequívoca (Nissan Qashqai
+  2024 **€10.000.000** z=57; Mercedes Clase A **€1** z=−120), **runtime 10,9s**.
+  CAZADOS 2 bugs ocultos NO del diseño: (a) la "lentitud >270s" era 100% un **pile-up de locks** (zombies
+  dup_deep_link de 3,25h + DROP INDEX atascado bloqueando la cola sobre vehicle → mis gates nunca ejecutaban) —
+  matados; + planner elegía MERGE (4 sorts de 1,66M) → forzado HASH en run.py → 10,9s. (b) test pre-existente ROJO:
+  el proof-gate 0036 (route.py:235, 2º fetchrow) no estaba mockeado → arreglado. 58/58 gestionador verdes.
+- **ESTADO: 4/4 features vetados construidos+verificados+commiteados.** Migraciones→0040, verify 34/0 drift. Todo
+  ship INERT/seguro (emisión OFF, scheduler sin deploy, detector tras dry-run-review). Diferido con rationale:
+  canonical_key forward-write (mecánico), 3 ALTO-identidad (ADR 11), F-scheduler-deploy (owner), F-spend (€0).

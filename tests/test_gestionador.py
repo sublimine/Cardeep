@@ -43,8 +43,9 @@ from pipeline.gestionador.detect import (
     FAB_PRICE_CEIL,
     FAB_YEAR_FLOOR,
     FAB_YEAR_CEIL,
-    PRICE_TRAP_MONTHLY_LOW,
-    PRICE_TRAP_MONTHLY_HIGH,
+    PRICE_TRAP_FLOOR,
+    PRICE_TRAP_COHORT_Z,
+    PRICE_TRAP_HIGH_ABS_FLOOR,
     SILENT_CAP_MAX_ROWS,
 )
 from pipeline.gestionador.route import (
@@ -447,55 +448,78 @@ class TestCoverageGap:
 # ---------------------------------------------------------------------------
 
 class TestPriceTrap:
-    def _median_row(self, kind, median):
-        return {"kind": kind, "median_price": median}
+    """Mock tests for the Python mapping of detect_price_trap v2 (cohort robust-z).
 
-    def test_implausible_low_fires(self):
-        """Price=199 (< 300 floor) for compraventa → critical, quarantines."""
-        median_rows = [self._median_row("compraventa", 18000)]
-        trap_rows = [{"vehicle_ulid": "01JTEST00000000000000PT001",
-                      "cdp_code": "CDP-ES-28-TRAP", "kind": "compraventa",
-                      "price": 199}]
+    The cohort statistic itself (z thresholds, the 150k / 0.25-median / MAD floors, the n>=15/30
+    size guards) lives in SQL and is validated against the live DB by the price_trap dry-run gate
+    (counts recorded in PROGRESO/the feature design). These tests pin the mapping of an already-
+    decided cohort row → AnomalyResult (side→severity, QUARANTINE lane, cohort evidence, idempotency).
+    The detector fetches twice: (1) the cohort CTE, (2) a kind lookup for the flagged vids only.
+    """
+    def _scored(self, vid, price, z, side, *, med=20000.0, n=50, tier_b=False,
+                make="SEAT", model="Ibiza", year=2018):
+        return {"vehicle_ulid": vid, "price": price, "make": make, "model": model,
+                "year": year, "n": n, "med_price": med, "z": z, "tier_b": tier_b, "side": side}
+
+    def _conn(self, scored, kinds=None):
         conn = AsyncMock()
-        conn.fetch = AsyncMock(side_effect=[median_rows, trap_rows])
+        conn.fetch = AsyncMock(side_effect=[scored] if not scored else [scored, kinds or []])
+        return conn
+
+    def test_high_side_is_critical_quarantine(self):
+        """z>=6 & price>=150k (a >1M monster) → critical, quarantines, QUARANTINE lane."""
+        conn = self._conn([self._scored("01HIGH", 9_000_000.0, 25.3, "high")],
+                          [{"vehicle_ulid": "01HIGH", "kind": "compraventa"}])
         results = run(detect_price_trap(conn))
         assert len(results) == 1
         r = results[0]
-        assert r.severity == "critical"
-        assert r.quarantines is True
-        assert r.measured["implausible_low"] is True
+        assert r.severity == "critical" and r.quarantines is True
+        assert r.lane == "QUARANTINE"
+        assert r.subject_type == "vehicle" and r.subject_key == "01HIGH"
+        assert r.measured["side"] == "high"
 
-    def test_monthly_band_outlier_fires(self):
-        """Price=299 (monthly band) + < 5% of median=18000 → critical."""
-        median_rows = [self._median_row("compraventa", 18000)]
-        trap_rows = [{"vehicle_ulid": "01JTEST00000000000000PT002",
-                      "cdp_code": "CDP-ES-28-TRAP2", "kind": "compraventa",
-                      "price": 299}]
-        conn = AsyncMock()
-        conn.fetch = AsyncMock(side_effect=[median_rows, trap_rows])
-        results = run(detect_price_trap(conn))
-        assert len(results) == 1
-        assert results[0].measured["ratio_outlier"] is True
+    def test_low_at_deposit_floor_is_critical(self):
+        """LOW outlier at/below the per-kind deposit floor (300) = deposit shape → critical."""
+        conn = self._conn([self._scored("01LOWD", 49.0, -24.7, "low")],
+                          [{"vehicle_ulid": "01LOWD", "kind": "compraventa"}])
+        r = run(detect_price_trap(conn))[0]
+        assert r.severity == "critical" and r.measured["side"] == "low"
 
-    def test_normal_price_no_item(self):
-        """Price=18000 (well above floor) → no item."""
-        median_rows = [self._median_row("compraventa", 18000)]
-        # price=18000 > floor=300 → not in trap_rows (filtered by query)
-        conn = AsyncMock()
-        conn.fetch = AsyncMock(side_effect=[median_rows, []])
-        results = run(detect_price_trap(conn))
-        assert results == []
+    def test_low_above_deposit_floor_is_warning(self):
+        """LOW cohort outlier ABOVE the deposit floor → warning, but still quarantines."""
+        conn = self._conn([self._scored("01LOWW", 600.0, -8.0, "low")],
+                          [{"vehicle_ulid": "01LOWW", "kind": "compraventa"}])
+        r = run(detect_price_trap(conn))[0]
+        assert r.severity == "warning" and r.quarantines is True
 
-    def test_desguace_exempt(self):
-        """Desguace has no floor in PRICE_TRAP_FLOOR → items skipped."""
-        median_rows = [self._median_row("desguace", 50)]
-        trap_rows = [{"vehicle_ulid": "01JTEST00000000000000PT003",
-                      "cdp_code": "CDP-ES-04-DESGUACE", "kind": "desguace",
-                      "price": 50}]
+    def test_no_flags_returns_empty_and_skips_kind_query(self):
+        """Empty cohort result → [] and the kind lookup is never issued (early return)."""
         conn = AsyncMock()
-        conn.fetch = AsyncMock(side_effect=[median_rows, trap_rows])
+        conn.fetch = AsyncMock(side_effect=[[]])
         results = run(detect_price_trap(conn))
         assert results == []
+        assert conn.fetch.await_count == 1   # second (kind) query skipped
+
+    def test_measured_carries_cohort_evidence_and_dedupe_idempotent(self):
+        """measured exposes the cohort evidence; dedupe_key is stable within a day (idempotent)."""
+        conn = self._conn(
+            [self._scored("01EV", 9_000_000.0, 25.32, "high", med=16400.0, n=617,
+                          make="Audi", model="A4", year=2008)],
+            [{"vehicle_ulid": "01EV", "kind": "compraventa"}])
+        r = run(detect_price_trap(conn))[0]
+        assert r.measured["cohort_n"] == 617
+        assert r.measured["cohort_median"] == 16400.0
+        assert r.measured["robust_z"] == 25.32
+        assert r.measured["cohort_tier"] == "A"
+        assert r.dedupe_key == f"price_trap|01EV|{_daily_bucket()}"
+
+    def test_tier_b_fallback_labeled(self):
+        """A model-NULL Tier-B flag is labeled 'B' in measured.cohort_tier."""
+        conn = self._conn(
+            [self._scored("01TB", 9_000_000.0, 12.0, "high", tier_b=True, model=None)],
+            [{"vehicle_ulid": "01TB", "kind": "garaje"}])
+        r = run(detect_price_trap(conn))[0]
+        assert r.measured["cohort_tier"] == "B"
 
 
 # ---------------------------------------------------------------------------
@@ -570,10 +594,17 @@ class TestTransitionGuards:
             asyncio.run(transition(conn, 1, "RESOLVED", actor="test"))
 
     def test_resolved_with_verdict_id_proceeds(self):
-        """Transition to RESOLVED with verdict_id must succeed."""
+        """Transition to RESOLVED with a TRUSTWORTHY quorum>=2 proof verdict must succeed.
+
+        transition() issues TWO fetchrow calls for RESOLVED: (1) current item state, (2) the
+        proof verdict lookup (0036 gate, route.py:235). The mock must answer both.
+        """
         from pipeline.gestionador.route import transition
         conn = AsyncMock()
-        conn.fetchrow = AsyncMock(return_value={"state": "REVERIFYING", "closed_at": None})
+        conn.fetchrow = AsyncMock(side_effect=[
+            {"state": "REVERIFYING", "closed_at": None},   # current item state
+            {"verdict": "TRUSTWORTHY", "quorum_n": 2},      # 0036 proof verdict
+        ])
         conn.execute = AsyncMock(return_value=None)
 
         # Should not raise
