@@ -517,3 +517,18 @@
 - §Deuda B2 (minor, 0,8%): (a) G1 debería tratar entidades nacionales (subasta/importador ~98) sin requerir
   provincia; (b) excluir las 2 plataforma del tracker per-dealer; (c) 210 compraventa sin provincia = gap-geo
   (A6-extendido). β-populate FUNCIONALMENTE SANO; COMPLETED-eligible (37.271) correcto. Pend: γ/δ/ε; G5=corrida.
+
+## 2026-06-15 — SU-B2 γ: Gestionador V4 + fix raíz de migrate.py strip_rollback
+- γ build (`0031_gestion.sql` + `pipeline/gestionador/{detect,route}.py` + `tests/test_gestionador.py` **54✓**):
+  `gestion_item`/`gestion_transition` (V4 spec, state machine OPEN→ROUTED→…→RESOLVED + lanes AUTO_FIX/RESEARCH/
+  QUARANTINE/ESCALATE; RESOLVED exige verdict_id) + **7 detectores €0 LIVE** (count_inflation, silent_cap,
+  field_loss, staleness, fabrication, coverage_gap, price_trap) + 2 stubs declarados (3.8 geo-drift, 3.9
+  classifier-drift = golden-set/scraping, fuera €0). Demo dry-run DB real: **1.610 anomalías** (coverage_gap
+  confirma conc 1526<2018 + garaje 7220<<29955; fabrication 502 price≤0; etc.). MVCC: gestion_item UPSERT,
+  transition append-only.
+- **El gate cazó el bug RECURRENTE de `strip_rollback`** (migrate.py): `find("-- Rollback:")` = primera
+  ocurrencia → un "Rollback:" en el header truncaba el DDL a 0 bytes (mordió **0026 y 0031**). **Arreglado de
+  raíz**: `rfind` (último marker=bloque trailing) + guarda (forward sin DDL → no truncar) + `tests/test_strip_rollback.py`
+  (4✓ regresión). Ledger 0031 reconciliado (hash 430333↔archivo; **25 migs, 0 hashes malos**).
+- §Deuda: detectores 3.8/3.9 stub; price_trap floor de particulares (~1000 precios simbólicos) puede ajustarse.
+  Pend B2: δ (expires_at TTL + scheduler WF-INQUISITION cadencia), ε (V3 inquisition); G5=2ª corrida.

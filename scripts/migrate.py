@@ -45,9 +45,24 @@ def discover() -> list[tuple[str, Path]]:
 
 
 def strip_rollback(sql: str) -> str:
-    """Return only the forward DDL (everything before the `-- Rollback:` marker)."""
-    idx = sql.find("-- Rollback:")
-    return sql if idx == -1 else sql[:idx]
+    """Return only the forward DDL (everything before the trailing `-- Rollback:` block).
+
+    Uses the LAST occurrence of the marker (rfind), not the first, so a ``Rollback:``
+    mention in the file's HEADER comment does not truncate the DDL. Safety guard: if
+    stripping would leave no SQL statement, the matched marker was a header mention (not
+    the rollback section), so the full SQL is returned — a migration is NEVER silently
+    applied as 0 bytes. (Recurring bug: a header ``-- Rollback:`` truncated 0026 and 0031.)
+    """
+    idx = sql.rfind("-- Rollback:")
+    if idx == -1:
+        return sql
+    forward = sql[:idx]
+    upper = forward.upper()
+    if not any(kw in upper for kw in (
+        "CREATE ", "ALTER ", "INSERT ", "UPDATE ", "DELETE ", "DROP ", "TRUNCATE ",
+    )):
+        return sql  # marker was a header mention, not the rollback section
+    return forward
 
 
 def split_statements(sql: str) -> Iterator[str]:

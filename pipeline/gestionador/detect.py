@@ -1,0 +1,889 @@
+"""V4 Gestionador — Detectors (V4-GESTIONADOR.md §3).
+
+Each detector is a pure async function that:
+  1. Queries the live DB (zero external calls, zero cost).
+  2. Returns a list of AnomalyResult dataclasses.
+  3. Is idempotent: re-running produces the same result set; the UPSERT
+     in route.py ensures no duplicate gestion_items.
+
+Detector status:
+  3.1 count_inflation      LIVE — reads verification_verdict entity_inventory
+  3.2 silent_cap           LIVE — reads verification_verdict (harvested=1000 & D>H)
+  3.3 field_loss           LIVE — null-rate z-test against global baseline
+  3.4 staleness            LIVE — entity.last_seen vs TTL per kind
+  3.5 fabrication          LIVE — out-of-band values + distinct-collapse check
+  3.6 coverage_gap         LIVE — covered count vs anchor floors
+  3.7 price_trap           LIVE — implausible-low price / monthly-band cross-check
+  3.8 geo_resolution_drift STUB — requires sentinel placement tracking (no data yet)
+  3.9 classifier_drift     STUB — requires golden-set evaluation harness (no data yet)
+
+All thresholds are module-level constants (never magic numbers in logic).
+"""
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass, field
+from typing import Any
+
+import asyncpg
+
+# ---------------------------------------------------------------------------
+# Configuration constants (V4 §3 — "thresholds live in config, not code")
+# ---------------------------------------------------------------------------
+
+# 3.1 count_inflation
+TAU_COUNT = 0.02          # 2% — leaves 20x headroom over honest sub-0.1% drift
+TAU_GHOST = 0.02          # 2% — L > D by more than 2% = stale ghosts
+
+# 3.2 silent_cap
+SILENT_CAP_MAX_PAGES = 50
+SILENT_CAP_PAGE_SIZE = 20
+SILENT_CAP_MAX_ROWS = SILENT_CAP_MAX_PAGES * SILENT_CAP_PAGE_SIZE  # 1000
+SILENT_CAP_ROUND_CEILINGS = {500, 1000, 2000, 5000}
+
+# 3.3 field_loss
+FIELD_LOSS_Z_CRIT = 3.0         # ~0.13% one-sided false-alarm rate
+FIELD_LOSS_ABS_FLOOR = 0.05     # ignore statistically-significant but tiny drifts
+FIELD_LOSS_HARD_THRESH = 0.30   # hard-required fields: fire if p1 > 30% regardless of z
+FIELD_LOSS_PHOTO_THRESH = 0.10  # photo_url: abs floor 10%
+
+# 3.4 staleness — TTL in seconds per kind (V4 §3.4, MASTER_PLAN C-11)
+STALENESS_TTL: dict[str, int] = {
+    "compraventa":          3 * 86400,
+    "concesionario_oficial": 3 * 86400,
+    "plataforma":           1 * 86400,
+    "garaje":               7 * 86400,
+    "desguace":            30 * 86400,
+    "particular":           7 * 86400,
+    "rent_a_car_vo":        7 * 86400,
+    "subasta":              3 * 86400,
+    "importador":           7 * 86400,
+    "oem_vo_portal":        3 * 86400,
+    "_entity":             90 * 86400,   # entity existence re-confirmation
+}
+STALENESS_RATIO_WARN = 1.0
+STALENESS_RATIO_CRIT = 3.0
+STALENESS_STORM_THRESHOLD = 200  # suppress per-entity items if >200 for a source
+
+# 3.5 fabrication
+FAB_PRICE_FLOOR = 0
+FAB_PRICE_CEIL = 5_000_000
+FAB_YEAR_FLOOR = 1900
+FAB_YEAR_CEIL = 2027          # next year for pre-reg
+FAB_KM_CEIL = 1_000_000       # tighter than producer's 5M sanity cap
+FAB_COLLAPSE_KAPPA = 1.10     # >10% of distinct sources fused
+FAB_CV_DEGENERATE = 0.01      # coefficient of variation < 1% = degenerate
+
+# 3.6 coverage_gap — anchor floors (V4 §1 VERIFIED sources)
+COVERAGE_ANCHORS: dict[str, int] = {
+    "desguace":             1_292,   # DGT official CAT registry (exact)
+    "concesionario_oficial": 2_018,  # FACONAUTO franchised
+    "compraventa":          1_662,   # Paginas Amarillas floor
+    "garaje":              29_955,   # Paginas Amarillas
+}
+COVERAGE_RELGAP_INFO = 0.10
+COVERAGE_RELGAP_WARN = 0.40
+
+# 3.7 price_trap
+PRICE_TRAP_FLOOR: dict[str, float] = {
+    "compraventa":           300.0,
+    "concesionario_oficial": 300.0,
+    "garaje":                300.0,
+    "plataforma":            300.0,
+    "particular":            300.0,
+    "rent_a_car_vo":         300.0,
+    "importador":            300.0,
+    "oem_vo_portal":         300.0,
+    "subasta":               300.0,
+}
+PRICE_TRAP_MONTHLY_LOW = 49
+PRICE_TRAP_MONTHLY_HIGH = 999
+
+
+# ---------------------------------------------------------------------------
+# Result type
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AnomalyResult:
+    """One detection hit — maps 1:1 to a gestion_item row."""
+    detector: str
+    subject_type: str
+    subject_key: str
+    severity: str               # 'info' | 'warning' | 'critical'
+    score: float                # 0..1 normalised anomaly score
+    measured: dict[str, Any]
+    baseline: dict[str, Any] | None
+    lane: str                   # AUTO_FIX | RESEARCH | QUARANTINE | ESCALATE_*
+    quarantines: bool
+    dedupe_key: str             # detector|subject_key|bucket — idempotency
+
+
+def _rel(a: float, b: float) -> float:
+    """Two-sided relative divergence: |a-b| / max(a, b, 1)."""
+    return abs(a - b) / max(a, b, 1.0)
+
+
+def _z_two_prop(x0: int, n0: int, x1: int, n1: int) -> float:
+    """One-sided z-test for null-rate increase (p1 > p0)."""
+    if n0 <= 0 or n1 <= 0:
+        return 0.0
+    p0 = x0 / n0
+    p1 = x1 / n1
+    if p1 <= p0:
+        return 0.0
+    p_pool = (x0 + x1) / (n0 + n1)
+    denom = math.sqrt(p_pool * (1 - p_pool) * (1 / n0 + 1 / n1))
+    if denom == 0:
+        return 0.0
+    return (p1 - p0) / denom
+
+
+def _daily_bucket(conn_or_today: str | None = None) -> str:
+    """ISO date bucket for daily detectors."""
+    from datetime import date
+    return date.today().isoformat()
+
+
+# ---------------------------------------------------------------------------
+# 3.1 — count_inflation
+# ---------------------------------------------------------------------------
+
+async def detect_count_inflation(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect divergence between source-declared (D), harvested (H), and
+    landed (L) counts. Reads evidence already stored in verification_verdict
+    (independent_values JSONB) — never re-harvests.
+
+    Fires when:
+      g_DL > TAU_COUNT (2%) — declared vs landed divergence
+      g_HL > 0             — harvested rows we parsed but never landed (critical)
+    """
+    sql = """
+        SELECT DISTINCT ON (subject_key)
+            subject_key,
+            independent_values,
+            verdict,
+            primary_value::int AS primary_value
+        FROM verification_verdict
+        WHERE subject_type = 'entity_inventory'
+        ORDER BY subject_key, created_at DESC
+    """
+    rows = await conn.fetch(sql)
+    results: list[AnomalyResult] = []
+    bucket = _daily_bucket()
+
+    for row in rows:
+        # independent_values may come back as str (asyncpg JSONB) or dict (mocks)
+        raw_iv = row["independent_values"]
+        import json as _json
+        iv: dict = _json.loads(raw_iv) if isinstance(raw_iv, str) else dict(raw_iv)
+
+        d = iv.get("source_declared")
+        h = iv.get("harvested")
+        l_val = iv.get("db_available")
+
+        # Skip if evidence is incomplete
+        if d is None or h is None or l_val is None:
+            continue
+
+        d, h, l = float(d), float(h), float(l_val)
+        g_dh = _rel(d, h)
+        g_hl = _rel(h, l) if h > 0 else 0.0
+        g_dl = _rel(d, l)
+
+        subject_key = row["subject_key"]
+
+        # Hard rule: any ingest loss (H parsed but L < H) → critical/AUTO_FIX.
+        # This takes absolute priority: H>L means rows we parsed never landed.
+        if h > l:
+            results.append(AnomalyResult(
+                detector="count_inflation",
+                subject_type="entity",
+                subject_key=subject_key,
+                severity="critical",
+                score=min(g_hl, 1.0),
+                measured={"g_hl": round(g_hl, 4), "h": int(h), "l": int(l), "d": int(d)},
+                baseline={"threshold_g_hl": 0, "rule": "ingest_loss_zero_tolerance"},
+                lane="AUTO_FIX",
+                quarantines=True,
+                dedupe_key=f"count_inflation|{subject_key}|{bucket}",
+            ))
+        # Ghost surplus: DB has MORE than source declares by > TAU_GHOST.
+        # Checked before the generic g_dl path because L>D has a different
+        # direction (stale ghosts) and different remedy (GONE reconcile).
+        elif l > d and _rel(l, d) > TAU_GHOST:
+            g_ghost = _rel(l, d)
+            results.append(AnomalyResult(
+                detector="count_inflation",
+                subject_type="entity",
+                subject_key=subject_key,
+                severity="warning",
+                score=min(g_ghost, 1.0),
+                measured={"g_dl": round(g_ghost, 4), "d": int(d), "l": int(l),
+                          "sub": "ghost_surplus"},
+                baseline={"tau_ghost": TAU_GHOST},
+                lane="AUTO_FIX",
+                quarantines=False,
+                dedupe_key=f"count_inflation|{subject_key}|{bucket}",
+            ))
+        # Under-landed: g_DL > 20% (≥1 full page lost) → critical QUARANTINE.
+        elif g_dl > 0.20:
+            results.append(AnomalyResult(
+                detector="count_inflation",
+                subject_type="entity",
+                subject_key=subject_key,
+                severity="critical",
+                score=min(g_dl, 1.0),
+                measured={"g_dl": round(g_dl, 4), "d": int(d), "l": int(l)},
+                baseline={"tau_count": TAU_COUNT},
+                lane="QUARANTINE",
+                quarantines=True,
+                dedupe_key=f"count_inflation|{subject_key}|{bucket}",
+            ))
+        # Under-landed: TAU_COUNT < g_DL ≤ 20% → warning RESEARCH.
+        elif g_dl > TAU_COUNT:
+            results.append(AnomalyResult(
+                detector="count_inflation",
+                subject_type="entity",
+                subject_key=subject_key,
+                severity="warning",
+                score=min(g_dl, 1.0),
+                measured={"g_dl": round(g_dl, 4), "d": int(d), "l": int(l)},
+                baseline={"tau_count": TAU_COUNT},
+                lane="RESEARCH",
+                quarantines=False,
+                dedupe_key=f"count_inflation|{subject_key}|{bucket}",
+            ))
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 3.2 — silent_cap
+# ---------------------------------------------------------------------------
+
+async def detect_silent_cap(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect top-N truncation: harvest looks complete but hit a page/provider cap.
+
+    Signal: the latest entity_inventory verdict where harvested == 1000 (the
+    AS24 max-pages*size ceiling) and source_declared > harvested.
+    These are the entities in the live DB that hit the cap and were never
+    flagged (the old quorum read fetched=harvested as fine).
+    """
+    sql = """
+        SELECT DISTINCT ON (subject_key)
+            subject_key,
+            independent_values,
+            created_at
+        FROM verification_verdict
+        WHERE subject_type = 'entity_inventory'
+        ORDER BY subject_key, created_at DESC
+    """
+    rows = await conn.fetch(sql)
+    results: list[AnomalyResult] = []
+    bucket = _daily_bucket()
+
+    for row in rows:
+        import json as _json
+        raw_iv = row["independent_values"]
+        iv: dict = _json.loads(raw_iv) if isinstance(raw_iv, str) else dict(raw_iv)
+        d = iv.get("source_declared")
+        h = iv.get("harvested")
+        if d is None or h is None:
+            continue
+        d, h = float(d), float(h)
+
+        cap_hit = (h >= SILENT_CAP_MAX_ROWS) and (d > h)
+        ceiling_hit = (int(h) in SILENT_CAP_ROUND_CEILINGS) and (d > h)
+
+        if not (cap_hit or ceiling_hit):
+            continue
+
+        subject_key = row["subject_key"]
+        sub = "page_budget_cap" if cap_hit else "provider_ceiling"
+        results.append(AnomalyResult(
+            detector="silent_cap",
+            subject_type="entity",
+            subject_key=subject_key,
+            severity="critical",
+            score=min(_rel(d, h), 1.0),
+            measured={"h": int(h), "d": int(d), "sub": sub,
+                      "max_rows": SILENT_CAP_MAX_ROWS},
+            baseline={"max_pages": SILENT_CAP_MAX_PAGES,
+                      "page_size": SILENT_CAP_PAGE_SIZE},
+            lane="AUTO_FIX" if cap_hit else "RESEARCH",
+            quarantines=True,
+            dedupe_key=f"silent_cap|{subject_key}|{bucket}",
+        ))
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 3.3 — field_loss
+# ---------------------------------------------------------------------------
+
+async def detect_field_loss(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect null-rate spikes in high-value fields vs global baseline.
+
+    Uses a two-proportion z-test (V4 §3.3): baseline is computed from ALL
+    available vehicles (the rolling global estimate n0/x0); per-source
+    current rates are computed from vehicles harvested in the last 7 days.
+    """
+    # Compute global baseline null rates.
+    # Aliases use exact field names so src_row[f"{fname}_null"] works uniformly.
+    baseline_sql = """
+        SELECT
+            count(*)                                       AS total,
+            count(*) FILTER (WHERE price IS NULL)          AS price_null,
+            count(*) FILTER (WHERE year IS NULL)           AS year_null,
+            count(*) FILTER (WHERE km IS NULL)             AS km_null,
+            count(*) FILTER (WHERE photo_url IS NULL)      AS photo_url_null
+        FROM vehicle WHERE status = 'available'
+    """
+    b = await conn.fetchrow(baseline_sql)
+    n0 = int(b["total"])
+    if n0 == 0:
+        return []
+
+    # Per-source recent harvest null rates (last 7 days, min 10 vehicles).
+    # Aliases match {fname}_null pattern for consistent lookup below.
+    recent_sql = """
+        SELECT
+            es.source_key,
+            count(*)                                       AS n,
+            count(*) FILTER (WHERE v.price IS NULL)        AS price_null,
+            count(*) FILTER (WHERE v.year IS NULL)         AS year_null,
+            count(*) FILTER (WHERE v.km IS NULL)           AS km_null,
+            count(*) FILTER (WHERE v.photo_url IS NULL)    AS photo_url_null
+        FROM vehicle v
+        JOIN entity_source es ON es.entity_ulid = v.entity_ulid
+        WHERE v.status = 'available'
+          AND v.last_seen >= now() - interval '7 days'
+        GROUP BY es.source_key
+        HAVING count(*) >= 10
+    """
+    source_rows = await conn.fetch(recent_sql)
+    results: list[AnomalyResult] = []
+    bucket = _daily_bucket()
+
+    fields = [
+        ("price",     int(b["price_null"]),     "critical"),
+        ("year",      int(b["year_null"]),      "warning"),
+        ("km",        int(b["km_null"]),        "warning"),
+        ("photo_url", int(b["photo_url_null"]), "info"),
+    ]
+
+    for src_row in source_rows:
+        source_key = src_row["source_key"]
+        n1 = int(src_row["n"])
+
+        for fname, x0_global, default_severity in fields:
+            x1 = int(src_row[f"{fname}_null"])
+            p0 = x0_global / n0
+            p1 = x1 / n1
+
+            z = _z_two_prop(x0_global, n0, x1, n1)
+            abs_delta = p1 - p0
+
+            # Hard-required: identity field spike regardless of z
+            hard_fire = (fname in ("price",)) and p1 > FIELD_LOSS_HARD_THRESH
+
+            if not hard_fire and not (z > FIELD_LOSS_Z_CRIT and abs_delta >= FIELD_LOSS_ABS_FLOOR):
+                continue
+
+            # Determine severity and lane
+            if hard_fire or fname in ("price",):
+                severity = "critical"
+                quarantines = True
+                lane = "RESEARCH"
+            elif fname in ("year", "km"):
+                severity = "warning"
+                quarantines = False
+                lane = "RESEARCH"
+            else:  # photo_url
+                if abs_delta < FIELD_LOSS_PHOTO_THRESH:
+                    continue
+                severity = "info"
+                quarantines = False
+                lane = "AUTO_FIX"
+
+            results.append(AnomalyResult(
+                detector="field_loss",
+                subject_type="source",
+                subject_key=f"{source_key}:{fname}",
+                severity=severity,
+                score=min(z / 10.0, 1.0),
+                measured={"field": fname, "z": round(z, 2),
+                          "p0": round(p0, 4), "p1": round(p1, 4),
+                          "n0": n0, "n1": n1, "delta": round(abs_delta, 4)},
+                baseline={"z_crit": FIELD_LOSS_Z_CRIT,
+                          "abs_floor": FIELD_LOSS_ABS_FLOOR},
+                lane=lane,
+                quarantines=quarantines,
+                dedupe_key=f"field_loss|{source_key}:{fname}|{bucket}",
+            ))
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 3.4 — staleness
+# ---------------------------------------------------------------------------
+
+async def detect_staleness(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect entities whose last_seen has drifted past their segment TTL.
+
+    Storm suppression: if >STALENESS_STORM_THRESHOLD entities from a single
+    source are stale simultaneously, collapse into one source-level item.
+    """
+    sql = """
+        SELECT
+            e.cdp_code,
+            e.kind,
+            e.last_seen,
+            extract(epoch FROM (now() - e.last_seen)) AS age_seconds
+        FROM entity e
+        WHERE e.last_seen IS NOT NULL
+          AND e.status = 'active'
+    """
+    rows = await conn.fetch(sql)
+    results: list[AnomalyResult] = []
+    bucket = _daily_bucket()
+
+    # Group by kind for storm suppression
+    stale_by_kind: dict[str, list[dict]] = {}
+
+    for row in rows:
+        kind = row["kind"]
+        ttl = STALENESS_TTL.get(kind, STALENESS_TTL["garaje"])
+        age = float(row["age_seconds"])
+        ratio = age / ttl
+        if ratio <= STALENESS_RATIO_WARN:
+            continue
+
+        entry = {
+            "cdp_code": row["cdp_code"],
+            "kind": kind,
+            "age_seconds": age,
+            "ttl": ttl,
+            "ratio": ratio,
+        }
+        stale_by_kind.setdefault(kind, []).append(entry)
+
+    for kind, stale_list in stale_by_kind.items():
+        # Storm suppression: collapse if too many
+        if len(stale_list) > STALENESS_STORM_THRESHOLD:
+            results.append(AnomalyResult(
+                detector="staleness",
+                subject_type="source",
+                subject_key=f"kind:{kind}",
+                severity="critical",
+                score=1.0,
+                measured={"stale_count": len(stale_list),
+                          "kind": kind,
+                          "storm_suppressed": True,
+                          "sample_cdp_codes": [e["cdp_code"] for e in stale_list[:10]]},
+                baseline={"storm_threshold": STALENESS_STORM_THRESHOLD,
+                          "ttl_seconds": STALENESS_TTL.get(kind)},
+                lane="ESCALATE_GASTO",
+                quarantines=False,
+                dedupe_key=f"staleness|kind:{kind}|{bucket}",
+            ))
+            continue
+
+        for entry in stale_list:
+            cdp_code = entry["cdp_code"]
+            ratio = entry["ratio"]
+            severity = "critical" if ratio > STALENESS_RATIO_CRIT else "warning"
+            quarantines = ratio > STALENESS_RATIO_CRIT
+            results.append(AnomalyResult(
+                detector="staleness",
+                subject_type="entity",
+                subject_key=cdp_code,
+                severity=severity,
+                score=min(ratio / 10.0, 1.0),
+                measured={"age_seconds": round(entry["age_seconds"]),
+                          "ttl_seconds": entry["ttl"],
+                          "ratio": round(ratio, 2)},
+                baseline={"ttl_warn_ratio": STALENESS_RATIO_WARN,
+                          "ttl_crit_ratio": STALENESS_RATIO_CRIT},
+                lane="AUTO_FIX",
+                quarantines=quarantines,
+                dedupe_key=f"staleness|{cdp_code}|{bucket}",
+            ))
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 3.5 — fabrication
+# ---------------------------------------------------------------------------
+
+async def detect_fabrication(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect impossible / out-of-band / collapsed values.
+
+    (a) Out-of-band hard bounds: price, year, km
+    (b) Distinct-row-collapse: cdp_code cardinality vs source rows
+    (c) Degenerate distribution: CV of price per entity < FAB_CV_DEGENERATE
+    """
+    results: list[AnomalyResult] = []
+    bucket = _daily_bucket()
+
+    # (a) Out-of-band bounds on vehicle table
+    oob_sql = """
+        SELECT
+            v.vehicle_ulid,
+            v.entity_ulid,
+            e.cdp_code,
+            v.price,
+            v.year,
+            v.km
+        FROM vehicle v
+        JOIN entity e ON e.entity_ulid = v.entity_ulid
+        WHERE v.status = 'available'
+          AND (
+              (v.price IS NOT NULL AND (v.price <= 0 OR v.price > %(price_ceil)s))
+           OR (v.year  IS NOT NULL AND (v.year < %(year_floor)s OR v.year > %(year_ceil)s))
+           OR (v.km    IS NOT NULL AND v.km > %(km_ceil)s)
+          )
+        LIMIT 500
+    """
+    oob_rows = await conn.fetch(
+        """
+        SELECT v.vehicle_ulid, e.cdp_code, v.price, v.year, v.km
+        FROM vehicle v
+        JOIN entity e ON e.entity_ulid = v.entity_ulid
+        WHERE v.status = 'available'
+          AND (
+              (v.price IS NOT NULL AND (v.price <= 0 OR v.price > $1))
+           OR (v.year  IS NOT NULL AND (v.year < $2 OR v.year > $3))
+           OR (v.km    IS NOT NULL AND v.km > $4)
+          )
+        LIMIT 500
+        """,
+        FAB_PRICE_CEIL, FAB_YEAR_FLOOR, FAB_YEAR_CEIL, FAB_KM_CEIL,
+    )
+
+    for row in oob_rows:
+        vid = str(row["vehicle_ulid"])
+        cdp = row["cdp_code"]
+        reasons = []
+        if row["price"] is not None and (row["price"] <= 0 or row["price"] > FAB_PRICE_CEIL):
+            reasons.append(f"price={row['price']}")
+        if row["year"] is not None and (row["year"] < FAB_YEAR_FLOOR or row["year"] > FAB_YEAR_CEIL):
+            reasons.append(f"year={row['year']}")
+        if row["km"] is not None and row["km"] > FAB_KM_CEIL:
+            reasons.append(f"km={row['km']}")
+
+        results.append(AnomalyResult(
+            detector="fabrication",
+            subject_type="vehicle",
+            subject_key=vid,
+            severity="critical",
+            score=1.0,
+            measured={"vehicle_ulid": vid, "cdp_code": cdp,
+                      "oob_fields": reasons, "sub": "out_of_band"},
+            baseline={
+                "price_range": (FAB_PRICE_FLOOR, FAB_PRICE_CEIL),
+                "year_range":  (FAB_YEAR_FLOOR, FAB_YEAR_CEIL),
+                "km_max":       FAB_KM_CEIL,
+            },
+            lane="AUTO_FIX",
+            quarantines=True,
+            dedupe_key=f"fabrication|{vid}|{bucket}",
+        ))
+
+    # (b) Distinct-row-collapse: entities where DB rows per cdp << source refs
+    # Using entity_source table to count source distinct refs per cdp_code
+    collapse_sql = """
+        SELECT
+            e.cdp_code,
+            count(DISTINCT es.source_key || ':' || es.source_ref) AS source_refs,
+            1 AS db_distinct
+        FROM entity e
+        JOIN entity_source es ON es.entity_ulid = e.entity_ulid
+        GROUP BY e.cdp_code
+        HAVING count(DISTINCT es.source_key || ':' || es.source_ref) > 1
+    """
+    # Use verification_verdict where multiple subjects map to same cdp_code
+    # (simpler: look at entities where source_coverage has collapse signals)
+    # The actual collapse signal is: for a given source_key, how many distinct
+    # source_refs map to the same cdp_code vs how many cdp_codes
+    collapse_sql2 = """
+        SELECT
+            es.source_key,
+            count(DISTINCT es.source_ref)  AS source_distinct,
+            count(DISTINCT e.cdp_code)             AS cdp_distinct
+        FROM entity_source es
+        JOIN entity e ON e.entity_ulid = es.entity_ulid
+        GROUP BY es.source_key
+        HAVING count(DISTINCT es.source_ref) > 0
+           AND count(DISTINCT es.source_ref)::float /
+               GREATEST(count(DISTINCT e.cdp_code), 1) > $1
+    """
+    collapse_rows = await conn.fetch(collapse_sql2, FAB_COLLAPSE_KAPPA)
+
+    for row in collapse_rows:
+        source_key = row["source_key"]
+        src_dist = int(row["source_distinct"])
+        cdp_dist = int(row["cdp_distinct"])
+        ratio = src_dist / max(cdp_dist, 1)
+        results.append(AnomalyResult(
+            detector="fabrication",
+            subject_type="source",
+            subject_key=source_key,
+            severity="critical",
+            score=min((ratio - 1.0) / 5.0, 1.0),
+            measured={"source_distinct": src_dist, "cdp_distinct": cdp_dist,
+                      "collapse_ratio": round(ratio, 3), "sub": "distinct_collapse"},
+            baseline={"kappa": FAB_COLLAPSE_KAPPA},
+            lane="RESEARCH",
+            quarantines=False,
+            dedupe_key=f"fabrication|{source_key}:collapse|{bucket}",
+        ))
+
+    # (c) Degenerate price distribution (CV < 0.01) per entity with >= 20 vehicles
+    degen_sql = """
+        SELECT
+            e.cdp_code,
+            count(*)                   AS n,
+            avg(v.price)               AS avg_price,
+            stddev(v.price)            AS std_price
+        FROM vehicle v
+        JOIN entity e ON e.entity_ulid = v.entity_ulid
+        WHERE v.status = 'available'
+          AND v.price IS NOT NULL
+          AND v.price > 0
+        GROUP BY e.cdp_code
+        HAVING count(*) >= 20
+           AND avg(v.price) > 0
+           AND (stddev(v.price) / NULLIF(avg(v.price), 0)) < $1
+    """
+    degen_rows = await conn.fetch(degen_sql, FAB_CV_DEGENERATE)
+
+    for row in degen_rows:
+        cdp = row["cdp_code"]
+        avg_p = float(row["avg_price"])
+        std_p = float(row["std_price"]) if row["std_price"] else 0.0
+        cv = std_p / avg_p if avg_p > 0 else 0.0
+        results.append(AnomalyResult(
+            detector="fabrication",
+            subject_type="entity",
+            subject_key=cdp,
+            severity="warning",
+            score=max(0.0, 1.0 - cv / FAB_CV_DEGENERATE),
+            measured={"n": int(row["n"]), "avg_price": round(avg_p, 2),
+                      "std_price": round(std_p, 2), "cv": round(cv, 4),
+                      "sub": "degenerate_distribution"},
+            baseline={"cv_threshold": FAB_CV_DEGENERATE},
+            lane="RESEARCH",
+            quarantines=False,
+            dedupe_key=f"fabrication|{cdp}:degen|{bucket}",
+        ))
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 3.6 — coverage_gap
+# ---------------------------------------------------------------------------
+
+async def detect_coverage_gap(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect gaps between covered entity count and anchor floors per segment.
+
+    Uses the VERIFIED anchor floors from V4 §1 (DGT for desguace,
+    FACONAUTO for concesionario_oficial, PA floor for compraventa/garaje).
+    """
+    # Covered count per kind (active entities only)
+    covered_sql = """
+        SELECT kind, count(*) AS covered
+        FROM entity
+        WHERE status = 'active'
+        GROUP BY kind
+    """
+    covered_rows = await conn.fetch(covered_sql)
+    covered: dict[str, int] = {r["kind"]: int(r["covered"]) for r in covered_rows}
+
+    results: list[AnomalyResult] = []
+    bucket = _daily_bucket()
+
+    for kind, anchor in COVERAGE_ANCHORS.items():
+        c = covered.get(kind, 0)
+        gap = max(0, anchor - c)
+        relgap = gap / max(anchor, 1)
+
+        # Hard anchor breach: we are below the known minimum
+        if c < anchor:
+            severity = "critical"
+        elif relgap > COVERAGE_RELGAP_WARN:
+            severity = "warning"
+        elif relgap > COVERAGE_RELGAP_INFO:
+            severity = "info"
+        else:
+            continue
+
+        results.append(AnomalyResult(
+            detector="coverage_gap",
+            subject_type="segment",
+            subject_key=kind,
+            severity=severity,
+            score=min(relgap, 1.0),
+            measured={"covered": c, "anchor_floor": anchor,
+                      "gap": gap, "relgap": round(relgap, 4)},
+            baseline={"relgap_info": COVERAGE_RELGAP_INFO,
+                      "relgap_warn": COVERAGE_RELGAP_WARN},
+            lane="RESEARCH",
+            quarantines=False,  # coverage_gap never quarantines (V4 §3.10)
+            dedupe_key=f"coverage_gap|{kind}|{bucket}",
+        ))
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 3.7 — price_trap
+# ---------------------------------------------------------------------------
+
+async def detect_price_trap(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect finance/monthly rate stored as the vehicle price.
+
+    Fires when: price < segment floor OR price in monthly band [49,999]
+    AND price < 5% of cohort median (make+year cohort, if available).
+    """
+    # Cohort median: median price per kind (broad proxy without make/model join)
+    median_sql = """
+        SELECT e.kind, percentile_cont(0.5) WITHIN GROUP (ORDER BY v.price) AS median_price
+        FROM vehicle v
+        JOIN entity e ON e.entity_ulid = v.entity_ulid
+        WHERE v.status = 'available' AND v.price IS NOT NULL AND v.price > 0
+        GROUP BY e.kind
+    """
+    median_rows = await conn.fetch(median_sql)
+    kind_median: dict[str, float] = {
+        r["kind"]: float(r["median_price"]) for r in median_rows
+    }
+
+    # Candidate vehicles
+    trap_sql = """
+        SELECT
+            v.vehicle_ulid,
+            e.cdp_code,
+            e.kind,
+            v.price
+        FROM vehicle v
+        JOIN entity e ON e.entity_ulid = v.entity_ulid
+        WHERE v.status = 'available'
+          AND v.price IS NOT NULL
+          AND v.price > 0
+          AND v.price < $1
+        LIMIT 1000
+    """
+    trap_rows = await conn.fetch(trap_sql, float(max(PRICE_TRAP_FLOOR.values()) + 1))
+    results: list[AnomalyResult] = []
+    bucket = _daily_bucket()
+
+    for row in trap_rows:
+        kind = row["kind"]
+        price = float(row["price"])
+        floor_price = PRICE_TRAP_FLOOR.get(kind)
+
+        if floor_price is None:
+            # Desguace or unknown segment: exempt
+            continue
+
+        implausible_low = price < floor_price
+        in_monthly_band = PRICE_TRAP_MONTHLY_LOW <= price <= PRICE_TRAP_MONTHLY_HIGH
+
+        med = kind_median.get(kind, 0.0)
+        ratio_outlier = (med > 0) and (price < 0.05 * med)
+
+        if not (implausible_low or (in_monthly_band and ratio_outlier)):
+            continue
+
+        vid = str(row["vehicle_ulid"])
+        results.append(AnomalyResult(
+            detector="price_trap",
+            subject_type="vehicle",
+            subject_key=vid,
+            severity="critical",
+            score=1.0,
+            measured={"price": price, "kind": kind,
+                      "kind_median": round(med, 2),
+                      "implausible_low": implausible_low,
+                      "in_monthly_band": in_monthly_band,
+                      "ratio_outlier": ratio_outlier,
+                      "cdp_code": row["cdp_code"]},
+            baseline={"floor_price": floor_price,
+                      "monthly_band": [PRICE_TRAP_MONTHLY_LOW, PRICE_TRAP_MONTHLY_HIGH]},
+            lane="RESEARCH",
+            quarantines=True,
+            dedupe_key=f"price_trap|{vid}|{bucket}",
+        ))
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# 3.8 — geo_resolution_drift  [STUB — no sentinel-placement data yet]
+# ---------------------------------------------------------------------------
+
+async def detect_geo_resolution_drift(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect geocoder regression via sentinel-placement rate spike.
+
+    STUB: This detector requires tracking how many newly-placed entities
+    land in sentinel directories (_sin-comarca / _sin-municipio) vs normal
+    placement. The sentinel_placement_rate column / tracking table does not
+    yet exist in the schema. When it does, this function will:
+      - Read rolling sentinel-placement rate per time window
+      - Compare to trailing 30-day baseline
+      - Fire when rate > 2x baseline OR > 15% absolute
+    Requires: new migration adding geo placement tracking.
+    """
+    return []   # STUB — no data, no items
+
+
+# ---------------------------------------------------------------------------
+# 3.9 — classifier_drift  [STUB — requires golden-set harness]
+# ---------------------------------------------------------------------------
+
+async def detect_classifier_drift(conn: asyncpg.Connection) -> list[AnomalyResult]:
+    """Detect LLM kind-label accuracy regression on golden set.
+
+    STUB: This detector requires a golden-set evaluation harness that:
+      - Maintains a hand-labeled set of entities with known correct kinds
+      - Runs the local LLM classifier nightly against this set
+      - Scores precision/recall per kind
+      - Fires when any per-kind metric drops below 0.95
+    Requires: golden_set table + classifier evaluation pipeline.
+    Both are T08 §5.1 items not yet implemented.
+    """
+    return []   # STUB — no golden set, no items
+
+
+# ---------------------------------------------------------------------------
+# Dry-run entry point: count anomalies per detector without writing to DB
+# ---------------------------------------------------------------------------
+
+async def dry_run_all(conn: asyncpg.Connection) -> dict[str, int]:
+    """Run all detectors, return anomaly counts per detector. No DB writes."""
+    detectors = [
+        ("count_inflation",      detect_count_inflation),
+        ("silent_cap",           detect_silent_cap),
+        ("field_loss",           detect_field_loss),
+        ("staleness",            detect_staleness),
+        ("fabrication",          detect_fabrication),
+        ("coverage_gap",         detect_coverage_gap),
+        ("price_trap",           detect_price_trap),
+        ("geo_resolution_drift", detect_geo_resolution_drift),
+        ("classifier_drift",     detect_classifier_drift),
+    ]
+    counts: dict[str, int] = {}
+    for name, fn in detectors:
+        try:
+            results = await fn(conn)
+            counts[name] = len(results)
+        except Exception as exc:
+            counts[name] = -1  # -1 = detector raised an error
+            print(f"  [ERROR] {name}: {exc}")
+    return counts
