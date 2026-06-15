@@ -70,13 +70,30 @@ def canonical_key(*, domain: str | None = None, cif: str | None = None,
     raise ValueError("need domain, cif, (name + municipality_code) or (name + province_code)")
 
 
-def cdp_code(*, province_code: str, domain: str | None = None, cif: str | None = None,
+def cdp_pair(*, province_code: str, domain: str | None = None, cif: str | None = None,
              name: str | None = None, municipality_code: str | None = None,
              address: str | None = None, particular_platform: str | None = None,
-             particular_seller_id: str | None = None) -> str:
+             particular_seller_id: str | None = None) -> tuple[str, str]:
+    """Return ``(canonical_key, cdp_code)`` — the dedup pre-image key AND its hashed code.
+
+    cdp_code() delegates here so callers that must persist ``entity.canonical_key`` (the audit
+    pre-image: ``particular:wallapop:{id}`` / ``domain:ford.es`` / ``name:{norm}|{muni}``) get the key
+    without re-deriving it (audit P2 B-canonical-key). The returned code is byte-identical to the
+    historical cdp_code() output — verified by the golden test.
+    """
     key = canonical_key(domain=domain, cif=cif, name=name, municipality_code=municipality_code,
                         province_code=province_code, address=address,
                         particular_platform=particular_platform,
                         particular_seller_id=particular_seller_id)
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return f"CDP-ES-{province_code}-{_base32(digest)}"
+    return key, f"CDP-ES-{province_code}-{_base32(digest)}"
+
+
+def cdp_code(*, province_code: str, domain: str | None = None, cif: str | None = None,
+             name: str | None = None, municipality_code: str | None = None,
+             address: str | None = None, particular_platform: str | None = None,
+             particular_seller_id: str | None = None) -> str:
+    return cdp_pair(province_code=province_code, domain=domain, cif=cif, name=name,
+                    municipality_code=municipality_code, address=address,
+                    particular_platform=particular_platform,
+                    particular_seller_id=particular_seller_id)[1]
