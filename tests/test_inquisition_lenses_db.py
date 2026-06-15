@@ -103,7 +103,11 @@ class TestLensARequery:
         conn = await asyncpg.connect(DSN)
         try:
             async with conn.transaction():
-                claim = _claim("count", "province:28", "52668")
+                # Drift-proof: re-derive the TRUE province-28 entity count live (it grows as entities
+                # are added — hardcoding it made this test brittle), then assert Lens A re-queries it.
+                real = str(await conn.fetchval(
+                    "SELECT COUNT(*) FROM entity WHERE province_code = '28'"))
+                claim = _claim("count", "province:28", real)
                 result = await lens_a_requery(conn, claim)
 
                 assert result.lens == "A_requery"
@@ -111,7 +115,7 @@ class TestLensARequery:
                     f"Expected ASSERT for true count but got {result.verdict}: "
                     f"measured={result.measured_value}"
                 )
-                assert result.measured_value == "52668"
+                assert result.measured_value == real
                 assert "." not in result.measured_value
                 raise _Rollback
         except _Rollback:
@@ -129,12 +133,15 @@ class TestLensARequery:
         conn = await asyncpg.connect(DSN)
         try:
             async with conn.transaction():
-                # |52668-99999|=47331 far outside DRIFT tolerance ~500
+                # |real-99999| stays far outside the DRIFT tolerance, so this REFUTES. measured_value
+                # is the live count (re-derived — drift-proof as the entity table grows).
+                real = str(await conn.fetchval(
+                    "SELECT COUNT(*) FROM entity WHERE province_code = '28'"))
                 claim = _claim("count", "province:28", "99999")
                 result = await lens_a_requery(conn, claim)
 
                 assert result.verdict == "REFUTE_SOFT"
-                assert result.measured_value == "52668"
+                assert result.measured_value == real
                 assert "." not in result.measured_value
                 raise _Rollback
         except _Rollback:
