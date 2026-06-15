@@ -1017,3 +1017,19 @@
     β-resolver dormido, 2 recetas rancias coches.net/wallapop por deriva de ruta write_recipe→_tier1, supersession
     sin cablear, audit-chain solo 46/1085, scheduler-never-deployed), 11 MEDIO, 6 BAJO. Todos en AUDIT_PHASE2.md.
 - Commits del barrido P2: 9755ffa (scheduler) · 5d1f782 (inventory) · bd6c485 (evict-gate) · 9655cf3 (singleton-lock).
+
+### 2026-06-15 (cont.) — 10/10 CRÍTICOS + primeros ALTOS sellados (sin parar)
+- **D-grandfathered (último CRÍTICO) SELLADO** (b124d5a): `scripts/reform_grandfathered_verdicts.py` reformó los
+  veredictos object-shaped a la forma nueva (independent_values objeto→array, verifier_paths string→[{family,origin}]
+  con `_path_family` canónica). 959 tenían quórum real todo el tiempo → quedan TRUSTWORTHY; 30 (28+2 NULL) no lo
+  prueban → downgrade honesto a UNVERIFIED. **994 TRUSTWORTHY, 0 sin quórum; chk_trustworthy_needs_quorum
+  VALIDATED** (ventana grandfathering CERRADA — el ledger enforce quórum a futuro). 9 tests verdes.
+- **D-supersession (ALTO) SELLADO** (532af8e): `superseded_by` nunca se escribía → verdicts acumulados, "último
+  activo" no-fiable. `verify.py` ahora RETURNing id + marca previos del mismo (subject,claim) superseded. Backfill:
+  429 stale superseded → **0 pares (subject,claim) con >1 activo** (era 202). 9 tests verdes.
+- **ESTADO: los 10 CRÍTICOS del audit P2 sellados + verificados + commiteados** (scheduler coverage ×4, inventory
+  data-loss ×2, evict-gate, singleton-lock, grandfathered, +regresión F-autocasion reparada) + 1 ALTO (supersession).
+- **Pendiente (sin parar, próximos): 9 ALTO** — A-prices(junk/zero), A-make-model-null(400k), A-cross-entity-dup(140k),
+  B-particular-split(703), B-beta-resolver, C-cochesnet/wallapop-recipe(deriva ruta write_recipe→_tier1 + colisión),
+  D-audit-chain-backfill(46/1085), F-scheduler-never-deployed(despliegue, no-código) — **11 MEDIO, 6 BAJO**. Todo en
+  AUDIT_PHASE2.md.
