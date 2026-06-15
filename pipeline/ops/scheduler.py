@@ -132,6 +132,8 @@ def _build_registry() -> dict[str, SourceEntry]:
                     "pipeline.platform.coches_com_wholesale", ["--all", "--segment", "all"]),
         SourceEntry("coches_net_wholesale",   # key=COCHES_SOURCE_KEY (facet imports it); module=facet
                     "pipeline.platform.coches_net_facet", []),
+        SourceEntry("coches_net_segments",    # own key (audit C-cochesnet-segments); new/km0/renting, seeded 0039
+                    "pipeline.platform.coches_net_segments", []),
         SourceEntry("milanuncios_wholesale",
                     "pipeline.platform.milanuncios_wholesale", []),
         SourceEntry("motor_es_wholesale",     # --full --segment all = full census (vo+vn+renting)
@@ -140,6 +142,13 @@ def _build_registry() -> dict[str, SourceEntry]:
                     "pipeline.platform.wallapop_facet", []),
 
         # ── OEM / groups / subastas (168h) ───────────────────────────────
+        # AS24 (audit C-as24-unscheduled): schedule autoscout24_wholesale — it WRITES record_run and is
+        # governor-paced. NOT the literal 'as24' per-dealer driver (scale_as24.py), which never writes
+        # last_ok -> would be perpetually DUE every 15-min tick = the AS24 ban scar. Ban-safe 168h cadence
+        # lives in the 0039 seed row (the connector doesn't pass harvest_interval_hours). This 12-page
+        # proof slice closes the cadence/auto-repair gap, NOT full ~278k coverage (that stays operator-run).
+        SourceEntry("as24_wholesale",
+                    "pipeline.platform.autoscout24_wholesale", []),
         SourceEntry("carandclassic_wholesale",
                     "pipeline.platform.carandclassic_wholesale", []),
         SourceEntry("dasweltauto_wholesale",
@@ -257,8 +266,9 @@ REGISTRY: dict[str, SourceEntry] = _build_registry()
 
 # source_keys present in source_health that have NO mapping in REGISTRY.
 # Declared explicitly (never invented) — these are excluded from scheduling.
-# as24_wholesale has a SOURCE_KEY constant but is NOT in source_health; it is
-# a special case (handled outside the scheduler via its own governor).
+# (audit P2 C-as24): as24_wholesale is now seeded in source_health (migration 0039) and mapped in
+# REGISTRY above — it is the AS24 record_run writer, scheduled at the 0039 168h cadence. The literal
+# 'as24' per-dealer driver (scale_as24.py) stays operator-run and is intentionally NOT scheduled.
 UNMAPPED_KEYS: frozenset[str] = frozenset()  # populated dynamically in _gap_report()
 
 

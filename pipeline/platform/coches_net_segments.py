@@ -57,6 +57,12 @@ from pipeline.platform.coches_net_wholesale import (
     COCHES_PLATFORM_RECIPE, _force_utf8_stdout,
 )
 
+# Audit P2 C-cochesnet-segments: segments runs its OWN source_health/breaker key so the durable
+# scheduler can give it an independent cadence (the shared COCHES_SOURCE_KEY collides with the used
+# drain + facet). COCHES_SOURCE_KEY is still used for entity_source OWNER attribution (platform
+# identity), NOT health. Seeded in migration 0039; see docs/architecture/feature-designs/.
+COCHES_SEGMENTS_SOURCE_KEY = "coches_net_segments"
+
 # ---------------------------------------------------------------------------
 # Segment taxonomy — ground truth from the live SPA gateway capture (2026-06-13).
 # Each segment is the SAME /search endpoint with a DIFFERENT filters.offerTypeIds.
@@ -381,8 +387,8 @@ async def harvest_segment(conn, geo, prov_names, platform_ulid, name: str,
 async def harvest(segments: list[str], concurrency: int = 8) -> dict:
     conn = await asyncpg.connect(DSN)
     try:
-        if await is_open(conn, COCHES_SOURCE_KEY):
-            print(f"[segments] breaker OPEN for {COCHES_SOURCE_KEY}; skipping.")
+        if await is_open(conn, COCHES_SEGMENTS_SOURCE_KEY):
+            print(f"[segments] breaker OPEN for {COCHES_SEGMENTS_SOURCE_KEY}; skipping.")
             return {"skipped": True, "reason": "breaker_open"}
 
         geo = await GeoResolver.load(conn)
@@ -444,8 +450,9 @@ async def harvest(segments: list[str], concurrency: int = 8) -> dict:
 
         total_caged = sum(s.get("cars_caged", 0) for s in per_segment.values())
         run_ok = fetch_error is None and total_caged > 0
-        outcome = await record_run(conn, COCHES_SOURCE_KEY, ok=run_ok, rows=total_caged,
-                                   error=fetch_error, http_status=last_http)
+        outcome = await record_run(conn, COCHES_SEGMENTS_SOURCE_KEY, ok=run_ok, rows=total_caged,
+                                   error=fetch_error, http_status=last_http,
+                                   is_tier1=False, harvest_interval_hours=24)
 
         return {
             "per_segment": per_segment,
