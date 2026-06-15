@@ -279,3 +279,87 @@ def diff_vehicle(
         })
 
     return events
+
+
+# ---------------------------------------------------------------------------
+# emit_change_deltas — shared landing-time delta emission for RE-SEEN vehicles
+# (audit P2 SU-A4). Connector-agnostic: each connector passes its pre-run snapshot
+# dict + its freshly-scraped vehicle objects, both keyed identically.
+# ---------------------------------------------------------------------------
+
+_BULK_INSERT_DELTA_EVENTS = """
+INSERT INTO vehicle_event (event_ulid, vehicle_ulid, entity_ulid, event_type,
+        old_value, new_value)
+SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, u.event_type,
+       u.old_value::jsonb, u.new_value::jsonb
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])
+       AS u(event_ulid, vehicle_ulid, entity_ulid, event_type, old_value, new_value)
+"""
+
+_BULK_REFRESH_VEHICLES = """
+UPDATE vehicle v SET price = u.price, km = u.km, photo_url = u.photo_url
+  FROM unnest($1::text[], $2::numeric[], $3::bigint[], $4::text[])
+       AS u(vehicle_ulid, price, km, photo_url)
+ WHERE v.vehicle_ulid = u.vehicle_ulid
+"""
+
+
+async def emit_change_deltas(
+    conn: asyncpg.Connection,
+    existing_snap: dict[Any, dict],
+    new_vehicles: dict[Any, Any],
+    keys: list,
+) -> dict[str, int]:
+    """For RE-SEEN vehicles, emit PRICE/KM/PHOTO_CHANGE events + refresh the served row.
+
+    existing_snap[key] = {"vehicle_ulid", "price", "km", "photo_url"} (DB snapshot before this run).
+    new_vehicles[key]  = the freshly-scraped vehicle object (attrs: price, km, photo_url).
+    keys               = the keys to consider (the window's re-seen+new; new ones have no snapshot
+                         and are skipped here — they go through the connector's NEW-event path).
+
+    Writes ONLY vehicle_event (append) and vehicle price/km/photo (MVCC-clean: only rows that
+    changed). No network. SAFE on a partial harvest (touches only re-seen vehicles — never retires;
+    GONE is handled separately by reconcile_gone, which is coverage-gated). Returns per-type counts.
+    Shared across connectors (DRY) so the delta semantics are identical and tested once.
+    """
+    ev_ulids: list[str] = []
+    ev_v: list[str] = []
+    ev_e: list[str] = []
+    ev_t: list[str] = []
+    ev_old: list[str] = []
+    ev_new: list[str] = []
+    up_v: list[str] = []
+    up_price: list = []
+    up_km: list = []
+    up_photo: list = []
+    counts = {"PRICE_CHANGE": 0, "KM_CHANGE": 0, "PHOTO_CHANGE": 0}
+    for key in keys:
+        snap = existing_snap.get(key)
+        if snap is None:
+            continue  # genuinely new vehicle — not a delta; handled by the NEW-event path
+        new_obj = new_vehicles.get(key)
+        if new_obj is None:
+            continue
+        events = diff_vehicle(snap, new_obj)
+        if not events:
+            continue
+        vid = snap["vehicle_ulid"]
+        # entity_ulid is the first element of the (entity_ulid, deep_link) key tuple by convention.
+        ent = key[0] if isinstance(key, tuple) else snap.get("entity_ulid")
+        for ev in events:
+            ev_ulids.append(ulid())
+            ev_v.append(vid)
+            ev_e.append(ent)
+            ev_t.append(ev["event_type"])
+            ev_old.append(json.dumps(ev["old_value"]))
+            ev_new.append(json.dumps(ev["new_value"]))
+            counts[ev["event_type"]] = counts.get(ev["event_type"], 0) + 1
+        up_v.append(vid)
+        up_price.append(new_obj.price)
+        up_km.append(new_obj.km)
+        up_photo.append(new_obj.photo_url)
+    if ev_ulids:
+        await conn.execute(_BULK_INSERT_DELTA_EVENTS, ev_ulids, ev_v, ev_e, ev_t, ev_old, ev_new)
+    if up_v:
+        await conn.execute(_BULK_REFRESH_VEHICLES, up_v, up_price, up_km, up_photo)
+    return counts
