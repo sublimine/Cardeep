@@ -85,7 +85,7 @@ SELECT EXISTS (
     FROM verification_verdict vv
     JOIN entity e ON (
         vv.subject_type = 'entity_inventory'
-        AND vv.subject_key = e.entity_ulid
+        AND vv.subject_key = e.cdp_code
     )
     WHERE e.cdp_code = $1
       AND vv.verdict = 'TRUSTWORTHY'
@@ -100,7 +100,7 @@ SELECT EXISTS (
     FROM verification_verdict vv
     JOIN entity e ON (
         vv.subject_type = 'entity_inventory'
-        AND vv.subject_key = e.entity_ulid
+        AND vv.subject_key = e.cdp_code
     )
     WHERE e.cdp_code = $1
       AND vv.verdict IN ('REFUTED', 'UNVERIFIED')
