@@ -820,3 +820,19 @@
   verification_verdict, dealer_recipe, etc.). Grep final: 0 patrón malo genuino. Commit `cfee4f0`. Coherencia
   flaggeada: `write_recipe()` escribe plano `countries/ES/recipes/` y el reshape SU-E2 (idempotente) + loader
   glob-con-fallback lo reconcilian al árbol geo — documentado.
+
+## 2026-06-15 — E2E BORRAR: `pipeline/evict.py` (último módulo) → E2E spine COMPLETO
+- Construido el único módulo POR CONSTRUIR del E2E (la etapa BORRAR que el usuario pidió: "ELIMINAMOS POR
+  CAPACIDAD DEL PC"). `migrations/0033_evict.sql` (aplicada, 27 migs): `entity_status`+'evicted', `entity.evicted_at`,
+  `capacity_ledger`, `audit_eviction` (append-only + trigger de inmutabilidad espejo de verdict_audit). `pipeline/evict.py`:
+  `check_preconditions` = **3 gates duros re-leídos** (G1 sin TRUSTWORTHY vigente + evidencia de muerte; G2 receta
+  preservada; G3 vehicle available=0 ∧ g4_served=False ∧ sin gestion_item OPEN); cualquier gate rojo → borra NADA.
+  `evict_dealer(dry_run=True default)` planea; `--apply` (explícito) hace el borrado en 1 transacción. 24 tests
+  (tmp_path + tx rolled-back; **`--apply` NUNCA corrido sobre los 161MB raw / DB reales** — destructivo, gated).
+- **Gate (Opus) corrigió un over-strictness real** que el agente flaggeó honestamente: Gate 2 exigía recipe.yaml
+  per_dealer → habría hecho los **98.4% connector-covered** permanentemente in-evictables (su receta ES el conector
+  commiteado). Corregido: Gate 2 acepta `v_dealer_recipe.recipe_kind='connector'` también (+1 test). Verifiqué la
+  migración landed (enum+'evicted', 2 tablas, DB real intacta: 0 evicted/0 audit). 24 evict tests✓.
+- **E2E SPINE COMPLETO**: los 7 stages tienen módulo real (discover/scrape[engine+44 conectores]/recipe/ingest/
+  serve-api/delta/evict). Cierra el §Deuda histórico "evict.py no construido". Barrido del tramo: **395 tests✓**,
+  27 migs (0 pending). ~19 commits.
