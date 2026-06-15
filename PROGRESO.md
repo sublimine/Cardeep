@@ -425,3 +425,19 @@
   documenta ambas hipótesis), under-coverage intacto, tests 4✓; coches_com instrumentado; discrepancia
   as24-no-en-source_health corregida (48 rows). **Fase-2 (paced D1)**: re-probe milanuncios full-index, instrumentar
   los 42, drains AS24(~13.900 págs)/autocasion/motor.es.
+
+## 2026-06-15 — SU-A4 fase-1: maquinaria de delta uniforme (€0)
+- Auditoría (`docs/recon/SUA4_DELTA_RECON.md`): delta NO uniforme — solo AS24 emite los 5 eventos
+  (NEW/GONE/PRICE/PHOTO/KM); 93% del inventario (1,58M) es append-only (solo NEW); un coche vendido queda
+  `available` para siempre. La lógica completa existe en `ingest.py` pero solo AS24 la llama.
+- **Fase-1 €0** (`pipeline/delta.py` nuevo, 75 tests✓): `diff_vehicle(old,new)` (helper puro PRICE/KM/PHOTO,
+  compartido) + `reconcile_gone(conn,source,run_start)` (baja: marca gone los no-re-vistos por last_seen,
+  source-scoped, idempotente, MVCC-safe) + 2 bugs en `generic_dealer_site.py` (status 'sold'→'gone';
+  old_value string→JSON).
+- **El gate del Director cazó un FALLO CATASTRÓFICO**: la guarda `min_captured` solo chequeaba `<1`
+  (bloqueaba corridas vacías) pero NO comparaba capturado-vs-umbral → una corrida PARCIAL (wallapop capta
+  5k de 588k) habría marcado los ~583k no-re-vistos como gone = **borrado del 99% del inventario**.
+  Reemplazada por **cap de fracción-gone** (aborta si stale/available > 50% para inventarios ≥20; exime
+  los pequeños). Test del caso catastrófico añadido (`test_fraction_cap_aborts_partial_run`).
+- **Fase-2** (cosecha): cablear `diff_vehicle` en los 43 conectores append-only + `reconcile_gone`
+  post-corrida con umbral por fuente + corridas espaciadas → delta completo uniforme materializado.

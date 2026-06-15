@@ -727,14 +727,15 @@ async def ingest_generic_dealer_vehicles(
         for row in gone_rows:
             if row["deep_link"] not in seen_deep_links:
                 await conn.execute(
-                    "UPDATE vehicle SET status='sold', last_seen=now() WHERE vehicle_ulid=$1",
+                    "UPDATE vehicle SET status='gone', last_seen=now() WHERE vehicle_ulid=$1",
                     row["vehicle_ulid"],
                 )
                 await conn.execute(
                     "INSERT INTO vehicle_event "
                     "(event_ulid, vehicle_ulid, entity_ulid, event_type, old_value, new_value) "
-                    "VALUES ($1,$2,$3,'GONE','available','sold')",
+                    "VALUES ($1,$2,$3,'GONE',$4::jsonb,$5::jsonb)",
                     ulid(), row["vehicle_ulid"], entity_ulid,
+                    json.dumps({"status": "available"}), None,
                 )
                 gone_count += 1
 
