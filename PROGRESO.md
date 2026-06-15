@@ -787,3 +787,16 @@
   harvest-review (verdicts revisados reales), no ajuste ciego. **NO toqué el código** (anti-degradar tested/sealed
   sin causa). §Deuda cerrado como EVALUADO-sin-cambio. Corregí mi propio error de lectura (no vi el gate
   ratio_outlier) — anti-alucinación aplicada a mí mismo.
+
+## 2026-06-15 — Confirmación del techo €0: A6 comarca-backfill = 0 accionable (data-blocked)
+- Último candidato €0 (§Deuda A6 "backfill 131 comarca"): investigado contra DB viva. **backfilleable=0** —
+  CERO entidades tienen `comarca_id` NULL con comarca derivable de su `municipality_code` (las que tienen muni
+  ya tienen comarca). El resto: **956** con muni pero el muni carece de comarca en `geo_municipality` (tabla geo
+  incompleta) + **53.694** sin municipality_code (sin señal). TODO data-blocked → necesita mapeo INE
+  comarca-municipio externo (data-acquisition) o geocoding (la muni-gap A6 ya declarada). NO hay backfill €0 limpio.
+- **TECHO €0 CONFIRMADO EXHAUSTIVAMENTE**. Frente €0 de la misión barrido punto-por-punto A→F + §Deuda:
+  A(SERIE completa + A7 cdp átomo), B(B1/β/B7 sellados + B2 verification-stack completo + G1-national §Deuda
+  cerrado + price_trap evaluado), C(C3/B7 sellado; C1/C2=scraping), D(D1 LLM hardware-gated evaluado; D2 API
+  rate-limit+cache sellado), E(E1 docs + E2 reshape geo+Tier-1 sellados), F(F1 cadencia + F2 tools + F3 doctrina).
+  **Todo lo restante es harvest/spend/hardware/data-gated** = la fase "cosecha/spend DESPUÉS" que el usuario
+  difirió explícitamente ("gasto inviable hasta que esté todo configurado A-Z"). El €0-config A-Z está completo.
