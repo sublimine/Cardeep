@@ -222,12 +222,30 @@ async def transition(
     from_state = item["state"]
     assert_valid_transition(from_state, to_state)
 
-    # Closure proof guard
-    if to_state == "RESOLVED" and verdict_id is None:
-        raise ValueError(
-            f"RESOLVED requires verdict_id — no independent recheck recorded "
-            f"for item {item_id}"
+    # Closure proof guard (V4 §4.2 + audit F7): RESOLVED needs not just *a* verdict_id but a
+    # verdict that is a REAL proof — TRUSTWORTHY with quorum_n>=2. A REFUTED/UNVERIFIED verdict, or
+    # a grandfathered TRUSTWORTHY with quorum_n=0, is a closure proof that is not a proof. The DB
+    # trigger trg_gestion_resolved_proof (0036) is the hard guarantee; this is the fail-fast mirror.
+    if to_state == "RESOLVED":
+        if verdict_id is None:
+            raise ValueError(
+                f"RESOLVED requires verdict_id — no independent recheck recorded "
+                f"for item {item_id}"
+            )
+        proof = await conn.fetchrow(
+            "SELECT verdict, quorum_n FROM verification_verdict WHERE id = $1",
+            verdict_id,
         )
+        if proof is None:
+            raise ValueError(
+                f"RESOLVED verdict_id {verdict_id} does not exist (item {item_id})"
+            )
+        if proof["verdict"] != "TRUSTWORTHY" or (proof["quorum_n"] or 0) < 2:
+            raise ValueError(
+                f"RESOLVED requires a TRUSTWORTHY verdict with quorum_n>=2; verdict_id "
+                f"{verdict_id} is verdict={proof['verdict']} quorum_n={proof['quorum_n']} "
+                f"(item {item_id}) — no real recheck = no closure"
+            )
 
     # Build the UPDATE
     update_parts = ["state = $2"]
