@@ -26,6 +26,7 @@ from typing import Any
 import pytest
 
 from pipeline.identity.cluster_vehicles import (
+    PHOTO_HIGH_COLLISION_K,
     UnionFind,
     _build_cluster_table,
     _build_edges,
@@ -623,3 +624,204 @@ class TestUnionFind:
         uf.union("A", "B")
         uf.union("A", "B")
         assert uf.find("A") == uf.find("B")
+
+
+# ---------------------------------------------------------------------------
+# Photo high-collision guard (new, 2026-06-15)
+# ---------------------------------------------------------------------------
+
+
+class TestPhotoHighCollisionGuard:
+    """A photo_url shared by >= PHOTO_HIGH_COLLISION_K listings is catalogue/stock
+    and must NOT be used as a merge signal (Signal A disabled for that URL)."""
+
+    def _make_stock_photo_vehicles(self, count: int, photo: str) -> list[dict]:
+        """Create `count` vehicles all sharing the same photo URL."""
+        return [
+            _vehicle(
+                f"V{i}",
+                entity_ulid=f"ENT{i}",
+                km=50000 + i * 1000,
+                price=Decimal("8000"),
+                photo_url=photo,
+                province_code="28",
+            )
+            for i in range(count)
+        ]
+
+    def test_stock_photo_above_threshold_does_not_merge(self) -> None:
+        """A photo shared by >= PHOTO_HIGH_COLLISION_K distinct listings must NOT
+        produce any merge edges (catalogue/stock image)."""
+        stock_photo = "https://www1.bcaimage.com/document/placeholder.jpg"
+        vehicles = self._make_stock_photo_vehicles(PHOTO_HIGH_COLLISION_K, stock_photo)
+
+        edges, esm = _build_edges(vehicles)
+        # No photo_url edges should be produced for the high-collision photo
+        photo_edges = [(a, b) for a, b, sig in edges if sig in ("photo_url", "both")]
+        assert photo_edges == [], (
+            f"A photo shared by {PHOTO_HIGH_COLLISION_K} listings must not produce merge edges"
+        )
+
+    def test_stock_photo_above_threshold_all_singletons(self) -> None:
+        """All vehicles sharing a high-collision photo must remain singletons."""
+        stock_photo = "https://cdn.dealerk.es/cars/placeholder/placeholder-0x250.png"
+        vehicles = self._make_stock_photo_vehicles(PHOTO_HIGH_COLLISION_K, stock_photo)
+
+        edges, esm = _build_edges(vehicles)
+        cluster_rows = _build_cluster_table(vehicles, edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == len(vehicles), (
+            "Each vehicle sharing a catalogue photo must remain its own cluster"
+        )
+
+    def test_unique_photo_below_threshold_still_merges(self) -> None:
+        """A photo shared by < PHOTO_HIGH_COLLISION_K listings (legitimate cross-platform
+        duplicate) must still be merged via Signal A."""
+        unique_photo = "https://cdn.wallapop.com/img/real_used_car_xyz123.jpg"
+        # Use 3 listings (well below K=12): two platforms listing the same car
+        vehicles = [
+            _vehicle("V1", entity_ulid="ENT1", km=75000, photo_url=unique_photo,
+                     province_code="28"),
+            _vehicle("V2", entity_ulid="ENT2", km=75000, photo_url=unique_photo,
+                     province_code="08"),
+            _vehicle("V3", entity_ulid="ENT3", km=75000, photo_url=unique_photo,
+                     province_code="46"),
+        ]
+
+        edges, esm = _build_edges(vehicles)
+        cluster_rows = _build_cluster_table(vehicles, edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            f"A photo shared by 3 listings (< K={PHOTO_HIGH_COLLISION_K}) "
+            f"must still trigger Signal A merge"
+        )
+
+    def test_at_threshold_minus_one_still_merges(self) -> None:
+        """K-1 listings sharing a photo must still merge (boundary: K-1 is legitimate)."""
+        photo = "https://cdn.example.com/borderline_photo.jpg"
+        count = PHOTO_HIGH_COLLISION_K - 1
+        vehicles = self._make_stock_photo_vehicles(count, photo)
+
+        edges, esm = _build_edges(vehicles)
+        cluster_rows = _build_cluster_table(vehicles, edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            f"K-1={count} listings sharing a photo must still merge (below high-collision threshold)"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Firma non-null-price guard (new, 2026-06-15)
+# ---------------------------------------------------------------------------
+
+
+class TestFirmaNonNullPriceGuard:
+    """Signal B (firma) requires both vehicles to have price IS NOT NULL.
+    A NULL price means we cannot verify price similarity → firma must not merge."""
+
+    def test_firma_null_price_does_not_merge(self) -> None:
+        """Two vehicles with identical firma but price=NULL must NOT merge via firma.
+        This is the VW Caddy scenario: 1,752 listings with price=NULL and a generic
+        templated title all collapsed into 1 cluster in the previous run."""
+        va = _vehicle(
+            "V1", entity_ulid="ENT1",
+            make="volkswagen", model="caddy", year=2019, km=120000,
+            price=None,  # NULL price
+            title="Volkswagen Caddy",
+            province_code="28",
+        )
+        vb = _vehicle(
+            "V2", entity_ulid="ENT1",  # same entity (strongest anti-FP corroboration)
+            make="volkswagen", model="caddy", year=2019, km=120000,
+            price=None,  # NULL price
+            title="Volkswagen Caddy",
+            province_code="28",
+        )
+
+        edges, esm = _build_edges([va, vb])
+        firma_edges = [(a, b) for a, b, sig in edges if sig in ("firma", "both")]
+        assert firma_edges == [], (
+            "NULL price must block firma merge regardless of entity/title corroboration"
+        )
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "Two vehicles with price=NULL must remain distinct (cannot verify price similarity)"
+        )
+
+    def test_firma_one_null_price_does_not_merge(self) -> None:
+        """If ONE of the two vehicles has price=NULL, firma must not merge."""
+        va = _vehicle(
+            "V1", entity_ulid="ENT1",
+            make="seat", model="ibiza", year=2020, km=50000,
+            price=Decimal("8000"),  # valid price
+            title="Seat Ibiza",
+            province_code="28",
+        )
+        vb = _vehicle(
+            "V2", entity_ulid="ENT1",
+            make="seat", model="ibiza", year=2020, km=50000,
+            price=None,  # NULL price on the other
+            title="Seat Ibiza",
+            province_code="28",
+        )
+
+        edges, esm = _build_edges([va, vb])
+        firma_edges = [(a, b) for a, b, sig in edges if sig in ("firma", "both")]
+        assert firma_edges == [], (
+            "One NULL price must block firma merge (cannot compute ±2% tolerance)"
+        )
+
+    def test_firma_valid_price_within_tolerance_merges(self) -> None:
+        """Regression: both vehicles with valid price ±2% must still merge via firma."""
+        va = _vehicle(
+            "V1", entity_ulid="ENT1",
+            make="seat", model="ibiza", year=2020, km=50000,
+            price=Decimal("8000"),
+            title="Seat Ibiza 2020",
+            province_code="28",
+        )
+        vb = _vehicle(
+            "V2", entity_ulid="ENT1",
+            make="seat", model="ibiza", year=2020, km=50000,
+            price=Decimal("8100"),  # +1.25%, within ±2%
+            title="Seat Ibiza 2020",
+            province_code="28",
+        )
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            "Both-valid-price firma match within ±2% must still merge (non-null-price guard must not break legitimate merges)"
+        )
+
+    def test_km0_guard_still_applies_with_null_price(self) -> None:
+        """km=0 guard has precedence over the null-price guard — km=0 without VIN
+        must not merge regardless of price (regression check for guard ordering)."""
+        va = _vehicle(
+            "V1", entity_ulid="ENT1",
+            make="volkswagen", model="golf", year=2024, km=0,
+            price=None,
+            title="Volkswagen Golf",
+            province_code="28",
+            vin_ref=None,
+        )
+        vb = _vehicle(
+            "V2", entity_ulid="ENT1",
+            make="volkswagen", model="golf", year=2024, km=0,
+            price=None,
+            title="Volkswagen Golf",
+            province_code="28",
+            vin_ref=None,
+        )
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "km=0 without VIN must not merge — km=0 guard must remain intact"
+        )

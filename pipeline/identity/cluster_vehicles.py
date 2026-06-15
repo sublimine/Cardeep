@@ -79,6 +79,20 @@ SCOPE_CONDITION = "status = 'available'"
 # Price tolerance for firma-based matching: ±2% of the lower price.
 PRICE_TOL_PCT = 0.02
 
+# Photo high-collision threshold: a normalized photo_url shared by >= K distinct
+# listings is classified as a catalogue/stock photo (not a unique physical-car photo)
+# and is therefore EXCLUDED from Signal A merging.
+#
+# Calibration rationale (2026-06-15 production sample, 1.689M vehicles):
+#   - Legitimate cross-platform duplicates share the same photo across 2–11 platforms.
+#     Histogram shows 126,754 photos at cnt=2, then a smooth decay through cnt=11 (5 photos).
+#   - At cnt=12 the curve breaks: confirmed catalogue/stock URLs appear
+#     (BCA image placeholder shared 1,752×, SEAT render shared 220–274×,
+#     Flexicar "coming_soon.jpg" shared 331×, Dealerk placeholder shared 83×).
+#   - K=12 is the natural elbow: 63 photos qualify (all verified stock/placeholder),
+#     while the 126,874 photos at cnt ≤ 11 are preserved as valid merge signals.
+PHOTO_HIGH_COLLISION_K = 12
+
 # Blocking rules stored for audit / reproducibility.
 BLOCKING_RULES: list[str] = [
     "photo_url normalized (exact): same CDN photo = same physical car [signal A, sufficient alone]; DISABLED for km=0/NULL unless shared non-null vin_ref",
@@ -87,6 +101,18 @@ BLOCKING_RULES: list[str] = [
         "+ (same normalized_title OR same entity_ulid) [signal B, anti-FP guards mandatory]; DISABLED for km=0/NULL unless shared non-null vin_ref"
     ),
     "km=0/NULL guard: new/catalogue stock listing treated as distinct unit unless vin_ref matches; declared bias = possible cross-platform over-count of new-car stock",
+    (
+        f"photo_url high-collision guard [Signal A]: a normalized photo_url shared by "
+        f">= {PHOTO_HIGH_COLLISION_K} distinct listings is classified as catalogue/stock photo "
+        f"and is EXCLUDED from merge decisions; calibrated on 2026-06-15 production data "
+        f"(elbow at cnt=12; 63 stock URLs identified vs 126,874 valid cross-platform photos)"
+    ),
+    (
+        "firma non-null-price guard [Signal B]: both vehicles must have price IS NOT NULL "
+        "for the ±2% price tolerance check to apply; NULL price vacuously satisfies ±2% "
+        "and causes over-merge of distinct units with generic/templated titles "
+        "(e.g. VW Caddy: 1,752 listings → 1 cluster in previous run)"
+    ),
 ]
 
 
@@ -279,12 +305,31 @@ def _build_edges(
         if norm:
             idx_photo[norm].append(v["vehicle_ulid"])
 
+    # Photo high-collision guard: identify catalogue/stock photo URLs.
+    # A normalized photo_url shared by >= PHOTO_HIGH_COLLISION_K distinct listings
+    # is a catalogue image (placeholder, brand render, etc.), not a unique physical-car
+    # photo.  Merging on such URLs produces giant false-positive clusters (e.g. the VW
+    # Caddy BCA placeholder shared 1,752×).  We exclude these URLs from Signal A.
+    high_collision_photos: frozenset[str] = frozenset(
+        norm
+        for norm, bucket in idx_photo.items()
+        if len(bucket) >= PHOTO_HIGH_COLLISION_K
+    )
+    log.info(
+        "  Photo high-collision URLs (>=%d listings): %d excluded from Signal A",
+        PHOTO_HIGH_COLLISION_K,
+        len(high_collision_photos),
+    )
+
     # Build a lookup to check km/vin_ref per ulid for the guard
     _v_by_ulid: dict[str, dict] = {v["vehicle_ulid"]: v for v in vehicles}
 
     photo_edges: set[tuple[str, str]] = set()
-    for bucket in idx_photo.values():
+    for norm, bucket in idx_photo.items():
         if len(bucket) < 2:
+            continue
+        # Photo high-collision guard: skip catalogue/stock photo URLs.
+        if norm in high_collision_photos:
             continue
         for i in range(len(bucket)):
             for j in range(i + 1, len(bucket)):
@@ -339,6 +384,16 @@ def _build_edges(
                 if _is_new_car(va) or _is_new_car(vb):
                     if not _can_merge_new_cars(va, vb):
                         continue
+
+                # Firma non-null-price guard: both vehicles must have a real price.
+                # A NULL price vacuously satisfies the ±2% tolerance check (both
+                # None values return False from _prices_within_tolerance, which would
+                # already block — but the intent is explicit: NULL price means we
+                # cannot confirm price similarity, so firma must not merge).
+                # This kills the VW Caddy over-merge: 1,752 listings with price=NULL
+                # and a generic templated title collapsed into 1 cluster.
+                if va.get("price") is None or vb.get("price") is None:
+                    continue
 
                 # Price guard: must be within ±2%
                 if not _prices_within_tolerance(va.get("price"), vb.get("price")):
