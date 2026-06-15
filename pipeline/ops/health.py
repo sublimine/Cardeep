@@ -27,9 +27,17 @@ alert, and the breaker actually run, every cycle, against the real DB tables.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
+from datetime import datetime
 
 import asyncpg
+
+log = logging.getLogger(__name__)
+
+# GONE retirement floor (audit P2 SU-A4): reconcile_gone only retires not-re-seen vehicles when the
+# source's latest B9 coverage_pct >= this (i.e. the harvest captured ~all the inventory). Conservative.
+_GONE_MIN_COVERAGE = 0.9
 
 # ---------------------------------------------------------------------------
 # Thresholds & state machine constants (06 §2.2 / §5; defaults tunable per source via
@@ -87,6 +95,7 @@ async def record_run(
     declared_total: int | None = None,
     captured_distinct: int | None = None,
     platform_ulid: str | None = None,
+    run_started_at: datetime | None = None,
 ) -> RunOutcome:
     """Record one harvest run outcome. THE single writer of source_health + source_breaker.
 
@@ -250,6 +259,17 @@ async def record_run(
             platform_ulid=platform_ulid,
             phase=phase,
         )
+
+    # GONE reconciliation (audit P2 SU-A4): after coverage is recorded, retire vehicles this source
+    # owns that were NOT re-seen since run_started_at — but ONLY if reconcile_gone's coverage gate
+    # confirms a ~complete harvest (coverage_pct >= _GONE_MIN_COVERAGE, verdict not REFUTED) and the
+    # gone fraction is plausible (its >50% cap). Connectors that omit run_started_at skip this entirely
+    # (no retirement) — fully backward-compatible. reconcile_gone is the single GONE-event emitter.
+    if ok and run_started_at is not None:
+        from pipeline.delta import reconcile_gone  # local import avoids a circular dependency
+        gone_n, gone_reason = await reconcile_gone(
+            conn, source_key, run_started_at, min_coverage=_GONE_MIN_COVERAGE)
+        log.info("reconcile_gone[%s]: %s", source_key, gone_reason)
 
     return outcome
 

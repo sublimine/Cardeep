@@ -110,3 +110,40 @@ def test_min_coverage_none_is_backward_compatible():
         assert n == 0
         assert "no available vehicles" in reason  # reached the count path, no coverage check
     _run(body)
+
+
+_SRC_INTEG = "test-record-run-gone-integ"
+
+
+@SKIP
+def test_record_run_wires_reconcile_gone_when_run_started_at_given():
+    # The central integration: record_run(ok, declared_total, run_started_at) records coverage then
+    # invokes reconcile_gone. This test source owns no vehicles -> captured_db=0 -> coverage 0 < floor
+    # -> reconcile_gone SKIPS on its coverage gate (no retirement). The point: record_run wires through
+    # to reconcile_gone without crashing, and retires nothing on an incomplete/zero-coverage harvest.
+    from pipeline.ops.health import record_run
+
+    async def body(c):
+        await c.execute("DELETE FROM source_coverage WHERE source_key=$1", _SRC_INTEG)
+        out = await record_run(c, _SRC_INTEG, ok=True, rows=5, declared_total=100,
+                               captured_distinct=50, run_started_at=_T0)
+        assert out is not None  # completed; reconcile_gone was invoked + coverage-gated, no exception
+        # No vehicles exist for this source, so nothing could be retired regardless.
+        gone = await c.fetchval(
+            "SELECT count(*) FROM vehicle_event WHERE event_type='GONE' "
+            "AND entity_ulid IN (SELECT entity_ulid FROM entity_source WHERE source_key=$1)",
+            _SRC_INTEG)
+        assert gone == 0
+    _run(body)
+
+
+@SKIP
+def test_record_run_skips_gone_without_run_started_at():
+    # Backward-compat: an unmigrated connector (no run_started_at) never triggers GONE.
+    from pipeline.ops.health import record_run
+
+    async def body(c):
+        out = await record_run(c, _SRC_INTEG, ok=True, rows=5, declared_total=100,
+                               captured_distinct=50)
+        assert out is not None
+    _run(body)
