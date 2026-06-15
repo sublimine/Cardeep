@@ -110,6 +110,7 @@ async def reconcile_gone(
     run_started_at: datetime,
     *,
     max_gone_fraction: float = 0.5,
+    min_coverage: float | None = None,
 ) -> tuple[int, str]:
     """Mark stale vehicles from source_key as gone (not re-seen in the latest run).
 
@@ -140,6 +141,26 @@ async def reconcile_gone(
         (gone_count, reason) — gone_count is 0 when skipped/aborted; reason is
         always a non-empty explanation.
     """
+    # COVERAGE GATE (audit P2 SU-A4 GONE): only retire not-re-seen vehicles when the latest harvest
+    # was confirmed ~complete. A partial harvest leaves real inventory "not re-seen"; the >50% cap
+    # below catches GROSS partials, but a 60%-complete harvest (40% not-seen) slips under it and would
+    # falsely retire legit stock. The B9 coverage verdict is the completeness signal: refuse to retire
+    # unless captured/declared >= min_coverage and the verdict is not REFUTED. "Better a hole than a lie."
+    if min_coverage is not None:
+        cov = await conn.fetchrow(
+            "SELECT coverage_pct, verdict FROM source_coverage WHERE source_key = $1", source_key)
+        if cov is None:
+            return 0, (f"reconcile_gone SKIPPED source_key={source_key!r}: no coverage verdict — "
+                       f"cannot confirm a complete harvest, refusing to retire any vehicle.")
+        cov_pct = float(cov["coverage_pct"]) if cov["coverage_pct"] is not None else None
+        if cov_pct is None or cov_pct < min_coverage:
+            return 0, (f"reconcile_gone SKIPPED source_key={source_key!r}: coverage {cov_pct} < floor "
+                       f"{min_coverage} — harvest incomplete; not-re-seen vehicles are likely "
+                       f"un-captured, NOT gone.")
+        if cov["verdict"] == "REFUTED":
+            return 0, (f"reconcile_gone SKIPPED source_key={source_key!r}: coverage verdict REFUTED "
+                       f"(inconsistent counts) — refusing to retire on an untrustworthy harvest.")
+
     # How many vehicles this source currently owns as available (the denominator).
     available_count: int = await conn.fetchval(
         """SELECT COUNT(*)
