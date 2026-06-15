@@ -161,7 +161,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 
 | SU | Definición | GATE | Estado |
 |---|---|---|---|
-| **SU-R1** | Desguace E2E (numerador) | workflow E2E desguace (1.292 CATs, Opisto/own-site); inventario >0 con VAM; ≥1 provincia sellada en desguace | ⬜ |
+| **SU-R1** | Desguace E2E (numerador) | workflow E2E desguace (1.292 CATs, Opisto/own-site); inventario >0 con VAM; ≥1 provincia sellada en desguace | ⬜ RECON: 1.895 desguaces (1.292 DGT+603), 283 con web, **0 inventario**. Greenfield (sin receta). Fuente=Opisto/own-sites. NOTA Director: inventario desguace=despiece/scrap (valor consumidor < venta); rendimiento limitado por techo schema.org ~1,5%. Frontera del numerador €0. |
 | **SU-R2** | Concesionario harvest | cosecha FACONAUTO más allá de OEM-VO; servido sube de 11,6% con VAM | ⬜ |
 | **SU-R3** | Filtrado sells_cars (sin ruido) | `sells_cars` resuelto en 100% de `kind=garaje`; ruido fuera; particular/POS coherente | ⬜ |
 | **SU-R4** | Cobertura 100% + cierre | cada segmento sellado o gap-con-causa; Canarias/Ceuta/Melilla cerrados | ⬜ |
