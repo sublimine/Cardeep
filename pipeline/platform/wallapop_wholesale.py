@@ -1332,8 +1332,12 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
         # wallapop cars never drop, no professional car is touched. Idempotent across re-runs.
         await cleanup_legacy_buckets(conn, platform_ulid, stats)
 
-        recipe_path = write_recipe(platform_code, WP_PLATFORM_RECIPE)
-        print(f"[wallapop_wholesale] recipe written: {recipe_path}")
+        # Audit P2: wallapop_facet is the CANONICAL wallapop harvester (seller_type×price, ~651k).
+        # This flat wholesale path must NOT write the platform recipe — facet owns CDP-ES-00-EMRH0TWQ;
+        # last-writer-wins would clobber the canonical facet recipe (and the stale geo-grid one it
+        # described claimed 'lat/long HONORED', which the facet proved false).
+        recipe_path = "(not written — wallapop_facet owns the canonical recipe)"
+        print(f"[wallapop_wholesale] recipe: {recipe_path}")
 
         # VAM count quorum for the slice — THREE orthogonal DB paths that all measure
         # "distinct cageable cars in this slice", each derived INDEPENDENTLY of the others:

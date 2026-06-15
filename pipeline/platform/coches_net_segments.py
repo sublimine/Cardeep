@@ -438,7 +438,9 @@ async def harvest(segments: list[str], concurrency: int = 8) -> dict:
             "edge_flag": "platform_listing.segment in (new,km0,renting)",
             "verified_live": "2026-06-13",
         }
-        recipe_path = write_recipe(platform_code, recipe)
+        # Audit P2: coches_net_facet owns the canonical coches.net recipe (CDP-ES-00-TKRV45RP). This
+        # segments path must NOT write it — last-writer-wins would clobber the canonical facet recipe.
+        recipe_path = "(not written — coches_net_facet owns the canonical recipe)"
 
         total_caged = sum(s.get("cars_caged", 0) for s in per_segment.values())
         run_ok = fetch_error is None and total_caged > 0

@@ -1010,8 +1010,12 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES,
                JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                WHERE pl.platform_entity_ulid = $1""", platform_ulid)
 
-        recipe_path = write_recipe(platform_code, COCHES_PLATFORM_RECIPE)
-        print(f"[coches_net_wholesale] recipe written: {recipe_path}")
+        # Audit P2: coches_net_facet is the CANONICAL coches.net harvester (province×price-band
+        # partition, ~272k). This wholesale path is the ~500-car relevance-capped slice and must NOT
+        # write the platform recipe — facet owns CDP-ES-00-TKRV45RP; last-writer-wins would clobber
+        # the canonical facet recipe with the capped one.
+        recipe_path = "(not written — coches_net_facet owns the canonical recipe)"
+        print(f"[coches_net_wholesale] recipe: {recipe_path}")
 
         # VAM count quorum for the slice — THREE orthogonal like-with-like paths that
         # all measure "distinct cageable cars in this slice":
