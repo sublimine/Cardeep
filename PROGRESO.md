@@ -871,3 +871,32 @@
 - **Conclusión**: el harvest FUNCIONA en esta terminal (2 motores fuertes + delta + VAM real). Listo para que el
   VPS arranque lo que aquí funciona. Pendiente: barrido por-conector del resto de las 44 familias (campaña de
   validación, cada uno con su targeting) — el CORE (pipeline + mis cambios + 2 motores) ya está probado.
+
+## 2026-06-15 (cont.) — CAMPAÑA DE VALIDACIÓN POR-CONECTOR + cierre H-2 (drift de migraciones)
+- **Herramienta reproducible `scripts/validate_connectors.py`** (commit 5b19efe): smoke de cada conector en scope
+  mínimo (€0), captura verdict VAM + cars-caged + exit, escribe `state/validation_matrix.json`. Serial por diseño
+  (single-producer, cicatriz AS24). Multi-filtro + merge → re-run dirigido sin perder la matriz.
+- **Sweep en background (bodqwxjcu)** — parcial #1-23 (de 32): DOMINANTE TRUSTWORTHY con coches reales: hyundai
+  1962, kia 1510, milanuncios 10667, subastas 3907, coches.com 200, volvo/jlr/suzuki 236, rentacar 172, coches.net
+  100, audi 96, +carandclassic/miclasico/vo_chains/seat/ford/nissan/merc/spoticar/dasweltauto/renew. 3 incidencias,
+  TODAS por args míos (no regresión de conector): bmw_mini + motor_es (ARG: usan --dealers/--limit, no --pages),
+  autocasion_facet (TIMEOUT: faltaba --max-pages-per-slice). Corregidas en el harness (pendiente re-run que lo
+  PRUEBE — no declaro "fixed" sin RAN real).
+- **Honestidad de cobertura (sin cap silencioso)**: de 43 módulos platform, el harness v1 cubría 32. Auditados los
+  11 restantes → OMITIDO real: **Wallapop** (C2C mayor) + faciliteacoches_racc + group_importador + subastacar +
+  autocasion_wholesale → AÑADIDOS (2ª tanda). Excluidos-a-propósito documentados: autoscout24 (cicatriz AS24,
+  stealth), coches_net_facet/segments + wallapop_facet + seat_cupra_new_stock (estrategias hermanas de host ya
+  probado), generic_dealer_site (helper sin main).
+- **H-2 CERRADO (drift SHA256 de migraciones)** — commit 96c2676: 0018/0026/0027/0028 archivo≠ledger. Probado
+  COSMÉTICO antes de tocar (los 10 objetos clave existen en esquema vivo + git single-commit/additions-only, sin
+  regresión de DDL forward). `migrate.py` ahora tiene `verify` (recomputa sha vs ledger, exit 1 = gate CI) y
+  `repair` (reconcilia ledger→archivo, acción admin deliberada estilo Flyway). Reconciliado → verify limpio
+  (27 match / 0 drift). status pending=0 (sin archivos sin-track).
+- **H-9 entendido al átomo (NO tocado)**: cdp_code = `CDP-ES-{NN}-{8-char digest}`; el digest NO incluye provincia
+  pero el prefijo NN sí → mismo dealer con provincia distinta = 2 códigos. 880 suffix-groups "split" en vivo, pero
+  el top (1 sufijo en 26 provincias) es digest-FALLBACK (identidad faltante → colisión entre dealers distintos),
+  ya MITIGADO por dedup deep_link 0027. NO es quick-fix; cambiar el hash re-acuñaría 390k códigos (prohibido).
+- **Batch €0 post-sweep (queued)**: F2 (trigger BEFORE TRUNCATE en verdict_audit), F7 (CHECK/FK quorum en
+  gestion_item.verdict_id RESOLVED), /health split (liveness-unauth / counts-authed — CAMBIA diseño GAP-7, requiere
+  flag de revisión), H-9 (investigación enfocada). Gated tras el sweep (DDL/identity-critical no se tocan con el
+  harvest escribiendo).
