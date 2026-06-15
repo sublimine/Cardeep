@@ -1024,7 +1024,10 @@ async def harvest_brand(conn: asyncpg.Connection, geo: GeoResolver, brand: Brand
     run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
     run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
     outcome = await record_run(conn, brand.source_key, ok=run_ok, rows=stats["cars_caged"],
-                               error=run_error, http_status=last_http)
+                               error=run_error, http_status=last_http,
+                               declared_total=stats.get("declared_full"),
+                               captured_distinct=stats.get("harvested_cageable"),
+                               platform_ulid=platform_ulid)
     stats["health_status"] = outcome.status
     stats["breaker_state"] = outcome.breaker_state
     if not run_ok:
