@@ -351,3 +351,20 @@
 - **Conclusión honesta**: "SPAIN-SEALED 52/52 PLENO en cobertura" NO es alcanzable €0 hoy — requiere CAPA B (semanas).
   Lo €0-alcanzable AHORA: NATIONAL-SEALED venta (88%, gap irreducible confesado) + desguace discovery limpio +
   concesionario medido. Sellar los gaps REDUCIBLES (Overture/OEM) como "hecho" sería maquillaje — prohibido.
+
+## 2026-06-15 — SU-A9 API: el gate cazó 2 bugs + descubrió duplicación de entidades
+- Build del API (agente: 7 gaps cerrados, FastAPI sirve solo sellado) **GATEADO contra la DB — 2 bugs cazados**:
+  1. `/health` dealers contaba **61.551 filas-alias** de v_canonical → corregido a
+     `count(DISTINCT canonical_cdp_code)` = **42.259** (sello B1). El sello no llegaba al producto.
+  2. `/inventory` (GRAVE): el filtro canonical-only GLOBAL dropeaba **102.449 coches cross-dealer**
+     que el dealer SÍ lista (su canónico global vive en otro dealer) → violaba "sacarle TODO su stock".
+     Reescrito a dedup INTRA-cluster `DISTINCT ON (canonical_vehicle_ulid)`. Verificado sobre dealer de
+     muestra: 17.479 (correcto) vs 17.453 (el agente perdía 26). Tests reescritos con cross-check DB no-frágil.
+- Targeted 6/6 PASS (inventario+health); **suite completa 85/85 PASS** (494s, cero regresiones).
+- **DESCUBRIMIENTO al verificar por caminos distintos** (doctrina antialucinación): los 102.449 cross-dealer
+  son 65% mismo trade_name. Muestra de 8 parejas reales = **el MISMO coche** (título+km-exacto+precio
+  idénticos; **6/8 con el MISMO deep_link**). ⟹ **B7 (1.486.285) NO sobre-fusiona — es CORRECTO**; la raíz
+  es **duplicación de ENTIDADES**: el mismo dealer/listing existe como ≥2 entidades que B1/ingest no dedupló.
+  Cuantificado: **6.876 canónicos (16,3%) comparten nombre+provincia** → el dealer-count **42.259 es un TECHO**
+  (real ~≥35.400; la cota incluye cadenas D-11 + homónimos genuinos, el gap real de B1 es un subconjunto).
+  **Nuevo SU-B-DEDUP: re-gate B1/ingest entity-dedup.** No invalida B7 ni el fix del API.

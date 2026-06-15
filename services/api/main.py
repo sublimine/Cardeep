@@ -1,4 +1,4 @@
-"""Cardeep live API (F2 skeleton -> F6 full).
+"""Cardeep live API (F2 skeleton -> F6 full, all 7 gaps closed).
 
 Serves per-entity inventory and delta over the PostgreSQL backbone.
 Consistent envelope: {ok, data, error, meta}.
@@ -16,8 +16,25 @@ The ``meta`` block for paginated responses carries:
 
 ``has_more`` is True when the DB returned exactly ``size`` rows, meaning
 there MAY be a next page.  A full COUNT(*) is intentionally avoided on
-tables with 500 k+ rows — for wallapop 576 k listings a SELECT COUNT(*)
-costs ~40 ms extra per request and is not worth it.
+tables with 500 k+ rows.
+
+Sealed product surface
+----------------------
+  - /entities/{cdp}/inventory dedups WITHIN the dealer cluster by
+    canonical_vehicle_ulid (collapses the dealer's own cross-platform
+    duplicates; KEEPS cars whose global canonical sits in another dealer —
+    the dealer genuinely lists them). /health reports the GLOBAL unique count
+    (v_canonical_vehicle canonical-only + available = 1 486 285).
+  - /geo endpoints serve only active non-particular entities (status='active'
+    AND kind <> 'particular').
+  - /health reports sealed dealer count (v_canonical) and sealed vehicle
+    count (v_canonical_vehicle canonical + available).
+  - /delta is cluster-aware: events from ALL cluster members.
+  - /vehicles/{ulid} resolves aliases to canonical; /vehicles/{ulid}/history
+    returns the full event stream for a vehicle.
+  - /geo/{province}/municipalities/{muni}/entities scopes to a municipality.
+  - /alerts returns active (unresolved) alerts with origin.
+  - /sources returns source_health rows for monitoring.
 """
 from __future__ import annotations
 
@@ -37,24 +54,17 @@ DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localho
 # B3.5 — API key authentication (backward-compatible).
 #
 # Behaviour:
-#   CARDEEP_API_KEY not set in environment  ->  public mode; all callers pass (no change
-#                                               to existing behaviour — all existing tests
-#                                               pass without providing a key).
-#   CARDEEP_API_KEY set in environment      ->  protected mode; callers must send the
-#                                               'X-API-Key' header with the correct value.
-#                                               Missing or wrong key -> HTTP 401.
+#   CARDEEP_API_KEY not set in environment  ->  public mode; all callers pass
+#   CARDEEP_API_KEY set in environment      ->  protected mode; X-API-Key required
 #
-# Applied via Depends(require_api_key) on data endpoints only (entities / platforms / geo /
-# vehicles). NOT applied to /health so that liveness probes and monitoring always reach it.
+# Applied via Depends(require_api_key) on data endpoints only.
+# NOT applied to /health so that liveness probes always reach it.
 # ---------------------------------------------------------------------------
 
 def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
-    """FastAPI dependency: enforce the API key when CARDEEP_API_KEY is set in the
-    environment. No-op (public) when the env var is absent so all existing callers and
-    tests continue to work without any modification."""
+    """FastAPI dependency: enforce the API key when CARDEEP_API_KEY is set."""
     configured_key = os.environ.get("CARDEEP_API_KEY")
     if configured_key is None:
-        # Public mode — key not configured; grant access unconditionally.
         return
     if x_api_key != configured_key:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
@@ -69,7 +79,7 @@ async def lifespan(app: FastAPI):
         await app.state.pool.close()
 
 
-app = FastAPI(title="Cardeep API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Cardeep API", version="0.2.0", lifespan=lifespan)
 
 
 def ok(data: Any, **meta: Any) -> JSONResponse:
@@ -117,10 +127,7 @@ async def resolve_cluster(conn: asyncpg.Connection, cdp_code: str) -> ClusterInf
        falling back to the entity's own ulid for non-clustered / particular entities.
     3. Collect ALL entities whose canonical (via the same COALESCE logic) equals
        that canonical_ulid — those form the complete cluster.
-
-    Returns ClusterInfo or None if *cdp_code* does not exist.
     """
-    # Step 1 — resolve the input entity
     entity_row = await conn.fetchrow(
         """
         SELECT e.entity_ulid,
@@ -138,7 +145,6 @@ async def resolve_cluster(conn: asyncpg.Connection, cdp_code: str) -> ClusterInf
     canonical_ulid: str = entity_row["canonical_ulid"]
     canonical_cdp_code: str = entity_row["canonical_cdp_code"]
 
-    # Step 2 — collect all members of the cluster
     member_rows = await conn.fetch(
         """
         SELECT e.entity_ulid,
@@ -160,12 +166,35 @@ async def resolve_cluster(conn: asyncpg.Connection, cdp_code: str) -> ClusterInf
     )
 
 
+# ---------------------------------------------------------------------------
+# GAP 1+7 fix: /health reports sealed counts
+# ---------------------------------------------------------------------------
+
 @app.get("/health")
 async def health() -> JSONResponse:
+    """Liveness probe with sealed product counts.
+
+    dealers        — sealed dealer count from v_canonical (42 259, not raw 390 621).
+    vehicles_unique_available — canonical-only + status='available' (1 486 285,
+                    not the 1 689 243 raw including cross-entity aliases).
+    events         — total event rows (not filtered: historical record).
+    provinces      — static geo table row count.
+    municipalities — static geo table row count.
+    """
     async with app.state.pool.acquire() as c:
         counts = {
-            "entities": await c.fetchval("SELECT count(*) FROM entity"),
-            "vehicles_available": await c.fetchval("SELECT count(*) FROM vehicle WHERE status='available'"),
+            "dealers": await c.fetchval(
+                "SELECT count(DISTINCT canonical_cdp_code) FROM v_canonical"
+            ),
+            "vehicles_unique_available": await c.fetchval(
+                """
+                SELECT count(*)
+                  FROM v_canonical_vehicle vc
+                  JOIN vehicle v ON v.vehicle_ulid = vc.vehicle_ulid
+                 WHERE vc.vehicle_ulid = vc.canonical_vehicle_ulid
+                   AND v.status = 'available'
+                """
+            ),
             "events": await c.fetchval("SELECT count(*) FROM vehicle_event"),
             "provinces": await c.fetchval("SELECT count(*) FROM geo_province"),
             "municipalities": await c.fetchval("SELECT count(*) FROM geo_municipality"),
@@ -173,18 +202,13 @@ async def health() -> JSONResponse:
     return ok({"status": "live", "counts": counts})
 
 
+# ---------------------------------------------------------------------------
+# Entity resolution endpoints (B1.5 — unchanged)
+# ---------------------------------------------------------------------------
+
 @app.get("/entities/{cdp_code}/canonical")
 async def get_entity_canonical(cdp_code: str, _: None = Depends(require_api_key)) -> JSONResponse:
-    """Resolve *cdp_code* to its canonical and expose the full cluster.
-
-    Response fields
-    ---------------
-    input_cdp_code    — the code requested by the caller
-    canonical_cdp_code — the authoritative code for the physical dealer
-    is_canonical      — True when input == canonical (this entity IS the representative)
-    members           — list of all cdp_codes in the cluster (canonical included)
-    n_members         — len(members); 1 for singletons
-    """
+    """Resolve *cdp_code* to its canonical and expose the full cluster."""
     async with app.state.pool.acquire() as c:
         cluster = await resolve_cluster(c, cdp_code)
         if cluster is None:
@@ -202,30 +226,21 @@ async def get_entity_canonical(cdp_code: str, _: None = Depends(require_api_key)
 
 @app.get("/entities/{cdp_code}")
 async def get_entity(cdp_code: str, _: None = Depends(require_api_key)) -> JSONResponse:
-    """Return the CANONICAL entity for *cdp_code* with aggregated cluster inventory.
-
-    Changes vs pre-B1.5
-    --------------------
-    - Resolves *cdp_code* to its canonical; serves the canonical entity row.
-    - available_inventory  — sum of available stock across ALL cluster members.
-    - canonical_cdp_code   — the canonical identifier.
-    - n_aliases            — cluster members excluding the canonical (duplicates collapsed).
-    - queried_cdp_code     — the original code the caller sent.
-    """
+    """Return the CANONICAL entity for *cdp_code* with aggregated cluster inventory."""
     async with app.state.pool.acquire() as c:
         cluster = await resolve_cluster(c, cdp_code)
         if cluster is None:
             return err(f"entity {cdp_code} not found")
 
-        # Serve the canonical entity row
         row = await c.fetchrow(
             "SELECT * FROM entity WHERE entity_ulid = $1",
             cluster.canonical_ulid,
         )
-        # Aggregate available inventory across the full cluster
         n_available = await c.fetchval(
-            "SELECT count(*) FROM vehicle "
-            "WHERE entity_ulid = ANY($1::text[]) AND status = 'available'",
+            "SELECT count(DISTINCT vc.canonical_vehicle_ulid) "
+            "FROM vehicle v "
+            "JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid "
+            "WHERE v.entity_ulid = ANY($1::text[]) AND v.status = 'available'",
             cluster.member_ulids,
         )
         data = dict(row)
@@ -238,6 +253,10 @@ async def get_entity(cdp_code: str, _: None = Depends(require_api_key)) -> JSONR
         return ok(data)
 
 
+# ---------------------------------------------------------------------------
+# GAP 6 fix: /inventory serves ONLY canonical vehicles via v_canonical_vehicle
+# ---------------------------------------------------------------------------
+
 @app.get("/entities/{cdp_code}/inventory")
 async def get_inventory(
     cdp_code: str,
@@ -245,17 +264,16 @@ async def get_inventory(
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Return available stock for ALL cluster members, deduplicated by vehicle_ulid.
+    """Return available CANONICAL stock for ALL cluster members.
 
-    Changes vs pre-B1.5
-    --------------------
-    Resolves *cdp_code* to its cluster and returns vehicles across all member entities,
-    deduped by vehicle_ulid, ordered by first_seen DESC.
+    GAP-6 fix: dedups WITHIN the cluster via DISTINCT ON (canonical_vehicle_ulid)
+    — collapses the dealer's own cross-platform duplicates (same physical car
+    listed on two of its platforms -> one) while KEEPING cars whose global
+    canonical belongs to another dealer (the dealer genuinely lists them).
+    The global canonical-only filter would wrongly drop ~102 449 cross-dealer
+    cars from the inventories that list them.
 
-    Pagination (B3.1)
-    -----------------
-    Accepts ``page`` and ``size`` query params.  Returns ``has_more`` in meta.
-    DISTINCT ON + ORDER requires a subquery to apply LIMIT/OFFSET after dedup.
+    Pagination (B3.1): accepts ``page`` and ``size``, returns ``has_more`` in meta.
     """
     offset = (page - 1) * size
     async with app.state.pool.acquire() as c:
@@ -265,18 +283,19 @@ async def get_inventory(
 
         rows = await c.fetch(
             """
-            SELECT vehicle_ulid, deep_link, title, make, model, year, km, price, currency,
-                   fuel, transmission, photo_url, status, first_seen, last_seen
-              FROM (
-                    SELECT DISTINCT ON (vehicle_ulid)
-                           vehicle_ulid, deep_link, title, make, model, year, km, price,
-                           currency, fuel, transmission, photo_url, status, first_seen, last_seen
-                      FROM vehicle
-                     WHERE entity_ulid = ANY($1::text[]) AND status = 'available'
-                     ORDER BY vehicle_ulid, first_seen DESC
-              ) deduped
-             ORDER BY first_seen DESC, vehicle_ulid
-             LIMIT $2 OFFSET $3
+            SELECT * FROM (
+              SELECT DISTINCT ON (vc.canonical_vehicle_ulid)
+                     v.vehicle_ulid, v.deep_link, v.title, v.make, v.model, v.year,
+                     v.km, v.price, v.currency, v.fuel, v.transmission, v.photo_url,
+                     v.status, v.first_seen, v.last_seen
+                FROM vehicle v
+                JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
+               WHERE v.entity_ulid = ANY($1::text[])
+                 AND v.status = 'available'
+               ORDER BY vc.canonical_vehicle_ulid, v.first_seen DESC, v.vehicle_ulid
+            ) dedup
+            ORDER BY dedup.first_seen DESC, dedup.vehicle_ulid
+            LIMIT $2 OFFSET $3
             """,
             cluster.member_ulids,
             size,
@@ -300,6 +319,10 @@ async def get_inventory(
         )
 
 
+# ---------------------------------------------------------------------------
+# GAP 4 fix: /delta is now cluster-aware (all member_ulids)
+# ---------------------------------------------------------------------------
+
 @app.get("/entities/{cdp_code}/delta")
 async def get_delta(
     cdp_code: str,
@@ -308,40 +331,56 @@ async def get_delta(
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Return vehicle events for *cdp_code*.
+    """Return vehicle events for the FULL CLUSTER of *cdp_code*.
 
-    Pagination (B3.1)
-    -----------------
-    When ``since`` is provided the window can be very large (all events from a
-    stale timestamp).  Both the ``since``-filtered and the unfiltered paths are
-    now paginated via ``page``/``size``.  The old hard-coded ``LIMIT 500`` is
-    replaced by the configurable ``size`` (max 200) so callers control depth.
+    GAP-4 fix: queries vehicle_event WHERE entity_ulid = ANY(cluster.member_ulids)
+    instead of the literal entity_ulid of the requested cdp_code.  Events from
+    all cluster members are returned, merged and ordered by observed_at DESC.
+
+    Pagination (B3.1): accepts ``page``/``size`` and optional ``since`` ISO-8601.
     """
     offset = (page - 1) * size
-    # Parse ``since`` to a timezone-aware datetime so asyncpg receives the
-    # correct Python type (it rejects raw strings for timestamptz columns).
     since_dt: datetime | None = None
     if since:
         try:
             since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
         except ValueError:
-            return err(f"invalid since format '{since}'; use ISO-8601 (e.g. 2024-01-01T00:00:00Z)", status=400)
+            return err(
+                f"invalid since format '{since}'; use ISO-8601 (e.g. 2024-01-01T00:00:00Z)",
+                status=400,
+            )
     async with app.state.pool.acquire() as c:
-        eulid = await c.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", cdp_code)
-        if eulid is None:
+        cluster = await resolve_cluster(c, cdp_code)
+        if cluster is None:
             return err(f"entity {cdp_code} not found")
+
         if since_dt is not None:
             rows = await c.fetch(
-                "SELECT event_type, old_value, new_value, observed_at FROM vehicle_event "
-                "WHERE entity_ulid=$1 AND observed_at >= $2 "
-                "ORDER BY observed_at DESC, event_type LIMIT $3 OFFSET $4",
-                eulid, since_dt, size, offset,
+                """
+                SELECT event_type, old_value, new_value, observed_at, entity_ulid
+                  FROM vehicle_event
+                 WHERE entity_ulid = ANY($1::text[])
+                   AND observed_at >= $2
+                 ORDER BY observed_at DESC, event_type
+                 LIMIT $3 OFFSET $4
+                """,
+                cluster.member_ulids,
+                since_dt,
+                size,
+                offset,
             )
         else:
             rows = await c.fetch(
-                "SELECT event_type, old_value, new_value, observed_at FROM vehicle_event "
-                "WHERE entity_ulid=$1 ORDER BY observed_at DESC, event_type LIMIT $2 OFFSET $3",
-                eulid, size, offset,
+                """
+                SELECT event_type, old_value, new_value, observed_at, entity_ulid
+                  FROM vehicle_event
+                 WHERE entity_ulid = ANY($1::text[])
+                 ORDER BY observed_at DESC, event_type
+                 LIMIT $2 OFFSET $3
+                """,
+                cluster.member_ulids,
+                size,
+                offset,
             )
         items = [{**dict(r), "observed_at": str(r["observed_at"])} for r in rows]
         return ok(
@@ -353,6 +392,11 @@ async def get_delta(
         )
 
 
+# ---------------------------------------------------------------------------
+# GAP 1 fix: /geo/{province}/entities filters active non-particular
+# GAP 3 new: /geo/{province}/municipalities/{muni}/entities
+# ---------------------------------------------------------------------------
+
 @app.get("/geo/{province_code}/entities")
 async def entities_by_province(
     province_code: str,
@@ -360,19 +404,30 @@ async def entities_by_province(
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """List entities for a province.
+    """List active non-particular entities for a province.
 
-    Pagination (B3.1)
-    -----------------
-    Madrid (province_code='28') has 49 661 entities — an unbounded response
-    was a P0 hazard.  Now paginated via ``page``/``size``.
+    GAP-1 fix: adds WHERE status='active' AND kind <> 'particular'.
+    Excludes C2C sellers and unverified entities — only trade point-of-sale
+    dealers are returned.
+
+    Pagination (B3.1): accepts ``page``/``size``.
     """
     offset = (page - 1) * size
     async with app.state.pool.acquire() as c:
         rows = await c.fetch(
-            "SELECT cdp_code, kind, trade_name, legal_name, municipality_code, is_tier1, status "
-            "FROM entity WHERE province_code=$1 ORDER BY trade_name, cdp_code LIMIT $2 OFFSET $3",
-            province_code, size, offset,
+            """
+            SELECT cdp_code, kind, trade_name, legal_name, municipality_code,
+                   is_tier1, status
+              FROM entity
+             WHERE province_code = $1
+               AND status = 'active'
+               AND kind <> 'particular'
+             ORDER BY trade_name, cdp_code
+             LIMIT $2 OFFSET $3
+            """,
+            province_code,
+            size,
+            offset,
         )
         return ok(
             [dict(r) for r in rows],
@@ -384,11 +439,59 @@ async def entities_by_province(
         )
 
 
+@app.get("/geo/{province_code}/municipalities/{muni_code}/entities")
+async def entities_by_municipality(
+    province_code: str,
+    muni_code: str,
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """GAP-3: List active non-particular dealers in a specific municipality.
+
+    Scopes to province_code + municipality_code so callers can drill
+    country → province → municipality without fetching the full province dump.
+    Applies the same active/non-particular filter as /geo/{province}/entities.
+
+    Pagination (B3.1): accepts ``page``/``size``.
+    """
+    offset = (page - 1) * size
+    async with app.state.pool.acquire() as c:
+        rows = await c.fetch(
+            """
+            SELECT cdp_code, kind, trade_name, legal_name, municipality_code,
+                   is_tier1, status
+              FROM entity
+             WHERE province_code = $1
+               AND municipality_code = $2
+               AND status = 'active'
+               AND kind <> 'particular'
+             ORDER BY trade_name, cdp_code
+             LIMIT $3 OFFSET $4
+            """,
+            province_code,
+            muni_code,
+            size,
+            offset,
+        )
+        return ok(
+            [dict(r) for r in rows],
+            page=page,
+            size=size,
+            returned=len(rows),
+            has_more=len(rows) == size,
+            province=province_code,
+            municipality=muni_code,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Existing geo endpoints (unchanged)
+# ---------------------------------------------------------------------------
+
 @app.get("/geo/{province_code}/tree")
 async def province_inventory_tree(province_code: str, _: None = Depends(require_api_key)) -> JSONResponse:
-    """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad, with a
-    clean count tree and zero NULL-geo noise (only municipality-resolved entities,
-    inner-joined through the comarca layer)."""
+    """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad."""
     async with app.state.pool.acquire() as c:
         prov = await c.fetchrow(
             "SELECT code, name, ccaa_code, ccaa_name FROM geo_province WHERE code=$1",
@@ -424,8 +527,6 @@ async def province_inventory_tree(province_code: str, _: None = Depends(require_
                 "entities": r["entities"], "compraventa": r["compraventa"],
                 "oficial": r["oficial"], "desguace": r["desguace"],
                 "plataforma": r["plataforma"]})
-        # province-only entities (have province, no municipality) reported separately,
-        # never mixed into the comarca tree as noise.
         province_only = await c.fetchval(
             "SELECT count(*) FROM entity WHERE province_code=$1 AND municipality_code IS NULL",
             province_code)
@@ -441,8 +542,7 @@ async def province_inventory_tree(province_code: str, _: None = Depends(require_
 
 @app.get("/geo/completeness")
 async def geo_completeness(_: None = Depends(require_api_key)) -> JSONResponse:
-    """National geo-completeness report: how many entities/vehicles carry the full
-    pais+PROVINCIA+COMARCA+ciudad grid vs partial, every number from a live query."""
+    """National geo-completeness report."""
     async with app.state.pool.acquire() as c:
         e_total = await c.fetchval("SELECT count(*) FROM entity")
         e_full = await c.fetchval(
@@ -480,6 +580,10 @@ async def geo_completeness(_: None = Depends(require_api_key)) -> JSONResponse:
         })
 
 
+# ---------------------------------------------------------------------------
+# Platform endpoints (unchanged)
+# ---------------------------------------------------------------------------
+
 @app.get("/platforms/{cdp_code}/inventory")
 async def platform_inventory(
     cdp_code: str,
@@ -487,14 +591,7 @@ async def platform_inventory(
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Cars linked to a platform via platform_listing, each WITH its selling-dealer
-    attribution (the dual-membership proof: platform edge + singular dealer owner).
-
-    Pagination (B3.1)
-    -----------------
-    Wallapop has 576 213 active listings — returning all in one request was a P0
-    hazard.  Now paginated via ``page``/``size`` (default 50, max 200).
-    """
+    """Cars linked to a platform via platform_listing, with selling-dealer attribution."""
     offset = (page - 1) * size
     async with app.state.pool.acquire() as c:
         prow = await c.fetchrow(
@@ -540,8 +637,7 @@ async def platform_inventory(
 
 @app.get("/vehicles/{vehicle_ulid}/platforms")
 async def vehicle_platforms(vehicle_ulid: str, _: None = Depends(require_api_key)) -> JSONResponse:
-    """The platforms a car is listed on (its platform_listing edges), plus the car's
-    singular owning dealer — proving ownership and membership are distinct axes."""
+    """Platforms a vehicle is listed on, plus its owning dealer."""
     async with app.state.pool.acquire() as c:
         vrow = await c.fetchrow(
             """SELECT v.vehicle_ulid, v.make, v.model, v.year, v.deep_link,
@@ -565,11 +661,193 @@ async def vehicle_platforms(vehicle_ulid: str, _: None = Depends(require_api_key
             d["first_seen"] = str(r["first_seen"])
             d["last_seen"] = str(r["last_seen"])
             platforms.append(d)
-        vehicle = {"vehicle_ulid": vrow["vehicle_ulid"], "make": vrow["make"],
-                   "model": vrow["model"], "year": vrow["year"], "deep_link": vrow["deep_link"],
-                   "owning_dealer": {"cdp_code": vrow["dealer_cdp_code"],
-                                     "name": vrow["dealer_name"], "kind": vrow["dealer_kind"]}}
+        vehicle = {
+            "vehicle_ulid": vrow["vehicle_ulid"],
+            "make": vrow["make"],
+            "model": vrow["model"],
+            "year": vrow["year"],
+            "deep_link": vrow["deep_link"],
+            "owning_dealer": {
+                "cdp_code": vrow["dealer_cdp_code"],
+                "name": vrow["dealer_name"],
+                "kind": vrow["dealer_kind"],
+            },
+        }
         return ok({"vehicle": vehicle, "platforms": platforms}, count=len(platforms))
+
+
+# ---------------------------------------------------------------------------
+# GAP 2 new: /vehicles/{ulid} detail + /vehicles/{ulid}/history
+# ---------------------------------------------------------------------------
+
+@app.get("/vehicles/{vehicle_ulid}/history")
+async def vehicle_history(
+    vehicle_ulid: str,
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """GAP-2: Full event history for a vehicle (NEW→PRICE_CHANGE→GONE), oldest first.
+
+    If *vehicle_ulid* is a non-canonical alias the history is still served —
+    the alias vehicle_ulid is a real row in vehicle_event; aliasing is an
+    entity-level concept for cross-dealer duplicates, not an erasure of history.
+
+    Pagination: oldest events first (ASC) so callers can replay the timeline.
+    """
+    offset = (page - 1) * size
+    async with app.state.pool.acquire() as c:
+        exists = await c.fetchval(
+            "SELECT 1 FROM vehicle WHERE vehicle_ulid = $1", vehicle_ulid)
+        if exists is None:
+            return err(f"vehicle {vehicle_ulid} not found")
+        rows = await c.fetch(
+            """
+            SELECT event_type, old_value, new_value, observed_at
+              FROM vehicle_event
+             WHERE vehicle_ulid = $1
+             ORDER BY observed_at ASC, event_type
+             LIMIT $2 OFFSET $3
+            """,
+            vehicle_ulid,
+            size,
+            offset,
+        )
+        items = [{**dict(r), "observed_at": str(r["observed_at"])} for r in rows]
+        return ok(
+            items,
+            page=page,
+            size=size,
+            returned=len(items),
+            has_more=len(items) == size,
+            vehicle_ulid=vehicle_ulid,
+        )
+
+
+@app.get("/vehicles/{vehicle_ulid}")
+async def vehicle_detail(
+    vehicle_ulid: str,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """GAP-2: Full detail for a single vehicle.
+
+    If *vehicle_ulid* is a non-canonical alias (per v_canonical_vehicle),
+    the canonical_vehicle_ulid is exposed so callers can redirect.
+    Returns 404 with coherent message when the ulid does not exist at all.
+    """
+    async with app.state.pool.acquire() as c:
+        row = await c.fetchrow(
+            """
+            SELECT v.vehicle_ulid, v.make, v.model, v.year, v.km, v.price, v.currency,
+                   v.photo_url, v.deep_link, v.title, v.fuel, v.transmission,
+                   v.status, v.first_seen, v.last_seen,
+                   vc.canonical_vehicle_ulid
+              FROM vehicle v
+              LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
+             WHERE v.vehicle_ulid = $1
+            """,
+            vehicle_ulid,
+        )
+        if row is None:
+            return err(f"vehicle {vehicle_ulid} not found")
+        data = dict(row)
+        data["price"] = float(data["price"]) if data["price"] is not None else None
+        data["first_seen"] = str(data["first_seen"])
+        data["last_seen"] = str(data["last_seen"])
+        canonical = data.pop("canonical_vehicle_ulid")
+        data["is_canonical"] = (canonical is None) or (canonical == vehicle_ulid)
+        data["canonical_vehicle_ulid"] = canonical if canonical else vehicle_ulid
+        return ok(data)
+
+
+# ---------------------------------------------------------------------------
+# GAP 5 new: /alerts (active unresolved) + /sources (source_health)
+# ---------------------------------------------------------------------------
+
+@app.get("/alerts")
+async def list_alerts(
+    page: int = Query(default=1, ge=1, description="Page number (1-based)"),
+    size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """GAP-5: Active (unresolved) alerts with exact origin.
+
+    Columns served: id, origin, severity, message, payload, created_at.
+    Sorted by severity priority (critical → warning → info) then by most
+    recent first so the most urgent alerts surface at the top.
+
+    Only rows WHERE resolved_at IS NULL are returned — resolved alerts
+    are not surfaced here (historical; use a separate query if needed).
+    """
+    offset = (page - 1) * size
+    async with app.state.pool.acquire() as c:
+        rows = await c.fetch(
+            """
+            SELECT id, origin, severity, message, payload, created_at
+              FROM alert
+             WHERE resolved_at IS NULL
+             ORDER BY
+               CASE severity
+                 WHEN 'critical' THEN 0
+                 WHEN 'warning'  THEN 1
+                 ELSE                 2
+               END,
+               created_at DESC
+             LIMIT $1 OFFSET $2
+            """,
+            size,
+            offset,
+        )
+        items = [
+            {
+                **dict(r),
+                "created_at": str(r["created_at"]),
+            }
+            for r in rows
+        ]
+        return ok(
+            items,
+            page=page,
+            size=size,
+            returned=len(items),
+            has_more=len(items) == size,
+        )
+
+
+@app.get("/sources")
+async def list_sources(_: None = Depends(require_api_key)) -> JSONResponse:
+    """GAP-5: Source health overview for all known scrapers/sources.
+
+    Columns: source_key, status, consecutive_fails, last_ok, last_fail, is_tier1.
+    Sorted: degraded/down first (most urgent), then by consecutive_fails DESC
+    so the sickest sources are at the top.
+    """
+    async with app.state.pool.acquire() as c:
+        rows = await c.fetch(
+            """
+            SELECT source_key, status, consecutive_fails,
+                   last_ok, last_fail, is_tier1
+              FROM source_health
+             ORDER BY
+               CASE status
+                 WHEN 'down'     THEN 0
+                 WHEN 'degraded' THEN 1
+                 WHEN 'unknown'  THEN 2
+                 ELSE                 3
+               END,
+               consecutive_fails DESC,
+               source_key
+            """
+        )
+        items = [
+            {
+                **dict(r),
+                "last_ok": str(r["last_ok"]) if r["last_ok"] else None,
+                "last_fail": str(r["last_fail"]) if r["last_fail"] else None,
+            }
+            for r in rows
+        ]
+        return ok(items, count=len(items))
 
 
 if __name__ == "__main__":
