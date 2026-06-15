@@ -1,0 +1,42 @@
+# Cardeep extraction recipe — CDP-ES-00-RJ109M0T
+# Reusable; re-scrape without raw crude.
+version: 1
+source: "Autorola Espana (autorola.es — Autorola Group ES car auction / remarketing)"
+scope: "platform-wholesale (ES B2B/B2C car auction: remarketing of fleet & leasing returns to dealers; Angular SPA + public REST vehiclesearch API behind anon JWT)"
+engine: "stealth_browser_js_spa+chrome131_execute (curl_cffi alone cannot boot the Angular SPA or mint the per-request anon JWT; a JS-executing stealth browser — Playwright/camoufox — is required; the REST response is captured from the browser network and ingested via scripts/cage_autorola_bca_subastas.py)"
+access: "REQUIRES JS-EXECUTING STEALTH BROWSER. The public Angular SPA (shell served from S3) mints a per-request anonymous JWT that gates the REST data layer. Plain curl_cffi cannot boot the SPA. A stealth browser (camoufox/Playwright chrome131) passes the SPA bootstrap and obtains the JWT with no login, no proxy, no cookie warm-up — the lot data itself is public (no dealer approval needed to VIEW lots; only BIDDING requires approval). defense_tier=t1_soft (cookie-gated SPA + anon JWT; no hard WAF). is_tier1=FALSE. EUR_0 (no credential)."
+data_surface: internal_api
+surface_intent: spa_rest_vehiclesearch
+endpoint: "GET https://old.autorola.es/rest/vehiclesearchenrollment/result?locale=es_ES&offset=0&limit=200[&auctionId=<id>]"
+request:
+  method: GET
+  params: "locale=es_ES, offset (row cursor 0-based), limit (page size up to 200), auctionId (optional: drain a single auction)"
+  auth: "per-request anonymous JWT in Authorization header (minted by SPA on boot; captured from browser network)"
+enumeration: "page offset=0,200,400,... until groups[].vehicleDTOS[] is empty. Filter: vehicleDTO.countryCode=='ES'. Dedup on enrollId."
+denominator: "sum of lot counts across all opened ES auction events (declared lotsCount per auction). Honest: loginRequired=true/price=None (bid gated) -> price=NULL always. Vehicle data (make/model/year/km/photo) IS public."
+platform_entity: "kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t1_soft, source_group=official_registry, role=platform, family=autorola, data_surface=internal_api"
+seller_model: "the SELLING POINT is the AUCTION SALE EVENT (the timed auction). Each lot -> entity kind=subasta (national; province NULL), canonical_key name='Autorola subasta {auctionTitle|id}'|p00, address='autorolasale:{auctionId}'; role=registry. No per-lot dealer/province on this surface."
+dual_membership: "vehicle.entity_ulid=SELLING SALE EVENT (subasta); platform_listing edge=platform<->vehicle"
+field_map:
+  deep_link: "https://www.autorola.es/vehicles/{enrollId}"
+  listing_ref: "enrollId (stable lot id + dedup key)"
+  make: "vehicleDTO.headline.split(' ')[0] (first token of headline)"
+  model: "vehicleDTO.headline[len(make):].strip()"
+  version: "vehicleDTO.details.split(',')[0].strip() (e.g. '1.0 Tsi Dsg Style Xm')"
+  year: "vehicleDTO.presentationYear regex (\\d{4}) fallback vehicleDTOS.firstReg regex (\\d{4})"
+  km: "vehicleDTOS.sortableMileage (int) fallback vehicleDTO.localizedMileage regex ([\\d.]+) (strip dots)"
+  price: "NULL always (loginRequired=true; bid gated; price not public)"
+  fuel: "vehicleDTO.details split ',' -> token in fuel vocab -> Spanish label"
+  transmission: "vehicleDTO.details split ',' -> token containing manual/auto/secuencial -> Spanish label"
+  photo_url: "vehicleDTO.pictureUrl"
+  sale: "auctionId + auctionTitle -> entity kind=subasta (the selling auction)"
+gate_documented:
+  verdict: "OVERTURNED from prior GATED (that probe used non-JS curl_cffi which cannot boot the Angular SPA). With JS-executing stealth browser the REST vehiclesearch API is fully reachable and public (verified live 2026-06-13)."
+  autorola_es_surface: "GET https://old.autorola.es/rest/vehiclesearchenrollment/result — public (anon JWT, no hard WAF, no buyer login for viewing). 1,056 ES lots / 20 auction events verified live."
+caveats:
+  jwt_per_request: "The anon JWT is minted fresh per SPA boot; it cannot be reused across sessions. The stealth browser must boot the SPA to obtain it each run."
+  price_gated: "loginRequired=True on every lot -> price=NULL (honest). Buyers need dealer approval to BID; viewing the lot is public."
+  no_province: "Auction lots have no per-lot province; the sale event is national (province NULL). No province is fabricated."
+  no_vin: "The vehiclesearch surface carries no VIN on any lot — vin_ref=NULL."
+  es_filter: "vehicleDTO.countryCode=='ES' is the correct ES gate (country of vehicle location, not auction country)."
+  ingest_script: "scripts/cage_autorola_bca_subastas.py --autorola <autorola_es_full.json> [<a2.json> ...]"

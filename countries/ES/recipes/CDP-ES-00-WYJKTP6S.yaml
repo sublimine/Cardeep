@@ -1,0 +1,42 @@
+# Cardeep extraction recipe — CDP-ES-00-WYJKTP6S
+# Reusable; re-scrape without raw crude.
+version: 1
+source: "BCA Espana (es.bca-europe.com — British Car Auctions Espana, B2B VO remarketing)"
+scope: "platform-wholesale (ES B2B car auction: fleet/leasing returns remarketed to professional dealers; SPA behind Cloudflare JS challenge + faceted-search ViewModel API; price always gated)"
+engine: "stealth_browser_js_spa+cloudflare_bypass (curl_cffi alone receives 403 'Just a moment...' Cloudflare JS challenge; a JS-executing stealth browser — Playwright/camoufox — passes the challenge; the faceted-search ViewModel JSON is captured from the browser network and ingested via scripts/cage_autorola_bca_subastas.py)"
+access: "REQUIRES JS-EXECUTING STEALTH BROWSER. Cloudflare JS challenge fronts the faceted-search API — plain curl_cffi gets 403 'Just a moment...'. A stealth browser (camoufox/Playwright chrome131) passes the JS challenge and obtains the ViewModel JSON with no login (IsUserAnonymous=true, CanViewPricing=false). Vehicle metadata (Make/Model/Derivative, year, km, fuel, photo) is public; pricing is always B2B gated. defense_tier=t2_js_challenge (Cloudflare full JS challenge). is_tier1=TRUE. EUR_0 (no credential for metadata)."
+data_surface: internal_api
+surface_intent: spa_facetedsearch_viewmodel
+endpoint: "POST https://es.bca-europe.com/buyer/facetedsearch/GetViewModel?q=&bq=salecountry_exact:ES"
+request:
+  method: POST
+  params: "q= (empty query), bq=salecountry_exact:ES (ES sale-country filter)"
+  auth: "none beyond Cloudflare challenge (stealth browser passes automatically)"
+enumeration: "ViewModel returns VehicleResults[] in pages. TotalVehicles declared in response (1,926 ES lots verified 2026-06-13). Dedup on VehicleId. Filter: VehicleType IN {car, crosscountryvehicle} (drops motorcycles + vans)."
+denominator: "TotalVehicles in GetViewModel response (1,926 verified live 2026-06-13 for scope bq=salecountry_exact:ES). Honest: CanViewPricing=false -> price=NULL always."
+platform_entity: "kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t2_js_challenge, source_group=official_registry, role=platform, family=bca_europe, data_surface=internal_api"
+seller_model: "the SELLING POINT is the SALE EVENT (the BCA auction/sale). Each lot -> entity kind=subasta (national; province NULL), canonical_key name='BCA Espana subasta {SaleName|loc}'|p00, address='bca_europesale:{SaleId}'; role=registry."
+dual_membership: "vehicle.entity_ulid=SELLING SALE EVENT (subasta); platform_listing edge=platform<->vehicle"
+field_map:
+  deep_link: "https://es.bca-europe.com/vehicle/{VehicleId}"
+  listing_ref: "RegistrationNumber fallback VehicleId (stable dedup key)"
+  make: "Make (or make)"
+  model: "Model (+ Derivative suffix if present)"
+  title: "VehicleInfoHeadline.split(',')[0].strip() fallback '{Make} {Model}'"
+  year: "RegistrationDate regex (\\d{4}) fallback VehicleInfoHeadline regex ,\\s*(\\d{4})\\s*$ fallback VehicleInfoColumn1 regex /(\\d{4})/"
+  km: "Mileage (int) fallback VehicleInfoColumn1 regex ([\\d.]+)\\s*Kil (strip dots)"
+  price: "NULL always (CanViewPricing=false; B2B bid gated; price not public)"
+  fuel: "FuelType fallback VehicleInfoColumn3 scan for gasolina/diesel/electrico/hibrido -> Spanish label"
+  transmission: "VehicleInfoColumn3 scan for manual/automatico/auto -> Spanish label"
+  photo_url: "ImageUrl (prefix https: if starts with //)"
+  sale: "SaleId/SaleName (structured) fallback SaleInformation split seg[1] fallback SaleLocation -> entity kind=subasta"
+gate_documented:
+  verdict: "OVERTURNED from prior GATED (that verdict was for curl_cffi which gets a Cloudflare 403). With a JS-executing stealth browser the ViewModel JSON is fully reachable (IsUserAnonymous=true). Vehicle metadata IS public; only pricing is B2B gated (CanViewPricing=false)."
+  bca_es_surface: "POST https://es.bca-europe.com/buyer/facetedsearch/GetViewModel?q=&bq=salecountry_exact:ES — 1,752 ES car lots / 20 auction events verified live in DB (2026-06-13 harvest)."
+caveats:
+  cloudflare_challenge: "A full Cloudflare JS challenge (not just a WAF rule) — requires camoufox/Playwright, not curl_cffi. defense_tier=t2_js_challenge."
+  price_gated: "CanViewPricing=false -> price=NULL on every lot (honest). B2B buyers need a professional account to see prices."
+  no_province: "Auction lots have no per-lot province; the sale event is national (province NULL). No province fabricated."
+  vehicle_type_filter: "VehicleType must be IN {car, crosscountryvehicle}; drop Motorcycle and LightCommercialVehicle to keep only car/SUV inventory."
+  b2b_only: "BCA Espana is B2B only (solo profesionales del automovil). Every lot is fleet/leasing/trade-in remarketing to professional dealers."
+  ingest_script: "scripts/cage_autorola_bca_subastas.py --bca <bca_es_full.json>"

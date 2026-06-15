@@ -441,3 +441,17 @@
   los pequeños). Test del caso catastrófico añadido (`test_fraction_cap_aborts_partial_run`).
 - **Fase-2** (cosecha): cablear `diff_vehicle` en los 43 conectores append-only + `reconcile_gone`
   post-corrida con umbral por fuente + corridas espaciadas → delta completo uniforme materializado.
+
+## 2026-06-15 — SU-A5 recon + €0-completion: cobertura de recetas auditable
+- Recon (`docs/recon/SUA5_RECETAS_RECON.md`): modelo de recetas 2-niveles — conector (35 YAML por
+  plataforma/OEM, cubre 98,4% de dealers servidos vía source_key) + per-dealer (550 YAML, stamps AS24).
+  `recipe_version` solo poblado para 537 AS24 → indicador engañoso (cobertura no-auditable desde DB).
+- **€0-completion** (`migrations/0029_dealer_recipe.sql`): vista `v_dealer_recipe` (READ-ONLY, MVCC-safe,
+  CERO UPDATE) clasifica cada dealer servido → per_dealer/connector/none. **Cobertura PROBADA**:
+  37.041 connector (98,4%) / 537 per_dealer / 75 none (directorio = techo). +YAML Autorola (1.056 veh)
+  y BCA (1.752 veh) extraídos del módulo real (line-cited).
+- **Gate cazó integridad del ledger**: 0029 aplicado y luego archivo editado → hash schema_migrations
+  (28effd) ≠ archivo (e50061). Reconciliado: DELETE fila + re-aplicar (idempotente CREATE OR REPLACE) →
+  hash coherente. Verificado: 23 migraciones, 0 hashes malos.
+- **A5 config SANO**: 98,4% dealers servidos con receta documentada. Gap = 23.894 dealers SIN inventario
+  = recipe-hunting Tier-1 (Fase-B cosecha, deferido).
