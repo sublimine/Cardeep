@@ -154,7 +154,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 | SU | Definición | GATE | Estado |
 |---|---|---|---|
 | **SU-F1** | Workflows de OPS continua | orquestación scheduler-driven del E2E per-dealer (no solo build); idempotente; XAUTOCLAIM recovery | ⬜ |
-| **SU-F2** | Integrar herramientas (free+viable) | instalar las specified-not-installed que rinden en este hardware (selectolax, libpostal, extruct…); descartar las que exigen GPU/gasto, declarado | ⬜ |
+| **SU-F2** | Integrar herramientas (free+viable) | instalar las specified-not-installed que rinden en este hardware (selectolax, libpostal, extruct…); descartar las que exigen GPU/gasto, declarado | 🟢 €0 EVALUADO (anti-YAGNI, descartado con causa): parsing actual = **lxml+bs4** (instalados, suficientes, usados por ~15 conectores). **selectolax** (perf) DIFERIDO — el bottleneck a €0 es governor/red, no parsing; adoptar solo si se mide. **extruct** (JSON-LD/microdata) EARMARKED para activación de Lens B (raw-recount, harvest-gated) — instalar cuando exista raw store, no antes. **libpostal/postal** DESCARTADO en Windows (sin wheel; exige build C+CMake+MSVC + ~2GB datos; marginal a €0). Ninguna paga su coste de mantenimiento sin consumidor vivo → cero instalado por diseño. |
 | **SU-F3** | Agotar alternativas | ceilings solo tras probar, declarados con causa | ✅ doctrina (re-confirmar) |
 
 ### GAPS ROJOS — DESARROLLAR

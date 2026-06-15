@@ -653,3 +653,14 @@
 - `RUNBOOK.md` de-staled: §7.4 (VAM=L1 + puntero al stack) + §7.7 (0019→0032 + familia de verificación
   0026/0031/0032). NO toqué las cifras de cosecha fechadas (587 verdicts etc. = 2026-06-13; su disciplina manda).
 - SU-E1 €0 sustancialmente cubierto: árbol limpio + el subsistema que faltaba (verificación) documentado A-Z.
+
+## 2026-06-15 — SU-F2: herramientas free EVALUADAS (anti-YAGNI, descartadas con causa)
+- Recon [VERIFICADO]: manifest=`requirements.txt`; parsing actual = **lxml+bs4** (instalados, usados por ~15
+  conectores). selectolax / extruct / libpostal(postal) / parsel / w3lib **NO instalados ni usados**.
+- Decisión €0 (anti-especulación, doctrina YAGNI): NINGUNA de las tres tiene consumidor vivo a €0 → instalarlas
+  = superficie de mantenimiento sin pago. **selectolax** (perf) DIFERIDO — el bottleneck a €0 es el governor/red,
+  no el parsing; adoptar solo tras medir. **extruct** (JSON-LD/microdata) EARMARKED para la activación de Lens B
+  (raw-recount, harvest-gated) — instalar cuando exista raw store. **libpostal** DESCARTADO en Windows (sin wheel;
+  build C+CMake+MSVC + descarga de datos ~2GB; valor marginal a €0). Cero instalado **por diseño** — "ceilings
+  solo tras probar, declarados con causa" (SU-F3). El criterio "descartar las que exigen GPU/gasto, declarado" se
+  cumple: las tres descartadas/diferidas con causa registrada.
