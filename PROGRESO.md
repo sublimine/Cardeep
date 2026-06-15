@@ -964,3 +964,28 @@
   (`NOT EXISTS`, anti-join) corre en 2,9s y confirma 0 huérfanos. No está en código de producción.
 - **Pendiente (próximos ticks, con autoridad)**: Punto 5 (colisión receta autocasión facet/wholesale — decidir
   estrategia canónica, requiere ver si SSR pagina >10k), Punto 6 (tolerance=0 en count VAM — decidir semántica).
+
+## 2026-06-15 — BATCH COMPLETO: Puntos 5 y 6 cerrados con autoridad soberana
+- **Punto 5 — colisión receta autocasión + bug de cobertura** (commit 227d8d1): la evidencia del propio código
+  (`autocasion_facet.py:6-26`) prueba que el SSR/wholesale cap a `max_result_window=10000` (~8% del catálogo ~123k);
+  el facet (partición por marca) es la superficie completa uncapped. **Hallazgo grave**: el scheduler de producción
+  corría `autocasion_wholesale` (capado, 2.113 coches), NO facet (que se construyó pero nunca se promovió). Fix:
+  scheduler ahora corre `autocasion_facet --makes all` (catálogo completo); wholesale ya no escribe la receta de
+  plataforma (facet la posee — el clobber era last-writer-wins). Módulo wholesale se queda (facet importa sus
+  helpers de hidratación). Verificado: registry resuelve solo autocasion_facet, 3 módulos importan, receta=facet.
+- **Punto 6 — tolerance=0 en count VAM → CORRECTO, sin cambio** (decisión con evidencia): los 3 paths
+  (db_edges/db_join_vehicles/harvested_cageable) son mediciones snapshot-consistentes del MISMO slice → deben
+  coincidir exacto; divergencia = discrepancia real de ingest que merece REFUTED. `modal_ok` certifica sin tolerancia
+  el acuerdo exacto de ≥2 paths (incl. primary); el guard primary_agrees atrapa pérdida silenciosa. Los REFUTED de
+  la campaña fueron artefactos de scope-mínimo (db_edges acumulado 274k vs harvested-slice 100). En full-drain de
+  producción convergen → TRUSTWORTHY. NO se cambia tolerance (debilitaría la verificación). Observación separada
+  registrada: `db_edges` cuenta edges acumulados (no "este slice") — posible slice-scoping per-conector para
+  cosechas parciales, trabajo deliberado futuro, no un cambio global.
+
+### Estado del batch del audit 2026-06-15 — TODOS los puntos concretos cerrados
+- H-2 (drift migraciones) ✓ · F2 (TRUNCATE 4 ledgers) ✓ · Punto 1 (row-guards append-only) ✓ · Punto 2/F7
+  (RESOLVED exige prueba) ✓ · Punto 3 (/health split) ✓ · Punto 4/H-9 (no-defecto, probado) ✓ · Punto 5
+  (autocasión facet canónico + bug cobertura) ✓ · Punto 6 (tolerance=0 correcto) ✓ · incidente zombi NOT-IN ✓.
+- Validación local del harvest: ~30 conectores probados. Migraciones 0034/0035/0036 aplicadas + verify limpio.
+- Próxima fase (mandato A-F): pasada de auditoría FRESCA para hallar el siguiente lote (revisar GREEN a nivel átomo,
+  coherencia de negocio) — no confiamos en ningún resultado.
