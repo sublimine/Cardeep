@@ -989,3 +989,31 @@
 - Validación local del harvest: ~30 conectores probados. Migraciones 0034/0035/0036 aplicadas + verify limpio.
 - Próxima fase (mandato A-F): pasada de auditoría FRESCA para hallar el siguiente lote (revisar GREEN a nivel átomo,
   coherencia de negocio) — no confiamos en ningún resultado.
+
+## 2026-06-15 — AUDITORÍA FASE 2 (48 agentes, verificación adversarial) + sellado de 9/10 CRÍTICOS
+- **Workflow `cardeep-audit-phase2` ejecutado** (48 agentes, 4,2M tokens, 27min): 37 hallazgos REAL adversarialmente
+  confirmados (10 CRÍT, 10 ALTO, 11 MEDIO, 6 BAJO). Backlog triado completo en `docs/recon/AUDIT_2026-06-15_PHASE2.md`
+  (cada uno con id/severidad/ubicación file:line/evidencia/por-qué/fix). Tema dominante: brecha entre lo construido y
+  lo que late en cadencia. LEER ese doc al retomar.
+- **9 de 10 CRÍTICOS SELLADOS + verificados + commiteados:**
+  - **Scheduler corría el conector de PRUEBA/capado para los 6 Tier-1** (misma clase que el bug autocasión de P5).
+    Fix (9755ffa): cada Tier-1 → cosechador COMPLETO. coches.net→facet, wallapop→facet, coches.com `--all --segment all`,
+    motor.es `--full --segment all`, autocasion `--segment all --makes all`. **Reparó además la REGRESIÓN que mi fix de
+    P5 introdujo** (F-autocasion-orphaned: renombré source_key→desync con source_health→orphan; los 3 tests de
+    test_scheduler_due fallaban). source_key preservado = *_SOURCE_KEY que el facet importa. 18 tests verdes.
+  - **E-inventory data-loss** (5d1f782): INNER JOIN a v_canonical_vehicle ocultaba 9.827 coches de 1.329 dealers
+    (stock CERO falso). LEFT JOIN + COALESCE-a-sí-mismo en ambos call-sites de entities.py. Verificado: dealer 0→450,
+    +9.827 global exacto, dedup intra-cluster preservado (4 tests).
+  - **D-evict-gate1** (bd6c485): el gate de seguridad unía verdicts por entity_ulid pero se claves por cdp_code →
+    código muerto, gate ciego. Fix: join por cdp_code. Verificado: 750 verdicts ahora matchean (eran 0), TRUE/TRUE
+    en el dealer test. 24 tests verdes.
+  - **F-scheduler-no-singleton-lock** (9655cf3): sin cerrojo, 2 schedulers = 2 governors = 4x-hammer AS24. Fix:
+    pg_try_advisory_lock(0x43415244) en _start_scheduler, fail-fast. Verificado: exclusión mutua probada.
+- **Pendiente (próximos ticks, contexto fresco):**
+  - **CRÍTICO restante: D-grandfathered-trustworthy-no-quorum** — 989/1024 TRUSTWORTHY con quorum_n<2 (independent_values
+    guardado como objeto JSON no array → cdp_modal_cluster=0). Migración de datos delicada sobre el ledger + VALIDATE
+    constraint. NO urgente-de-servicio (la API no lee verification_verdict). Hacer con cuidado, contexto fresco.
+  - 10 ALTO (precios centinela/basura, make/model NULL 400k, dup deep_link 140k, B-particular-split 703,
+    β-resolver dormido, 2 recetas rancias coches.net/wallapop por deriva de ruta write_recipe→_tier1, supersession
+    sin cablear, audit-chain solo 46/1085, scheduler-never-deployed), 11 MEDIO, 6 BAJO. Todos en AUDIT_PHASE2.md.
+- Commits del barrido P2: 9755ffa (scheduler) · 5d1f782 (inventory) · bd6c485 (evict-gate) · 9655cf3 (singleton-lock).
