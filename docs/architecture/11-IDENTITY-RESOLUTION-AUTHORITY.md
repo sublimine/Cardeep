@@ -24,7 +24,7 @@ This chain works because `canonical_dedup` is built ON TOP of B1's output (same 
 |---|---|---|---|
 | **β — `entity_resolution`** (run `entity-resolution-fingerprint-v1`, vam_verified=TRUE, 20,951 merges; exposed by the dead view `v_resolved_dealer`, 0 consumers) | computed, sealed, **NOT served** | ~388 pairs | **DEFER composition** |
 | **cross-source — `cross-source-dedup-v1`** (OSM × digital, vam_verified=**FALSE**, 688 merges) | computed, **NOT certified** | ~13 genuine | **DEFER certification** |
-| **particular province-split** (same 8-char cdp suffix, different province prefix → one human as N codes) | 703 still split in the served view | 703 | **DE-RISKED 2026-06-15 (cont.)** — see Update below |
+| **particular province-split** (same 8-char cdp suffix, different province prefix → one human as N codes) | ~~703 still split~~ → **SERVED** (706 collapsed, verdict 1423) | 706 | **DONE 2026-06-15 (cont.)** — see Update below |
 
 ### Rationale (Director, "lo mejor para el negocio")
 
@@ -71,27 +71,31 @@ hash, so it cannot collide. Grouping particulares by `canonical_key` (verified o
 count. Same canonical_key ⟺ same platform seller account ⟺ same human, with zero false-positive risk
 (stronger than the partial deep_link signal). This is precisely "evidence-backed, never suffix-alone".
 
-**Safe execution path (inert build → gate), NOT yet done — the deliberate next focused build:**
-1. Build a new `canonical_dedup` run (or a dedicated particular-resolution overlay) that maps every
-   particular sharing a `canonical_key` to one deterministic representative, `vam_verified=FALSE`.
-   Because `v_dealer_resolved` reads only the latest `vam_verified=TRUE` run, this is **INERT** — it
-   changes nothing served until gated.
-2. Verify: every merged group shares one `canonical_key`; dealer merges from the current run are
-   preserved byte-for-byte; deduped count drops by ~846; regression-test `resolve_cluster` + `/entities`
-   + `/stats`.
-3. Gate `vam_verified=TRUE` only after that verification — the deliberate serve step.
+**EXECUTED 2026-06-15 (cont.) — built, verified, gated, SERVED.** (`scripts/build_particular_dedup.py`
++ `scripts/gate_particular_dedup.py`)
+1. Built run `particular-canonkey-v1` = a verbatim copy of the served run (`canonical-dedup-deeplink-v1`,
+   dealers + 139 deep_link particular merges + the 2 cross-kind groups preserved) + 1,409 added rows
+   mapping every still-split particular to a per-`canonical_key` representative (case A 703 / case B 140
+   / case C 0). Started `vam_verified=FALSE` → inert.
+2. Verified on live DB: **0 key_mismatch** (all 1,409 added pairs map particular→super sharing one
+   `canonical_key`), **0 super-not-particular**, **0 orphan super**, **0 null resolved**; dealer rows
+   byte-identical to the served run; v_dealer_resolved simulation = 369,561 distinct identities (706
+   particular splits collapsed). resolve/cluster/canonical/dedup suite green pre- and post-gate.
+3. Gated `vam_verified=TRUE` with TRUSTWORTHY verdict 1423 (quorum_n/family_n/origin_n = 2/2/2: the
+   served count 369,561 confirmed by two independent paths). v_dealer_resolved now serves 369,561
+   (was 370,267); `/stats.dealers` is unchanged (it excludes particulares, kind<>'particular'=40,016).
+   **Reversible:** `gate_particular_dedup.py --revert` flips it back.
 
-This is no longer high-risk (the discriminator is definitive); it is now a focused, testable build. β-
-composition and cross-source certification remain deferred per the rationale above (no comparable
-collision-free discriminator exists for those).
+The discriminator was definitive (canonical_key, collision-free) so this carried zero false-positive
+risk. β-composition and cross-source certification **remain deferred** per the rationale above (no
+comparable collision-free discriminator exists for those — they rest on name+geo similarity that needs
+per-merge review).
 
-**Edge case the build MUST handle (verified on live DB):** the current served run merges particulares
-and dealers in **2 cross-kind super-canonical groups** (a particular sharing a deep_link with a dealer).
-The other 140 particular-only + 2,094 dealer-only groups are disjoint, so the clean build is "copy the
-dealer-only merges + rebuild particular merges from canonical_key" — but those **2 cross-kind groups are
-NOT disjoint** and must be inspected first (likely a mis-classified "particular" that is really a small
-dealer, or a shared-listing artifact): either preserve the existing deep_link merge or re-classify the
-entity. Do not blindly rebuild over them. This is exactly the per-merge inspection the deferral protects.
+**Edge case (verified + handled):** the served run merges particulares and dealers in **2 cross-kind
+super-canonical groups** (a particular sharing a deep_link with a dealer). These 2 are NOT in the 843
+canonical_key split-groups (their particulares are canonical_key-singletons, not province-split), so the
+build's case-C guard left them untouched (case C = 0 triggered) and the verbatim copy preserved them.
+They remain a known follow-up for kind re-classification review — NOT corrupted by this merge.
 
 ## In-schema note
 

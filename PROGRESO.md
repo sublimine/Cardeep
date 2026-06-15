@@ -1178,3 +1178,20 @@
 - **ESTADO: 4/4 features vetados construidos+verificados+commiteados.** Migraciones→0040, verify 34/0 drift. Todo
   ship INERT/seguro (emisión OFF, scheduler sin deploy, detector tras dry-run-review). Diferido con rationale:
   canonical_key forward-write (mecánico), 3 ALTO-identidad (ADR 11), F-scheduler-deploy (owner), F-spend (€0).
+
+### 2026-06-15 (cont.) — frente "diferido" atacado: forward-write + deploy-docs + particular-split SERVIDO
+- **canonical_key forward-write** (`5733597`): cerrado como job de cadencia central auto-verificante (NO 70
+  ediciones — es columna de auditoría, verificado en `servable_entity`+0006, no hot-path). 5 tests (incl. live
+  rolled-back que re-deriva una key real). Extracción behavior-idéntica (93,3%).
+- **Deploy-readiness** (`390ba66`): RUNBOOK A-Z (6 jobs scheduler, price_trap+work_mem, prosecución, migraciones).
+  Cacé env-overrides falsos (constantes hardcoded). Es el gate del gasto.
+- **SUPERPLAN reconciliado** (`ceb164e`): §9 stale corregido (deep ledger = 0026, no "NO construido").
+- **particular province-split — BUILT + GATED + SERVIDO** (`build_particular_dedup.py`+`gate_particular_dedup.py`,
+  ADR 11 Update): el `canonical_key` backfilleado este turno ES el discriminador definitivo (pre-imagen literal
+  `particular:{plat}:{sid}`, sin colisión) que el ADR no tenía → de "diferido alto-riesgo" a EJECUTADO. Run inerte
+  `particular-canonkey-v1` = copia verbatim del servido (dealers + 139 deep-link + 2 cross-kind preservados) +
+  1.409 filas (case A 703 / B 140 / C 0). **Verificado: 0 key_mismatch, 0 super-no-particular, 0 orphan, 0 null**;
+  dealers byte-idénticos. Gateado con verdict TRUSTWORTHY **1423** (quorum 2/2/2). `v_dealer_resolved`: 370.267→
+  **369.561** (706 humanos-split colapsados); `/stats.dealers`=40.016 intacto (excluye particulares). **Regresión
+  E2E: 206/206 verdes pre Y post gate.** Reversible (`--revert`). β/cross-source siguen diferidos (sin discriminador
+  libre-de-colisión; exigen review per-merge). **El "diferido" del hook ahora EJECUTADO o genuinamente owner/spend-gated.**
