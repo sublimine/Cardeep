@@ -91,6 +91,11 @@ INQUISITION_EMIT_BATCH: int = int(os.environ.get("CARDEEP_INQUISITION_EMIT_BATCH
 # (docs/architecture/feature-designs/price_trap.md §Risks); inert until the scheduler is deployed.
 GESTIONADOR_DETECT_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_GESTIONADOR_CADENCE_HOURS", "24"))
 
+# canonical_key forward-coverage (audit P2 B-canonical-key, forward-write portion): recompute + gate-
+# write the audit pre-image for any entity still NULL (new entities INSERT it NULL; cdp_code, the
+# hot-path dedup key, is always set). Self-verifying (writes only on re-hash match) → €0, zero-risk.
+CANONICAL_KEY_BACKFILL_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_CANONKEY_CADENCE_HOURS", "24"))
+
 # Circuit breaker: skip sources with consecutive_fails >= this threshold
 BREAKER_TRIP_AT: int = 3
 
@@ -563,6 +568,38 @@ def gestionador_detect_job() -> None:
     log.info("=== gestionador_detect (price_trap) END ===")
 
 
+def canonical_key_backfill_job() -> None:
+    """Daily job (audit P2 B-canonical-key forward-coverage): fill entity.canonical_key for new rows.
+
+    canonical_key is the AUDIT pre-image of cdp_code; new entities INSERT it NULL while cdp_code (the
+    hot-path UNIQUE dedup key) is always set, so lazy fill is correct. Self-verifying: writes a key
+    ONLY when its recompute re-hashes to the row's stored cdp_code (a wrong key cannot be written).
+    €0 (DB reads + targeted UPDATEs of NULL→value only — never rewrites a set key, MVCC-clean). Never
+    raises: a DB error is logged and the job exits so the scheduler continues.
+    """
+    import asyncio
+
+    import asyncpg
+
+    from pipeline.identity.canonical_key_backfill import backfill_canonical_keys
+
+    log.info("=== canonical_key_backfill START ===")
+
+    async def _run() -> dict:
+        conn = await asyncpg.connect(_ASYNCPG_DSN)
+        try:
+            return await backfill_canonical_keys(conn, apply=True)
+        finally:
+            await conn.close()
+
+    try:
+        summary = asyncio.run(_run())
+        log.info("canonical_key_backfill: %s", summary)
+    except Exception as exc:  # noqa: BLE001
+        log.error("canonical_key_backfill: unexpected error: %s", exc)
+    log.info("=== canonical_key_backfill END ===")
+
+
 # ---------------------------------------------------------------------------
 # Dry-run mode
 # ---------------------------------------------------------------------------
@@ -790,6 +827,21 @@ def _start_scheduler() -> None:
         hours=GESTIONADOR_DETECT_CADENCE_HOURS,
         id="gestionador_detect",
         name="cardeep gestionador price_trap detector",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
+    )
+
+    # audit P2 B-canonical-key (forward-coverage): keep the audit pre-image filled as new entities
+    # arrive. Self-verifying (re-hash gate) + MVCC-clean (only NULL→value UPDATEs). Additive job id;
+    # touches no SourceEntry/source_health/connector key.
+    scheduler.add_job(
+        canonical_key_backfill_job,
+        trigger="interval",
+        hours=CANONICAL_KEY_BACKFILL_CADENCE_HOURS,
+        id="canonical_key_backfill",
+        name="cardeep canonical_key forward-coverage",
         replace_existing=True,
         max_instances=1,
         coalesce=True,
