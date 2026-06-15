@@ -17,6 +17,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Iterator
 
 import asyncpg
 
@@ -49,6 +50,42 @@ def strip_rollback(sql: str) -> str:
     return sql if idx == -1 else sql[:idx]
 
 
+def split_statements(sql: str) -> Iterator[str]:
+    """Split a SQL migration into individual statements.
+
+    Handles $$ dollar-quoting so semicolons inside function/trigger bodies are
+    not treated as statement terminators. Empty or comment-only chunks are
+    skipped. This works around an asyncpg bug where executing a large multi-
+    statement DDL block as a single call raises AttributeError on NoneType when
+    the server emits a mix of NOTICE messages and CommandComplete packets for
+    complex DDL sequences (CREATE OR REPLACE FUNCTION + DROP/CREATE TRIGGER in
+    the same batch).
+    """
+    in_dollar = False
+    current: list[str] = []
+
+    for line in sql.splitlines():
+        stripped = line.rstrip()
+        # Count $$ occurrences to track dollar-quote nesting (simple, no nested $$)
+        count = stripped.count("$$")
+        if count % 2 == 1:
+            in_dollar = not in_dollar
+
+        current.append(line)
+
+        if not in_dollar and stripped.endswith(";"):
+            stmt = "\n".join(current).strip()
+            if stmt and not all(l.lstrip().startswith("--") for l in stmt.splitlines() if l.strip()):
+                yield stmt
+            current = []
+
+    # Flush any trailing content without a trailing semicolon
+    if current:
+        stmt = "\n".join(current).strip()
+        if stmt and not all(l.lstrip().startswith("--") for l in stmt.splitlines() if l.strip()):
+            yield stmt
+
+
 async def up() -> int:
     conn = await asyncpg.connect(DSN)
     try:
@@ -62,8 +99,10 @@ async def up() -> int:
             sql = path.read_text(encoding="utf-8")
             forward = strip_rollback(sql)
             sha = hashlib.sha256(sql.encode("utf-8")).hexdigest()
+            stmts = list(split_statements(forward))
             async with conn.transaction():
-                await conn.execute(forward)
+                for stmt in stmts:
+                    await conn.execute(stmt)
                 await conn.execute(
                     "INSERT INTO schema_migrations (version, filename, sha256) VALUES ($1, $2, $3)",
                     version, path.name, sha,
