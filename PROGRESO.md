@@ -1114,3 +1114,24 @@
   - No-código: F-scheduler-never-deployed (deploy del owner, alineado con "sin VPS aún").
   - LOW bounded: A-km-year (ingest clamp), B-canonical-key (persistir+backfill 391k), E-cache-key/E-ratelimit/F-0033
     (doc-flags), F-spend-gated (aceptado), D-gestion-proof (nota positiva, sin fix).
+
+### 2026-06-15 (cont.) — 24 findings P2 sellados: frontera autónomo-seguro COMPLETA
+- **A-km-year** (8957a15, LOW): sanitize_km/year en el módulo de saneo de ingest (km>1.5M / year fuera [1900,curr+1]
+  → NULL; bound de año dinámico) + cableado + backfill (km 1.055, year 4). 38 tests.
+- **E-cache-key + E-ratelimit + F-0033** (2e4e083, LOW): guardrails documentados (cache-key sin dimensión tenant;
+  ratelimit import-time) + corregido el claim falso de transacción en 0033 (footgun enum) + migrate repair del drift.
+- **TOTAL P2 este turno: 24 sellados** (10 CRÍT + 6 ALTO + 4 MEDIO [A-gone-listed, A-sourceless, E-geo-tree,
+  E-platforms-status] + 4 LOW [A-km-year, E-cache-key, E-ratelimit, F-0033]). Migraciones 0034-0037, verify 31/0 drift.
+- **D-gestion-proof** = nota POSITIVA del audit (guards 0034/0035/0036 verificados funcionando) — no requiere fix.
+- **Restante (12 accionables, trabajo DELIBERADO — fuera de la frontera autónomo-seguro/bounded):**
+  - 3 ALTO identidad (alto-valor, ALTO-RIESGO core): A-cross-entity-dup (mitigado server-side, residual auto-cura en
+    cluster-run), B-particular-split (dedup deep-link 703), **B-beta-resolver** (decisión-Director: componer β/
+    entity_resolution en v_dealer_resolved [mission-aligned, +388 merges] vs retirar vista muerta — rebuild de vista
+    CORE que consume resolve_cluster+API → requiere contexto fresco + testing).
+  - Features a construir: A-zero-tiny-prices + D-inquisition-never-ran (price_trap model-aware + prosecutor wiring),
+    C-as24-unscheduled (registrar harvester existente — BAN-SENSITIVE, decisión de cadencia), C-cochesnet-segments
+    (source_key propio o fold en facet), B-crosssource-ungated (VAM-verificar 13 merges = certificación Inquisidor).
+  - No-código: F-scheduler-never-deployed (deploy del owner). LOW: B-canonical-key (backfill BLOQUEADO — inputs del
+    hash no persistidos; solo forward-fix parcial posible, toca codes.py identity-core), F-spend-gated (aceptado €0).
+  - **Estos NO son "sellar un defecto rápido": son features/decisiones/rebuilds-core/owner-action.** Hacer con la
+    calidad que cada uno merece, no crank de contexto saturado (doctrina: una vez impecable, no todo de golpe).
