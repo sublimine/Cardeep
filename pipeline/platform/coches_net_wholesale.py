@@ -56,6 +56,7 @@ from dataclasses import dataclass
 import asyncpg
 from curl_cffi import requests as cffi_requests
 
+from pipeline.delta import diff_vehicle
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
@@ -636,6 +637,81 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::js
        AS u(event_ulid, vehicle_ulid, entity_ulid, new_value)
 """
 
+# A4 delta (audit P2 SU-A4): PRICE/KM/PHOTO change events for RE-SEEN vehicles. Generic event_type
+# with both old_value and new_value (unlike _BULK_INSERT_EVENTS which is NEW-only).
+_BULK_INSERT_DELTA_EVENTS = """
+INSERT INTO vehicle_event (event_ulid, vehicle_ulid, entity_ulid, event_type,
+        old_value, new_value)
+SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, u.event_type,
+       u.old_value::jsonb, u.new_value::jsonb
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])
+       AS u(event_ulid, vehicle_ulid, entity_ulid, event_type, old_value, new_value)
+"""
+
+# Refresh the served row to the current scraped values for vehicles that genuinely changed
+# (MVCC: only called for rows with >=1 delta event — never rewrites an unchanged row). Fixes the
+# historical stale-price bug: re-seen vehicles previously only got last_seen touched, never a new price.
+_BULK_REFRESH_VEHICLES = """
+UPDATE vehicle v SET price = u.price, km = u.km, photo_url = u.photo_url
+  FROM unnest($1::text[], $2::numeric[], $3::bigint[], $4::text[])
+       AS u(vehicle_ulid, price, km, photo_url)
+ WHERE v.vehicle_ulid = u.vehicle_ulid
+"""
+
+
+async def _emit_existing_deltas(
+    conn: asyncpg.Connection,
+    existing_snap: dict[tuple[str, str], dict],
+    cars: dict[tuple[str, str], "_CageRow"],
+    car_keys: list[tuple[str, str]],
+) -> dict[str, int]:
+    """A4 delta for RE-SEEN coches.net vehicles: emit PRICE/KM/PHOTO_CHANGE events + refresh the row.
+
+    existing_snap[key] = {"vehicle_ulid", "price", "km", "photo_url"} (DB snapshot before this run).
+    cars[key] = the freshly-scraped _CageRow. Pure of network; writes only vehicle_event (append) and
+    vehicle price/km/photo (only for changed rows). Safe on a partial harvest (only touches re-seen
+    vehicles — never retires anything; GONE is handled separately by reconcile_gone, coverage-gated).
+    Returns per-type counts.
+    """
+    ev_ulids: list[str] = []
+    ev_v: list[str] = []
+    ev_e: list[str] = []
+    ev_t: list[str] = []
+    ev_old: list[str] = []
+    ev_new: list[str] = []
+    up_v: list[str] = []
+    up_price: list = []
+    up_km: list = []
+    up_photo: list = []
+    counts = {"PRICE_CHANGE": 0, "KM_CHANGE": 0, "PHOTO_CHANGE": 0}
+    for key in car_keys:
+        snap = existing_snap.get(key)
+        if snap is None:
+            continue  # genuinely new vehicle — handled by the NEW-event path, not here
+        events = diff_vehicle(snap, cars[key].vehicle)
+        if not events:
+            continue
+        vid = snap["vehicle_ulid"]
+        ent = key[0]
+        for ev in events:
+            ev_ulids.append(ulid())
+            ev_v.append(vid)
+            ev_e.append(ent)
+            ev_t.append(ev["event_type"])
+            ev_old.append(json.dumps(ev["old_value"]))
+            ev_new.append(json.dumps(ev["new_value"]))
+            counts[ev["event_type"]] = counts.get(ev["event_type"], 0) + 1
+        nv = cars[key].vehicle
+        up_v.append(vid)
+        up_price.append(nv.price)
+        up_km.append(nv.km)
+        up_photo.append(nv.photo_url)
+    if ev_ulids:
+        await conn.execute(_BULK_INSERT_DELTA_EVENTS, ev_ulids, ev_v, ev_e, ev_t, ev_old, ev_new)
+    if up_v:
+        await conn.execute(_BULK_REFRESH_VEHICLES, up_v, up_price, up_km, up_photo)
+    return counts
+
 
 def _province_name(prov: str | None, prov_names: dict[str, str]) -> str:
     """The human province label for a particular bucket's trade_name. Falls back to a stable
@@ -782,10 +858,13 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver,
         car_keys = list(cars.keys())
         v_entity = [k[0] for k in car_keys]
         v_links = [k[1] for k in car_keys]
-        existing: dict[tuple[str, str], str] = {
-            (row["entity_ulid"], row["deep_link"]): row["vehicle_ulid"]
+        # A4 delta: fetch the pre-run snapshot (price/km/photo) so RE-SEEN vehicles can be diffed.
+        existing_snap: dict[tuple[str, str], dict] = {
+            (row["entity_ulid"], row["deep_link"]): {
+                "vehicle_ulid": row["vehicle_ulid"], "price": row["price"],
+                "km": row["km"], "photo_url": row["photo_url"]}
             for row in await conn.fetch(
-                """SELECT vehicle_ulid, entity_ulid, deep_link FROM vehicle
+                """SELECT vehicle_ulid, entity_ulid, deep_link, price, km, photo_url FROM vehicle
                    WHERE (entity_ulid, deep_link) IN (
                      SELECT * FROM unnest($1::text[], $2::text[]))""",
                 v_entity, v_links)
@@ -795,10 +874,10 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver,
         new_keys: list[tuple[str, str]] = []
         touch_ulids: list[str] = []
         for key in car_keys:
-            ex = existing.get(key)
-            if ex is not None:
-                vehicle_ulid_for[key] = ex
-                touch_ulids.append(ex)
+            snap = existing_snap.get(key)
+            if snap is not None:
+                vehicle_ulid_for[key] = snap["vehicle_ulid"]
+                touch_ulids.append(snap["vehicle_ulid"])
             else:
                 vid = ulid()
                 vehicle_ulid_for[key] = vid
@@ -806,6 +885,12 @@ async def _ingest_window(conn: asyncpg.Connection, geo: GeoResolver,
 
         if touch_ulids:
             await conn.execute(_BULK_TOUCH_VEHICLES, touch_ulids)
+        # A4 (SU-A4): emit PRICE/KM/PHOTO_CHANGE for re-seen vehicles + refresh their row to current
+        # values (fixes the stale-price bug where re-seen vehicles only got last_seen touched).
+        delta_counts = await _emit_existing_deltas(conn, existing_snap, cars, car_keys)
+        stats["price_change"] = stats.get("price_change", 0) + delta_counts["PRICE_CHANGE"]
+        stats["km_change"] = stats.get("km_change", 0) + delta_counts["KM_CHANGE"]
+        stats["photo_change"] = stats.get("photo_change", 0) + delta_counts["PHOTO_CHANGE"]
 
         if new_keys:
             ins = [(vehicle_ulid_for[k], k[0], k[1], cars[k].vehicle) for k in new_keys]
