@@ -770,3 +770,20 @@
   asserts del populate PASS. 83 tests completion✓ (0 regresión). Código + SQL + datos persistidos consistentes.
 - Resta del §Deuda B2 (declarado): 210 compraventa sin-provincia = gap-geo SU-A6 genuino (data-blocked €0);
   price_trap floor-particulares; supersesión post-RESOLVED; egress CHECK lente-C — todos harvest/data-gated.
+
+## 2026-06-15 — SU-B2 §Deuda: price_trap EVALUADO sin-defecto (anti-cambio-ciego)
+- §Deuda B2 "price_trap floor-particulares puede ajustarse": investigué con evidencia antes de tocar (doctrina:
+  no cambiar código que funciona sin defecto confirmado). Distribución real de 500.772 particulares con precio:
+  €0=1.059, €1-49=7.625, €50-299=8.723, €300-999=10.917, >999=472.448.
+- **Mi concern inicial (sobre-marca masiva) estaba EQUIVOCADO** — releí `detect_price_trap` L801: la condición es
+  `implausible_low OR (in_monthly_band AND ratio_outlier)`. La banda-mensual [49,999] NO dispara sola: exige
+  `ratio_outlier` (price < 5% de la mediana del kind, ~mediana particular >999 → 5%≈500). Es CONSERVADORA. El
+  `implausible_low` (<floor 300) sí dispara incondicional, pero captura precios mayormente SIMBÓLICOS (€0-49=8.684
+  que SÍ son anomalías reales — un coche no se vende a €1) y los enruta a RESEARCH + quarantine (NO-destructivo,
+  revisión humana). El detector YA es kind-aware (`PRICE_TRAP_FLOOR` con particular=300). El "1000" del demo era
+  el `LIMIT 1000` del scan, no 1000 falsos-positivos.
+- **Conclusión (evidencia-based, no maquillaje)**: el detector es conservador-correcto, no ruidoso. El §Deuda era
+  un flag-de-revisión soft, no un defecto. Tuning del floor para particulares = juicio que necesita data de
+  harvest-review (verdicts revisados reales), no ajuste ciego. **NO toqué el código** (anti-degradar tested/sealed
+  sin causa). §Deuda cerrado como EVALUADO-sin-cambio. Corregí mi propio error de lectura (no vi el gate
+  ratio_outlier) — anti-alucinación aplicada a mí mismo.
