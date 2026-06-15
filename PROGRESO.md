@@ -800,3 +800,23 @@
   rate-limit+cache sellado), E(E1 docs + E2 reshape geo+Tier-1 sellados), F(F1 cadencia + F2 tools + F3 doctrina).
   **Todo lo restante es harvest/spend/hardware/data-gated** = la fase "cosecha/spend DESPUÉS" que el usuario
   difirió explícitamente ("gasto inviable hasta que esté todo configurado A-Z"). El €0-config A-Z está completo.
+
+## 2026-06-15 — Workflow blueprints atom-precisos (docs/workflows/) — la demanda más fuerte del usuario
+- Hueco detectado (el hook tenía razón): construí la IMPLEMENTACIÓN pero NO los "WORKFLOWS DISEÑADOS CON
+  PRECISIÓN ÁTOMO PARA CADA COSA... CARPETAS PARA ESTRUCTURAR TODO" que el usuario gritó. `docs/workflows/`
+  tenía solo un README F3 fechado (predataba la verification-stack, layout de módulos desactualizado).
+- Construido (€0 documentación — el "cómo A-Z" del gate de gasto): **16 docs foldered** — `e2e/` (8: lifecycle +
+  DISCOVER/SCRAPE/RECIPE/INGEST/SERVE-API/DELTA/EVICT, cada uno átomo: disparador/entradas/pasos[módulo+CLI
+  real]/gate/artefactos/fallo-routing/idempotencia/estado/€0) + `verification/` (6: overview + WF-VAM/DEEP-LEDGER/
+  INQUISITION/GESTIONADOR/CADENCE reflejando la stack real) + AGENT-SKILL-TOOL-MATRIX (22 casos: €0-Python vs
+  agente-Workflow; skills reales cardex-pipeline/systematic-debugging/database-reviewer). Refleja REALIDAD
+  (corregido el README: SCRAPE=engine/fetch+44 conectores, RECIPE=recipe.yaml geo+v_dealer_recipe, IMPLEMENTADO);
+  solo `pipeline/evict.py` (BORRAR) = POR CONSTRUIR, diseñado átomo (3 gates duros), anti-stub.
+- **GATE (Opus) — "no confiamos en ningún resultado"**: el agente-builder parafraseó → **~44 errores de hecho**
+  (verdict UNTRUSTWORTHY inexistente, tabla audit_chain inexistente [real verdict_audit], dealer_recipe
+  inexistente, gestion_item.verdict_id FK mal, vehicle.cdp_code inexistente, firmas, invariantes). Un 2º agente
+  hizo pasada READ-AND-QUOTE contra fuente real (44 correcciones citadas a \d/líneas); luego **yo re-gateé y cacé
+  6 residuos auto-contradictorios** que el corrector dejó (UNTRUSTWORTHY en intros, ON-CONFLICT en
+  verification_verdict, dealer_recipe, etc.). Grep final: 0 patrón malo genuino. Commit `cfee4f0`. Coherencia
+  flaggeada: `write_recipe()` escribe plano `countries/ES/recipes/` y el reshape SU-E2 (idempotente) + loader
+  glob-con-fallback lo reconcilian al árbol geo — documentado.
