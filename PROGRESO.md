@@ -383,3 +383,17 @@
 - **FIX diseñado (SU-B-DEDUP)**: overlay dedup NO-destructivo que fusiona canónicos conectados por
   deep_link compartido (union-find; guarda anti-hub: excluir deep_links de alta colisión >K), vam_verified
   tras gate, re-sella B1, la API sirve el canónico fusionado. 1 listing = 1 dealer → alta precisión, no sobre-fusiona.
+
+## 2026-06-15 — SU-B-DEDUP SELLADO (verdict 1112): B1 corregido a 39.874
+- Overlay dedup construido (agente) + **GATEADO** contra datos vivos: no-destructivo (v_canonical intacta
+  42.259), **39.874 deduplicados** (−2.385), **0 conflictos CIF**, divergencia de nombre 181/2.236 = variantes
+  triviales (case/acento/sufijo legal), muestras = mismo dealer (6/8 mismo deep_link).
+- **El gate cazó un 2º gap (reproducibilidad)**: 0027 solo tenía esquema; la lógica union-find se corrió
+  ad-hoc y NO se guardó (+comentario con el número viejo/buggy 39.934). Corregido: `scripts/build_canonical_dedup.py`
+  reproducible (deep_link union-find, anti-hub K=3, idempotente, asserts). **El Director lo corrió**: 4 asserts OK
+  (39.874/2.236/4.621/2.385), idempotente. Comentario de 0027 arreglado al valor correcto.
+- **SELLADO** (`bc21547`): verdict **1112 TRUSTWORTHY** (quorum_n=2, family_n=3, origin_n=3 — pasa el CHECK del
+  ledger 0026), vam_verified=TRUE. **B1: 42.259 = TECHO → 39.874 dealers verificados** (−2.385 merges de alta
+  precisión por deep_link). B7 (1.486M) intacto y correcto.
+- **PENDIENTE (coherencia)**: el servido (v_canonical/API) aún expone 42.259 — integrar el mapeo dedup
+  (canonical→super) al servido + API + tests (mismo patrón que SU-A9). El sello está; falta que LLEGUE al producto.
