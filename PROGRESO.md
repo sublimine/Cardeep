@@ -900,3 +900,29 @@
   gestion_item.verdict_id RESOLVED), /health split (liveness-unauth / counts-authed — CAMBIA diseño GAP-7, requiere
   flag de revisión), H-9 (investigación enfocada). Gated tras el sweep (DDL/identity-critical no se tocan con el
   harvest escribiendo).
+
+### Resultado FINAL de la campaña de validación (sweep 32 + re-run 9, merge)
+- **Veredicto: el harvest FUNCIONA en esta terminal.** ~30 conectores corren fetch→parse→ingest sin crash con
+  coches reales. Arg-fixes **VERIFICADOS por re-run** (no declaro "fixed" sin RAN): bmw_mini `--dealers 2`→112,
+  motor_es `--max-cells 1`→21, autocasion_facet `--max-pages-per-slice 1`→25, family_builder `--from-fingerprints`
+  ya no da ARG. 2ª tanda nueva TRUSTWORTHY: faciliteacoches 178, group_importador 19, autocasion_wholesale 26.
+- **4 conectores sin bound CLI** (motorflash, subastacar, wallapop, family_builder): CORREN sin crash pero drenan
+  la fuente completa a scope-smoke (>200s timeout). Característica (crawl no acotable por flag), no defecto —
+  completarán en harvest VPS-escala. motorflash/subastacar no tienen flags de scope.
+- **Señal correcta de "conector OK" = RAN + caged>0**, NO el label de verdict del harness (captura UNA línea de
+  stdout, no el verdict de count en DB).
+- **HALLAZGO 1 — colisión de receta autocasión**: `autocasion_facet` y `autocasion_wholesale` apuntan al MISMO cdp
+  platform (CDP-ES-00-QY06GW0B = Autocasión) → comparten `recipe.yaml` → last-writer-wins. Mi smoke volteó la
+  receta canónica (facet, diseñada para drenar >10k vía partición) a wholesale por orden de ejecución. **Receta
+  REVERTIDA** al estado commiteado (no persisto artefacto de run-order). DECISIÓN PENDIENTE del usuario/harvest-
+  design: ¿cuál estrategia es canónica para Autocasión (facet sortea max_result_window=10000; wholesale enumera
+  SSR ~115k/4800 págs)? No la resuelvo solo (dirige scraping de producción).
+- **HALLAZGO 2 — `tolerance=0` en claim count** (`verify.py:60`, default que casi todos omiten): exige acuerdo
+  EXACTO entre caminos → REFUTED ante CUALQUIER drift. En la práctica refuta (a) scope-parcial [100 de 274.144 en
+  marketplaces] y (b) churn legítimo [family_dms 738 vs 714 = 3,3%] junto a discrepancias reales. Riesgo: el
+  verdict de count se vuelve casi-siempre-REFUTED para fuentes con churn → semi-vacuo. OBSERVACIÓN de semántica VAM
+  para tu revisión — NO la cambio en autónomo (alteraría qué significa "count verificado" en todo el sistema).
+- **Recetas**: reshape reconcilió 26 staging → 0 flat untracked (invariante PASS). 24 eran idénticas a recetas ya
+  commiteadas (dealers ya cosechados → recetas deterministas, idempotente), 1 era la colisión autocasión (revertida).
+  NINGUNA receta perdida (verificado: git status = 0 untracked, 0 añadidos).
+- Matriz en `state/validation_matrix.json` (gitignored — artefacto runtime; resultados documentados aquí).
