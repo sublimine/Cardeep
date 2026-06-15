@@ -79,6 +79,13 @@ TICK_INTERVAL_MINUTES: int = 15
 # has lapsed and queue their re-verification. Independent of the harvest heartbeat.
 INQUISITION_CADENCE_HOURS: int = 6
 
+# WF-INQUISITION prosecution (audit P2 D-inquisition): adjudicate PENDING claims in cadence.
+# Emission of NEW claims is OPT-IN (CARDEEP_INQUISITION_EMIT=1) and bounded — at €0 mass emission
+# floods un-self-resolvable escalations; prosecute-only (default) just drains whatever is PENDING.
+INQUISITION_PROSECUTE_CADENCE_HOURS: int = 6
+INQUISITION_PROSECUTE_BATCH: int = int(os.environ.get("CARDEEP_INQUISITION_PROSECUTE_BATCH", "200"))
+INQUISITION_EMIT_BATCH: int = int(os.environ.get("CARDEEP_INQUISITION_EMIT_BATCH", "200"))
+
 # Circuit breaker: skip sources with consecutive_fails >= this threshold
 BREAKER_TRIP_AT: int = 3
 
@@ -480,6 +487,43 @@ def inquisition_cadence_job() -> None:
     log.info("=== inquisition_cadence END ===")
 
 
+def inquisition_prosecute_job() -> None:
+    """Periodic job (audit P2 D-inquisition): adjudicate PENDING inquisition claims in cadence.
+
+    ALWAYS runs prosecute_pending (drains PENDING claims; at €0 → honest REFUTED:NO_INDEPENDENT_PATH
+    → ESCALATE_OWNER). Emission of NEW claims from VAM verdicts is OPT-IN (CARDEEP_INQUISITION_EMIT=1)
+    and bounded — at €0 mass emission would flood un-self-resolvable escalations. Writes ONLY
+    inquisition_*/gestion_*/alert — never served vehicle/entity/verification_verdict. Never raises:
+    a DB error is logged and the job exits so the scheduler continues.
+    """
+    import asyncio
+    import os
+
+    import asyncpg
+
+    from pipeline.inquisition.prosecutor import emit_claims_from_verdicts, prosecute_pending
+
+    log.info("=== inquisition_prosecute START ===")
+
+    async def _run() -> dict:
+        conn = await asyncpg.connect(_ASYNCPG_DSN)
+        try:
+            summary: dict = {}
+            if os.environ.get("CARDEEP_INQUISITION_EMIT") == "1":
+                summary["emit"] = await emit_claims_from_verdicts(conn, limit=INQUISITION_EMIT_BATCH)
+            summary["prosecute"] = await prosecute_pending(conn, limit=INQUISITION_PROSECUTE_BATCH)
+            return summary
+        finally:
+            await conn.close()
+
+    try:
+        summary = asyncio.run(_run())
+        log.info("inquisition_prosecute: %s", summary)
+    except Exception as exc:  # noqa: BLE001
+        log.error("inquisition_prosecute: unexpected error: %s", exc)
+    log.info("=== inquisition_prosecute END ===")
+
+
 # ---------------------------------------------------------------------------
 # Dry-run mode
 # ---------------------------------------------------------------------------
@@ -677,6 +721,21 @@ def _start_scheduler() -> None:
         hours=INQUISITION_CADENCE_HOURS,
         id="inquisition_cadence",
         name="cardeep inquisition cadence (verdict TTL re-verification)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
+    )
+
+    # audit P2 D-inquisition: adjudicate PENDING claims in cadence (gives the prosecutor a live caller).
+    # Prosecute-only by default; NEW-claim emission is opt-in (CARDEEP_INQUISITION_EMIT=1). DB-only,
+    # single-producer + host advisory lock prevent a 2nd run. +30min offset from the cadence job above.
+    scheduler.add_job(
+        inquisition_prosecute_job,
+        trigger="interval",
+        hours=INQUISITION_PROSECUTE_CADENCE_HOURS,
+        id="inquisition_prosecute",
+        name="cardeep inquisition prosecution (adjudicate pending claims)",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

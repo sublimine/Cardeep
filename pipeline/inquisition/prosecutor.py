@@ -400,30 +400,22 @@ async def prosecute_pending(
 async def emit_claim_from_verdict(
     conn: asyncpg.Connection,
     verification_verdict_row: asyncpg.Record,
-) -> str:
-    """Convert a VAM verification_verdict row into an inquisition_claim (PENDING).
+) -> str | None:
+    """Convert a VAM verification_verdict row into an inquisition_claim (PENDING), or None to SKIP.
 
-    This is the §9 harvest bridge: takes any VAM-produced TRUSTWORTHY verdict and
-    submits it to the Inquisition for adversarial re-prosecution.
+    This is the §9 harvest bridge: takes a VAM verdict and submits it to the Inquisition for
+    adversarial re-prosecution. Called by emit_claims_from_verdicts (the opt-in batch emitter).
 
-    Parameters
-    ----------
-    conn:                     asyncpg connection.
-    verification_verdict_row: Row from verification_verdict (VAM table).
+    Returns the claim_id ULID, or None when the subject is unresolvable, unsupported, or already
+    has an open claim (idempotent).
 
-    Returns
-    -------
-    claim_id: ULID of the newly inserted inquisition_claim.
+    IMPORTANT — DO NOT auto-run over all VAM rows: mass emission at €0 floods the queue with
+    un-self-resolvable ESCALATE_OWNER items. Gated behind emit_claims_from_verdicts (opt-in/bounded).
 
-    IMPORTANT — DO NOT auto-run over all VAM rows.
-    This function must be called explicitly from a harvest/migration script after
-    the VAM harvest phase closes (SU-A4 delta integration).  Auto-running it over
-    the full verification_verdict table would flood the inquisition queue.
-
-    Subject-type mapping (VAM subject_type → inquisition subject_type):
-        entity_inventory → count
-        coverage         → coverage
-        <anything else>  → count (safe default; over-refutes, never over-trusts)
+    Subject-type mapping (audit P2 D-inquisition — only shapes a €0 lens can measure):
+        entity_inventory / generic_dealer_site_inventory → inventory:<entity_ulid>  (Lens A real count)
+        denominator                                      → denominator:<...>
+        <anything else> (coverage/source_coverage/platform_slice/…) → None (SKIP — never coerce to count)
     """
     import ulid
 
@@ -432,16 +424,36 @@ async def emit_claim_from_verdict(
     primary_value: str | None = verification_verdict_row.get("primary_value")
     primary_path: str | None = verification_verdict_row.get("primary_path") or "vam"
 
-    # Map VAM subject_type to inquisition subject_type
-    _vam_to_inq_subject: dict[str, str] = {
-        "entity_inventory": "count",
-        "coverage":         "coverage",
-        "freshness":        "count",
-        "field_fill":       "entity_field",
-        "existence":        "entity_field",
-        "denominator":      "denominator",
-    }
-    inq_subject_type = _vam_to_inq_subject.get(vam_subject_type, "count")
+    # Audit P2 D-inquisition: re-key VAM inventory verdicts to inquisition subject 'inventory:<entity_ulid>'
+    # so Lens A measures the REAL available count. The OLD map sent entity_inventory→'count'+cdp_code,
+    # making Lens A's count branch run `count(*) FROM entity WHERE province_code=<cdp_code>` → 0 → falsely
+    # REFUTE a healthy inventory. Unsupported subject shapes return None (SKIP), never coerced to 'count'.
+    if vam_subject_type == "entity_inventory":
+        entity_ulid = await conn.fetchval(
+            "SELECT entity_ulid FROM entity WHERE cdp_code = $1", vam_subject_key)
+        if entity_ulid is None:
+            return None  # unresolvable cdp_code → skip
+        inq_subject_type, subject_key = "inventory", f"inventory:{entity_ulid}"
+    elif vam_subject_type == "generic_dealer_site_inventory":
+        # subject_key is ALREADY the entity_ulid for this VAM type (verified 17/17).
+        if not await conn.fetchval("SELECT 1 FROM entity WHERE entity_ulid = $1", vam_subject_key):
+            return None
+        inq_subject_type, subject_key = "inventory", f"inventory:{vam_subject_key}"
+    elif vam_subject_type == "denominator":
+        inq_subject_type, subject_key = "denominator", vam_subject_key
+    else:
+        # coverage / source_coverage / platform_slice / family_slice / freshness / field_fill / … —
+        # no €0 lens measures these shapes; do NOT coerce to 'count' (the meaning-corruption bug).
+        return None
+
+    # Idempotency (audit P2): claim_id is a fresh ULID and there is no UNIQUE on (subject_type,subject_key),
+    # so re-emitting every cadence would stack duplicate open claims. One open claim per subject.
+    if await conn.fetchval(
+        "SELECT 1 FROM inquisition_claim WHERE subject_type = $1 AND subject_key = $2 "
+        "AND status IN ('PENDING','PROSECUTING') LIMIT 1",
+        inq_subject_type, subject_key,
+    ):
+        return None  # an open claim already covers this subject
 
     producer_state = json.dumps({
         "source":      primary_path,
@@ -466,18 +478,54 @@ async def emit_claim_from_verdict(
         """,
         claim_id,
         inq_subject_type,
-        vam_subject_key,
+        subject_key,
         claim_text,
         primary_value,
         producer_state,
     )
 
     logger.info(
-        "emit_claim_from_verdict: created claim=%s for vam_subject=%s:%s",
-        claim_id, vam_subject_type, vam_subject_key,
+        "emit_claim_from_verdict: created claim=%s subject=%s:%s (from vam %s:%s)",
+        claim_id, inq_subject_type, subject_key, vam_subject_type, vam_subject_key,
     )
 
     return claim_id
+
+
+async def emit_claims_from_verdicts(
+    conn: asyncpg.Connection,
+    *,
+    limit: int = 200,
+    include_trustworthy: bool = False,
+) -> dict:
+    """Batch-emit inquisition claims from active VAM verdicts (audit P2 D-inquisition).
+
+    OPT-IN: the scheduler calls this only when CARDEEP_INQUISITION_EMIT=1. Selects ONLY the
+    inventory/denominator shapes a €0 lens can measure (coverage/platform_slice/… are excluded);
+    emit_claim_from_verdict re-keys, SKIPs the unresolvable, and dedupes open claims. TRUSTWORTHY is
+    gated off by default (re-prosecuting it at €0 can only downgrade to REFUTED:NO_INDEPENDENT_PATH).
+    Returns a tally dict; never raises on a single bad row (the caller wraps in its own logging).
+    """
+    rows = await conn.fetch(
+        """
+        SELECT vv.id, vv.subject_type, vv.subject_key, vv.primary_value, vv.primary_path,
+               vv.claim_kind, vv.verdict
+          FROM verification_verdict vv
+         WHERE vv.superseded_by IS NULL
+           AND vv.subject_type IN ('entity_inventory','generic_dealer_site_inventory','denominator')
+           AND (vv.verdict IN ('REFUTED','UNVERIFIED')
+                OR ($1::boolean AND vv.verdict = 'TRUSTWORTHY'))
+         ORDER BY vv.created_at DESC
+         LIMIT $2
+        """,
+        include_trustworthy, limit,
+    )
+    stats = {"scanned": len(rows), "emitted": 0, "skipped": 0}
+    for row in rows:
+        claim_id = await emit_claim_from_verdict(conn, row)
+        stats["emitted" if claim_id else "skipped"] += 1
+    logger.info("emit_claims_from_verdicts: %s", stats)
+    return stats
 
 
 # ---------------------------------------------------------------------------
