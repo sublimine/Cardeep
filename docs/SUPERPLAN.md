@@ -139,7 +139,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 
 | SU | Definición | GATE | Estado |
 |---|---|---|---|
-| **SU-D1** | LLM local para lo masivo | pipeline Ollama (qwen3:4b) clasifica/parsea/normaliza dentro del hardware sin ahogarlo; determinista donde regla basta; benchmark t/s registrado | ⬜ |
+| **SU-D1** | LLM local para lo masivo | pipeline Ollama (qwen3:4b) clasifica/parsea/normaliza dentro del hardware sin ahogarlo; determinista donde regla basta; benchmark t/s registrado | 🟡 €0 EVALUADO (hardware-gated, declarado con causa): Ollama instalado + 3 modelos (qwen2.5:3b 1.9GB / qwen3:4b 2.5GB / qwen3:8b 5.2GB). **PERO solo 2.11GB RAM libre** (15.3GB total; ~13 en uso OS+Docker: cardex-pg 1.6GB [otro proyecto], cardeep-pg 0.2GB) y **sin CUDA** (Radeon iGPU → CPU-only). Correr incluso qwen2.5:3b (~2.5-3GB inferencia) EXCEDE la RAM libre → swap-thrash → **ahogaría el pipeline vivo** (viola "sin ahogarlo"). **Decisión Director**: LLM local DIFERIDO a ventanas pipeline-idle / fase harvest (modelo=qwen2.5:3b, el menor); a €0 clasificación/parseo/dedup las cubren los DETERMINISTAS ya construidos (7 detectores gestionador + regex + lentes Inquisición + kind-classifier) = "determinista donde regla basta". **NO se corrió benchmark**: riesgo de ahogar la DB viva > valor de un t/s para herramienta sin consumidor €0. |
 | **SU-D2** | Eficiente y blindado | rate-limit + cache en API; pacing conductual para walled; governor verificado anti-cicatriz | ⬜ |
 
 ### E — HUELLA + ORGANIZACIÓN

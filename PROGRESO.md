@@ -687,3 +687,20 @@
 - §Deuda: 18 geo-dealers `_sin-comarca` (DB sin comarcalización oficial); 7 family templates quedan en `recipes/`
   (plantillas CMS, no per-cdp); módulos Python Tier-1 NO movidos (sellados/validados — la separación se logró en
   los datos, no en el código). El script es re-ejecutable idempotente (servirá según harvest añada recetas).
+
+## 2026-06-15 — SU-D1: LLM local EVALUADO (hardware-gated, diferido con causa)
+- Respuesta a la instrucción D1 del usuario ("revisa los componentes de este pc y haz lo que puedas sin ahogarlo").
+  Recon hardware [VERIFICADO vivo]: RAM 15.3GB total / **2.11GB libre**; CPU Ryzen 5 5500U 6c/12t; **sin CUDA**
+  (Radeon iGPU → CPU-only); disco C 34.4GB libre. **Ollama instalado** + 3 modelos ya pulled (qwen2.5:3b 1.9GB,
+  qwen3:4b 2.5GB, qwen3:8b 5.2GB). Docker real: cardex-pg 1.6GB (OTRO proyecto, no tocar), cardeep-pg 0.2GB,
+  cardex-redis 22MB.
+- Análisis: incluso el menor (qwen2.5:3b) necesita ~2.5-3GB en inferencia CPU → EXCEDE los 2.11GB libres →
+  swap-thrash → ahogaría el pipeline vivo (cardeep-pg sirviendo la DB verificada). La restricción literal del
+  usuario "sin que llegues a ahogarlo" lo PROHÍBE a RAM actual.
+- **Decisión Director (no maquillada)**: NO corrí benchmark — el riesgo de ahogar la DB viva supera el valor de
+  un t/s para una herramienta que a €0 **no tiene consumidor** (la clasificación/parseo/dedup las cubren los
+  DETERMINISTAS ya construidos: 7 detectores del gestionador + regex de los conectores + lentes de la Inquisición
+  + kind-classifier). Doctrina CLAUDE.md: "determinista donde regla basta". LLM local DIFERIDO a ventanas
+  pipeline-idle / fase harvest (modelo elegido=qwen2.5:3b). Mismo patrón honesto que SU-F2: evaluado, diferido
+  con causa de hardware, evidencia verificada registrada. SU-D1 queda 🟡 (decisión tomada; benchmark t/s pendiente
+  de ventana de RAM, no de capacidad).
