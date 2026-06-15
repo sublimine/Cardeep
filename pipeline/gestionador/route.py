@@ -15,7 +15,7 @@ All DB writes are MVCC-safe:
 from __future__ import annotations
 
 import json
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Any
 
 import asyncpg
@@ -103,6 +103,15 @@ async def open_or_refresh(
     """
     sla_delta = LANE_SLA.get(anomaly.lane)
 
+    # Compute sla_due as a concrete datetime (or None) so asyncpg can bind it as
+    # TIMESTAMPTZ without type-inference ambiguity.  Previously the SQL computed
+    # ``now() + $10::interval`` inside the query, which caused AmbiguousParameterError
+    # when sla_delta is None (asyncpg cannot infer the OID of a NULL parameter that
+    # only appears inside a CASE branch).  Computing client-side and passing the
+    # result as a typed datetime removes the ambiguity.
+    now_utc = datetime.now(tz=timezone.utc)
+    sla_due: datetime | None = (now_utc + sla_delta) if sla_delta is not None else None
+
     upsert_sql = """
         INSERT INTO gestion_item
             (detector, subject_type, subject_key, severity, score,
@@ -111,9 +120,7 @@ async def open_or_refresh(
         VALUES
             ($1, $2, $3, $4, $5,
              $6::jsonb, $7::jsonb, $8, 'OPEN', $9,
-             now(),
-             CASE WHEN $10::interval IS NOT NULL THEN now() + $10::interval END,
-             $11)
+             now(), $10, $11)
         ON CONFLICT (dedupe_key) DO UPDATE
             SET
                 measured   = EXCLUDED.measured,
@@ -134,7 +141,6 @@ async def open_or_refresh(
                 END
         RETURNING id, state, (xmax = 0) AS is_new
     """
-    sla_str = str(sla_delta) if sla_delta else None
 
     row = await conn.fetchrow(
         upsert_sql,
@@ -147,7 +153,7 @@ async def open_or_refresh(
         json.dumps(anomaly.baseline) if anomaly.baseline else None,
         anomaly.lane,
         anomaly.quarantines,
-        sla_str,
+        sla_due,      # datetime | None — asyncpg encodes as TIMESTAMPTZ natively
         anomaly.dedupe_key,
     )
 

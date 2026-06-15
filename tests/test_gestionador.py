@@ -616,3 +616,129 @@ class TestSLAConfig:
     def test_escalate_lanes_have_no_sla(self):
         assert LANE_SLA["ESCALATE_GASTO"] is None
         assert LANE_SLA["ESCALATE_OWNER"] is None
+
+
+# ---------------------------------------------------------------------------
+# DB integration — open_or_refresh against the REAL connection.
+#
+# WHY THIS EXISTS: the rest of this file mocks asyncpg.Connection, so it cannot
+# catch encoding bugs in the SQL bind path.  A real bug shipped under that blind
+# spot: open_or_refresh passed str(timedelta) ('7 days, 0:00:00') as the sla_due
+# parameter, which asyncpg's INTERVAL/TIMESTAMPTZ codec rejects with DataError
+# ('str' object has no attribute 'days') for EVERY lane that carries an SLA
+# (AUTO_FIX/RESEARCH/QUARANTINE).  Mocked tests stayed green while the live path
+# crashed.  These tests bind through real asyncpg (rolled back) so that class of
+# regression cannot recur silently.  Pattern mirrors test_inquisition_schedule.py.
+# ---------------------------------------------------------------------------
+
+_DSN = "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep"
+
+
+async def _ping_db() -> bool:
+    try:
+        import asyncpg
+        conn = await asyncpg.connect(_DSN, timeout=3)
+        await conn.close()
+        return True
+    except Exception:
+        return False
+
+
+def _db_available() -> bool:
+    try:
+        import asyncpg  # noqa: F401
+        return asyncio.run(_ping_db())
+    except Exception:
+        return False
+
+
+_DB_AVAILABLE = _db_available()
+
+
+class _Rollback(Exception):
+    """Sentinel that forces transaction rollback without persisting any state."""
+
+
+@pytest.mark.skipif(not _DB_AVAILABLE, reason="cardeep-pg not reachable at 127.0.0.1:5433")
+class TestOpenOrRefreshRealDB:
+    """Bind open_or_refresh through real asyncpg (rolled back) — guards the
+    sla_due encoding path that mocked tests cannot see."""
+
+    def test_sla_lane_encodes_sla_due(self) -> None:
+        """An SLA-carrying lane (RESEARCH) must insert with a non-NULL sla_due.
+
+        This is the exact path that crashed with str(timedelta).  It must now
+        return an int id and persist sla_due as a real TIMESTAMPTZ.
+        """
+        asyncio.run(self._run_sla_lane())
+
+    async def _run_sla_lane(self) -> None:
+        import asyncpg
+        from pipeline.gestionador.route import open_or_refresh
+
+        conn = await asyncpg.connect(_DSN)
+        try:
+            async with conn.transaction():
+                anomaly = AnomalyResult(
+                    detector="dbtest_detector",
+                    subject_type="dbtest",
+                    subject_key="__gestionador_dbtest_research__",
+                    severity="warning",
+                    score=0.5,
+                    measured={"k": 1},
+                    baseline={"b": 0},
+                    lane="RESEARCH",          # SLA = 7 days → the str(timedelta) trap
+                    quarantines=False,
+                    dedupe_key="__gestionador_dbtest_research__",
+                )
+                item_id = await open_or_refresh(conn, anomaly, actor="dbtest")
+                assert isinstance(item_id, int)
+
+                sla_due = await conn.fetchval(
+                    "SELECT sla_due FROM gestion_item WHERE id = $1", item_id
+                )
+                assert sla_due is not None, (
+                    "RESEARCH lane carries a 7-day SLA; sla_due must be a real "
+                    "TIMESTAMPTZ, not NULL (the str(timedelta) bug produced a crash)"
+                )
+                raise _Rollback
+        except _Rollback:
+            pass
+        finally:
+            await conn.close()
+
+    def test_no_sla_lane_leaves_sla_due_null(self) -> None:
+        """An escalate lane (no SLA) must insert with sla_due = NULL, not crash."""
+        asyncio.run(self._run_no_sla_lane())
+
+    async def _run_no_sla_lane(self) -> None:
+        import asyncpg
+        from pipeline.gestionador.route import open_or_refresh
+
+        conn = await asyncpg.connect(_DSN)
+        try:
+            async with conn.transaction():
+                anomaly = AnomalyResult(
+                    detector="dbtest_detector",
+                    subject_type="dbtest",
+                    subject_key="__gestionador_dbtest_escalate__",
+                    severity="critical",
+                    score=1.0,
+                    measured={"k": 2},
+                    baseline=None,
+                    lane="ESCALATE_OWNER",    # SLA = None
+                    quarantines=False,
+                    dedupe_key="__gestionador_dbtest_escalate__",
+                )
+                item_id = await open_or_refresh(conn, anomaly, actor="dbtest")
+                assert isinstance(item_id, int)
+
+                sla_due = await conn.fetchval(
+                    "SELECT sla_due FROM gestion_item WHERE id = $1", item_id
+                )
+                assert sla_due is None, "ESCALATE lane has no SLA; sla_due must be NULL"
+                raise _Rollback
+        except _Rollback:
+            pass
+        finally:
+            await conn.close()

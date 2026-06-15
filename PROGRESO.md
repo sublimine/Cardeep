@@ -532,3 +532,24 @@
   (4✓ regresión). Ledger 0031 reconciliado (hash 430333↔archivo; **25 migs, 0 hashes malos**).
 - §Deuda: detectores 3.8/3.9 stub; price_trap floor de particulares (~1000 precios simbólicos) puede ajustarse.
   Pend B2: δ (expires_at TTL + scheduler WF-INQUISITION cadencia), ε (V3 inquisition); G5=2ª corrida.
+
+## 2026-06-15 — SU-B2 δ: WF-INQUISITION (TTL de veredictos + cadencia) + crash latente de γ cazado
+- δ build (Sonnet; **Fable 5 no disponible** — reportado sin maquillar, fallback doctrinal a Sonnet):
+  `pipeline/verify_ttl.py` (TTL por claim_kind: count 7d, freshness 1d, coverage/field_fill 14d,
+  existence/denominator 30d; unknown→count default, nunca NULL) + `pipeline/verify.py` (cableado
+  backward-compat claim_kind/expires_in: veredictos NUEVOS llevan expires_at=now()+TTL; grandfathered siguen
+  **NULL=eternos, NO backfill** — se re-verifican al re-cosechar, no por reloj) + `pipeline/ops/inquisition_schedule.py`
+  (find_expired [expires_at<now() ∧ superseded_by NULL, usa idx_verdict_expiry] → open_or_refresh
+  detector='stale_verdict' lane RESEARCH; **€0**, idempotente por dedupe_key; CLI WF-INQUISITION). 17✓ (TTL unit
+  + integración real-DB rolled-back). Smoke CLI real: **expired=0 / 1044** (todos NULL-grandfathered, coherente).
+  El hash-chain 0026 NO hashea expires_at → setearlo es chain-safe (verificado leyendo el trigger). δ es CÓDIGO
+  PURO (expires_at/superseded_by/idx ya existían en 0026 — sin migración).
+- **EL GATE CAZÓ UN CRASH LATENTE QUE SHIPPEÉ EN γ (b8a51c4)**: `open_or_refresh` pasaba `str(timedelta)`
+  ('7 days, 0:00:00') como parámetro ligado a `::interval` → asyncpg revienta `DataError: 'str' object has no
+  attribute 'days'` en TODO lane con SLA (AUTO_FIX/RESEARCH/QUARANTINE); el path None (ESCALATE) sí iba. **Causa
+  raíz de por qué se coló**: `test_gestionador.py` 100% MOCKEADO (AsyncMock) → nunca tocó asyncpg real. Probado
+  con un probe read-only (prepare OK; execute str→DataError). Arreglado (sla_due como datetime Python→TIMESTAMPTZ
+  nativo) + **2 tests de integración real-DB** en test_gestionador.py que ligan por asyncpg real (rolled-back)
+  el path exacto que crasheaba. Suite gestionador 56✓; sweep 87✓.
+- §Deuda δ: escribir `superseded_by` tras RESOLVED = fase posterior (el scheduler ya lo respeta excluyendo
+  supersedidos); dedupe_key usa el claim completo (refinar a hash si varía). Pend B2: ε (V3 inquisition); G5=corrida.
