@@ -335,3 +335,19 @@
   β S_obs=38.555 = floor (en denominator_estimate). Chao2 sellable DEFERIDO; prereq declarados:
   Overture→entity_source (25% del universo P sin captura formal), fuente fiscal cross-covering,
   filtro sells_cars en garaje, estratificar por kind.
+
+## 2026-06-15 — SU-SEAL: assessment de seal-readiness (gate del Director)
+- Recon read-only (agente) sobre la seal-readiness 52×3 con datos sellados de hoy. **GATE = TRUSTWORTHY**:
+  los números F8 (B6.4, 2026-06-14) siguen VÁLIDOS — DB fresca 48h, overlays B1/β/B7 + AS24-fix incorporados.
+- **Tensión raw-vs-dedup resuelta**: el numerador raw infla (50/52 selladas, ~37k dealers con dups cross-portal);
+  el DEDUP canónico es el honesto → **19/52 venta ≥85% + 88% nacional** (20.324/23.085). Decisión: **sello = dedup**.
+- **Decisión de Director — SELLO EN DOS CAPAS**:
+  - **CAPA A (firmable €0 HOY, sellado-con-gap-irreducible)**: venta 88% nacional · desguace discovery 52/52 LIMPIO
+    (146,7% DGT) · concesionario 11,6% inventario (denom FACONAUTO inflado: incluye talleres sin stock VO → gap real
+    menor) · desguace-inventario = GAP-ESTRUCTURAL (sin estándar web CAT, no es hueco de cobertura) · C2C 88% del
+    inventario = fuera-de-modelo (correctamente excluido).
+  - **CAPA B (roadmap deferido, NO sellar-alrededor)**: Overture E2E 13.204 leads ~2-3 sem (+15-20 prov al umbral) ·
+    scrapers OEM por marca ~6-8 sem (concesionario 11,6%→40-60%) · Ceuta/Melilla censo directo 1-2 días.
+- **Conclusión honesta**: "SPAIN-SEALED 52/52 PLENO en cobertura" NO es alcanzable €0 hoy — requiere CAPA B (semanas).
+  Lo €0-alcanzable AHORA: NATIONAL-SEALED venta (88%, gap irreducible confesado) + desguace discovery limpio +
+  concesionario medido. Sellar los gaps REDUCIBLES (Overture/OEM) como "hecho" sería maquillaje — prohibido.

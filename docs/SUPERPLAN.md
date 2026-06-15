@@ -170,7 +170,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 
 | SU | Definición | GATE | Estado |
 |---|---|---|---|
-| **SU-SEAL** | SPAIN-SEALED 52/52 (B6) | por provincia: denominador medido + numerador VAM-estable + vehicle-recall; Ceuta/Melilla direct-census; residuales itemizados; API sirve solo TRUSTWORTHY | ⬜ |
+| **SU-SEAL** | SPAIN-SEALED 52/52 (B6) | por provincia: denominador medido + numerador VAM-estable + vehicle-recall; Ceuta/Melilla direct-census; residuales itemizados; API sirve solo TRUSTWORTHY | 🟡 **ASSESS (gate Director)**: F8 VÁLIDO (DB fresca, overlays+AS24 incorporados). **Sello=DEDUP** (raw 50/52=artefacto cross-portal; honesto **19/52 ≥85% + 88% nacional**). **CAPA A firmable €0** (gap-irreducible): venta 88% nac + desguace discovery 52/52 LIMPIO + conc 11,6% (FACONAUTO inflado) + desguace-inv=GAP-ESTRUCTURAL + C2C fuera-modelo. **CAPA B=roadmap deferido** (NO sellar-alrededor): Overture E2E ~2-3sem, OEM ~sem/marca, Ceuta/Melilla censo. **52/52-PLENO no €0 hoy.** |
 
 ---
 
