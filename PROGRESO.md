@@ -739,3 +739,17 @@
 - Verificado: import scheduler OK; `inquisition_cadence_job()` end-to-end contra DB viva (expired=0 honesto, sin
   raise); **46 tests ops/scheduler/watchdog✓** (0 regresión). Orquestación E2E-per-dealer-harvest (correr
   conectores reales) queda harvest-gated = fase cosecha. SU-F1 €0 SELLADO.
+
+## 2026-06-15 — SU-A7: átomo cdp_code confirmado (= SU-A1) + barrido del frente €0
+- SU-A7 era ⬜ pero su criterio dice "(= SU-A1) cdp_code inmutable, átomo confirmado" = DUPLICADO de SU-A1 (el
+  sistema cdp_code ya vivo). Confirmado a nivel átomo contra DB viva: **390.621 entities = 390.621 cdp_code
+  distintos, 0 nulls** (1:1, cero colisión), DB-enforced por `uq_entity_cdp_code` UNIQUE; minter determinista
+  `services/api/codes.py`. Marcado 🟢. (Nota: el conteo de entities creció 369k→390k — discovery continuó; el
+  átomo de unicidad se mantiene.)
+- **Barrido SUPERPLAN — frente €0 AGOTADO**. Estado: 20✅ / 7🟢 / 8🟡 / 8⬜. Los ⬜ restantes (SU-C1/C2 recetas
+  Tier-1, SU-R1-4 desguace/concesionario) = scraping/harvest. Los 🟡 (SU-A2 φ/Chao2 REFUTED-sellado, A3 drains
+  harvest, A4 delta necesita corrida, A5 v_dealer_recipe sellado, A6 muni-gap DATA-BLOCKED €0, D1 LLM
+  hardware-gated, SU-SEAL Capa-A-firmable/Capa-B-harvest) = deuda harvest/hardware/data-gated DECLARADA, no
+  trabajo €0 sin tocar. SU-SEAL: Capa A €0-firmable con gaps declarados; 52/52-pleno "no €0 hoy" (Overture/OEM/
+  censo = semanas+gasto). **Conclusión honesta: el €0-config A-Z está sustancialmente completo**; lo que resta es
+  la fase "cosecha/spend DESPUÉS" que el usuario difirió explícitamente hasta tener todo configurado.
