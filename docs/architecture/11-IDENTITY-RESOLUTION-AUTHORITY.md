@@ -87,9 +87,26 @@ count. Same canonical_key ⟺ same platform seller account ⟺ same human, with 
    **Reversible:** `gate_particular_dedup.py --revert` flips it back.
 
 The discriminator was definitive (canonical_key, collision-free) so this carried zero false-positive
-risk. β-composition and cross-source certification **remain deferred** per the rationale above (no
-comparable collision-free discriminator exists for those — they rest on name+geo similarity that needs
-per-merge review).
+risk. β-composition and cross-source certification **remain deferred** — and a fresh investigation this
+turn shows WHY they are NOT like particular-split:
+
+- **particular-split was uniquely safe** = definitive discriminator (canonical_key) **AND a disjoint,
+  additive mechanism** (each canonical_key group is independent; merges never chain with the dealer
+  graph — verified: 843 groups, case-C cross-kind = 0). So it composed as pure INSERTs into
+  canonical_dedup with zero union-find. Value was meaningful (706 humans).
+- **cross-source** (`pipeline/identity/cross_source_dedup.py` → `entity_cluster` run, vam_verified=FALSE)
+  HAS a hard-ID safe subset (Signal A phone fp≈0% + Signal B domain), so the *discriminator* problem is
+  solvable. But its edges connect **distinct B1 super-canonicals** (OSM↔digital pairs B1 never merged),
+  so serving them needs a **union-find closure** over {B1, canonical_dedup, cross-source} edges — NOT
+  additive — for only **~13 genuine dealers (0.03% of 40,016)**. Risk (closure rebuild of the served
+  view) ≫ value. Deferral confirmed.
+- **β-composition** is the same union-find-rebuild class (388 merges ≈ 1%); fingerprint/Jaccard edges,
+  independent of B1∘dedup. Same mechanism risk, modest value.
+
+The line: do the merge when it is BOTH evidence-definitive AND mechanically additive (particular-split
+was). When serving requires a transitive-closure rebuild of the core view for a sub-1% gain, the doctrine
+("una vez impecable, sin prisa; no certificar sin probar") says defer to a focused, fully-regression-
+tested rebuild — not bolt it on. The hard-ID subsets are pre-identified for that future build.
 
 **Edge case (verified + handled):** the served run merges particulares and dealers in **2 cross-kind
 super-canonical groups** (a particular sharing a deep_link with a dealer). These 2 are NOT in the 843
