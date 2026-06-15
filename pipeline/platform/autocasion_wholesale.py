@@ -880,8 +880,12 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES, limit: int | None = None) 
                JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                WHERE pl.platform_entity_ulid = $1""", platform_ulid)
 
-        recipe_path = write_recipe(platform_code, AC_PLATFORM_RECIPE)
-        print(f"[autocasion_wholesale] recipe written: {recipe_path}")
+        # Audit 2026-06-15: autocasion_facet is the CANONICAL Autocasion harvester (complete,
+        # uncapped — make-partition surface). This SSR/wholesale path caps at max_result_window
+        # =10000 (~8% of the catalogue) and is superseded; it must NOT write the platform recipe,
+        # or it would clobber facet's canonical CDP-ES-00 recipe (last-writer-wins). facet owns it.
+        recipe_path = "(not written — autocasion_facet owns the canonical recipe)"
+        print(f"[autocasion_wholesale] recipe: {recipe_path}")
 
         # VAM count quorum for the slice — THREE orthogonal like-with-like paths that
         # all measure "distinct cageable cars in this slice":

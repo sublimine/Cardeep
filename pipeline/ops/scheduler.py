@@ -119,8 +119,12 @@ def _build_registry() -> dict[str, SourceEntry]:
     """
     entries: list[SourceEntry] = [
         # ── Tier-1 (24h) ─────────────────────────────────────────────────
-        SourceEntry("autocasion_wholesale",
-                    "pipeline.platform.autocasion_wholesale", []),
+        # autocasion: FACET is the canonical harvester. The SSR/wholesale path caps at
+        # index.max_result_window=10000 (~8% of the ~123k catalogue); the make-partition facet is
+        # the complete, uncapped surface. Audit 2026-06-15 found production was scheduling the
+        # capped wholesale path (2,113 cars) instead of facet — under-harvesting Autocasion.
+        SourceEntry("autocasion_facet",
+                    "pipeline.platform.autocasion_facet", ["--makes", "all"]),
         SourceEntry("coches_com_wholesale",
                     "pipeline.platform.coches_com_wholesale", []),
         SourceEntry("coches_net_wholesale",
