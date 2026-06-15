@@ -269,6 +269,29 @@ async def check_g3(
     return True, reason, sha
 
 
+def _resolve_recipe_path(cdp_code: str, root: Path) -> Path | None:
+    """Locate the recipe file for cdp_code under root, supporting both layouts.
+
+    Search order (first match wins):
+      1. New geo layout : countries/ES/**/<cdp_code>/recipe.yaml  (post SU-E2)
+      2. Legacy flat    : countries/ES/recipes/<cdp_code>.yaml    (pre SU-E2)
+
+    Returns the resolved absolute Path, or None if not found in either layout.
+    Transition-safe: works before, during, and after the SU-E2 reshape move.
+    """
+    # New layout: glob under countries/ES (excludes the flat recipes/ dir on
+    # purpose — the flat path below handles that case explicitly).
+    for candidate in (root / "countries" / "ES").glob(f"**/{cdp_code}/recipe.yaml"):
+        return candidate
+
+    # Legacy flat layout fallback
+    flat = root / "countries" / "ES" / "recipes" / f"{cdp_code}.yaml"
+    if flat.exists():
+        return flat
+
+    return None
+
+
 def _check_g3_git_subsignal(
     cdp_code: str, repo_root: Path | None = None
 ) -> tuple[str | None, str]:
@@ -278,13 +301,19 @@ def _check_g3_git_subsignal(
     This does NOT gate G3. It is called only for recipe_kind='per_dealer' and
     provides extra evidence for the entity_completion record. In Docker without
     git, returns (None, 'git_unavailable') — G3 remains TRUE.
+
+    Path resolution is geo-reorg-stable: searches the new geo layout first
+    (countries/ES/**/<cdp>/recipe.yaml) then falls back to the legacy flat
+    path (countries/ES/recipes/<cdp>.yaml).  Both git checks (ls-files and
+    cat-file HEAD) are run against the resolved path in either layout.
     """
     root = repo_root or _REPO_ROOT
-    recipe_rel = Path("countries") / "ES" / "recipes" / f"{cdp_code}.yaml"
-    recipe_abs = root / recipe_rel
 
-    if not recipe_abs.exists():
+    recipe_abs = _resolve_recipe_path(cdp_code, root)
+    if recipe_abs is None:
         return None, "git_subsignal:recipe_file_missing"
+
+    recipe_rel = recipe_abs.relative_to(root)
 
     try:
         subprocess.run(

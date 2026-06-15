@@ -664,3 +664,26 @@
   build C+CMake+MSVC + descarga de datos ~2GB; valor marginal a €0). Cero instalado **por diseño** — "ceilings
   solo tras probar, declarados con causa" (SU-F3). El criterio "descartar las que exigen GPU/gasto, declarado" se
   cumple: las tres descartadas/diferidas con causa registrada.
+
+## 2026-06-15 — SU-E2: reshape geo de recetas + separación Tier-1 (580 git mv, count-preserving)
+- Recon átomo [VERIFICADO]: 587 ficheros en `countries/ES/recipes/` flat = **580 CDP-ES-*** + 7 family templates;
+  loader ÚNICO = `complete.py` G3 (blast-radius BAJO); `entity` tiene province_code/municipality_code/comarca_id
+  (geo_municipality.name da la ciudad); geo real (120 Madrid, 51 BCN, 47 Valencia...). `is_tier1=TRUE`=**14**
+  (7 marketplaces incl. AS24 `WS3ZTNX7` + 7 OEM `t1_soft`) = "plataformas con defensas duras" (CLAUDE.md).
+- **Método mejorado (Director)**: UN reshape de DATOS (NO mover módulos Python sellados — alto riesgo + bajo valor)
+  logra geo-org + separación Tier-1 a la vez. `scripts/reshape_recipes_geo.py` DB-driven, count-preserving by
+  construction, idempotente, dry-run→apply. Routing: `is_tier1`→`_tier1/<cdp>/`; nacional-no-tier1→
+  `_platforms/<source_group>/<cdp>/`; geo dealer→`<prov>/<comarca-slug>/<muni-slug>/dealers/<cdp>/recipe.yaml`
+  (NULL→`_sin-comarca`/`_sin-municipio`). `complete.py` G3 → `_resolve_recipe_path` glob-based geo-reorg-stable
+  + legacy flat fallback (git-committed check preservado, contrato idéntico).
+- Ejecutado `--apply`: **580 git mv (renames=historia preservada), 0 perdidos, COUNT INVARIANT PASS**. Verificado
+  por mí (no confié en el script): 580 recipe.yaml en árbol nuevo + 7 family intactos = 587; estructura real
+  `ES/28/area-metropolitana-de-madrid/alcorcon/dealers/CDP-ES-28-AAQ2PK41/recipe.yaml`; `_tier1` 14, `_platforms`
+  7 grupos; **loader resuelve cdp reales (geo + _tier1) verificado vivo**; 31 tests reshape + 81 sweep
+  complete/recipe✓ (0 regresiones — gate G3 verde en layout nuevo).
+- **El gate (Opus) cazó/validó la desviación del spec**: el agente usó `is_tier1` en vez de `source_group IN
+  (marketplaces)` y lo flaggeó — VALIDADO: es más fiel ("Tier-1=defensas duras", incluye OEM soft-walled; los 6
+  marketplaces puros + AS24 + 7 OEM t1_soft = 14, no 9). 580≠587 explicado (7 family templates, no per-cdp).
+- §Deuda: 18 geo-dealers `_sin-comarca` (DB sin comarcalización oficial); 7 family templates quedan en `recipes/`
+  (plantillas CMS, no per-cdp); módulos Python Tier-1 NO movidos (sellados/validados — la separación se logró en
+  los datos, no en el código). El script es re-ejecutable idempotente (servirá según harvest añada recetas).
