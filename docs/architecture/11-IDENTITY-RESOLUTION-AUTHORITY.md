@@ -85,6 +85,14 @@ This is no longer high-risk (the discriminator is definitive); it is now a focus
 composition and cross-source certification remain deferred per the rationale above (no comparable
 collision-free discriminator exists for those).
 
+**Edge case the build MUST handle (verified on live DB):** the current served run merges particulares
+and dealers in **2 cross-kind super-canonical groups** (a particular sharing a deep_link with a dealer).
+The other 140 particular-only + 2,094 dealer-only groups are disjoint, so the clean build is "copy the
+dealer-only merges + rebuild particular merges from canonical_key" — but those **2 cross-kind groups are
+NOT disjoint** and must be inspected first (likely a mis-classified "particular" that is really a small
+dealer, or a shared-listing artifact): either preserve the existing deep_link merge or re-classify the
+entity. Do not blindly rebuild over them. This is exactly the per-merge inspection the deferral protects.
+
 ## In-schema note
 
 `v_resolved_dealer` is β-only and has **zero code consumers** — it is NOT the served resolver. The β data
