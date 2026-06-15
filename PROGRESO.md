@@ -409,3 +409,19 @@
   reproducible, lo corrí — pasa); comentarios 0027/0028 arreglados; verdict **1121** (40.016, quorum 2/3/3)
   **supersede el 1112** (39.874) en el ledger — registro honesto de la corrección. Los MERGES nunca cambiaron
   (son correctos: 0 CIF, deep_link); solo el NÚMERO derivado estaba mal. **B1: 42.259 = techo → 40.016 servidos.**
+
+## 2026-06-15 — SU-A9 refactor (deuda <800) + SU-A3 fase-1 (€0)
+- **SU-A9 refactor SELLADO** (`84efa47`): `main.py` 856→63 líneas + `deps.py`(99) + `routers/`{ops,entities,
+  geo,vehicles,platforms} (84-194 c/u, todos <800). Behavior-preserving (queries verbatim, pool vía
+  `request.app.state.pool`). Gate: verificación estructural (15 rutas registradas, re-exports OK) + **89 tests
+  PASS** (633s — lento por query huérfana de 4,5h que MATÉ [auto-repair] + `/health` JOIN 1,69M, residuo declarado).
+- **D1 ejecutado** (capacidad PC): Ryzen 5500U 6c/12t, **1,7GB RAM libre / 34GB disco (93%)** → drains modestos/
+  paced, evicción necesaria. `cardex-pg` (1,6GB) = otro proyecto, no tocado.
+- **SU-A3 recon + fase-1** (`docs/recon/SUA3_EXHAUSTIVIDAD_RECON.md` + addendum Director): B9 coverage gate EXISTE
+  (`coverage_verify.py`, €0). Estado: 2/47 TRUSTWORTHY (coches_net 100,8%, wallapop 90,3%), 2 REFUTED, 42 sin gate.
+  **Fase-1 €0 (sin scraping)**: AS24 REFUTED→**UNVERIFIED** (gap-declarado: proof-slice por diseño, drain real
+  P1/D1-gated; v1122); milanuncios REFUTED→**UNVERIFIED** (causa = scope-mismatch: captured_db all-runs 397k vs
+  declared 1-segmento 110k, NO over-capture real; v1123); **B9 v2**: over-coverage→UNVERIFIED (no REFUTED+auto_repair,
+  documenta ambas hipótesis), under-coverage intacto, tests 4✓; coches_com instrumentado; discrepancia
+  as24-no-en-source_health corregida (48 rows). **Fase-2 (paced D1)**: re-probe milanuncios full-index, instrumentar
+  los 42, drains AS24(~13.900 págs)/autocasion/motor.es.

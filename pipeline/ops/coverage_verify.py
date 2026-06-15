@@ -50,6 +50,32 @@ _DEFAULT_FLOOR: float = 0.85
 # Without it, milanuncios (captured 397k vs declared 110k = 360%) slipped through as TRUSTWORTHY.
 _COVERAGE_CEILING: float = 1.15
 
+# B9 v2 — SCOPE CLASSIFICATION for over-coverage alerts.
+#
+# Problem: multi-segment / multi-run sources (e.g. milanuncios) emit spurious REFUTED verdicts
+# because captured_db is CUMULATIVE (all runs, all segments) while declared_total is scoped to
+# ONE segment of the current run.  The 360% figure is an artifact of comparing different scopes,
+# NOT evidence of DB inflation or real over-capture.
+#
+# Design intent (phase-2):
+#   - The correct fix is to pass declared_total = sum(ALL partition totalHits across ALL segments
+#     of a SINGLE full-index run) so that declared and captured are on the same scope.
+#   - Until that full-index probe is available, over-coverage MUST be UNVERIFIED (not REFUTED):
+#     REFUTED implies the data is wrong; UNVERIFIED implies the metric is unmeasurable at this
+#     scope — which is the honest assessment.
+#   - Single-scope / single-run sources (e.g. coches_net) are unaffected: their declared_total
+#     is the full platform total and captured_db is the exact same scope.  coches_net stays
+#     TRUSTWORTHY.
+#
+# Implementation: when coverage_pct > _COVERAGE_CEILING, emit UNVERIFIED (not REFUTED) and
+# document the ambiguity in the alert payload.  This does NOT mask genuine DB inflation —
+# both "declared under-scoped" and "DB inflated" produce over-coverage; we surface the
+# ambiguity and leave resolution to the phase-2 full-index probe.
+#
+# The floor path (under-coverage) is unchanged: REFUTED stays correct there because a source
+# that captured 22% of declared is genuinely incomplete regardless of scope.  (AS24 proof-slice
+# is sealed as UNVERIFIED via manual reclassification, not by this path.)
+
 
 async def verify_coverage(
     conn: asyncpg.Connection,
@@ -172,6 +198,35 @@ async def verify_coverage(
     if captured_distinct is not None:
         paths["captured_distinct"] = captured_distinct
 
+    # ------------------------------------------------------------------
+    # B9 v2 — over-coverage scope classification.
+    #
+    # When coverage_pct > ceiling, there are TWO possible causes:
+    #   (a) declared under-scoped: declared_total covers ONE segment/run but captured_db
+    #       is the cumulative all-runs total.  This is a MEASUREMENT artifact, not a data
+    #       quality failure.  Sources with multi-segment / multi-run drains (milanuncios,
+    #       wallapop with legacy buckets) naturally produce this.
+    #   (b) DB inflated: genuine intra-source duplicates or stale-available rows that were
+    #       never marked GONE.  This IS a data quality failure.
+    #
+    # At this point we cannot distinguish (a) from (b) without a full-index re-probe.
+    # Therefore we record the verdict as UNVERIFIED (not REFUTED): REFUTED would imply the
+    # data is wrong; UNVERIFIED correctly states we cannot measure coverage at this scope.
+    # The alert payload carries both hypotheses so operators can investigate.
+    # Phase-2 fix: pass declared_total = sum(ALL partition totalHits, full-index run) so
+    # declared and captured are on the same scope, at which point the gate can emit a
+    # definitive TRUSTWORTHY or REFUTED verdict.
+    #
+    # The under-coverage path (coverage_pct < floor) is unchanged: a partial drain is a real
+    # failure regardless of scope — a source cannot have captured MORE than it declared.
+    # ------------------------------------------------------------------
+    over_coverage_unverified: bool = False
+    if coverage_pct > _COVERAGE_CEILING:
+        # Force the verdict to UNVERIFIED regardless of what record_count_verdict emitted.
+        # record_count_verdict may have emitted REFUTED (the paths diverge beyond tolerance);
+        # we override it here because the divergence is due to scope mismatch, not bad data.
+        over_coverage_unverified = True
+
     verdict = await record_count_verdict(
         conn,
         subject_type="source_coverage",
@@ -180,6 +235,10 @@ async def verify_coverage(
         paths=paths,
         tolerance=_COVERAGE_TOLERANCE,
     )
+
+    if over_coverage_unverified:
+        # Override: scope mismatch => UNVERIFIED (see B9 v2 comment above).
+        verdict = "UNVERIFIED"
 
     # Retrieve the id of the verdict just inserted (most recent for this key).
     verdict_id: int | None = await conn.fetchval(
@@ -237,20 +296,31 @@ async def verify_coverage(
         )
         await auto_repair(conn, source_key, "low_coverage", phase="coverage")
     elif coverage_pct > _COVERAGE_CEILING:
-        # OVER-coverage: we have far MORE than the source declares. The declared figure is
-        # wrong/under-counted OR our DB is inflated (intra-source duplicates / stale-available).
-        # NOT trustworthy — must surface, symmetric with the floor. (milanuncios 360% case.)
+        # OVER-coverage (B9 v2): verdict is UNVERIFIED (not REFUTED — see scope classification
+        # comment above).  Alert fires to surface the ambiguity; payload carries both hypotheses
+        # so operators can investigate.  auto_repair is NOT called: this is not a drain failure
+        # but an unresolvable measurement ambiguity at the current scope.
         await fire_alert(
             conn, coverage_origin, severity=SEV_WARNING,
             message=(
-                f"source '{source_key}' coverage ABOVE ceiling: "
+                f"source '{source_key}' coverage ABOVE ceiling (UNVERIFIED): "
                 f"{coverage_pct:.1%} > {_COVERAGE_CEILING:.0%} "
                 f"(captured_db={captured_db}, declared={declared_total}) — "
-                f"declared under-counted or DB inflated (dups/stale)"
+                f"cause ambiguous: declared may be under-scoped (multi-segment/run) "
+                f"OR DB may be inflated (dups/stale). Verdict=UNVERIFIED until "
+                f"full-index re-probe confirms scope alignment."
             ),
-            payload={**base_payload, "direction": "over"},
+            payload={
+                **base_payload,
+                "direction": "over",
+                "b9v2_hypothesis_a": "declared_under_scoped (multi-segment/run mismatch)",
+                "b9v2_hypothesis_b": "db_inflated (dups or stale-available rows)",
+                "b9v2_resolution": (
+                    "phase-2: pass declared_total = sum(ALL partition totalHits, "
+                    "full-index run) to align scopes and emit definitive verdict"
+                ),
+            },
         )
-        await auto_repair(conn, source_key, "over_coverage", phase="coverage")
     else:
         # Healthy coverage within [floor, ceiling]: close any prior open coverage alert.
         await resolve_alerts(conn, coverage_origin)

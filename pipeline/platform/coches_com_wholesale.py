@@ -1485,9 +1485,19 @@ async def harvest(limit: int = DEFAULT_LIMIT, concurrency: int = DEFAULT_CONCURR
         # wall stopped the drain, and the VAM did not refute.
         run_ok = (fetch_error is None and stats["cars_caged"] > 0 and verdict != "REFUTED")
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+        # B9 coverage gate: pass declared_total so the gate fires and records a
+        # source_coverage verdict on the next successful run.  declared_full is the
+        # segment's classifieds.total (VO: ~92k, km0: ~15k) — single-scope/single-segment,
+        # the correct denominator for this run's captured_db. platform_ulid enables the
+        # db_edges path (structural edge count via platform_listing JOIN).
+        # NOTE: coches_com_wholesale.py has declared_total_observed=92312 hardcoded in
+        # platform_meta but was NOT passing it here — the gate never fired. This fixes that.
         outcome = await record_run(
             conn, COCHES_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
-            error=run_error, http_status=last_http)
+            error=run_error, http_status=last_http,
+            declared_total=stats.get("declared_full"),
+            captured_distinct=stats.get("harvested_cageable"),
+            platform_ulid=platform_ulid)
         stats["health_status"] = outcome.status
         stats["breaker_state"] = outcome.breaker_state
         if not run_ok:
