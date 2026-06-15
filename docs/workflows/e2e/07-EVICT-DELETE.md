@@ -1,6 +1,6 @@
 # 07 — EVICT-DELETE
 
-> **ESTADO: POR CONSTRUIR** — `pipeline/evict.py` no existe. Este documento es el diseno canonico. No implementar sin autorizacion explicita del Director.
+> **ESTADO: IMPLEMENTADO** (€0) — `pipeline/evict.py` + `migrations/0033_evict.sql` + 24 tests. El módulo, los 3 gates y la migración están construidos y probados (tmp/rolled-back). **`--apply` (borrado real) NUNCA se ha ejecutado** sobre los datos reales (161 MB raw / DB): es destructivo y requiere dealer confirmado-muerto + los 3 gates verdes + autorización del Director.
 
 Borrar de forma segura e irreversible un dealer y su inventario tras confirmar que está muerto: sin actividad, sin verdict `TRUSTWORTHY` vigente (evidencia `REFUTED`/`UNVERIFIED` o gone-reconcile), recipe preservada en git.
 
@@ -34,11 +34,12 @@ Los tres deben ser `True` simultaneamente antes de ejecutar cualquier cambio. Si
 - Existe evidencia reciente `REFUTED`/`UNVERIFIED` (o gone-reconcile) de que el dealer está muerto.
 - Quorum: ≥2 paths confirman muerte (inventario disponible = 0 o fuente inaccesible).
 
-### Gate 2 — Recipe commiteada en HEAD
+### Gate 2 — Recipe PRESERVADA + commiteada (re-scrapeable post-evict)
 
-- El archivo `countries/ES/.../dealers/{cdp}/recipe.yaml` existe y esta commiteado en `git HEAD`.
-- Proposito: preservar el conocimiento de como scrapearlo en caso de reaparicion del dealer.
-- Sin recipe en git → abort. La recipe es el unico activo que sobrevive al borrado.
+Pasa si CUALQUIERA de las dos formas se cumple:
+- **(a)** `recipe.yaml` per_dealer commiteado en `git HEAD` (`countries/ES/.../dealers/{cdp}/recipe.yaml`; own-site / long-tail), O
+- **(b)** **connector-coverage**: `v_dealer_recipe.recipe_kind = 'connector'` — la receta ES el conector de plataforma compartido (Python commiteado en `pipeline/platform/`), que cubre ~98,4% del corpus. Exigir un yaml per-dealer a los dealers connector los haría permanentemente in-evictables (incorrecto); el conector es el activo commiteado que los re-scrapea si reaparecen.
+- Propósito: preservar el conocimiento de cómo scrapearlo. Sin NINGUNA de las dos formas → abort.
 
 ### Gate 3 — Counts cuadrados
 
@@ -98,9 +99,7 @@ Los tres deben ser `True` simultaneamente antes de ejecutar cualquier cambio. Si
 
 ## Estado
 
-**POR CONSTRUIR** — `pipeline/evict.py` no existe.
-
-Este documento es el diseno canonico. Cualquier implementacion debe seguir exactamente los 3 gates duros y el orden de pasos atomos definido aqui. No implementar sin autorizacion explicita del Director.
+**IMPLEMENTADO** (€0) — `pipeline/evict.py` + `migrations/0033_evict.sql` (`entity_status`+'evicted', `entity.evicted_at`, `capacity_ledger`, `audit_eviction` append-only con trigger de inmutabilidad) + `tests/test_evict.py` (24✓). Gate 2 acepta recipe.yaml-en-HEAD **o** connector-coverage. **El borrado real (`--apply`) sigue gated**: destructivo, requiere dealer confirmado-muerto + 3 gates verdes + autorización; no se ha corrido sobre datos reales.
 
 ## Coste
 
