@@ -1135,3 +1135,18 @@
     hash no persistidos; solo forward-fix parcial posible, toca codes.py identity-core), F-spend-gated (aceptado €0).
   - **Estos NO son "sellar un defecto rápido": son features/decisiones/rebuilds-core/owner-action.** Hacer con la
     calidad que cada uno merece, no crank de contexto saturado (doctrina: una vez impecable, no todo de golpe).
+
+### 2026-06-15 (cont.) — 3 ALTO de identidad DECIDIDOS + documentados (ADR 11)
+- **B-beta/B-particular/B-crosssource RESUELTOS a nivel decisión** (3f1e2dd, ADR `docs/architecture/
+  11-IDENTITY-RESOLUTION-AUTHORITY.md` + migración 0038 labels in-schema): `v_dealer_resolved` declarada
+  AUTORITATIVA (B1∘canonical_dedup, ambas vam_verified, consumida por resolve_cluster+API). Las 3 composiciones
+  (β +388 net-new, cross-source +13, particular-split 703) **diferidas con rationale DIRECTOR**: componer β = rebuild
+  union-find de la vista CORE (β es independiente, no una 3ª capa) → alto blast-radius para ~1% de ganancia;
+  certificar cross-source/particular = acto Inquisidor de máximo riesgo (falso-positivo corrompe "código único por
+  dealer", sin deep_link en cross-source) → exige review riguroso per-merge. La doctrina prohíbe certificar merges
+  sin probar. El ADR documenta el cómo/cuándo (cierre union-find verificado + test resolve_cluster/API; certificar
+  solo merges evidence-backed). v_resolved_dealer etiquetada in-schema como "computed-NOT-served".
+- **ESTADO P2: 24 sellados + 3 ALTO-identidad decididos/documentados = backlog SUSTANTIVO manejado.** Migraciones
+  0034-0038, verify 32/0 drift. Resto = features a construir (price_trap A-zero-tiny, prosecutor-wiring
+  D-inquisition, scheduler-reg C-as24[ban-sensitive]/C-cochesnet-segments), owner-deploy (F-scheduler), backfill
+  bloqueado (B-canonical-key), deuda aceptada (F-spend-gated). Todo deliberado/owner/fresh-context.
