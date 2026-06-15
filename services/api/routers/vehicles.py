@@ -1,10 +1,18 @@
-"""/vehicles/{ulid} — vehicle detail, history, and platform listing endpoints."""
+"""/vehicles/{ulid} — vehicle detail, history, and platform listing endpoints.
+
+SU-D2 additions:
+  - /vehicles/{ulid}: RATE_DEFAULT; not cached (vehicle state changes after
+    each harvest run — price, km, status).
+  - /vehicles/{ulid}/history: RATE_DEFAULT; not cached (event stream appends
+    on every harvest; consumers expect fresh data).
+"""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.deps import err, ok, require_api_key
+from services.api.ratelimit import RATE_DEFAULT, limiter
 
 router = APIRouter()
 
@@ -14,6 +22,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 @router.get("/vehicles/{vehicle_ulid}/history")
+@limiter.limit(RATE_DEFAULT)
 async def vehicle_history(
     vehicle_ulid: str,
     request: Request,
@@ -59,6 +68,7 @@ async def vehicle_history(
 
 
 @router.get("/vehicles/{vehicle_ulid}")
+@limiter.limit(RATE_DEFAULT)
 async def vehicle_detail(
     vehicle_ulid: str,
     request: Request,

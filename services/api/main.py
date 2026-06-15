@@ -35,13 +35,32 @@ Sealed product surface
   - /geo/{province}/municipalities/{muni}/entities scopes to a municipality.
   - /alerts returns active (unresolved) alerts with origin.
   - /sources returns source_health rows for monitoring.
+
+SU-D2: Security hardening
+--------------------------
+  Rate-limiting (slowapi, in-memory):
+    Global default: 120/minute. Expensive endpoints: 30/minute.
+    Controlled by env var CARDEEP_API_RATELIMIT_ENABLED (default "1").
+    Set to "0" for test runs to avoid tripping the 89 existing API tests.
+    429 responses use the project envelope {ok, data, error, meta}.
+
+  Response caching (cachetools TTLCache, in-memory):
+    Stable read endpoints (inventory/geo-tree/completeness) are cached
+    for CACHE_TTL_SECONDS seconds with a CACHE_MAXSIZE entry cap.
+    Cache key = METHOD:PATH?sorted-query-string.
+    meta.cache = "hit" | "miss" is injected into every cached response.
+    /health, /alerts, /sources are explicitly excluded.
 """
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 import asyncpg
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # Shared helpers — re-exported here so test files that import from
 # services.api.main (e.g. `from services.api.main import DSN`) keep working.
@@ -53,6 +72,7 @@ from services.api.deps import (  # noqa: F401
     require_api_key,
     resolve_cluster,
 )
+from services.api.ratelimit import limiter, rate_limit_handler
 from services.api.routers import entities, geo, ops, platforms, vehicles
 
 
@@ -66,6 +86,19 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Cardeep API", version="0.2.0", lifespan=lifespan)
+
+# ---------------------------------------------------------------------------
+# SU-D2: Rate-limiting middleware and exception handler.
+#
+# SlowAPIMiddleware intercepts every request and enforces limits declared via
+# @limiter.limit() decorators on individual route handlers.
+# The custom rate_limit_handler replaces slowapi's plain-text 429 response
+# with the project's consistent {ok, data, error, meta} envelope.
+# ---------------------------------------------------------------------------
+
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 app.include_router(ops.router)
 app.include_router(entities.router)

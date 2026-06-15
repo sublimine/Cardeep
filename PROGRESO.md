@@ -704,3 +704,22 @@
   pipeline-idle / fase harvest (modelo elegido=qwen2.5:3b). Mismo patrón honesto que SU-F2: evaluado, diferido
   con causa de hardware, evidencia verificada registrada. SU-D1 queda 🟡 (decisión tomada; benchmark t/s pendiente
   de ventana de RAM, no de capacidad).
+
+## 2026-06-15 — SU-D2: rate-limit + cache en la API (gap de seguridad €0 cerrado)
+- Recon [VERIFICADO]: la API NO tenía rate-limiting, NI cache, NI middleware — gap de seguridad real (la regla
+  manda "rate limiting on all endpoints"); requirements solo tenía fastapi. Es punto ROJO genuino, no polish.
+- Build (Sonnet): `services/api/ratelimit.py` (slowapi Limiter **in-memory** — SIN acoplar a cardex-redis;
+  límites por constante: 120/min default, 30/min costosos [inventory/geo-tree/completeness], 300/min health;
+  gate env `CARDEEP_API_RATELIMIT_ENABLED` para no romper los 89 tests; handler 429 con envelope del proyecto) +
+  `services/api/cache.py` (cachetools TTLCache 60s, **maxsize 512 LRU bounded** = RAM-safe; key=method+path+sorted-qs;
+  solo 2xx; `meta.cache`=hit/miss). +slowapi+cachetools a requirements (consumidor VIVO = la API, no especulativo).
+- **Gate (Opus) — verifiqué, no confié**: el agente dijo "Reescrito" los routers pero el diff real es **+174/-17
+  ADITIVO** (decoradores `@limiter.limit` + wrap `try_cache_get/cache_set` alrededor de la lógica intacta — las
+  17 deletions son `return X`→`response=X`). **Caching correctamente scoped** (mapeé los opt-in por handler):
+  cachean solo los 6 estables (inventory×2 + geo completeness/entities/muni/tree); **NO cachean** delta (stream
+  vivo)/health/alerts/sources/vehicles/entity-agregado → cero riesgo de servir stale. cache.py: TTLCache bounded,
+  no muta entry almacenado, solo ok=True. Corregí un **import muerto** en ops.py (cache importado sin usar).
+  Governor anti-cicatriz ya battle-tested 25/25 (runbook §7.1) — la otra mitad de SU-D2 ya estaba.
+- §Deuda D2: limiter/cache in-process → si uvicorn multi-worker, promover a backend compartido (documentado en
+  docstrings); el test usa `_storage` privado de slowapi (frágil a versiones). Verificación: 13 tests nuevos +
+  103 sweep api (commit tras confirmar el re-run en mi gate).

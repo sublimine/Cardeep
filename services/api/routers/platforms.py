@@ -1,19 +1,29 @@
-"""/platforms/{cdp_code}/inventory + /vehicles/{ulid}/platforms endpoints."""
+"""/platforms/{cdp_code}/inventory + /vehicles/{ulid}/platforms endpoints.
+
+SU-D2 additions:
+  - /platforms/{cdp}/inventory: RATE_EXPENSIVE + cached (576k+ rows for
+    Wallapop; JOIN-heavy; stable within a harvest window).
+  - /vehicles/{ulid}/platforms: RATE_DEFAULT; not cached (platform listing
+    changes with each harvest; small result set, cheap query).
+"""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
+from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, require_api_key
+from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 
 router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# Platform endpoints (unchanged)
+# Platform endpoints
 # ---------------------------------------------------------------------------
 
 @router.get("/platforms/{cdp_code}/inventory")
+@limiter.limit(RATE_EXPENSIVE)
 async def platform_inventory(
     cdp_code: str,
     request: Request,
@@ -21,7 +31,15 @@ async def platform_inventory(
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Cars linked to a platform via platform_listing, with selling-dealer attribution."""
+    """Cars linked to a platform via platform_listing, with selling-dealer attribution.
+
+    SU-D2: cached (Wallapop has 576k+ listed rows; JOIN-heavy; stable between
+    harvest runs).
+    """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
     offset = (page - 1) * size
     async with request.app.state.pool.acquire() as c:
         prow = await c.fetchrow(
@@ -54,7 +72,7 @@ async def platform_inventory(
             d["listed_first_seen"] = str(r["listed_first_seen"])
             d["listed_last_seen"] = str(r["listed_last_seen"])
             items.append(d)
-        return ok(
+        response = ok(
             items,
             page=page,
             size=size,
@@ -63,9 +81,11 @@ async def platform_inventory(
             platform=prow["trade_name"],
             cdp_code=cdp_code,
         )
+    return cache_set(request, response)
 
 
 @router.get("/vehicles/{vehicle_ulid}/platforms")
+@limiter.limit(RATE_DEFAULT)
 async def vehicle_platforms(
     vehicle_ulid: str,
     request: Request,

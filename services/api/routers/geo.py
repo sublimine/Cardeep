@@ -1,4 +1,15 @@
-"""/geo/* — geographic entity listing and tree/completeness endpoints."""
+"""/geo/* — geographic entity listing and tree/completeness endpoints.
+
+SU-D2 additions:
+  - /geo/completeness: RATE_EXPENSIVE + cached (runs 7 sequential COUNT(*) queries
+    over full entity + vehicle tables; changes only between harvests).
+  - /geo/{province}/tree: RATE_EXPENSIVE + cached (GROUP BY over 50k+ entity rows
+    per province; expensive and stable within a harvest window).
+  - /geo/{province}/entities: RATE_DEFAULT + cached (paginated; stable between
+    harvests — status/kind filters are enforced at DB write time).
+  - /geo/{province}/municipalities/{muni}/entities: RATE_DEFAULT + cached (same
+    stability contract as province listing, scoped to municipality).
+"""
 from __future__ import annotations
 
 from typing import Any
@@ -6,7 +17,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
+from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, require_api_key
+from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 
 router = APIRouter()
 
@@ -17,11 +30,19 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 @router.get("/geo/completeness")
+@limiter.limit(RATE_EXPENSIVE)
 async def geo_completeness(
     request: Request,
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """National geo-completeness report."""
+    """National geo-completeness report.
+
+    SU-D2: cached (7 sequential COUNT(*) queries; stable between harvests).
+    """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
     async with request.app.state.pool.acquire() as c:
         e_total = await c.fetchval("SELECT count(*) FROM entity")
         e_full = await c.fetchval(
@@ -44,7 +65,7 @@ async def geo_completeness(
             "municipalities_with_comarca": await c.fetchval(
                 "SELECT count(*) FROM geo_municipality WHERE comarca_id IS NOT NULL"),
         }
-        return ok({
+        response = ok({
             "geo_grid": geo,
             "entities": {
                 "total": e_total, "full_prov_comarca_muni": e_full,
@@ -57,6 +78,7 @@ async def geo_completeness(
                 "full_pct": round(100 * v_full / v_total, 2) if v_total else 0,
             },
         })
+    return cache_set(request, response)
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +87,7 @@ async def geo_completeness(
 # ---------------------------------------------------------------------------
 
 @router.get("/geo/{province_code}/entities")
+@limiter.limit(RATE_DEFAULT)
 async def entities_by_province(
     province_code: str,
     request: Request,
@@ -79,7 +102,14 @@ async def entities_by_province(
     dealers are returned.
 
     Pagination (B3.1): accepts ``page``/``size``.
+
+    SU-D2: cached (entity status/kind filtered at write time; stable between
+    harvests).
     """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
     offset = (page - 1) * size
     async with request.app.state.pool.acquire() as c:
         rows = await c.fetch(
@@ -97,7 +127,7 @@ async def entities_by_province(
             size,
             offset,
         )
-        return ok(
+        response = ok(
             [dict(r) for r in rows],
             page=page,
             size=size,
@@ -105,9 +135,11 @@ async def entities_by_province(
             has_more=len(rows) == size,
             province=province_code,
         )
+    return cache_set(request, response)
 
 
 @router.get("/geo/{province_code}/municipalities/{muni_code}/entities")
+@limiter.limit(RATE_DEFAULT)
 async def entities_by_municipality(
     province_code: str,
     muni_code: str,
@@ -123,7 +155,13 @@ async def entities_by_municipality(
     Applies the same active/non-particular filter as /geo/{province}/entities.
 
     Pagination (B3.1): accepts ``page``/``size``.
+
+    SU-D2: cached (same stability contract as province listing, scoped to muni).
     """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
     offset = (page - 1) * size
     async with request.app.state.pool.acquire() as c:
         rows = await c.fetch(
@@ -143,7 +181,7 @@ async def entities_by_municipality(
             size,
             offset,
         )
-        return ok(
+        response = ok(
             [dict(r) for r in rows],
             page=page,
             size=size,
@@ -152,19 +190,29 @@ async def entities_by_municipality(
             province=province_code,
             municipality=muni_code,
         )
+    return cache_set(request, response)
 
 
 # ---------------------------------------------------------------------------
-# Existing geo endpoints (unchanged)
+# Existing geo endpoints (unchanged logic)
 # ---------------------------------------------------------------------------
 
 @router.get("/geo/{province_code}/tree")
+@limiter.limit(RATE_EXPENSIVE)
 async def province_inventory_tree(
     province_code: str,
     request: Request,
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad."""
+    """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad.
+
+    SU-D2: cached (GROUP BY over 50k+ entity rows; stable within a harvest
+    window; tree structure changes only when new dealers are ingested).
+    """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
     async with request.app.state.pool.acquire() as c:
         prov = await c.fetchrow(
             "SELECT code, name, ccaa_code, ccaa_name FROM geo_province WHERE code=$1",
@@ -210,4 +258,5 @@ async def province_inventory_tree(
             "entities_geo_clean": prov_total,
             "entities_province_only_no_municipality": province_only,
         }
-        return ok(tree, comarca_count=len(comarcas), province=province_code)
+        response = ok(tree, comarca_count=len(comarcas), province=province_code)
+    return cache_set(request, response)

@@ -1,4 +1,14 @@
-"""/entities/{cdp_code} — entity resolution, inventory, and delta endpoints."""
+"""/entities/{cdp_code} — entity resolution, inventory, and delta endpoints.
+
+SU-D2 additions:
+  - /entities/{cdp}/inventory: RATE_EXPENSIVE (30/min) + response cache (TTL 60s).
+    This is the heaviest endpoint — multi-join DISTINCT ON over 500k+ rows.
+  - /entities/{cdp}/canonical: RATE_DEFAULT (120/min), not cached (identity data,
+    may update after a VAM run).
+  - /entities/{cdp}: RATE_DEFAULT, not cached (available_inventory is aggregated
+    live and changes after harvests).
+  - /entities/{cdp}/delta: RATE_DEFAULT, not cached (event stream is time-sensitive).
+"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -6,7 +16,9 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
+from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, require_api_key, resolve_cluster
+from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 
 router = APIRouter()
 
@@ -16,6 +28,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 @router.get("/entities/{cdp_code}/canonical")
+@limiter.limit(RATE_DEFAULT)
 async def get_entity_canonical(
     cdp_code: str,
     request: Request,
@@ -38,6 +51,7 @@ async def get_entity_canonical(
 
 
 @router.get("/entities/{cdp_code}")
+@limiter.limit(RATE_DEFAULT)
 async def get_entity(
     cdp_code: str,
     request: Request,
@@ -75,6 +89,7 @@ async def get_entity(
 # ---------------------------------------------------------------------------
 
 @router.get("/entities/{cdp_code}/inventory")
+@limiter.limit(RATE_EXPENSIVE)
 async def get_inventory(
     cdp_code: str,
     request: Request,
@@ -92,7 +107,14 @@ async def get_inventory(
     cars from the inventories that list them.
 
     Pagination (B3.1): accepts ``page`` and ``size``, returns ``has_more`` in meta.
+
+    SU-D2: cached for CACHE_TTL_SECONDS seconds (inventory changes only between
+    harvest runs, not per-request).
     """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
     offset = (page - 1) * size
     async with request.app.state.pool.acquire() as c:
         cluster = await resolve_cluster(c, cdp_code)
@@ -128,13 +150,14 @@ async def get_inventory(
             }
             for r in rows
         ]
-        return ok(
+        response = ok(
             items,
             page=page,
             size=size,
             returned=len(items),
             has_more=len(items) == size,
         )
+        return cache_set(request, response)
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +165,7 @@ async def get_inventory(
 # ---------------------------------------------------------------------------
 
 @router.get("/entities/{cdp_code}/delta")
+@limiter.limit(RATE_DEFAULT)
 async def get_delta(
     cdp_code: str,
     request: Request,

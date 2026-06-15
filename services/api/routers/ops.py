@@ -1,10 +1,17 @@
-"""/health, /alerts, /sources — operational monitoring endpoints."""
+"""/health, /alerts, /sources — operational monitoring endpoints.
+
+SU-D2 additions:
+  - /health: rate-limited at RATE_HEALTH (generous — liveness probes must pass).
+  - /alerts: rate-limited at RATE_DEFAULT; NOT cached (near-real-time data).
+  - /sources: rate-limited at RATE_DEFAULT; NOT cached (monitoring data).
+"""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.deps import err, ok, require_api_key
+from services.api.ratelimit import RATE_DEFAULT, RATE_HEALTH, limiter
 
 router = APIRouter()
 
@@ -14,6 +21,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 @router.get("/health")
+@limiter.limit(RATE_HEALTH)
 async def health(request: Request) -> JSONResponse:
     """Liveness probe with sealed product counts.
 
@@ -24,6 +32,8 @@ async def health(request: Request) -> JSONResponse:
     events         — total event rows (not filtered: historical record).
     provinces      — static geo table row count.
     municipalities — static geo table row count.
+
+    Not cached: /health is a liveness probe with a freshness contract.
     """
     async with request.app.state.pool.acquire() as c:
         counts = {
@@ -56,6 +66,7 @@ async def health(request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 @router.get("/alerts")
+@limiter.limit(RATE_DEFAULT)
 async def list_alerts(
     request: Request,
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
@@ -70,6 +81,8 @@ async def list_alerts(
 
     Only rows WHERE resolved_at IS NULL are returned — resolved alerts
     are not surfaced here (historical; use a separate query if needed).
+
+    Not cached: alert state can change at any time.
     """
     offset = (page - 1) * size
     async with request.app.state.pool.acquire() as c:
@@ -107,6 +120,7 @@ async def list_alerts(
 
 
 @router.get("/sources")
+@limiter.limit(RATE_DEFAULT)
 async def list_sources(
     request: Request,
     _: None = Depends(require_api_key),
@@ -116,6 +130,8 @@ async def list_sources(
     Columns: source_key, status, consecutive_fails, last_ok, last_fail, is_tier1.
     Sorted: degraded/down first (most urgent), then by consecutive_fails DESC
     so the sickest sources are at the top.
+
+    Not cached: source_health is near-real-time monitoring data.
     """
     async with request.app.state.pool.acquire() as c:
         rows = await c.fetch(
