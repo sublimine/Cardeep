@@ -466,3 +466,19 @@
 - **A6 = comarca/sentinel/errores SELLADOS GREEN; muni-gap <2% = gap-declarado-data-blocked**. §Deuda €0
   menor (negligible, queued): backfill 131 con-señal + revisar 38 CP-CCAA (0,1%). El recon recomienda no
   bloquear otros SUs por este gate de datos.
+
+## 2026-06-15 — SU-A8 SELLADO (lazo auto-reparación €0) + auto-corrección de SU-A3
+- Recon (`docs/recon/SUA8_AUTOREPAIR_RECON.md`): lazo €0 CERRADO (record_run→source_health→breaker→
+  auto_repair→fire_alert origin-exacto-dedup→recovery resuelve) — **5 ciclos completos confirmados en DB**,
+  aislamiento real (is_open en 44 scrapers → 1 fuente cae, API sigue), spend-actions (refingerprint/
+  escalate_tier/re_receta) marcadas `# P10-SCAFFOLD` (declarado, no fakeado).
+- **Test de inyección** (`tests/test_autorepair_loop.py`, 8 tests, transacción-rollback cero-residuo):
+  E2E status-transitions + breaker-open@3 + alert-dedup-origin-exacto + quarantine-€0 vs refingerprint-
+  scaffold + isolation A↛B + recovery-resets-and-resolves + two-cycle-no-leak. Evidencia empírica → verificación REPRODUCIBLE.
+- **Auto-resolución gone_guard** (€0): `ingest.py` + 3 conectores ahora llaman `resolve_alerts` cuando el
+  GONE-sweep corre (supresión ya no aplica) → cierra las ~28 alertas-ruido `:gone_guard:`.
+- **AUTO-CORRECCIÓN de mi propio SU-A3**: el gate (correr el registry test) cazó que mi insert de
+  `as24_wholesale` en source_health era ERRÓNEO — está INTENCIONALMENTE excluido (scheduler.py:243:
+  "special case, handled outside the scheduler via its own governor"). Traté un no-problema y rompí
+  `test_registry_covers_live_source_health`. **Revertido** (DELETE → source_health 47); registry-test verde.
+- **A8 = lazo €0 SELLADO + verificado reproducible**. refingerprint real = P10 (spend) declarado.

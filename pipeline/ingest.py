@@ -24,7 +24,7 @@ from pipeline.sources.autoscout24 import DealerHarvest, RECIPE_VERSION
 from pipeline.geo import GeoResolver
 from pipeline.verify import record_count_verdict
 from pipeline.delta_guard import should_emit_gone
-from pipeline.ops.health import fire_alert, build_origin
+from pipeline.ops.health import fire_alert, build_origin, resolve_alerts
 from services.api.codes import cdp_code
 
 
@@ -124,6 +124,10 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
                 await _event(conn, row["vehicle_ulid"], eulid, "GONE",
                              {"price": float(row["price"]) if row["price"] else None}, None)
                 counts["gone"] += 1
+        # Auto-resolve any lingering gone_guard alert for this exact dealer CDP code.
+        # The guard is now satisfied (harvest complete >= 95% declared), so the alert
+        # that fired on a prior partial run is no longer actionable — close it.
+        await resolve_alerts(conn, build_origin("as24", "gone_guard", code))
     else:
         counts["gone_suppressed"] = previous_available - len(
             harvested_links.intersection(

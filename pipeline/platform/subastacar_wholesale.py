@@ -103,7 +103,7 @@ from curl_cffi import requests as cffi_requests
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
 from pipeline.delta_guard import should_emit_gone
-from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run
+from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run, resolve_alerts
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
 from services.api.codes import _base32, cdp_code
@@ -835,6 +835,8 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
             await _reconcile_aged_out(conn, platform_ulid, vehicles_before, harvested, stats)
             if stats["retired_vehicles"]:
                 print(f"[subastacar_wholesale] retired {stats['retired_vehicles']} aged-out cars.")
+            # Auto-resolve any prior gone_guard alert: harvest is now complete, suppression lifted.
+            await resolve_alerts(conn, build_origin(SC_SOURCE_KEY, "gone_guard"))
 
         # ---- (4) Health + recipe + count verdict.
         ok = fetch_error is None and stats["cars_caged"] > 0
