@@ -20,6 +20,7 @@ import json
 import asyncpg
 
 from pipeline.ids import ulid
+from pipeline.identity.make_normalizer import normalize_make
 from pipeline.sources.autoscout24 import DealerHarvest, RECIPE_VERSION
 from pipeline.geo import GeoResolver
 from pipeline.verify import record_count_verdict
@@ -77,11 +78,16 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
         row = existing.get(v.deep_link)
         if row is None:
             vulid = ulid()
+            # Audit P2 A-make-model: canonical make at the ingest boundary — normalizes a known
+            # brand's casing and recovers make from the title's leading brand token when the
+            # connector left it NULL (classifieds carry the brand only in the title). Unknown
+            # brands are preserved verbatim (never guessed).
+            make_norm = normalize_make(v.make, v.title)
             await conn.execute(
                 """INSERT INTO vehicle (vehicle_ulid, entity_ulid, deep_link, title, make, model,
                        year, km, price, fuel, transmission, photo_url, vin_ref, recipe_version, status)
                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'available')""",
-                vulid, eulid, v.deep_link, v.title, v.make, v.model, v.year, v.km, v.price,
+                vulid, eulid, v.deep_link, v.title, make_norm, v.model, v.year, v.km, v.price,
                 v.fuel, v.transmission, v.photo_url, v.vin_ref, RECIPE_VERSION)
             await _event(conn, vulid, eulid, "NEW", None,
                          {"price": v.price, "title": v.title})
