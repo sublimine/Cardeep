@@ -572,3 +572,24 @@
   (TRUSTWORTHY indep=1 → RECHAZADO; indep=2/assert=2/hard=0 → OK; REFUTED indep=0 → OK). `tests/test_inquisition_schema.py`
   **9✓ real-DB** (3 rechazos del invariante + 3 aceptaciones + tablas/CHECK/grant/FK). Egress CHECK del lente-C
   diferido a harvest (documentado en el .sql). Pend B2: ε2/ε3/ε4; G5=corrida.
+
+## 2026-06-15 — SU-B2 ε2: motores puros del Inquisidor (gate de independencia §4 + quórum §5.4)
+- ε2 build (Sonnet; Fable no disponible): `pipeline/inquisition/{models,independence,quorum}.py` — Python PURO
+  (sin DB/IO). `models`: StateTuple ⟨source,tool,cache,path⟩ + indep_distance + Skeptic + Regime/regime_for.
+  `independence`: admit (D(s,P)≥2) + indep_score (min sobre pares asserting). `quorum`: within_tolerance
+  (EXACT=igualdad / DRIFT=max(τ_rel·v,τ_abs), τ_rel=0.005 τ_abs=50) + QuorumResult (mapea 1:1 a inquisition_verdict)
+  + decide() §5.4 6-pasos + false-veto §5.5. **58 tests puros✓**; sweep inquisition **84✓** (con ε1).
+- **Fidelidad al oráculo del spec verificada por mí** (leí quorum.py+independence.py): §5.4 paso-a-paso correcto;
+  §5.2 AS24 (278163 vs 278329 Δ166≤tol1391→ASSERT) y coches.net reproducidos; §5.6 coverage 4-escépticos→REFUTED
+  (rs+ab=2≥n*=2); false-veto (determinista veta solo / lone no-determinista no veta / 2 independientes vetan).
+  El D(s2,P)=4 del agente (spec escribió "3") es CORRECTO — la prosa del spec dice que las 4 dimensiones difieren;
+  slip aritmético del spec, gate e INDEP pasan igual.
+- **Decisión Director blindada con comentario** (`independence.py`): INDEP se calcula sobre TODOS los asserts, no
+  solo el conjunto v*-concordante. El §4 es internamente ambiguo (fórmula "all asserting pairs" vs comentario
+  "agreeing set"). La lectura sobre-todos es ESTRICTA (INDEP menor): la agreeing-set podría convertir un REFUTED
+  en TRUSTWORTHY (un near-clone que asserta otro valor dejaría de bajar INDEP) — la única dirección prohibida por
+  Ley I. Ambiguo→gana lo seguro; solo puede sobre-refutar, jamás vender una mentira. Casi lo relajo en el gate; lo
+  documenté para que nadie lo "arregle".
+- §Deuda ε2 (para ε3/ε4): los lentes deben normalizar measured_value a string canónica ("1292" no "1292.0", el
+  Counter los separa); reason_code "SINGLE_ASSERT" es impreciso en el borde 0-asserts (renombrar a INSUFFICIENT
+  cuando ε4 lo enrute). Pend B2: ε3(lentes), ε4(prosecutor+router); G5=corrida.
