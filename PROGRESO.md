@@ -836,3 +836,38 @@
 - **E2E SPINE COMPLETO**: los 7 stages tienen módulo real (discover/scrape[engine+44 conectores]/recipe/ingest/
   serve-api/delta/evict). Cierra el §Deuda histórico "evict.py no construido". Barrido del tramo: **395 tests✓**,
   27 migs (0 pending). ~19 commits.
+
+## 2026-06-15 — REFRAME del usuario: "gasto"=VPS/escala, NO correr conectores AQUÍ (validación local = FASE ACTUAL)
+- El usuario corrigió un malentendido FATAL mío: me autofrené en "gasto inviable" creyendo que correr el harvest
+  era gasto. NO. **"gasto" = VPS/infra-pagada para ESCALA**, posterior. Lo que el usuario quiere AHORA: **PROBAR
+  que TODO funciona AQUÍ** (esta terminal, free: curl_cffi + arsenal libre + fuentes abiertas), validar
+  config/recetas FUNCIONALES, dejar listo para que el VPS "solo arranque sabiendo que funciona". "En vps irá todo
+  lo que haya funcionado en esta terminal primero." Correr conectores localmente NO es gasto — es la validación
+  obligatoria previa.
+- **Nueva fase ACTIVA: VALIDACIÓN LOCAL DEL HARVEST (€0, free).** Plan: probar el E2E real post-mis-cambios
+  (B-1 verify.py, reshape recetas, evict, API) — ¿siguen funcionando los conectores? Smoke por familia:
+  fetch→parse→ingest→VAM(quórum real ahora)→inquisición→delta, en scope mínimo (--pages 1). Empezar por un OEM
+  JSON-API abierto (renew/audi/toyota, t0_open, bajo riesgo de ban). Lo que funcione = validado para VPS; lo que
+  rompa = arreglar la regresión. NO es full-harvest (eso es VPS-escala); es PROBAR que la config/receta rinde.
+- En curso al llegar el reframe: arreglando los 3 bugs de API serving del audit (geo-tree contaba 39.659
+  particulares de Madrid, platforms servía 5 coches gone, completeness sin scope-dealer) — fix verificado contra
+  DB, test en gate. Tras commitear → pivoto a la validación local del harvest.
+
+## 2026-06-15 — VALIDACIÓN LOCAL DEL HARVEST: el pipeline FUNCIONA aquí (free) — 2 motores fuertes + B-1 en prod
+- **Pruebas E2E reales (free, curl_cffi, fuentes abiertas, scope mínimo)** post-todos-mis-cambios:
+  - **audi** (`oem_audi_wholesale --pages 1`, OEM-VO SCS JSON-API): 96 items → 96 cars caged (17 new) → 17 delta
+    NEW → **VAM TRUSTWORTHY q=2/f=2/o=3**, breaker closed. Motor OEM-portal ✓.
+  - **coches.net** (`coches_net_wholesale --pages 1`, Tier-1 marketplace gateway JSON): 100 items → 100 caged
+    (1 new) → **26 price-drops** (delta PRICE_CHANGE real) → **VAM TRUSTWORTHY q=2/f=2/o=3**, healthy. Motor
+    marketplace ✓ + delta ✓.
+  - **DealerK** (`family_dealerk_wholesale --limit 3`, long-tail CMS): código corre sin crash (los 3 dealers
+    --from-db no eran de la familia → 0 cosechado; prueba el code-path, no la fetch). VAM q=3/f=2/o=3.
+- **B-1 PROBADO EN PRODUCCIÓN**: 3 verdicts TRUSTWORTHY con **quórum REAL** (q≥2 ∧ f≥2 ∧ o≥3) escritos hoy vía
+  conectores reales — antes del fix habrían deadlockeado (quorum_n=0 → CheckViolation). El deep-ledger ya computa
+  quórum real (verifier_paths = objetos {family,origin}). **Mis cambios (B-1, reshape, evict, API) NO rompieron
+  el harvest** — confirmado en real.
+- **Recipe-flow coherente validado**: cada conector escribe receta flat-staging (untracked) → reshape
+  (untracked-robust) la mueve al geo-tree → loader la resuelve. Reconciliado audi+coches.net, flat_cdp=0.
+- **Conclusión**: el harvest FUNCIONA en esta terminal (2 motores fuertes + delta + VAM real). Listo para que el
+  VPS arranque lo que aquí funciona. Pendiente: barrido por-conector del resto de las 44 familias (campaña de
+  validación, cada uno con su targeting) — el CORE (pipeline + mis cambios + 2 motores) ya está probado.
