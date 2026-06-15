@@ -10,20 +10,49 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
+from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, require_api_key
-from services.api.ratelimit import RATE_DEFAULT, RATE_HEALTH, limiter
+from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, RATE_HEALTH, limiter
 
 router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# GAP 1+7 fix: /health reports sealed counts
+# /health — UNAUTHENTICATED liveness probe (no business data)
+# /stats  — AUTHENTICATED sealed product counts (moved off /health: audit)
 # ---------------------------------------------------------------------------
 
 @router.get("/health")
 @limiter.limit(RATE_HEALTH)
 async def health(request: Request) -> JSONResponse:
-    """Liveness probe with sealed product counts.
+    """Liveness probe — UNAUTHENTICATED by contract (load balancers / uptime probes).
+
+    Returns only {status, db}. It deliberately exposes NO product counts: coverage
+    totals (dealers / vehicles) are a competitive signal and now live behind auth at
+    /stats — the audit flagged that anonymous callers could read the product's scale
+    here. A single ``SELECT 1`` round-trip makes this a real liveness check (DB
+    reachable), not merely process-up, while staying cheap (the old /health ran 5
+    expensive COUNT(*) on every probe — uncached).
+    """
+    db_ok = True
+    try:
+        async with request.app.state.pool.acquire() as c:
+            await c.fetchval("SELECT 1")
+    except Exception:
+        db_ok = False
+    return ok({"status": "live" if db_ok else "degraded",
+               "db": "ok" if db_ok else "down"})
+
+
+@router.get("/stats")
+@limiter.limit(RATE_EXPENSIVE)
+async def stats(
+    request: Request,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """Sealed product counts — AUTHENTICATED (competitive coverage signal).
+
+    Moved off /health (audit): anonymous callers must not learn coverage scale.
 
     dealers        — sealed dealer count from v_dealer_resolved excluding
                      particulares (40 016: kind <> 'particular').
@@ -33,8 +62,13 @@ async def health(request: Request) -> JSONResponse:
     provinces      — static geo table row count.
     municipalities — static geo table row count.
 
-    Not cached: /health is a liveness probe with a freshness contract.
+    SU-D2: RATE_EXPENSIVE + cached (5 COUNT(*) over full tables; stable between
+    harvests). Caching here also removes the per-probe cost the old /health paid.
     """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
     async with request.app.state.pool.acquire() as c:
         counts = {
             "dealers": await c.fetchval(
@@ -58,7 +92,8 @@ async def health(request: Request) -> JSONResponse:
             "provinces": await c.fetchval("SELECT count(*) FROM geo_province"),
             "municipalities": await c.fetchval("SELECT count(*) FROM geo_municipality"),
         }
-    return ok({"status": "live", "counts": counts})
+    response = ok({"counts": counts})
+    return cache_set(request, response)
 
 
 # ---------------------------------------------------------------------------

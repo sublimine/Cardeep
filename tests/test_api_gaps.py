@@ -148,7 +148,7 @@ class TestHealthSealedCounts:
     @SKIP_NO_DB
     def test_health_has_sealed_keys(self, client: TestClient) -> None:
         """Health must expose 'dealers' and 'vehicles_unique_available', not raw counts."""
-        r = client.get("/health")
+        r = client.get("/stats")
         assert r.status_code == 200
         counts = r.json()["data"]["counts"]
         # Sealed keys exist
@@ -182,7 +182,7 @@ class TestHealthSealedCounts:
           3. dealers < v_canonical rows   (proves particulares excluded + dedup active)
           4. dealers equals independent SQL cross-check via v_dealer_resolved
         """
-        r = client.get("/health")
+        r = client.get("/stats")
         dealers = r.json()["data"]["counts"]["dealers"]
         vc_rows = _fetchval("SELECT count(*) FROM v_canonical")
         b1_distinct = _fetchval("SELECT count(DISTINCT canonical_cdp_code) FROM v_canonical")
@@ -213,7 +213,7 @@ class TestHealthSealedCounts:
     @SKIP_NO_DB
     def test_health_vehicles_unique_less_than_raw(self, client: TestClient) -> None:
         """vehicles_unique_available must be < raw available (aliases removed)."""
-        r = client.get("/health")
+        r = client.get("/stats")
         counts = r.json()["data"]["counts"]
         unique_available = counts["vehicles_unique_available"]
         # Raw available is 1 689 243; canonical is 1 486 285
@@ -648,7 +648,11 @@ class TestRegressionAllGaps:
     def test_health_still_live(self, client: TestClient) -> None:
         r = client.get("/health")
         assert r.status_code == 200
-        assert r.json()["data"]["status"] == "live"
+        data = r.json()["data"]
+        assert data["status"] == "live"
+        # Split (audit): /health is liveness-only — counts moved to authed /stats.
+        assert "counts" not in data, "/health must not leak product counts (moved to /stats)"
+        assert data["db"] == "ok"
 
     @SKIP_NO_DB
     def test_entity_canonical_unchanged(self, client: TestClient) -> None:
@@ -741,7 +745,7 @@ class TestVDealerResolved:
         It also asserts the value is lower than the B1 canonical count (42 259),
         proving the dedup view is active and particulares are excluded.
         """
-        r = client.get("/health")
+        r = client.get("/stats")
         assert r.status_code == 200
         api_dealers = r.json()["data"]["counts"]["dealers"]
 
