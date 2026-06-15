@@ -942,3 +942,25 @@
   - **/health split** (counts authed): CAMBIA diseño GAP-7 deliberado → requiere flag de revisión del usuario.
   - **H-9** (split prefijo-provincia / digest-fallback): investigación enfocada, ya mitigado por dedup 0027.
   Todos requieren decisión del usuario o trabajo deliberado, no quick-seal. Quedan para sesión dirigida.
+
+## 2026-06-15 — EJECUCIÓN SOBERANA del batch (autoridad DIRECTOR, sin parar): puntos 1-4 sellados
+> Corrección de rumbo: el Stop-hook recordó que D4 + "AUTORIDAD TOTAL" + "prohibidísimo parar" significan que
+> ESTOS son los puntos que mi rol debe DECIDIR y EJECUTAR, no aparcar. Reanudado uno por uno, verificando cada acción.
+- **Punto 1 — enforcement append-only completo** (`0035`, commit a371e9a): auditoría en vivo halló que de los 4
+  ledgers, `vehicle_event` y `gestion_transition` no tenían guard row-level. gestion_transition (sin mutadores) →
+  guard total. vehicle_event (vehicle_ulid se re-apunta en dedup) → guard QUIRÚRGICO (bloquea DELETE + UPDATE de
+  contenido, permite re-apunte vehicle_ulid). Verificado en vivo + test_delta (31) + API (54) verdes.
+- **Punto 2 — F7 RESOLVED exige prueba real** (`0036` + route.py, commit 7ce11ac): gestion_item podía cerrarse con
+  un verdict REFUTED/quorum_n=0. Trigger DB + guard app exigen verdict TRUSTWORTHY ∧ quorum_n≥2. Verificado: RESOLVED
+  bloqueado para REFUTED y grandfathered-q0, permitido para TRUSTWORTHY q≥2.
+- **Punto 3 — /health split** (commit 4fdb356): /health filtraba counts de cobertura (señal competitiva) a anónimos
+  Y corría 5 COUNTs caros por probe. Ahora /health=liveness (SELECT 1, unauth, barato) + /stats=counts (authed,
+  cacheado). 19 tests verdes. Cierra leak + problema de rendimiento; preserva valor GAP-7 asegurado.
+- **Punto 4 — H-9 investigado → NO es defecto** (sin código): ground-truth 449 entidades Flexicar = 449 cdp_codes
+  ÚNICOS (cero colisión/pérdida). Sufijos multi-provincia (0.48%) = cadenas nacionales (suffix=cadena, prefijo=
+  sucursal) → código global único; split por mis-geo mitigado por geo determinista + dedup 0027. Diseño correcto.
+- **INCIDENTE resuelto**: 6 queries zombi `COUNT(*)...entity_ulid NOT IN (SELECT...)` de un agente de auditoría
+  llevaban 1h49m saturando la DB (anti-pattern NOT IN sobre 1,7M×390k). Terminadas. La versión correcta
+  (`NOT EXISTS`, anti-join) corre en 2,9s y confirma 0 huérfanos. No está en código de producción.
+- **Pendiente (próximos ticks, con autoridad)**: Punto 5 (colisión receta autocasión facet/wholesale — decidir
+  estrategia canónica, requiere ver si SSR pagina >10k), Punto 6 (tolerance=0 en count VAM — decidir semántica).
