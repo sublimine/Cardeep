@@ -346,4 +346,148 @@ Ver `pipeline/ops/silence_watchdog.py`.
 
 ## Scheduler de cadencia (B2)
 
-Ver `pipeline/ops/scheduler.py` + `migrations/0021_harvest_cadence.sql`.
+Motor: `pipeline/ops/scheduler.py` (APScheduler `BlockingScheduler`, jobstore SQLAlchemy en PG,
+timezone UTC) + `migrations/0021_harvest_cadence.sql`. Es el latido del sistema: lanza harvests DUE,
+vigila silencios, re-verifica, y corre los detectores de gestión.
+
+### Arrancar / inspeccionar
+
+```bash
+# Arrancar el scheduler (proceso de larga vida — un solo host; ver singleton lock).
+python -m pipeline.ops.scheduler
+
+# Dry-run: imprime qué fuentes están DUE y qué comando se lanzaría. NO ejecuta nada. Seguro siempre.
+python -m pipeline.ops.scheduler --dry-run
+```
+
+**Singleton lock:** al arrancar, `_start_scheduler` toma `pg_try_advisory_lock(0x43415244)`. Si otro
+scheduler ya corre en la misma DB, el segundo aborta limpio (evita doble-producción de harvests). Un
+solo scheduler por base, siempre.
+
+### Jobs registrados (cadencias + flags)
+
+| Job id | Función | Cadencia (default) | Env override | Coste | Qué hace |
+|--------|---------|--------------------|--------------|-------|----------|
+| `heartbeat_tick` | `heartbeat_tick` | 15 min (`TICK_INTERVAL_MINUTES`) | — (constante) | harvest | Lanza las fuentes DUE (subprocess por fuente, breaker + timeout). |
+| `silence_watchdog` | `silence_watchdog_job` | 1h | — (fijo) | €0 | Marca fuentes que dejaron de reportar (`now()-last > 2×interval`). |
+| `inquisition_cadence` | `inquisition_cadence_job` | 6h (`INQUISITION_CADENCE_HOURS`) | — (constante) | €0 | Cola re-verificación de verdicts cuyo TTL de frescura caducó. |
+| `inquisition_prosecute` | `inquisition_prosecute_job` | 6h (`INQUISITION_PROSECUTE_CADENCE_HOURS`) | flags¹ | €0 | Adjudica claims PENDING (drena siempre). Emisión de claims NUEVOS = opt-in `CARDEEP_INQUISITION_EMIT=1`, acotada por `INQUISITION_*_BATCH` (200). |
+| `gestionador_detect` | `gestionador_detect_job` | 24h (`CARDEEP_GESTIONADOR_CADENCE_HOURS`) | sí | €0 | Detector price_trap (cohort robust-z). QUARANTINE-only, reversible. Ver §Gestionador. |
+| `canonical_key_backfill` | `canonical_key_backfill_job` | 24h (`CARDEEP_CANONKEY_CADENCE_HOURS`) | sí | €0 | Rellena `entity.canonical_key` (pre-imagen de auditoría) auto-verificante. Ver §canonical_key. |
+
+¹ La cadencia de `inquisition_prosecute` es constante (6h); lo env-overridable son los flags de
+comportamiento: `CARDEEP_INQUISITION_EMIT` (opt-in emisión) y `CARDEEP_INQUISITION_{PROSECUTE,EMIT}_BATCH`.
+
+Todos los jobs son `max_instances=1`, `coalesce=True`, `replace_existing=True` (un cambio de cadencia
+toma efecto al reiniciar, sin limpiar el jobstore a mano). Ninguno levanta excepción: un error de DB
+se loguea y el job sale para que el scheduler siga. Las cadencias marcadas "constante" se cambian en
+código (`pipeline/ops/scheduler.py`), no por entorno.
+
+---
+
+## Gestionador — detector price_trap (audit P2 A-junk/A-zero-tiny)
+
+Motor: `pipeline/gestionador/detect.py` (`detect_price_trap`) + `pipeline/gestionador/run.py` +
+`pipeline/gestionador/route.py`. Detecta precios cohort-implausibles y los **pone en cuarentena**
+(reversible) — nunca escribe `vehicle.price`, nunca borra.
+
+### Estadístico
+
+Robust-z sobre `ln(price)` por cohorte: `z = (ln price − mediana) / (1.4826·MAD)`. Cohorte =
+`(make, model, year)` Tier-A (n≥15) con fallback `(make, year)` Tier-B (model NULL, n≥30). MAD (no
+desviación típica): un solo monstruo de 9M€ no infla la escala ni esconde a sus hermanos.
+
+- **HIGH**: `z ≥ +6 AND price ≥ 150.000` (los monstruos >1M€). Floor absoluto = co-guard Law I.
+- **LOW**: `z ≤ −6 AND price < 0.25·mediana_cohorte` (depósito/financiación/placeholder).
+- **MAD-floor 0.05**: cohortes casi-degeneradas (spread <5%) se SALTAN en ambos lados (Law I — una
+  cohorte apretada nunca debe amplificar la desviación pequeña de un coche normal a un z espurio).
+
+Blast-radius validado en DB viva: **347 HIGH / 18.808 LOW = 1,15%** del stock disponible. Muestras
+reales: Nissan Qashqai 2024 @ 10.000.000€ (z=57), Mercedes Clase A @ 1€ (z=−120).
+
+### Correr (dry-run review OBLIGATORIO antes de fiarse)
+
+```bash
+# Corre el detector + abre/refresca items de cuarentena. Imprime resumen {high, low, items}.
+python -m pipeline.gestionador.run
+```
+
+> **Gate de despliegue:** el detector SE ENVÍA tras una revisión dry-run de UNA corrida del conjunto
+> marcado antes de confiar en él en producción (revisar `gestion_item WHERE detector='price_trap'`).
+> El job `gestionador_detect` está cableado pero INERTE hasta que el scheduler se despliegue.
+
+**Rendimiento:** `run.py` sube `work_mem` (`CARDEEP_GESTIONADOR_WORK_MEM`, default 384MB) y fuerza
+HASH joins (`enable_mergejoin/nestloop off`) — sin eso el planner elige MERGE (4 sorts de 1,66M filas)
+y la pasada dura minutos; con ello corre en **~11s**. Es un job diario DB-only, no está en el hot-path.
+
+### Leer / liberar cuarentenas
+
+```sql
+-- Coches en cuarentena por precio, con su evidencia de cohorte
+SELECT subject_key AS vehicle_ulid, severity, measured->>'price' AS price,
+       measured->>'robust_z' AS z, measured->>'cohort_median' AS median,
+       measured->>'make' AS make, measured->>'model' AS model, measured->>'year' AS year
+FROM gestion_item
+WHERE detector='price_trap' AND quarantines AND closed_at IS NULL
+ORDER BY (measured->>'robust_z')::float DESC;
+
+-- Un coche en cuarentena queda OCULTO de servable_vehicle automáticamente (zero write a vehicle.price).
+-- Liberar un falso positivo (re-aparece en servable_vehicle al instante):
+UPDATE gestion_item SET state='WONT_FIX', closed_at=now(), closed_reason='manual release: legit price'
+WHERE detector='price_trap' AND subject_key='<vehicle_ulid>' AND closed_at IS NULL;
+```
+
+El cierre a RESOLVED está proof-gated (trigger 0036: exige verdict TRUSTWORTHY con quorum_n≥2). Para
+liberar manualmente un falso positivo se usa `WONT_FIX` (no requiere proof, es reversible).
+
+---
+
+## Inquisición — prosecución en cadencia (audit P2 D-inquisition)
+
+Motor: `pipeline/inquisition/prosecutor.py`. El job `inquisition_prosecute` (6h) SIEMPRE drena claims
+PENDING (`prosecute_pending`); a €0 → REFUTED honesto `NO_INDEPENDENT_PATH` → ESCALATE_OWNER. La
+**emisión de claims nuevos** desde verdicts VAM es OPT-IN:
+
+```bash
+# Activar la emisión de claims nuevos (acotada por INQUISITION_EMIT_BATCH=200):
+CARDEEP_INQUISITION_EMIT=1 python -m pipeline.ops.scheduler
+```
+
+A €0 la emisión masiva inundaría escalaciones que no se pueden auto-resolver — por eso default OFF.
+El emisor re-keya verdicts `entity_inventory` a `inventory:<entity_ulid>` (Lens A mide el conteo REAL,
+no provincias). Shapes no soportados (coverage/platform_slice) se SALTAN (nunca se fuerzan a 'count').
+
+---
+
+## canonical_key — forward-coverage (audit P2 B-canonical-key)
+
+Motor: `pipeline/identity/canonical_key_backfill.py` + CLI `scripts/backfill_canonical_key.py`.
+`entity.canonical_key` es la pre-imagen de AUDITORÍA de `cdp_code` (no es clave de dedup hot-path; esa
+es `cdp_code`, el hash UNIQUE puesto en INSERT). Se rellena perezosamente, auto-verificante.
+
+```bash
+python scripts/backfill_canonical_key.py            # dry-run (reporte de cobertura, sin escrituras)
+python scripts/backfill_canonical_key.py --apply    # rellena
+```
+
+Escribe una key SOLO cuando su recálculo re-hashea al `cdp_code` almacenado de la fila (una key
+ERRÓNEA es imposible de escribir — el hash es el testigo). MVCC-limpio (solo UPDATE NULL→valor, nunca
+reescribe una key puesta). El job `canonical_key_backfill` (24h) lo corre automáticamente al desplegar.
+Cobertura actual: 365.573/391.944 (93,3%); el resto son dealers con nombre mutable que no re-matchean
+(correctamente NULL).
+
+---
+
+## Migraciones (Flyway-style, una transacción por archivo)
+
+Motor: `scripts/migrate.py`. Más reciente aplicada: **0040** (`servable_vehicle` price>0 guard).
+
+```bash
+python scripts/migrate.py status     # qué está aplicado / pendiente
+python scripts/migrate.py up          # aplica las pendientes en orden (una transacción cada una)
+python scripts/migrate.py verify      # compara checksum aplicado vs archivo en disco (drift)
+python scripts/migrate.py repair      # re-sincroniza el ledger si un checksum derivó (sin re-aplicar)
+```
+
+Cada archivo lleva su bloque `-- Rollback:` (SQL comentado, byte-fiel) para revertir a mano si hace
+falta. `verify` debe dar `N match, 0 drift` antes de cualquier despliegue.
