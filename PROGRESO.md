@@ -1033,3 +1033,22 @@
   B-particular-split(703), B-beta-resolver, C-cochesnet/wallapop-recipe(deriva ruta write_recipe→_tier1 + colisión),
   D-audit-chain-backfill(46/1085), F-scheduler-never-deployed(despliegue, no-código) — **11 MEDIO, 6 BAJO**. Todo en
   AUDIT_PHASE2.md.
+
+### 2026-06-15 (cont.) — recipe-collision sellado; ALTOS restantes = features deliberadas
+- **C-recipe-collision SELLADO** (1721e63): coches_net_wholesale/segments + wallapop_wholesale ya NO escriben la
+  receta de plataforma (facet la posee, patrón autocasión). Mitiga C-cochesnet-recipe + C-wallapop-recipe (parte
+  colisión). Residual (regenerar _tier1 rancios + deriva ruta write_recipe→geo-tree) = knowledge-integrity, ya
+  mitigado (facet programado refresca vía flat→reshape; loader hace fallback flat). 5 módulos importan OK.
+- **HITO: 13 findings P2 sellados+verificados+commiteados este turno** (los 10 CRÍTICOS + D-supersession + recipe-
+  collision) + batch P1 completo. Commits P2: 9755ffa·5d1f782·bd6c485·9655cf3·b124d5a·532af8e·1721e63.
+- **REFINAMIENTO de A-make-model** (hallado al investigar): no es solo backfill de 400k nulls — el campo `make`
+  tiene CASING inconsistente en los no-null (VOLKSWAGEN/Volkswagen/Mercedes/Mercedes-Benz coexisten). El fix
+  impecable = **normalización de make** (mapa canónico data-grounded [top tokens: mercedes-benz 39k, volkswagen 38k,
+  bmw 30k, audi 29k, …] aplicado en ingesta + backfill 1,7M, make-only para nulls vía marca-líder exacta; model es
+  demasiado error-prone para backfill). Feature deliberada, no quick-fix.
+- **ALTOS restantes (7) = features/decisiones deliberadas** (NO deep-context-crank): make-normalización,
+  A-cross-entity-dup (constraint/evicción nivel-vehicle, mitigado por vistas canónicas), B-particular-split (extender
+  resolver servido con señal deep-link sobre 703), B-beta-resolver (DECISIÓN Director: componer β en v_dealer_resolved
+  o repuntar resolve_cluster) + B-crosssource-ungated (VAM-verificar tras revisar 13 merges), D-audit-chain-backfill
+  (append hash-encadenado para 1039 pre-genesis — delicado), F-scheduler-never-deployed (despliegue infra, no-código).
+  + 11 MEDIO + 6 BAJO. Siguiente sesión: atacar uno por uno con la calidad que cada uno merece.
