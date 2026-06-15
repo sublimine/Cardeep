@@ -257,8 +257,12 @@ async def province_inventory_tree(
                 "entities": r["entities"], "compraventa": r["compraventa"],
                 "oficial": r["oficial"], "desguace": r["desguace"],
                 "plataforma": r["plataforma"]})
+        # Audit P2 E-geo-tree: scope to active non-particular dealers, matching the rest of this
+        # response (e.kind<>'particular' at :242) and /geo/{province}/entities — otherwise this
+        # summary count silently included C2C particulares + unverified rows the tree excludes.
         province_only = await c.fetchval(
-            "SELECT count(*) FROM entity WHERE province_code=$1 AND municipality_code IS NULL",
+            "SELECT count(*) FROM entity WHERE province_code=$1 AND municipality_code IS NULL "
+            "AND kind <> 'particular' AND status = 'active'",
             province_code)
         tree = {
             "province": {"code": prov["code"], "name": prov["name"],
