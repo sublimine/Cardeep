@@ -1235,9 +1235,14 @@ async def harvest(max_clusters: int | None = None,
         # drain, and the VAM did not refute.
         run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+        # B9 coverage gate: declared_full = sum of cluster total_vehiculos (source-declared
+        # national stock). captured_distinct = distinct (dealer_id, deep_link) pairs from the drain.
         outcome = await record_run(
             conn, KIA_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
-            error=run_error, http_status=last_http)
+            error=run_error, http_status=last_http,
+            declared_total=stats.get("declared_full"),
+            captured_distinct=stats.get("harvested_cageable"),
+            platform_ulid=platform_ulid)
         stats["health_status"] = outcome.status
         stats["breaker_state"] = outcome.breaker_state
         if not run_ok:

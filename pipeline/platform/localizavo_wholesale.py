@@ -830,7 +830,8 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
         # ---- (4) Health + recipe + count verdict.
         ok = fetch_error is None and stats["cars_caged"] > 0
         if ok:
-            await record_run(conn, LV_SOURCE_KEY, ok=True, rows=stats["cars_caged"], http_status=200)
+            await record_run(conn, LV_SOURCE_KEY, ok=True, rows=stats["cars_caged"], http_status=200,
+                             declared_total=stats.get("declared_full"), platform_ulid=platform_ulid)
             write_recipe(platform_code, LOCALIZAVO_RECIPE)
             # VAM: distinct lots caged this run vs the live events' own total, via >=2 orthogonal paths.
             live_edges = await conn.fetchval(
