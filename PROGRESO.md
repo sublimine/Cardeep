@@ -292,3 +292,19 @@
   - commits `fa1286b` (v2) / `c92ca07` (v3); `v_resolved_dealer` sirve 38.555 dealers.
 - **GATE β = VERDE** (sellado-con-gap-declarado). Pend SU-A2: **φ** (DIRCE ∩ β → fracción-ocasión →
   N_prof) · **F3 Chao2** ortogonal (fiscal × canal × geo) + cierre contra saturación → N̂(P) con CI.
+
+## 2026-06-15 — SU-C3: B7 dedup de coches físicos (km=0 + giants) bajo gate del Director
+- **km=0 guard** [commit `0f8a6e9`]: señales A(photo)/B(firma) OFF para km=0/NULL salvo `vin_ref`
+  compartido (stock nuevo: fotos de catálogo + atributos idénticos NO identifican la unidad). Sesgo
+  declarado: posible sobre-conteo cross-platform de coche nuevo (preferible a fundir unidades).
+  Re-run: unique_cars 1.443.563→**1.448.705** (+5.142). **GATE VERIFICADO: `km0_cross_entity_NO_VIN=0`**
+  — las 6.278 fusiones km=0 cross-entity son TODAS por VIN (mismo coche real). Cero over-merge.
+- **El gate del Director destapó 2 over-merges PRE-EXISTENTES (km>0)** que impedían el sello:
+  (1) firma con **precio NULL** + título genérico fundía unidades distintas (VW Caddy 1.752 fotos
+  distintas→1; Seat Arona 1.055); (2) `photo_url` de **stock/placeholder** compartida fundía coches
+  distintos (Bugatti Chiron 592 listings/14 fotos; BCA ×1752). 107 clusters >20. Cross-province (309):
+  TODO photo-legítimo (foto única=mismo coche, ruido de provincia), NO over-merge — declarado.
+- **B7 v2** [commit `61ef1bc`, 61 tests]: photo-high-collision guard (foto ≥K=**12** listings = stock,
+  off; elbow real cnt11→12, 63 URLs stock verificadas) + firma exige **precio NO-NULL** (7.274 km>0
+  price-NULL, 0,45%). Re-run v2 en curso → gate (giants caídos, km=0 intacto, fusiones legítimas
+  cross-platform preservadas) → sello B7. **SU-C3 casi cerrado.**
