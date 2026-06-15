@@ -722,4 +722,20 @@
   Governor anti-cicatriz ya battle-tested 25/25 (runbook §7.1) — la otra mitad de SU-D2 ya estaba.
 - §Deuda D2: limiter/cache in-process → si uvicorn multi-worker, promover a backend compartido (documentado en
   docstrings); el test usa `_storage` privado de slowapi (frágil a versiones). Verificación: 13 tests nuevos +
-  103 sweep api (commit tras confirmar el re-run en mi gate).
+  103 sweep api (commit tras confirmar el re-run en mi gate). [Confirmado: 13✓ re-run en gate; commit 9efb243.]
+
+## 2026-06-15 — SU-F1: cadencia δ cableada al scheduler durable (OPS continua €0)
+- Recon [VERIFICADO]: SU-F1 YA estaba sustancialmente construido — `pipeline/ops/scheduler.py` (648 líneas, B2.2):
+  APScheduler 3.x + SQLAlchemyJobStore en cardeep-pg → **DURABLE** (crash-safe, sobrevive muerte de proceso +
+  reanuda = el requisito "recovery"), single-producer series breaker-aware + silence_watchdog (B2.4). **cardeep
+  NO usa Redis** → la recovery NO es XAUTOCLAIM (Redis Streams) sino jobstore-PG — método SUPERIOR para cardeep
+  (sin infra Redis; PG ya es el store primario). El spec pedía XAUTOCLAIM; el OBJETIVO (recovery) ya estaba por
+  mejor vía → mejora del método declarada.
+- **Incremento €0**: cableé la cadencia δ (que construí como CLI standalone) DENTRO del scheduler como job
+  recurrente: `inquisition_cadence_job` (cada INQUISITION_CADENCE_HOURS=6h, max_instances=1, coalesce,
+  misfire_grace 600s) + `_ASYNCPG_DSN` dedicado (asyncpg URL, distinto del `_RAW_DSN` psycopg2-keyword — evita
+  la ambigüedad de formato de CARDEEP_DSN entre los dos módulos). Ahora la re-verificación de veredictos corre
+  CONTINUA junto al heartbeat (15min) + silence_watchdog (1h) — "el motor late".
+- Verificado: import scheduler OK; `inquisition_cadence_job()` end-to-end contra DB viva (expired=0 honesto, sin
+  raise); **46 tests ops/scheduler/watchdog✓** (0 regresión). Orquestación E2E-per-dealer-harvest (correr
+  conectores reales) queda harvest-gated = fase cosecha. SU-F1 €0 SELLADO.

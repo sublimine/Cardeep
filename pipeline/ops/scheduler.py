@@ -63,11 +63,21 @@ _RAW_DSN = os.environ.get(
     "CARDEEP_DSN",
     "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only",
 )
+# asyncpg URL DSN for the WF-INQUISITION cadence job (δ). Distinct from _RAW_DSN
+# above, which is the psycopg2 keyword form; asyncpg requires a postgres:// URL.
+_ASYNCPG_DSN = os.environ.get(
+    "CARDEEP_ASYNCPG_DSN",
+    "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep",
+)
 
 # ---------------------------------------------------------------------------
 # Heartbeat cadence
 # ---------------------------------------------------------------------------
 TICK_INTERVAL_MINUTES: int = 15
+
+# WF-INQUISITION cadence (δ): how often to scan for verdicts whose freshness TTL
+# has lapsed and queue their re-verification. Independent of the harvest heartbeat.
+INQUISITION_CADENCE_HOURS: int = 6
 
 # Circuit breaker: skip sources with consecutive_fails >= this threshold
 BREAKER_TRIP_AT: int = 3
@@ -422,6 +432,37 @@ def silence_watchdog_job() -> None:
     log.info("=== silence_watchdog END ===")
 
 
+def inquisition_cadence_job() -> None:
+    """Periodic job (δ): queue re-verification for verdicts whose TTL has lapsed.
+
+    Runs pipeline.ops.inquisition_schedule.schedule_reverification — finds expired
+    verification_verdict rows (expires_at < now() AND not superseded) and opens
+    stale_verdict gestion_items via the gestionador. €0 (DB reads + gestion_item
+    upserts; it QUEUES re-verification, never runs harvest). Never raises: a DB
+    error is logged and the job exits so the scheduler continues.
+    """
+    import asyncio
+    import asyncpg
+
+    from pipeline.ops.inquisition_schedule import schedule_reverification
+
+    log.info("=== inquisition_cadence START ===")
+
+    async def _run() -> dict:
+        conn = await asyncpg.connect(_ASYNCPG_DSN)
+        try:
+            return await schedule_reverification(conn)
+        finally:
+            await conn.close()
+
+    try:
+        summary = asyncio.run(_run())
+        log.info("inquisition_cadence: %s", summary)
+    except Exception as exc:  # noqa: BLE001
+        log.error("inquisition_cadence: unexpected error: %s", exc)
+    log.info("=== inquisition_cadence END ===")
+
+
 # ---------------------------------------------------------------------------
 # Dry-run mode
 # ---------------------------------------------------------------------------
@@ -591,9 +632,25 @@ def _start_scheduler() -> None:
         misfire_grace_time=600,  # 10 min slippage allowed before skipping
     )
 
+    # δ — WF-INQUISITION cadence: re-verify verdicts whose freshness TTL has lapsed.
+    # €0: queues re-verification as stale_verdict gestion_items (the re-prosecution
+    # itself is harvest-gated). Independent of the harvest heartbeat.
+    scheduler.add_job(
+        inquisition_cadence_job,
+        trigger="interval",
+        hours=INQUISITION_CADENCE_HOURS,
+        id="inquisition_cadence",
+        name="cardeep inquisition cadence (verdict TTL re-verification)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
+    )
+
     log.info(
-        "Scheduler started — heartbeat every %d min, silence watchdog every 1h — jobstore: %s",
-        TICK_INTERVAL_MINUTES, DB_URL,
+        "Scheduler started — heartbeat every %d min, silence watchdog every 1h, "
+        "inquisition cadence every %dh — jobstore: %s",
+        TICK_INTERVAL_MINUTES, INQUISITION_CADENCE_HOURS, DB_URL,
     )
     log.info("Press Ctrl+C to stop.")
     try:
