@@ -593,3 +593,24 @@
 - §Deuda ε2 (para ε3/ε4): los lentes deben normalizar measured_value a string canónica ("1292" no "1292.0", el
   Counter los separa); reason_code "SINGLE_ASSERT" es impreciso en el borde 0-asserts (renombrar a INSUFFICIENT
   cuando ε4 lo enrute). Pend B2: ε3(lentes), ε4(prosecutor+router); G5=corrida.
+
+## 2026-06-15 — SU-B2 ε3: los 5 lentes ortogonales del Inquisidor
+- ε3 build (Sonnet; Fable no disponible): `pipeline/inquisition/lenses.py` (API + ClaimEnvelope frozen + Lens B/C/E
+  + dispatcher `run_applicable_lenses` §3.6) + `_lens_a.py` (re-query SQL, 5 sub-handlers) + `_lens_d.py`
+  (cross-source, 4 rutas). **46 tests✓** (26 puros + 20 real-DB rolled-back); sweep inquisition **130✓**.
+- Lentes: **A** re-query (count/kind/coverage/inventory/denominator — €0 real, tool=sql/path=lens_a → D=2);
+  **D** cross-source (witnesses reales en DB: dgt_cat=1.292 desguace registral, wallapop ~220k particular,
+  denominator P_all 3-fuentes — €0; ABSTAIN si no hay witness); **E** batch-hash SHA256 sobre set canónico
+  (vehicle_ulid|price|last_seen-bucket; empty-delta→REFUTE_HARD determinista que veta §5.5b — €0); **B** raw-recount
+  ABSTAIN honesto `no_raw_evidence_store` (auditado: nada escribe evidence_uri aún; flag listo para harvest);
+  **C** live-refetch STUB cero-red `live_refetch_requires_harvest` (gold lens D=4, gated a harvest+egress separado).
+  measured_value canónico str(int) — cierra la deuda ε2.
+- **Gate (Opus) verificó, no confió**: esquema real (entity_ulid PK + cdp_code UNIQUE + entity_source(ulid,source_key)
+  + vehicle(price,last_seen,status) — cero alucinación); números de test reales (madrid_28=52.668, desguace=1.895,
+  P_all=38.555 = sello β); 46 tests reproducidos. **Cazó desviación §3.6**: matriz delta del agente = [B,C,E] pero
+  el spec marca **A mandatorio** (A✓C✓E✓); B es opcional. Corregido a [A,C,E] (A abstiene honesto hasta tener
+  handler de delta — `lens_a` ya ABSTAIN ante subject no soportado, no crashea).
+- §Deuda ε3: Lens A sin handler de `delta` (abstiene; pendiente del event-store / SU-A4); entity_field/cif/registral
+  necesitan B/C/D (harvest-gated) para verificación real — A-solo da INDEP<2→REFUTED (honesto, nunca TRUSTWORTHY
+  falso); duck-typing `claim: object` en _lens_a/_lens_d evita import circular (mover ClaimEnvelope a models.py sería
+  más limpio — menor). Pend B2: ε4 (prosecutor+manager router→γ); G5=corrida.
