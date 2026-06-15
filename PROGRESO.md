@@ -482,3 +482,21 @@
   "special case, handled outside the scheduler via its own governor"). Traté un no-problema y rompí
   `test_registry_covers_live_source_health`. **Revertido** (DELETE → source_health 47); registry-test verde.
 - **A8 = lazo €0 SELLADO + verificado reproducible**. refingerprint real = P10 (spend) declarado.
+
+## 2026-06-15 — SU-B2 FOUNDATION (framework de verificación-completitud) + decisiones de gate
+- Recon (`docs/recon/SUB2_INQUISITION_RECON.md`, 8 agentes): B2 era 0% implementado (V1-V6 = spec, nada en
+  código). Los "5 gates" de COMPLETED están en `V2-COMPLETION-PROOF.md`: **G1 Identity, G2 Inventory, G3 Recipe,
+  G4 Served, G5 Delta**. WF-INQUISITION (cadencia) no existe; verdicts one-shot (sin expires_at/re-juicio).
+- **Block α SELLADO** (`migrations/0030_entity_completion.sql`, reproducible): tabla `entity_completion`
+  (22 cols exactas de V2-spec, trigger BEFORE INS/UPD: COMPLETED⟺g1∧g2∧g3∧g4∧g5∧completed_at) + `pipeline/complete.py`
+  (G1-G4 operativos, G5 stub `# requires 2nd harvest`) + `tests/test_complete.py` **43✓** + demo de 20 dealers.
+- **Decisiones de Director (MEJORA del método V2 — el spec hacía COMPLETED inalcanzable para el 97,5%
+  connector-covered)**: **G1**=entity+cdp_code+province válido (NO lat/lon ni muni — geo-detalle = gap-de-datos
+  de A6, no fallo de identidad); **G2**=validez de inventario sobre `deep_link` no-null + VAM D=S (NO
+  `recipe_version`, que solo se escribe para 537 AS24 — eso es G3); **G3**=cobertura vía `v_dealer_recipe.recipe_kind
+  <> 'none'` (connector O per-dealer; NO git-per-dealer-only, que falla connector-covered + Docker sin git).
+  quorum-CHECK sigue NOT VALID (grandfather ~750 legacy).
+- **Secuencia restante (toda €0 salvo corridas)**: β-refine (aplicar G1/G2/G3 arriba) → β-populate (37-40k
+  entity_completion, corrida controlada) → γ (0031 gestion + gestionador detect/route, V4) → δ (expires_at en
+  verify.py + scheduler WF-INQUISITION cadencia) → ε (0032 + inquisition V3, lentes A/B/D/E €0, C=scraping).
+  G5 requiere 2ª corrida (delta). La tabla está VACÍA (sin datos erróneos antes de la refinación).
