@@ -66,6 +66,7 @@ from dataclasses import dataclass, field
 import asyncpg
 from curl_cffi import requests as cffi_requests
 
+from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
@@ -844,10 +845,12 @@ async def ingest_window(conn: asyncpg.Connection, m: Member, platform_ulid: str,
             return
         v_entity = [k[0] for k in car_keys]
         v_links = [k[1] for k in car_keys]
-        existing: dict[tuple[str, str], str] = {
-            (row["entity_ulid"], row["deep_link"]): row["vehicle_ulid"]
+        existing_snap: dict[tuple[str, str], dict] = {
+            (row["entity_ulid"], row["deep_link"]): {
+                "vehicle_ulid": row["vehicle_ulid"], "price": row["price"],
+                "km": row["km"], "photo_url": row["photo_url"]}
             for row in await conn.fetch(
-                """SELECT vehicle_ulid, entity_ulid, deep_link FROM vehicle
+                """SELECT vehicle_ulid, entity_ulid, deep_link, price, km, photo_url FROM vehicle
                    WHERE (entity_ulid, deep_link) IN (
                      SELECT * FROM unnest($1::text[], $2::text[]))""",
                 v_entity, v_links)
@@ -857,16 +860,19 @@ async def ingest_window(conn: asyncpg.Connection, m: Member, platform_ulid: str,
         new_keys: list[tuple[str, str]] = []
         touch_ulids: list[str] = []
         for key in car_keys:
-            ex = existing.get(key)
-            if ex is not None:
-                vehicle_ulid_for[key] = ex
-                touch_ulids.append(ex)
+            snap = existing_snap.get(key)
+            if snap is not None:
+                vehicle_ulid_for[key] = snap['vehicle_ulid']
+                touch_ulids.append(snap['vehicle_ulid'])
             else:
                 vehicle_ulid_for[key] = ulid()
                 new_keys.append(key)
 
         if touch_ulids:
             await conn.execute(_BULK_TOUCH_VEHICLES, touch_ulids)
+        # A4 (SU-A4): PRICE/KM/PHOTO_CHANGE for re-seen vehicles + refresh their row (shared helper, DRY).
+        await emit_change_deltas(
+            conn, existing_snap, {k: cars[k].vehicle for k in car_keys}, car_keys)
 
         if new_keys:
             ins = [(vehicle_ulid_for[k], k[0], k[1], cars[k].vehicle) for k in new_keys]
