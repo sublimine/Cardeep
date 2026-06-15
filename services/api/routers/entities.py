@@ -67,10 +67,13 @@ async def get_entity(
             "SELECT * FROM entity WHERE entity_ulid = $1",
             cluster.canonical_ulid,
         )
+        # LEFT JOIN + COALESCE-to-self: a vehicle absent from v_canonical_vehicle (not yet in a
+        # cluster run — 9,827 available cars / 1,329 dealers as of audit P2 E-inventory) is its own
+        # canonical and MUST be counted. An INNER JOIN dropped them, reporting 0 stock for live dealers.
         n_available = await c.fetchval(
-            "SELECT count(DISTINCT vc.canonical_vehicle_ulid) "
+            "SELECT count(DISTINCT COALESCE(vc.canonical_vehicle_ulid, v.vehicle_ulid)) "
             "FROM vehicle v "
-            "JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid "
+            "LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid "
             "WHERE v.entity_ulid = ANY($1::text[]) AND v.status = 'available'",
             cluster.member_ulids,
         )
@@ -124,15 +127,15 @@ async def get_inventory(
         rows = await c.fetch(
             """
             SELECT * FROM (
-              SELECT DISTINCT ON (vc.canonical_vehicle_ulid)
+              SELECT DISTINCT ON (COALESCE(vc.canonical_vehicle_ulid, v.vehicle_ulid))
                      v.vehicle_ulid, v.deep_link, v.title, v.make, v.model, v.year,
                      v.km, v.price, v.currency, v.fuel, v.transmission, v.photo_url,
                      v.status, v.first_seen, v.last_seen
                 FROM vehicle v
-                JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
+                LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
                WHERE v.entity_ulid = ANY($1::text[])
                  AND v.status = 'available'
-               ORDER BY vc.canonical_vehicle_ulid, v.first_seen DESC, v.vehicle_ulid
+               ORDER BY COALESCE(vc.canonical_vehicle_ulid, v.vehicle_ulid), v.first_seen DESC, v.vehicle_ulid
             ) dedup
             ORDER BY dedup.first_seen DESC, dedup.vehicle_ulid
             LIMIT $2 OFFSET $3
