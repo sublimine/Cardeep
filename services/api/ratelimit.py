@@ -65,6 +65,10 @@ from slowapi.util import get_remote_address
 # Module-level constants — all limit strings live here, none inline.
 # ---------------------------------------------------------------------------
 
+# NOTE (audit P2 E-ratelimit): _ENABLED and the RATE_* limits below are read ONCE at import and
+# baked into the Limiter — unlike require_api_key, which reads os.environ per request. Toggling
+# CARDEEP_API_RATELIMIT_ENABLED (or changing a limit) in an already-running process has NO effect;
+# it requires a process restart. The default (enabled) is the safe state.
 _ENABLED: bool = os.environ.get("CARDEEP_API_RATELIMIT_ENABLED", "1") != "0"
 
 # When disabled (test mode), use an astronomically high limit that no

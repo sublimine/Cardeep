@@ -77,7 +77,13 @@ _cache: TTLCache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL_SECONDS)
 
 
 def _cache_key(request: Request) -> str:
-    """Build a deterministic string key from method + path + sorted query params."""
+    """Build a deterministic string key from method + path + sorted query params.
+
+    NOTE (audit P2 E-cache-key): this key has NO auth/tenant dimension. Safe under the current
+    single shared CARDEEP_API_KEY (require_api_key runs before the body is read, so there is no
+    anonymous bypass), but introducing per-tenant API keys WITHOUT adding the key/tenant-id to this
+    key would let tenant A be served tenant B's cached body. Multi-tenant auth MUST extend this key.
+    """
     method = request.method.upper()
     path = request.url.path
     # Sort query params for key stability regardless of client parameter order.

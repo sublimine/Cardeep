@@ -8,8 +8,12 @@
 -- migrate.py applies only the forward section (before the trailing Rollback block).
 --
 -- NOTE: ALTER TYPE ADD VALUE IF NOT EXISTS is safe inside a transaction in PG 12+
--- (including PG 16 used here).  migrate.py wraps each statement individually via
--- split_statements() so this statement runs in its own transaction — no issue.
+-- (including PG 16 used here). CORRECTION (audit P2 F-0033): migrate.py applies the WHOLE file in a
+-- SINGLE transaction (one `async with conn.transaction()` around all split_statements + the ledger
+-- INSERT) — it does NOT run each statement in its own transaction. PG forbids USING a newly ADDed
+-- enum value in the SAME transaction ("unsafe use of new value"). This file is safe only because it
+-- never uses the value it adds; any future migration that must USE a new enum value has to split it
+-- across two files (add value -> commit -> use).
 
 -- ---------------------------------------------------------------------------
 -- 1. Extend entity_status enum with 'evicted'
