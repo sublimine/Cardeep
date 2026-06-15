@@ -505,3 +505,15 @@
   solo sub-señal per_dealer). Re-demo de 20: ahora G1/G2/G3/G4=T, verdict INCOMPLETE **solo por G5-pendiente**
   (no por gate-defs espurios) → **COMPLETED es alcanzable**. Decisión G2-VAM: opción 2 (G2=field_integrity;
   la completitud D=S es per-source de B9, no se duplica per-dealer). B2-foundation CORRECTA y sellada.
+
+## 2026-06-15 — SU-B2 β-populate: entity_completion poblada (37.657) + corrección del gate
+- `scripts/populate_completion.py` (set-based reproducible, idempotente 3✓): pobló `entity_completion` para
+  los 37.657 dealers servidos. Spot-check 10/10 == `complete.py` (SQL espeja la lógica Python). Todos
+  INCOMPLETE (G5-PEND); **37.271 G1∧G2∧G3∧G4=T** (→ COMPLETED al pasar G5/2ª corrida); G2/G4=100%, G3=F 79.
+- **El gate del Director corrigió una mis-caracterización del agente**: dijo "G1=F 310 = sentinels
+  plataforma"; la verdad (joinando entity.kind): **210 compraventa province_null + 97 subasta + 2 plataforma
+  + 1 importador**. Los 210 compraventa son dealers REALES sin provincia (gap geo más profundo que el
+  muni-gap de A6); subasta/importador son nacionales (sin provincia por naturaleza). Solo 2 son plataforma.
+- §Deuda B2 (minor, 0,8%): (a) G1 debería tratar entidades nacionales (subasta/importador ~98) sin requerir
+  provincia; (b) excluir las 2 plataforma del tracker per-dealer; (c) 210 compraventa sin provincia = gap-geo
+  (A6-extendido). β-populate FUNCIONALMENTE SANO; COMPLETED-eligible (37.271) correcto. Pend: γ/δ/ε; G5=corrida.
