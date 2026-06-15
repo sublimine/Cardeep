@@ -926,3 +926,19 @@
   commiteadas (dealers ya cosechados → recetas deterministas, idempotente), 1 era la colisión autocasión (revertida).
   NINGUNA receta perdida (verificado: git status = 0 untracked, 0 añadidos).
 - Matriz en `state/validation_matrix.json` (gitignored — artefacto runtime; resultados documentados aquí).
+
+### F2 SELLADO + reevaluación del batch €0 (tick autónomo 2026-06-15)
+- **F2 CERRADO** (`7cceaf2`, migración `0034`): los guards de inmutabilidad row-level (0005/0026/0033) NO disparan
+  en TRUNCATE. Añadido `BEFORE TRUNCATE FOR EACH STATEMENT` (reusando `cardeep_block_mutation`) a las 4 tablas
+  append-only: verdict_audit, audit_eviction, vehicle_event, gestion_transition. **Verificado en vivo: TRUNCATE
+  BLOQUEADO en las 4** (test con rollback, conteos intactos). `migrate verify` limpio (28 match / 0 drift).
+- **NUEVO hallazgo (verificación lo cazó, documentado NO sellado)**: `vehicle_event` (1,72M filas) y
+  `gestion_transition` están documentadas append-only pero **no tienen guard row-level UPDATE/DELETE** en el esquema
+  vivo (solo verdict_audit + audit_eviction lo tienen). 0034 bloquea su TRUNCATE; el guard row-level necesita
+  revisión de uso antes de imponerlo (¿se podan/archivan?) — no lo impongo a ciegas (podría romper archivado).
+- **Resto del batch €0 — reevaluado, NO son sellos autónomos limpios**:
+  - **F7** (gestion_item.verdict_id RESOLVED sin chequear quórum): NO es CHECK simple (CHECK no subconsulta) →
+    requiere trigger que valide el verdict al RESOLVED. Más diseño; gestion_item vacío (0 filas) → baja urgencia.
+  - **/health split** (counts authed): CAMBIA diseño GAP-7 deliberado → requiere flag de revisión del usuario.
+  - **H-9** (split prefijo-provincia / digest-fallback): investigación enfocada, ya mitigado por dedup 0027.
+  Todos requieren decisión del usuario o trabajo deliberado, no quick-seal. Quedan para sesión dirigida.
