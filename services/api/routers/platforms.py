@@ -60,6 +60,7 @@ async def platform_inventory(
                  JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                  JOIN entity d ON d.entity_ulid = v.entity_ulid
                 WHERE pl.platform_entity_ulid = $1 AND pl.status = 'listed'
+                  AND v.status = 'available'
                 ORDER BY pl.first_seen DESC, pl.vehicle_ulid
                 LIMIT $2 OFFSET $3""",
             prow["entity_ulid"], size, offset,

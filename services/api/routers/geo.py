@@ -44,15 +44,22 @@ async def geo_completeness(
         return cached
 
     async with request.app.state.pool.acquire() as c:
-        e_total = await c.fetchval("SELECT count(*) FROM entity")
+        # Geo-completeness is a DEALER coverage report: particulares are platform-attributed
+        # C2C inventory, not geo-located points of sale (and mostly lack geo by nature — the
+        # SU-A6 gap). Scoping to kind<>'particular' makes full_pct reflect real dealer coverage,
+        # consistent with /geo/{prov}/entities and /geo/{prov}/tree.
+        e_total = await c.fetchval("SELECT count(*) FROM entity WHERE kind <> 'particular'")
         e_full = await c.fetchval(
-            "SELECT count(*) FROM entity WHERE province_code IS NOT NULL "
+            "SELECT count(*) FROM entity WHERE kind <> 'particular' AND province_code IS NOT NULL "
             "AND municipality_code IS NOT NULL AND comarca_id IS NOT NULL")
         e_no_comarca_city = await c.fetchval(
-            "SELECT count(*) FROM entity WHERE municipality_code IS NOT NULL AND comarca_id IS NULL")
+            "SELECT count(*) FROM entity WHERE kind <> 'particular' "
+            "AND municipality_code IS NOT NULL AND comarca_id IS NULL")
         e_prov_only = await c.fetchval(
-            "SELECT count(*) FROM entity WHERE province_code IS NOT NULL AND municipality_code IS NULL")
-        e_no_geo = await c.fetchval("SELECT count(*) FROM entity WHERE province_code IS NULL")
+            "SELECT count(*) FROM entity WHERE kind <> 'particular' "
+            "AND province_code IS NOT NULL AND municipality_code IS NULL")
+        e_no_geo = await c.fetchval(
+            "SELECT count(*) FROM entity WHERE kind <> 'particular' AND province_code IS NULL")
         v_total = await c.fetchval("SELECT count(*) FROM vehicle")
         v_full = await c.fetchval(
             "SELECT count(*) FROM vehicle v JOIN entity e ON e.entity_ulid=v.entity_ulid "
@@ -68,6 +75,7 @@ async def geo_completeness(
         response = ok({
             "geo_grid": geo,
             "entities": {
+                "scope": "dealers (kind<>particular)",
                 "total": e_total, "full_prov_comarca_muni": e_full,
                 "municipality_no_comarca_ceuta_melilla": e_no_comarca_city,
                 "province_only": e_prov_only, "no_geo": e_no_geo,
@@ -231,6 +239,7 @@ async def province_inventory_tree(
                  JOIN geo_municipality m ON m.code = e.municipality_code
                  JOIN geo_comarca      co ON co.id = m.comarca_id
                 WHERE e.province_code = $1 AND e.comarca_id IS NOT NULL
+                  AND e.kind <> 'particular'
                 GROUP BY co.id, co.name, co.ine_code, m.code, m.name
                 HAVING count(e.entity_ulid) > 0
                 ORDER BY co.ine_code, entities DESC, m.name""",
