@@ -1,75 +1,69 @@
-# CARDEEP — Workflows átomo del E2E por dealer (F3)
+# Cardeep — Arquitectura de Workflows
 
-> Diseño con precisión átomo de las 5 fases + verificación transversal del mandato.
-> Cada fase declara: objetivo · entradas · pasos · gates · artefactos · fallo · idempotencia.
->
-> **Mejora del método (autorizada por el mandato):** el pipeline de PRODUCCIÓN es
-> código Python determinista (`pipeline/`), barato y escalable — no agentes por dealer.
-> La herramienta `Workflow` (agentes) se reserva para lo que necesita inteligencia:
-> **caza de receta en plataformas Tier-1** y **verificación adversarial**. Así el coste
-> caro va solo a decidir; lo masivo (descubrir, parsear, ingerir) corre en local/€0.
+El pipeline de produccion es codigo Python determinista (`pipeline/`) para todo lo masivo:
+descubrir, scrapear, ingerir, delta, verificar. Los agentes LLM se reservan estrictamente
+para dos casos que requieren inteligencia: caza de receta en plataformas Tier-1 y verificacion
+adversarial (Inquisition). El gasto caro va solo a decidir; lo escalable corre en local a €0.
 
-## Arquitectura de capas
+## Flujo completo
+
 ```
-pipeline/
-  sources/            # adaptadores de fuente (1 por fuente del censo F1)
-    base.py           # contrato SourceAdapter -> Iterable[DiscoveredEntity]
-    dgt_cat.py        # DGT CATV (desguaces) — IMPLEMENTADO
-  discover.py         # FASE 1 DESCUBRIR  — IMPLEMENTADO
-  scrape.py           # FASE 2 SCRAPEAR   — F3-cont
-  recipe.py           # FASE 3 RECETA     — F3-cont
-  ingest.py           # FASE 4 API        — IMPLEMENTADO (entidades); inventario F3-cont
-  evict.py            # FASE 5 BORRAR     — F3-cont
-  verify.py           # VERIFICAR (VAM)   — IMPLEMENTADO (count quorum)
-  geo.py              # resolución nombre->código INE
+DESCUBRIR -> SCRAPEAR -> RECETA -> INGEST -> SERVE-API
+                                       |
+                                     DELTA
+                                       |
+                               VAM -> DEEP-LEDGER -> INQUISITION -> GESTIONADOR
+                                       |
+                                     BORRAR (POR CONSTRUIR)
 ```
-> Los módulos no implementados NO existen aún como ficheros (anti-stub): se crean al
-> implementarlos, fase a fase. Este doc es la arquitectura visible; el código es la verdad.
 
-## FASE 1 — DESCUBRIR (`pipeline/discover.py`) · IMPLEMENTADO
-- **Objetivo:** dada una fuente del censo, producir entidades reales (punto de venta)
-  con geo INE + código único, e ingerirlas idempotentemente.
-- **Entradas:** un `SourceAdapter` (p.ej. `dgt_cat`). 
-- **Pasos:** fetch fuente → normalizar a `DiscoveredEntity` → resolver provincia/municipio
-  a código INE (`geo.py`) → mintar `cdp_code` (dominio>CIF>nombre+muni>nombre+prov) →
-  upsert `entity` + `entity_source` (provenance multi-fuente para dedup/capture-recapture).
-- **Gate (VAM):** nº entidades ingeridas de la fuente == nº que la fuente declara
-  (quórum ≥2 vías: conteo API + conteo página + conteo en DB). Tasa de geo-resolución
-  reportada; las no resueltas se ingieren con municipio NULL (honesto), no se descartan.
-- **Artefacto:** filas en `entity`/`entity_source` + veredicto en `verification_verdict`.
-- **Fallo:** fuente caída → alerta origen-exacto + se sigue; nunca aborta el barrido global.
-- **Idempotencia:** `ON CONFLICT (cdp_code)` → re-descubrir no duplica; refresca `last_seen`.
+## Indice de documentacion
 
-## FASE 2 — SCRAPEAR (`pipeline/scrape.py`) · F3-cont
-- **Objetivo:** extraer el inventario COMPLETO de las URLs de una entidad.
-- **Pasos:** cargar config dealer → drenar paginación hasta agotar → huella de cliente
-  coherente p1→pN → respetar robots/rate → volcar crudo a `data/` (gitignored).
-- **Gate:** páginas drenadas == esperadas; última página detectada explícita (no timeout).
-- **Routing arsenal:** `is-antibot` fingerprintea → ABIERTA=curl_cffi · CF=camoufox/SeleniumBase
-  · Akamai=BotBrowser+sensor (gate gasto). Banco de pruebas inicial: **AutoScout24.es** (abierto, JSON-LD dealer).
+| Carpeta | Documento | Modulo real | Estado | €0/Gasto |
+|---|---|---|---|---|
+| workflows/ | README (este) | — | IMPLEMENTADO | — |
+| workflows/e2e/ | 00-LIFECYCLE-OVERVIEW.md | pipeline/ (global) | IMPLEMENTADO | €0 |
+| workflows/e2e/ | 01-DISCOVER.md | pipeline/discover.py | IMPLEMENTADO | €0 |
+| workflows/e2e/ | 02-SCRAPE.md | pipeline/engine/fetch.py + governor.py | IMPLEMENTADO | €0 |
+| workflows/e2e/ | 03-RECIPE.md | pipeline/platform/ (44 conectores) | IMPLEMENTADO | €0 / Gasto Tier-1 |
+| workflows/e2e/ | 04-INGEST.md | pipeline/ingest.py + delta.py + delta_guard.py | IMPLEMENTADO | €0 |
+| workflows/e2e/ | 05-SERVE-API.md | services/api/main.py | IMPLEMENTADO | €0 |
+| workflows/e2e/ | 06-DELTA.md | pipeline/delta.py + delta_guard.py | IMPLEMENTADO | €0 |
+| workflows/e2e/ | 07-EVICT-DELETE.md | pipeline/evict.py | POR CONSTRUIR | €0 |
+| workflows/verification/ | 00-VERIFICATION-OVERVIEW.md | pipeline/verify.py | IMPLEMENTADO | €0 |
+| workflows/verification/ | WF-VAM.md | pipeline/verify.py | IMPLEMENTADO | €0 |
+| workflows/verification/ | WF-DEEP-LEDGER.md | verdict_audit + chk_trustworthy_needs_quorum + ops/inquisition_schedule.py | IMPLEMENTADO | €0 |
+| workflows/verification/ | WF-INQUISITION.md | pipeline/inquisition/ | IMPLEMENTADO | Gasto (lens C) |
+| workflows/verification/ | WF-GESTIONADOR.md | pipeline/gestionador/ | IMPLEMENTADO | €0 |
+| workflows/verification/ | WF-CADENCE.md | pipeline/ops/scheduler.py + inquisition_schedule.py | IMPLEMENTADO | €0 |
+| workflows/ | AGENT-SKILL-TOOL-MATRIX.md | — (referencia cruzada) | REFERENCIA | — |
 
-## FASE 3 — RECETA (`pipeline/recipe.py`) · F3-cont
-- **Objetivo:** destilar la receta reutilizable (selectores/regex/endpoints/mapeo) y versionarla.
-- **Pasos:** inferir estructura (regex/JSON-LD determinista > LLM) → mapear a campos canónicos
-  (precio, año, km, VIN/ref, deep-link, foto) → verificar sobre muestra ciega → versionar.
-- **Gate:** reproduce ≥ umbral de campos correctos, 0 campos críticos nulos.
-- **Artefacto:** `countries/ES/.../recipe.yaml` versionada (el activo que re-scrapea sin crudo).
+## Capas de verificacion
 
-## FASE 4 — API/INGEST (`pipeline/ingest.py`) · IMPLEMENTADO (entidad) / inventario F3-cont
-- **Objetivo:** ingerir inventario verificado con delta.
-- **Pasos:** validar en borde (rechazar sin deep-link/campos clave) → delta: INSERT nuevo +
-  cerrar desaparecido (status=gone+evento), UPDATE solo filas mutadas (Δprecio/Δfoto/Δkm) +
-  evento → reconciliar conteo post-ingesta (VAM).
-- **Gate:** conteo post-ingesta == lote por ≥2 vías; 0 filas inválidas; drift de esquema aborta.
+| Capa | Migracion | Modulo | Trigger | Estado |
+|---|---|---|---|---|
+| L1 VAM (count quorum) | 0004 | pipeline/verify.py | post-discover / post-ingest | IMPLEMENTADO |
+| L2 Deep Ledger (quorum DB + hash-chain) | 0026 | verdict_audit + chk_trustworthy_needs_quorum + ops/inquisition_schedule.py | cadencia δ TTL | IMPLEMENTADO |
+| L3 Gestionador (maquina de estados) | 0031 | pipeline/gestionador/ | post-ingest / post-inquisition | IMPLEMENTADO |
+| L4 Inquisition V3 (adversarial, 5 lenses) | 0032 | pipeline/inquisition/ | bridge VAM / cadencia δ / manual | IMPLEMENTADO |
 
-## FASE 5 — BORRAR (`pipeline/evict.py`) · F3-cont ⚠ destructivo
-- **Precondición DURA (3 gates):** ingesta TRUSTWORTHY (VAM≥2) + receta/config commiteadas +
-  conteos cuadrados. Releídos en el momento del borrado.
-- **Pasos:** watermark de disco → evicción LRU del crudo de dealers verificados → tombstone.json
-  (prueba de vida, re-obtenible desde receta) → actualizar `state/capacity-ledger.json`.
-- **Gate:** cualquier precondición roja → no se borra NADA.
+## Nota de metodo
 
-## VERIFICAR (`pipeline/verify.py`) · IMPLEMENTADO (count quorum)
-- Meta-fase transversal (§2 CLAUDE.md): toma un conteo/hallazgo, lo somete a N vías
-  ortogonales (re-query, recuento crudo, hash lote, muestreo ciego), persiste
-  `verification_verdict` con verdict TRUSTWORTHY/REFUTED/UNVERIFIED. Sin quórum → no avanza.
+Pipeline determinista para escala: cada entidad sigue el mismo grafo de estados sin variacion.
+Inquisition y recipe-hunt con agentes: solo cuando se necesita razonar sobre casos ambiguos o
+cazar configuraciones de plataformas con defensas duras.
+
+## Estado harvest-gated
+
+Los siguientes modulos estan construidos e integrados pero bloqueados por gasto de produccion
+hasta que se autorice el presupuesto de harvest real:
+
+- **Scraping real contra dealers**: fleet de 44 conectores en `pipeline/platform/` lista,
+  pero no esta corriendo en produccion contra inventario real.
+- **Lens C de Inquisition**: live re-fetch dentro del ciclo adversarial; requiere proxies
+  premium o ancho de banda de produccion.
+- **Heartbeat harvest real en scheduler**: `pipeline/ops/scheduler.py` tiene el hook
+  configurado pero el harvest periodico no esta activado en produccion.
+
+Lo que SI corre en €0 ahora mismo: discover (fuentes publicas), ingest de datos ya obtenidos,
+VAM, deep-ledger, Inquisition sin lens C, Gestionador, API.
