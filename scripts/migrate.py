@@ -144,6 +144,71 @@ async def status() -> None:
         await conn.close()
 
 
+async def verify() -> int:
+    """Detect drift: recompute each applied migration's file sha256 and compare
+    to the ledger. Exit 1 if any drift (CI integrity gate). migrate.py hashes the
+    FULL file, so a post-apply comment edit shows as drift even when the forward
+    DDL is unchanged — ``forward_ddl_lines`` is printed as a triage hint."""
+    conn = await asyncpg.connect(DSN)
+    try:
+        rows = await conn.fetch(
+            "SELECT version, filename, sha256 FROM schema_migrations ORDER BY version")
+        on_disk = {v: p for v, p in discover()}
+        drift: list[str] = []
+        for r in rows:
+            path = on_disk.get(r["version"])
+            if path is None:
+                print(f"  {r['version']}  FILE-MISSING (applied as {r['filename']})")
+                drift.append(r["version"])
+                continue
+            sql = path.read_text(encoding="utf-8")
+            cur = hashlib.sha256(sql.encode("utf-8")).hexdigest()
+            if cur == r["sha256"]:
+                print(f"  {r['version']}  MATCH")
+            else:
+                fwd = len([l for l in strip_rollback(sql).splitlines()
+                           if l.strip() and not l.lstrip().startswith("--")])
+                print(f"  {r['version']}  DRIFT  ledger={r['sha256'][:10]} "
+                      f"disk={cur[:10]} (forward_ddl_lines={fwd})")
+                drift.append(r["version"])
+        print(f"\nverify: {len(rows) - len(drift)} match, {len(drift)} drift {drift or ''}")
+        return 1 if drift else 0
+    finally:
+        await conn.close()
+
+
+async def repair(versions: list[str]) -> int:
+    """Reconcile ledger sha256 to the current file (deliberate admin action — the
+    Flyway ``repair`` model). Use ONLY after confirming the drift is cosmetic and the
+    migration's objects exist in the live schema. With no args, repairs all drifted."""
+    conn = await asyncpg.connect(DSN)
+    try:
+        on_disk = {v: p for v, p in discover()}
+        targets = versions or [r["version"] for r in
+                               await conn.fetch("SELECT version FROM schema_migrations ORDER BY version")]
+        fixed = 0
+        for v in targets:
+            path = on_disk.get(v)
+            old = await conn.fetchval("SELECT sha256 FROM schema_migrations WHERE version=$1", v)
+            if path is None:
+                print(f"  {v}  skip (no file on disk)")
+            elif old is None:
+                print(f"  {v}  skip (not applied)")
+            else:
+                cur = hashlib.sha256(path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+                if old == cur:
+                    print(f"  {v}  already in sync")
+                else:
+                    await conn.execute(
+                        "UPDATE schema_migrations SET sha256=$1 WHERE version=$2", cur, v)
+                    print(f"  {v}  reconciled {old[:10]} -> {cur[:10]}")
+                    fixed += 1
+        print(f"\nrepair: {fixed} reconciled")
+        return fixed
+    finally:
+        await conn.close()
+
+
 def main() -> None:
     cmd = sys.argv[1] if len(sys.argv) > 1 else "up"
     if cmd == "up":
@@ -151,6 +216,10 @@ def main() -> None:
         print(f"done: {n} migration(s) applied")
     elif cmd == "status":
         asyncio.run(status())
+    elif cmd == "verify":
+        sys.exit(asyncio.run(verify()))
+    elif cmd == "repair":
+        asyncio.run(repair(sys.argv[2:]))
     else:
         print(__doc__)
         sys.exit(2)
