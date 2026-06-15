@@ -15,6 +15,7 @@ Covers:
   - Canonical selection: oldest first_seen wins
   - Singleton has match_signal='none'
   - UnionFind correctness
+  - km=0/NULL guard: new-car stock not merged without matching VIN
 """
 from __future__ import annotations
 
@@ -28,6 +29,8 @@ from pipeline.identity.cluster_vehicles import (
     UnionFind,
     _build_cluster_table,
     _build_edges,
+    _can_merge_new_cars,
+    _is_new_car,
     _normalize_photo_url,
     _normalize_title,
     _prices_within_tolerance,
@@ -54,6 +57,7 @@ def _vehicle(
     photo_url: str | None = None,
     province_code: str | None = "28",
     first_seen: datetime.datetime | None = None,
+    vin_ref: str | None = None,
 ) -> dict:
     return {
         "vehicle_ulid": ulid,
@@ -67,6 +71,7 @@ def _vehicle(
         "photo_url": photo_url,
         "province_code": province_code,
         "first_seen": first_seen or _BASE_TS,
+        "vin_ref": vin_ref,
     }
 
 
@@ -385,6 +390,198 @@ class TestCanonicalSelection:
         vehicle_by_ulid = {v["vehicle_ulid"]: v for v in [va, vb]}
         canonical = _select_canonical(["V_AAA", "V_ZZZ"], vehicle_by_ulid)
         assert canonical == "V_AAA"
+
+
+# ---------------------------------------------------------------------------
+# km=0 / km=NULL guard
+# ---------------------------------------------------------------------------
+
+
+class TestNewCarGuard:
+    """km=0 and km=NULL vehicles must NOT be merged via Signal A or B
+    unless they share an identical non-null vin_ref."""
+
+    # --- helper predicates ---
+
+    def test_is_new_car_km_zero(self) -> None:
+        assert _is_new_car({"km": 0}) is True
+
+    def test_is_new_car_km_none(self) -> None:
+        assert _is_new_car({"km": None}) is True
+
+    def test_is_new_car_km_positive(self) -> None:
+        assert _is_new_car({"km": 1}) is False
+        assert _is_new_car({"km": 100000}) is False
+
+    def test_can_merge_new_cars_same_vin(self) -> None:
+        va = {"vin_ref": "WDD2130562A123456"}
+        vb = {"vin_ref": "WDD2130562A123456"}
+        assert _can_merge_new_cars(va, vb) is True
+
+    def test_can_merge_new_cars_different_vin(self) -> None:
+        va = {"vin_ref": "WDD2130562A123456"}
+        vb = {"vin_ref": "WDD2130562A999999"}
+        assert _can_merge_new_cars(va, vb) is False
+
+    def test_can_merge_new_cars_null_vin(self) -> None:
+        va = {"vin_ref": None}
+        vb = {"vin_ref": None}
+        assert _can_merge_new_cars(va, vb) is False
+
+    def test_can_merge_new_cars_one_null(self) -> None:
+        va = {"vin_ref": "WDD2130562A123456"}
+        vb = {"vin_ref": None}
+        assert _can_merge_new_cars(va, vb) is False
+
+    def test_can_merge_new_cars_vin_case_insensitive(self) -> None:
+        va = {"vin_ref": "wdd2130562a123456"}
+        vb = {"vin_ref": "WDD2130562A123456"}
+        assert _can_merge_new_cars(va, vb) is True
+
+    # --- Signal A: photo_url blocked for km=0 without VIN ---
+
+    def test_km0_photo_url_different_entity_no_vin_not_merged(self) -> None:
+        """Two km=0 listings with same catalogue photo and different dealers
+        must NOT be merged when both lack a vin_ref."""
+        shared_photo = "https://cdn.brand.com/catalogue/golf8.jpg"
+        va = _vehicle("V1", entity_ulid="DEALER_A", km=0,
+                      photo_url=shared_photo, vin_ref=None)
+        vb = _vehicle("V2", entity_ulid="DEALER_B", km=0,
+                      photo_url=shared_photo, vin_ref=None)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "km=0 listings without VIN sharing a catalogue photo must remain distinct units"
+        )
+
+    def test_km_null_photo_url_different_entity_no_vin_not_merged(self) -> None:
+        """Same as above but with km=NULL (catalogue listings without mileage)."""
+        shared_photo = "https://cdn.brand.com/catalogue/polo9.jpg"
+        va = _vehicle("V1", entity_ulid="DEALER_A", km=None,
+                      photo_url=shared_photo, vin_ref=None)
+        vb = _vehicle("V2", entity_ulid="DEALER_B", km=None,
+                      photo_url=shared_photo, vin_ref=None)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "km=NULL listings without VIN sharing a catalogue photo must remain distinct"
+        )
+
+    def test_km0_same_vin_photo_url_merged(self) -> None:
+        """Two km=0 listings with same non-null VIN and same photo must merge."""
+        shared_photo = "https://cdn.brand.com/catalogue/golf8.jpg"
+        vin = "WVWZZZ8TZPP012345"
+        va = _vehicle("V1", entity_ulid="DEALER_A", km=0,
+                      photo_url=shared_photo, vin_ref=vin)
+        vb = _vehicle("V2", entity_ulid="DEALER_B", km=0,
+                      photo_url=shared_photo, vin_ref=vin)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            "km=0 listings with matching non-null VIN must be merged"
+        )
+
+    # --- Signal B: firma blocked for km=0 without VIN ---
+
+    def test_km0_firma_different_entity_same_title_no_vin_not_merged(self) -> None:
+        """Two km=0 vehicles with identical firma + same title across different
+        dealers must NOT merge when neither has a vin_ref.  Catalogue stock
+        at list-price with shared titles is the canonical over-merge scenario."""
+        va = _vehicle("V1", entity_ulid="DEALER_A", km=0,
+                      price=Decimal("25000"), title="Volkswagen Golf 8 Life",
+                      province_code="28", vin_ref=None)
+        vb = _vehicle("V2", entity_ulid="DEALER_B", km=0,
+                      price=Decimal("25000"), title="Volkswagen Golf 8 Life",
+                      province_code="28", vin_ref=None)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "km=0 same-firma same-title different-dealer without VIN must NOT merge"
+        )
+
+    def test_km0_firma_same_entity_no_vin_not_merged(self) -> None:
+        """Two km=0 vehicles from the SAME dealer (same entity_ulid) but without
+        VIN must also NOT merge — they are two distinct units of the same model."""
+        va = _vehicle("V1", entity_ulid="DEALER_A", km=0,
+                      price=Decimal("25000"), title="Volkswagen Golf 8",
+                      province_code="28", vin_ref=None)
+        vb = _vehicle("V2", entity_ulid="DEALER_A", km=0,
+                      price=Decimal("25000"), title="Volkswagen Golf 8",
+                      province_code="28", vin_ref=None)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "km=0 same-dealer without VIN must NOT merge — two stock units"
+        )
+
+    def test_km0_firma_same_vin_merged(self) -> None:
+        """Two km=0 vehicles with same non-null VIN and firma must merge via firma."""
+        vin = "WVWZZZ8TZPP099999"
+        va = _vehicle("V1", entity_ulid="DEALER_A", km=0,
+                      price=Decimal("25000"), title="VW Golf 8",
+                      province_code="28", vin_ref=vin)
+        vb = _vehicle("V2", entity_ulid="DEALER_B", km=0,
+                      price=Decimal("25000"), title="VW Golf 8",
+                      province_code="28", vin_ref=vin)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            "km=0 listings with matching VIN must merge"
+        )
+
+    # --- Regression: km>0 unaffected ---
+
+    def test_km_positive_firma_still_merges(self) -> None:
+        """km>0 vehicles with matching firma and same entity must still merge
+        exactly as before the km=0 guard was introduced."""
+        va = _vehicle("V1", entity_ulid="ENT1", km=50000,
+                      price=Decimal("8000"), title="Seat Ibiza 2020",
+                      province_code="28", vin_ref=None)
+        vb = _vehicle("V2", entity_ulid="ENT1", km=50000,
+                      price=Decimal("8000"), title="Seat Ibiza 2020",
+                      province_code="28", vin_ref=None)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            "km>0 firma merge must be unaffected by the km=0 guard"
+        )
+
+    def test_km_positive_photo_still_merges(self) -> None:
+        """km>0 vehicles sharing a photo URL must still merge via Signal A."""
+        shared_photo = "https://cdn.wallapop.com/img/used_car.jpg"
+        va = _vehicle("V1", entity_ulid="ENT1", km=80000,
+                      photo_url=shared_photo, vin_ref=None)
+        vb = _vehicle("V2", entity_ulid="ENT2", km=80000,
+                      photo_url=shared_photo, vin_ref=None)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            "km>0 photo_url merge must be unaffected by the km=0 guard"
+        )
 
 
 # ---------------------------------------------------------------------------

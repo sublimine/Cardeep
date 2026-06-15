@@ -10,6 +10,7 @@ Two edge types, both reproducible from current DB state:
   A. photo_url (identical, normalized):
      Same byte-level photo URL → same physical car.  SUFFICIENT ALONE.
      False-positive risk: near-zero (platforms use CDN-unique URLs).
+     GUARD km=0/NULL: disabled for new-car stock (see below).
 
   B. firma (make + model + year + km EXACT + price ±2% + same province_code):
      Cross-entity duplicate.  REQUIRES at least one corroborating guard:
@@ -17,6 +18,20 @@ Two edge types, both reproducible from current DB state:
        b2. same entity_ulid (same dealer listed twice).
      Anti-FP: NEVER merge cross-province.  Two identical cars can exist in
      the same province at the same price — guard b1/b2 prevents collapse.
+     GUARD km=0/NULL: disabled for new-car stock (see below).
+
+km=0 / km=NULL guard — prevents over-merging of new-car stock:
+  Signals A and B are DISABLED for any pair where either vehicle has km=0
+  or km=NULL.  New/catalogue cars frequently share catalogue photo URLs and
+  identical attributes (make/model/year/km=0/list-price) across dealers but
+  are DISTINCT physical units.  Without VIN we cannot distinguish "same car
+  cross-listed" from "two units of the same model".  The conservative choice
+  is to treat each km=0 listing as its own unit unless a shared non-null
+  vin_ref is present.
+
+  Known bias: a genuine cross-platform duplicate of a new car will be
+  double-counted (over-count).  This is explicitly accepted and declared;
+  it is strictly preferable to collapsing distinct dealer stock (under-count).
 
 Canonical selection: earliest first_seen (oldest listing = primary source).
 Tiebreak: vehicle_ulid lexicographic ascending (deterministic).
@@ -66,11 +81,12 @@ PRICE_TOL_PCT = 0.02
 
 # Blocking rules stored for audit / reproducibility.
 BLOCKING_RULES: list[str] = [
-    "photo_url normalized (exact): same CDN photo = same physical car [signal A, sufficient alone]",
+    "photo_url normalized (exact): same CDN photo = same physical car [signal A, sufficient alone]; DISABLED for km=0/NULL unless shared non-null vin_ref",
     (
         "firma = exact(make, model, year, km) + price ±2% + same province_code "
-        "+ (same normalized_title OR same entity_ulid) [signal B, anti-FP guards mandatory]"
+        "+ (same normalized_title OR same entity_ulid) [signal B, anti-FP guards mandatory]; DISABLED for km=0/NULL unless shared non-null vin_ref"
     ),
+    "km=0/NULL guard: new/catalogue stock listing treated as distinct unit unless vin_ref matches; declared bias = possible cross-platform over-count of new-car stock",
 ]
 
 
@@ -203,6 +219,7 @@ def _load_vehicles(conn: Any) -> list[dict]:
             v.price,
             v.title,
             v.photo_url,
+            v.vin_ref,
             v.first_seen,
             e.province_code
         FROM vehicle v
@@ -214,6 +231,28 @@ def _load_vehicles(conn: Any) -> list[dict]:
         rows = [dict(r) for r in cur.fetchall()]
     log.info("Loaded %d vehicles", len(rows))
     return rows
+
+
+def _is_new_car(v: dict) -> bool:
+    """Return True if this vehicle is km=0 or km=NULL (new/catalogue stock).
+
+    For such vehicles signals A and B are disabled unless a shared non-null
+    vin_ref is present (see _can_merge_new_cars).
+    """
+    km = v.get("km")
+    return km is None or km == 0
+
+
+def _can_merge_new_cars(va: dict, vb: dict) -> bool:
+    """Return True only if both vehicles share an identical non-null vin_ref.
+
+    This is the sole permitted merge path for new-car stock.
+    """
+    vin_a = va.get("vin_ref")
+    vin_b = vb.get("vin_ref")
+    if not vin_a or not vin_b:
+        return False
+    return str(vin_a).strip().upper() == str(vin_b).strip().upper()
 
 
 # ---------------------------------------------------------------------------
@@ -240,13 +279,23 @@ def _build_edges(
         if norm:
             idx_photo[norm].append(v["vehicle_ulid"])
 
+    # Build a lookup to check km/vin_ref per ulid for the guard
+    _v_by_ulid: dict[str, dict] = {v["vehicle_ulid"]: v for v in vehicles}
+
     photo_edges: set[tuple[str, str]] = set()
     for bucket in idx_photo.values():
         if len(bucket) < 2:
             continue
         for i in range(len(bucket)):
             for j in range(i + 1, len(bucket)):
-                a, b = bucket[i], bucket[j]
+                va_u, vb_u = bucket[i], bucket[j]
+                va, vb = _v_by_ulid[va_u], _v_by_ulid[vb_u]
+                # km=0/NULL guard: catalogue photos are shared across models/dealers;
+                # only merge if both carry the same non-null VIN.
+                if _is_new_car(va) or _is_new_car(vb):
+                    if not _can_merge_new_cars(va, vb):
+                        continue
+                a, b = va_u, vb_u
                 photo_edges.add((a, b) if a < b else (b, a))
     log.info("  Signal A pairs: %d", len(photo_edges))
 
@@ -281,6 +330,15 @@ def _build_edges(
         for i in range(len(bucket)):
             for j in range(i + 1, len(bucket)):
                 va, vb = bucket[i], bucket[j]
+
+                # km=0/NULL guard: new-car stock is blocked from firma merges
+                # unless both share an identical non-null VIN.
+                # (block_key already includes km, so if km==0 this entire block
+                # is new-car stock — but the guard is applied pair-wise for
+                # correctness regardless.)
+                if _is_new_car(va) or _is_new_car(vb):
+                    if not _can_merge_new_cars(va, vb):
+                        continue
 
                 # Price guard: must be within ±2%
                 if not _prices_within_tolerance(va.get("price"), vb.get("price")):
