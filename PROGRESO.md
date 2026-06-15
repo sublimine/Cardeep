@@ -1195,3 +1195,14 @@
   **369.561** (706 humanos-split colapsados); `/stats.dealers`=40.016 intacto (excluye particulares). **Regresión
   E2E: 206/206 verdes pre Y post gate.** Reversible (`--revert`). β/cross-source siguen diferidos (sin discriminador
   libre-de-colisión; exigen review per-merge). **El "diferido" del hook ahora EJECUTADO o genuinamente owner/spend-gated.**
+
+### 2026-06-15 (cont.) — CERTIFICADO A→F verificado (workflow 7 agentes) → `docs/AUDIT_A-F_STATUS.md` (`55d0b8f`)
+- Producido el cierre **punto-por-punto A→F** que faltaba: cada SU (A-Producto..F-Método + GAPS + TERMINAL)
+  **re-verificado contra DB VIVA** por workflow `wh0mhslbq` (7 agentes Inquisidores, 295 tool-uses, queries
+  anti-lock). **13 SU €0-SELLADOS atom-verificados** / 11 GATED (harvest/spend/hardware/data = tu gate de gasto).
+- **3 drifts cazados + root-causeados (honesto, sin fabricar):** (1) A9 40.194 vs 40.016 = NO drift (2 métricas;
+  delta=0 sobre run viejo Y nuevo → mi gate particular-split no tocó dealers); (2) **SU-C3 verdict 1102=UNVERIFIED**
+  vs cluster_run vam_verified=TRUE → B7 es dedup mono-método sin 2º clustering para quórum → NO fabricable →
+  servido pragmático + sample-verif, verdict honestamente UNVERIFIED (SUPERPLAN corregido); (3) SU-C2 ⬜→🟢 (recetas
+  Tier-1 hechas+documentadas, stale). **Verdad central:** "terminar A→F a €0" tiene límite lógico — los puntos de
+  cosecha exigen el gasto que difieres. Infraestructura €0 que lo habilita = construida+verificada. Próximo = tu decisión.
