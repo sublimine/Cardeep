@@ -604,6 +604,25 @@ def _start_scheduler() -> None:
     from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
     from apscheduler.schedulers.blocking import BlockingScheduler
 
+    # Single-producer HOST lock (AS24 scar: never two governors on one host — that 4x-hammer lost
+    # 138 dealers). max_instances=1 only prevents overlapping ticks WITHIN one process; this
+    # session-level pg advisory lock prevents a SECOND scheduler process from doubling the host's
+    # aggregate request rate. It fails fast if another scheduler holds it and auto-releases when
+    # this connection closes at process exit. _lock_conn is intentionally kept open for the
+    # process lifetime — do not close it.
+    _SCHEDULER_SINGLETON_LOCK = 0x43415244  # ASCII 'CARD' = 1128415556 — fixed host-singleton key
+    _lock_conn = psycopg2.connect(_RAW_DSN)
+    _lock_conn.autocommit = True
+    _cur = _lock_conn.cursor()
+    _cur.execute("SELECT pg_try_advisory_lock(%s)", (_SCHEDULER_SINGLETON_LOCK,))
+    if not _cur.fetchone()[0]:
+        _lock_conn.close()
+        raise SystemExit(
+            "another cardeep scheduler already holds the singleton advisory lock "
+            f"({_SCHEDULER_SINGLETON_LOCK}); refusing to start a second producer on this host"
+        )
+    log.info("Acquired singleton scheduler advisory lock %s", _SCHEDULER_SINGLETON_LOCK)
+
     jobstores = {
         "default": SQLAlchemyJobStore(url=DB_URL),
     }
