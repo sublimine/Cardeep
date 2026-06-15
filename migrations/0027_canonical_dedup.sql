@@ -24,8 +24,12 @@
 --   - components with >= 2 members (super-canonicals): 2,236
 --   - component sizes: 5(x1), 4(x6), 3(x134), 2(x2,095)
 --   - canonicals in merge graph: 4,621
---   - redundant canonicals collapsed (n_merged): 2,385
---   - DEDUPED DEALER COUNT: 42,259 - 2,385 = 39,874
+--   - redundant canonicals collapsed (n_merged, graph absorbed incl 141 non-VAM): 2,385
+--   - DEDUPED DEALER COUNT (distinct dealers among the 42,259 B1 canonicals): 40,016
+--     NOTE: this is NOT 42,259 - 2,385. n_merged counts 141 non-VAM graph nodes
+--     (entities resolved via COALESCE-to-self) that were never part of the B1
+--     canonical set; subtracting them undercounts. Authoritative = distinct
+--     super-canonical over the B1 canonicals = matches v_dealer_resolved / /health.
 --
 -- NON-DESTRUCTIVE: entity rows are NEVER mutated. No cdp_code is changed.
 -- The overlay is a separate table + view for inspection. vam_verified=FALSE

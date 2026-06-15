@@ -43,10 +43,10 @@ Algorithm
 Asserts
 -------
 After populating, the script asserts exact counts against the sealed values:
-  deduped_count    == 39874
-  n_super_canonicals (components >= 2 members) == 2236
-  total members    == 4621
-  n_merged         == 2385
+  deduped_count (distinct dealers among B1 canonicals) == 40016
+  n_super_canonicals (graph components >= 2 members)   == 2236
+  total members (graph nodes in merges, incl non-VAM)  == 4621
+  n_merged (graph absorbed, incl 141 non-VAM)          == 2385
 
 If the rebuild produces different numbers, something changed in the underlying
 data (B1 cluster or vehicle deep_links). The script fails loudly — do not force.
@@ -89,10 +89,12 @@ ANTI_HUB_K = 3  # exclude deep_links shared by >= K distinct canonicals
 
 # Sealed expected counts (as of 2026-06-15 measurement).
 # If the rebuild yields different numbers, the underlying data changed — fail loudly.
-EXPECTED_DEDUPED_COUNT = 39874
-EXPECTED_N_SUPER_CANONICALS = 2236  # components with >= 2 members
-EXPECTED_TOTAL_MEMBERS = 4621       # all canonicals in any merge group
-EXPECTED_N_MERGED = 2385            # absorbed canonicals (not representative)
+EXPECTED_DEDUPED_COUNT = 40016      # distinct dealers AMONG the B1 canonicals after merges
+                                    # (matches v_dealer_resolved / /health; the old 39874 was a
+                                    #  miscount: n_in - n_merged wrongly subtracted 141 non-VAM nodes)
+EXPECTED_N_SUPER_CANONICALS = 2236  # graph components with >= 2 members
+EXPECTED_TOTAL_MEMBERS = 4621       # all nodes in any merge group (incl non-VAM)
+EXPECTED_N_MERGED = 2385            # absorbed nodes in the graph (incl 141 non-VAM)
 
 
 # ---------------------------------------------------------------------------
@@ -150,11 +152,14 @@ async def build(conn: asyncpg.Connection) -> None:
 
     print(f"[build_canonical_dedup] run_id={RUN_ID}  source_cluster={SOURCE_CLUSTER_RUN}")
 
-    # ── Step 1: load canonical count from B1 ────────────────────────────────
-    n_canonicals_in: int = await conn.fetchval(
-        "SELECT count(DISTINCT canonical_ulid) FROM entity_cluster WHERE cluster_run_id = $1",
-        SOURCE_CLUSTER_RUN,
-    )
+    # ── Step 1: load the B1 canonical cdp_code SET ──────────────────────────
+    # Load the SET (not just the count) so deduped_count can be computed
+    # correctly as the number of distinct components AMONG the B1 canonicals.
+    # The merge graph also contains non-VAM nodes (entities resolved via
+    # COALESCE-to-self); those must NOT be subtracted from the B1 dealer count.
+    b1_rows = await conn.fetch("SELECT DISTINCT canonical_cdp_code FROM v_canonical")
+    b1_canonicals: set[str] = {r["canonical_cdp_code"] for r in b1_rows}
+    n_canonicals_in = len(b1_canonicals)
     print(f"  B1 canonicals: {n_canonicals_in}")
 
     # ── Step 2: load vehicle deep_link → canonical mapping ──────────────────
@@ -296,10 +301,19 @@ async def build(conn: asyncpg.Connection) -> None:
                 evidence,       # evidence_deep_link
             ))
 
+    # n_merged: total nodes absorbed in the GRAPH (includes non-VAM nodes
+    # reached via COALESCE-to-self). This is a graph metric.
     n_merged = n_members_total - n_super_canonicals
-    deduped_count = n_canonicals_in - n_merged
-    print(f"  n_merged (absorbed): {n_merged}")
-    print(f"  deduped_count: {deduped_count}")
+    # deduped_count: dealer count over the B1 (VAM) canonical population after
+    # merges = number of distinct components AMONG the B1 canonicals.
+    # AUTHORITATIVE. (n_canonicals_in - n_merged is WRONG: it also subtracts the
+    # 141 non-VAM absorptions that were never part of the B1 canonical set.)
+    # Representative-based (matches the stored overlay + v_dealer_resolved/health):
+    # each B1 canonical maps to its super-canonical representative, or itself if unmerged.
+    member_to_rep = {row[0]: row[1] for row in output_rows}
+    deduped_count = len({member_to_rep.get(c, c) for c in b1_canonicals})
+    print(f"  n_merged (graph absorbed, incl non-VAM): {n_merged}")
+    print(f"  deduped_count (distinct B1 dealers): {deduped_count}")
 
     # ── Step 7: load entity_ulid for each canonical cdp_code ────────────────
     print("  Resolving canonical cdp_codes -> entity_ulids...")

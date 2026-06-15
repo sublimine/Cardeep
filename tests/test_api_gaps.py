@@ -167,25 +167,47 @@ class TestHealthSealedCounts:
 
     @SKIP_NO_DB
     def test_health_dealers_sealed_count(self, client: TestClient) -> None:
-        """Sealed dealer count must be DISTINCT canonical dealers, not v_canonical rows.
+        """Sealed dealer count must come from v_dealer_resolved (post-dedup, non-particular).
 
-        Regression guard: count(*) FROM v_canonical = 61 551 rows (clustered
-        entities incl. aliases); the sealed dealer count is
-        count(DISTINCT canonical_cdp_code) = 42 259 (the B1 seal). Serving the
-        row count double-counts dealers that carry multiple URLs/aliases.
+        Migration 0028 introduced v_dealer_resolved which fuses the B1 canonical layer
+        (v_canonical, 42 259 distinct dealers) with the VAM-verified dedup run
+        (canonical_dedup, 0027), collapsing dealers sharing deep_links into super-canonicals.
+        /health now reports count(DISTINCT resolved_cdp_code) WHERE kind <> 'particular',
+        yielding ~40 016 — strictly less than B1 (42 259) and far below v_canonical rows
+        (61 551+).
+
+        Invariants verified:
+          1. dealers > 0                  (endpoint is live)
+          2. dealers < B1 count (42 259)  (proves post-dedup layer is active)
+          3. dealers < v_canonical rows   (proves particulares excluded + dedup active)
+          4. dealers equals independent SQL cross-check via v_dealer_resolved
         """
         r = client.get("/health")
         dealers = r.json()["data"]["counts"]["dealers"]
         vc_rows = _fetchval("SELECT count(*) FROM v_canonical")
-        vc_distinct = _fetchval("SELECT count(DISTINCT canonical_cdp_code) FROM v_canonical")
-        assert isinstance(dealers, int) and dealers > 0
-        assert dealers == vc_distinct, (
-            f"dealers={dealers} must equal distinct canonical dealers={vc_distinct}, "
-            "not the raw v_canonical row count"
+        b1_distinct = _fetchval("SELECT count(DISTINCT canonical_cdp_code) FROM v_canonical")
+        # Independent cross-check: same predicate as main.py /health
+        vdr_count = _fetchval(
+            """
+            SELECT count(DISTINCT vdr.resolved_cdp_code)
+              FROM v_dealer_resolved vdr
+              JOIN entity e ON e.entity_ulid = vdr.entity_ulid
+             WHERE e.kind <> 'particular'
+            """
+        )
+        assert isinstance(dealers, int) and dealers > 0, (
+            "health dealers must be a positive integer"
+        )
+        assert dealers == vdr_count, (
+            f"dealers={dealers} must equal v_dealer_resolved non-particular count={vdr_count}"
+        )
+        assert dealers < b1_distinct, (
+            f"dealers={dealers} must be < B1 canonical count={b1_distinct} "
+            "(proves post-dedup layer from canonical_dedup/0027 is active)"
         )
         assert dealers < vc_rows, (
             f"dealers={dealers} must be < v_canonical rows={vc_rows} "
-            "(proves dedup; count(*) would double-count aliased dealers)"
+            "(proves dedup + particulares are excluded)"
         )
 
     @SKIP_NO_DB
@@ -678,3 +700,173 @@ def _get_vehicle_with_events() -> str | None:
         "SELECT vehicle_ulid FROM vehicle_event "
         "GROUP BY vehicle_ulid HAVING count(*) >= 2 LIMIT 1;"
     )
+
+
+# ---------------------------------------------------------------------------
+# v_dealer_resolved: merge correctness + health cross-check
+# ---------------------------------------------------------------------------
+
+# Verified 2026-06-15 against cardeep-pg :5433
+# Super-canonical (component_size=5): CDP-ES-07-AVYXV1NM
+# Absorbed members: CDP-ES-07-Z0HM5Y3F, CDP-ES-07-MBBZJ2YP,
+#                   CDP-ES-07-Q9XXYNRC, CDP-ES-07-ZKGTHNJM
+# All 5 rows resolve to CDP-ES-07-AVYXV1NM in v_dealer_resolved.
+SUPER_CANONICAL = "CDP-ES-07-AVYXV1NM"
+ABSORBED_MEMBERS = [
+    "CDP-ES-07-Z0HM5Y3F",
+    "CDP-ES-07-MBBZJ2YP",
+    "CDP-ES-07-Q9XXYNRC",
+    "CDP-ES-07-ZKGTHNJM",
+]
+CLUSTER_ALL = [SUPER_CANONICAL] + ABSORBED_MEMBERS  # 5 members total
+# B1 count: distinct canonical dealers from v_canonical (pre-dedup baseline)
+B1_CANONICAL_COUNT = 42_259
+
+
+class TestVDealerResolved:
+    """Verifies v_dealer_resolved merge correctness and its contract with /health."""
+
+    # ------------------------------------------------------------------
+    # Test 1 — /health dealers cross-checks against v_dealer_resolved
+    # ------------------------------------------------------------------
+
+    @SKIP_NO_DB
+    def test_health_dealers_equals_db(self, client: TestClient) -> None:
+        """health['dealers'] must equal COUNT(DISTINCT resolved_cdp_code) filtered by non-particular.
+
+        Cross-check: the API executes
+            SELECT count(DISTINCT resolved_cdp_code) FROM v_dealer_resolved
+              JOIN entity ON ... WHERE kind <> 'particular'
+        The test derives the same count via SQL and asserts both are equal.
+        It also asserts the value is lower than the B1 canonical count (42 259),
+        proving the dedup view is active and particulares are excluded.
+        """
+        r = client.get("/health")
+        assert r.status_code == 200
+        api_dealers = r.json()["data"]["counts"]["dealers"]
+
+        # Independent SQL cross-check (same predicate as main.py /health query)
+        db_dealers = _fetchval(
+            """
+            SELECT count(DISTINCT vdr.resolved_cdp_code)
+              FROM v_dealer_resolved vdr
+              JOIN entity e ON e.entity_ulid = vdr.entity_ulid
+             WHERE e.kind <> 'particular'
+            """
+        )
+        assert isinstance(api_dealers, int) and api_dealers > 0
+        assert api_dealers == db_dealers, (
+            f"health dealers={api_dealers} must equal DB count={db_dealers} "
+            "(v_dealer_resolved filtered by non-particular)"
+        )
+        assert api_dealers < B1_CANONICAL_COUNT, (
+            f"health dealers={api_dealers} must be < B1 canonical count={B1_CANONICAL_COUNT} "
+            "(proves particulares are excluded from the sealed count)"
+        )
+
+    # ------------------------------------------------------------------
+    # Test 2 — v_dealer_resolved merge correctness (pure SQL, no HTTP)
+    # ------------------------------------------------------------------
+
+    @SKIP_NO_DB
+    def test_view_dealer_resolved_merge_correctness(self, client: TestClient) -> None:
+        """All 5 cluster members must resolve to the super-canonical in v_dealer_resolved.
+
+        Verifies the view is correctly populated: every member of the
+        CDP-ES-07-AVYXV1NM cluster (1 representative + 4 absorbed) has
+        resolved_cdp_code = 'CDP-ES-07-AVYXV1NM'.  A COUNT(*) = 5 proves
+        no member is missing and none points to a wrong target.
+        """
+        count = _fetchval(
+            f"""
+            SELECT count(*)
+              FROM v_dealer_resolved
+             WHERE cdp_code = ANY(ARRAY{CLUSTER_ALL!r}::text[])
+               AND resolved_cdp_code = '{SUPER_CANONICAL}'
+            """
+        )
+        assert count == len(CLUSTER_ALL), (
+            f"Expected all {len(CLUSTER_ALL)} cluster members to resolve to "
+            f"'{SUPER_CANONICAL}', but only {count} do. "
+            "v_dealer_resolved merge may be incomplete or stale."
+        )
+
+    # ------------------------------------------------------------------
+    # Test 3 — /entities cluster resolution includes absorbed members
+    # ------------------------------------------------------------------
+
+    @SKIP_NO_DB
+    def test_entity_cluster_includes_absorbed_members(self, client: TestClient) -> None:
+        """Querying the super-canonical must expose n_aliases >= 4 (the absorbed members).
+
+        Also verifies that querying an absorbed member resolves to the
+        super-canonical (canonical_cdp_code == SUPER_CANONICAL).
+        """
+        # Super-canonical endpoint
+        r_canon = client.get(f"/entities/{SUPER_CANONICAL}")
+        assert r_canon.status_code == 200, (
+            f"/entities/{SUPER_CANONICAL} returned {r_canon.status_code}"
+        )
+        data_canon = r_canon.json()["data"]
+        n_aliases = data_canon["n_aliases"]
+        assert n_aliases >= 4, (
+            f"Super-canonical {SUPER_CANONICAL} must expose n_aliases >= 4 "
+            f"(the 4 absorbed members), got n_aliases={n_aliases}"
+        )
+
+        # Absorbed member endpoint — must resolve to super-canonical
+        absorbed = ABSORBED_MEMBERS[0]  # CDP-ES-07-Z0HM5Y3F
+        r_absorbed = client.get(f"/entities/{absorbed}")
+        assert r_absorbed.status_code == 200, (
+            f"/entities/{absorbed} returned {r_absorbed.status_code}"
+        )
+        data_absorbed = r_absorbed.json()["data"]
+        assert data_absorbed["canonical_cdp_code"] == SUPER_CANONICAL, (
+            f"Absorbed member {absorbed} must resolve canonical_cdp_code to "
+            f"'{SUPER_CANONICAL}', got '{data_absorbed['canonical_cdp_code']}'"
+        )
+
+    # ------------------------------------------------------------------
+    # Test 4 — inventory is identical whether queried via canonical or absorbed
+    # ------------------------------------------------------------------
+
+    @SKIP_NO_DB
+    def test_inventory_aggregates_across_merged_cluster(self, client: TestClient) -> None:
+        """Inventory via the super-canonical and via an absorbed member must be identical.
+
+        Both /entities/{SUPER_CANONICAL}/inventory and
+        /entities/{absorbed}/inventory must return the same page because
+        resolve_cluster() maps both to the same member_ulids set.
+        Verifies that absorbed members are not silently excluded from
+        inventory aggregation.
+        """
+        absorbed = ABSORBED_MEMBERS[0]  # CDP-ES-07-Z0HM5Y3F
+
+        r_canon = client.get(f"/entities/{SUPER_CANONICAL}/inventory?size=200")
+        r_absorbed = client.get(f"/entities/{absorbed}/inventory?size=200")
+
+        assert r_canon.status_code == 200, (
+            f"/entities/{SUPER_CANONICAL}/inventory returned {r_canon.status_code}"
+        )
+        assert r_absorbed.status_code == 200, (
+            f"/entities/{absorbed}/inventory returned {r_absorbed.status_code}"
+        )
+
+        items_canon = r_canon.json()["data"]
+        items_absorbed = r_absorbed.json()["data"]
+
+        assert len(items_canon) == len(items_absorbed), (
+            f"Inventory size via canonical={len(items_canon)} != "
+            f"via absorbed={len(items_absorbed)}. "
+            "resolve_cluster must aggregate ALL cluster members for both queries."
+        )
+
+        # If there are vehicles, verify the ulid sets are identical
+        if items_canon:
+            ulids_canon = {it["vehicle_ulid"] for it in items_canon}
+            ulids_absorbed = {it["vehicle_ulid"] for it in items_absorbed}
+            assert ulids_canon == ulids_absorbed, (
+                "Inventory vehicle_ulid sets differ between canonical and absorbed paths. "
+                f"Only in canonical: {ulids_canon - ulids_absorbed}. "
+                f"Only in absorbed: {ulids_absorbed - ulids_canon}."
+            )

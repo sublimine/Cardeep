@@ -123,18 +123,21 @@ async def resolve_cluster(conn: asyncpg.Connection, cdp_code: str) -> ClusterInf
     Algorithm
     ---------
     1. Look up the entity for *cdp_code* — return None if it does not exist.
-    2. Compute the canonical_ulid using the latest VAM-verified v_canonical view,
-       falling back to the entity's own ulid for non-clustered / particular entities.
+    2. Compute the canonical_ulid using v_dealer_resolved (transitive VAM-verified
+       clusters), falling back to the entity's own ulid for non-clustered entities.
     3. Collect ALL entities whose canonical (via the same COALESCE logic) equals
        that canonical_ulid — those form the complete cluster.
+
+    Note: uses v_dealer_resolved instead of the deprecated v_canonical so that
+    resolution is consistent with the sealed B1 dealer count (40 016).
     """
     entity_row = await conn.fetchrow(
         """
         SELECT e.entity_ulid,
-               COALESCE(vc.canonical_ulid, e.entity_ulid)    AS canonical_ulid,
-               COALESCE(vc.canonical_cdp_code, e.cdp_code)   AS canonical_cdp_code
+               COALESCE(vdr.resolved_ulid, e.entity_ulid)     AS canonical_ulid,
+               COALESCE(vdr.resolved_cdp_code, e.cdp_code)    AS canonical_cdp_code
           FROM entity e
-          LEFT JOIN v_canonical vc ON vc.entity_ulid = e.entity_ulid
+          LEFT JOIN v_dealer_resolved vdr ON vdr.entity_ulid = e.entity_ulid
          WHERE e.cdp_code = $1
         """,
         cdp_code,
@@ -150,8 +153,8 @@ async def resolve_cluster(conn: asyncpg.Connection, cdp_code: str) -> ClusterInf
         SELECT e.entity_ulid,
                e.cdp_code
           FROM entity e
-          LEFT JOIN v_canonical vc ON vc.entity_ulid = e.entity_ulid
-         WHERE COALESCE(vc.canonical_ulid, e.entity_ulid) = $1
+          LEFT JOIN v_dealer_resolved vdr ON vdr.entity_ulid = e.entity_ulid
+         WHERE COALESCE(vdr.resolved_ulid, e.entity_ulid) = $1
         """,
         canonical_ulid,
     )
@@ -174,7 +177,8 @@ async def resolve_cluster(conn: asyncpg.Connection, cdp_code: str) -> ClusterInf
 async def health() -> JSONResponse:
     """Liveness probe with sealed product counts.
 
-    dealers        — sealed dealer count from v_canonical (42 259, not raw 390 621).
+    dealers        — sealed dealer count from v_dealer_resolved excluding
+                     particulares (40 016: kind <> 'particular').
     vehicles_unique_available — canonical-only + status='available' (1 486 285,
                     not the 1 689 243 raw including cross-entity aliases).
     events         — total event rows (not filtered: historical record).
@@ -184,7 +188,12 @@ async def health() -> JSONResponse:
     async with app.state.pool.acquire() as c:
         counts = {
             "dealers": await c.fetchval(
-                "SELECT count(DISTINCT canonical_cdp_code) FROM v_canonical"
+                """
+                SELECT count(DISTINCT vdr.resolved_cdp_code)
+                  FROM v_dealer_resolved vdr
+                  JOIN entity e ON e.entity_ulid = vdr.entity_ulid
+                 WHERE e.kind <> 'particular'
+                """
             ),
             "vehicles_unique_available": await c.fetchval(
                 """

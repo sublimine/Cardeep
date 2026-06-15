@@ -397,3 +397,15 @@
   precisión por deep_link). B7 (1.486M) intacto y correcto.
 - **PENDIENTE (coherencia)**: el servido (v_canonical/API) aún expone 42.259 — integrar el mapeo dedup
   (canonical→super) al servido + API + tests (mismo patrón que SU-A9). El sello está; falta que LLEGUE al producto.
+
+## 2026-06-15 — SU-B-DEDUP integración + CORRECCIÓN del conteo (el gate volvió a cazar)
+- Integrado el dedup al servido (migración **0028** `v_dealer_resolved` = B1 ∘ dedup; `resolve_cluster`
+  y `/health` la usan; `/entities`,`/inventory`,`/delta` heredan el fix). Suite **457/457 PASS**.
+- **El gate de la integración cazó que el conteo sellado (39.874) estaba MAL**: `/health` (cómputo
+  independiente) dio 40.016. Causa raíz: la fórmula del script `n_canonicals_in − n_merged` (42.259 − 2.385)
+  restaba **141 nodos non-VAM** (entidades resueltas vía COALESCE-a-self) que NUNCA estuvieron en los
+  42.259 B1. El conteo correcto = distinct super-canónico sobre los B1 = **40.016** (coincide con lo servido).
+- **CORREGIDO**: `build_canonical_dedup.py` ahora computa deduped_count vía representante (assert **40.016**,
+  reproducible, lo corrí — pasa); comentarios 0027/0028 arreglados; verdict **1121** (40.016, quorum 2/3/3)
+  **supersede el 1112** (39.874) en el ledger — registro honesto de la corrección. Los MERGES nunca cambiaron
+  (son correctos: 0 CIF, deep_link); solo el NÚMERO derivado estaba mal. **B1: 42.259 = techo → 40.016 servidos.**
