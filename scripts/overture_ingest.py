@@ -507,6 +507,14 @@ async def run(dry_run: bool = False, limit: Optional[int] = None) -> None:
                 is_new = row["is_new_row"] if row else False
                 if is_new:
                     stats["inserted"] += 1
+                    # Attestation ledger (audit P2 A-sourceless-entities): overture entities lacked an
+                    # entity_source row, so trg_entity_attest never backed their attest_count. Record
+                    # the discovery source with the stable Overture GERS id as source_ref.
+                    await conn.execute(
+                        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) "
+                        "VALUES ($1, 'overture', $2) "
+                        "ON CONFLICT (entity_ulid, source_key) DO NOTHING",
+                        entity_ulid, place.overture_id or None)
                     province_counts[prov] = province_counts.get(prov, 0) + 1
                     # Update local dedup index to block duplicates within this batch
                     existing_cdp.add(code)
