@@ -119,22 +119,25 @@ def _build_registry() -> dict[str, SourceEntry]:
     """
     entries: list[SourceEntry] = [
         # ── Tier-1 (24h) ─────────────────────────────────────────────────
-        # autocasion: FACET is the canonical harvester. The SSR/wholesale path caps at
-        # index.max_result_window=10000 (~8% of the ~123k catalogue); the make-partition facet is
-        # the complete, uncapped surface. Audit 2026-06-15 found production was scheduling the
-        # capped wholesale path (2,113 cars) instead of facet — under-harvesting Autocasion.
-        SourceEntry("autocasion_facet",
-                    "pipeline.platform.autocasion_facet", ["--makes", "all"]),
-        SourceEntry("coches_com_wholesale",
-                    "pipeline.platform.coches_com_wholesale", []),
-        SourceEntry("coches_net_wholesale",
-                    "pipeline.platform.coches_net_wholesale", []),
+        # Audit 2026-06-15 Phase 2: production scheduled the PROOF/capped strategy for EVERY Tier-1
+        # platform — autocasion (10k SSR cap), coches.net (~500-car 5-page slice), wallapop (flat
+        # ~347k vs 651k), coches.com (16k VO-only), motor.es (10k VO-only). Each entry below now runs
+        # the CANONICAL COMPLETE harvester. The source_key is KEPT equal to the *_SOURCE_KEY the
+        # connector writes to source_health (facets import their wholesale's SOURCE_KEY), so
+        # health/breaker/harvest_run continuity and due-selection matching hold — this also repairs
+        # the F-autocasion-orphaned regression (a renamed key orphaned autocasion from scheduling).
+        SourceEntry("autocasion_wholesale",   # key=AC_SOURCE_KEY (facet imports it); module=facet
+                    "pipeline.platform.autocasion_facet", ["--segment", "all", "--makes", "all"]),
+        SourceEntry("coches_com_wholesale",   # no facet module; --all --segment all = full uncapped drain
+                    "pipeline.platform.coches_com_wholesale", ["--all", "--segment", "all"]),
+        SourceEntry("coches_net_wholesale",   # key=COCHES_SOURCE_KEY (facet imports it); module=facet
+                    "pipeline.platform.coches_net_facet", []),
         SourceEntry("milanuncios_wholesale",
                     "pipeline.platform.milanuncios_wholesale", []),
-        SourceEntry("motor_es_wholesale",
-                    "pipeline.platform.motor_es_wholesale", []),
-        SourceEntry("wallapop_wholesale",
-                    "pipeline.platform.wallapop_wholesale", []),
+        SourceEntry("motor_es_wholesale",     # --full --segment all = full census (vo+vn+renting)
+                    "pipeline.platform.motor_es_wholesale", ["--full", "--segment", "all"]),
+        SourceEntry("wallapop_wholesale",     # key=WP_SOURCE_KEY (facet imports it); module=facet
+                    "pipeline.platform.wallapop_facet", []),
 
         # ── OEM / groups / subastas (168h) ───────────────────────────────
         SourceEntry("carandclassic_wholesale",
