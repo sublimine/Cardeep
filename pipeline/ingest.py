@@ -21,6 +21,7 @@ import asyncpg
 
 from pipeline.ids import ulid
 from pipeline.identity.make_normalizer import normalize_make
+from pipeline.price_sanity import sanitize_price
 from pipeline.sources.autoscout24 import DealerHarvest, RECIPE_VERSION
 from pipeline.geo import GeoResolver
 from pipeline.verify import record_count_verdict
@@ -76,6 +77,9 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
     for v in harvest.vehicles:
         harvested_links.add(v.deep_link)
         row = existing.get(v.deep_link)
+        # Audit P2 A-junk-sentinel: null unambiguous junk prices (<=0 or > €10M) at the boundary
+        # so they never enter inventory or trigger a false PRICE_CHANGE. Used for both new and updated.
+        price_clean = sanitize_price(v.price)
         if row is None:
             vulid = ulid()
             # Audit P2 A-make-model: canonical make at the ingest boundary — normalizes a known
@@ -87,17 +91,17 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
                 """INSERT INTO vehicle (vehicle_ulid, entity_ulid, deep_link, title, make, model,
                        year, km, price, fuel, transmission, photo_url, vin_ref, recipe_version, status)
                    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'available')""",
-                vulid, eulid, v.deep_link, v.title, make_norm, v.model, v.year, v.km, v.price,
+                vulid, eulid, v.deep_link, v.title, make_norm, v.model, v.year, v.km, price_clean,
                 v.fuel, v.transmission, v.photo_url, v.vin_ref, RECIPE_VERSION)
             await _event(conn, vulid, eulid, "NEW", None,
-                         {"price": v.price, "title": v.title})
+                         {"price": price_clean, "title": v.title})
             counts["new"] += 1
         else:
             vulid = row["vehicle_ulid"]
             changed = False
-            if v.price is not None and row["price"] is not None and float(v.price) != float(row["price"]):
-                await conn.execute("UPDATE vehicle SET price=$1 WHERE vehicle_ulid=$2", v.price, vulid)
-                await _event(conn, vulid, eulid, "PRICE_CHANGE", {"price": float(row["price"])}, {"price": v.price})
+            if price_clean is not None and row["price"] is not None and float(price_clean) != float(row["price"]):
+                await conn.execute("UPDATE vehicle SET price=$1 WHERE vehicle_ulid=$2", price_clean, vulid)
+                await _event(conn, vulid, eulid, "PRICE_CHANGE", {"price": float(row["price"])}, {"price": price_clean})
                 counts["price_change"] += 1; changed = True
             if v.km is not None and row["km"] is not None and int(v.km) != int(row["km"]):
                 await conn.execute("UPDATE vehicle SET km=$1 WHERE vehicle_ulid=$2", v.km, vulid)
