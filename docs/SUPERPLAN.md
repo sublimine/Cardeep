@@ -235,7 +235,7 @@ Al retomar (sesión nueva / contexto compactado):
 >
 > ## Deuda declarada + hallazgos de auditoría (tracked, no bloqueante)
 > - **evict.py / evicción de crudo**: diseñada (MISSION §6, MASTER_PLAN) pero no construida. data/ = 161MB hoy (baja urgencia). Owner: compactar VHD WSL2 en ventana de mantenimiento (~21GB host).
-> - **AS24 kind mis-class [SU-A1]**: las **511** entidades `first_discovered_source='as24'` están TODAS `concesionario_oficial` (L7 hardcode). Infla el segmento oficial ~24%. Fix correcto = type-resolution ladder / clasificador (unidad propia, NO re-kind ciego). Afecta números de cobertura de segmento.
+> - **AS24 kind mis-class [SU-A1] — unidad lista**: 469 entidades `as24` siguen `concesionario_oficial` (42 ya re-kindeadas por cadenas). Recon: solo **10%** con marca OEM, **90% compraventa independiente** (ACR Automóviles, Adricars, Almogàvers Ocasión, 81 Motor). El default oficial es falso → infla el segmento. **Fix honesto** (no clasificador completo): (a) connector AS24 default `concesionario_oficial`→`compraventa` + `kind_source` low-conf (raíz), (b) backfill 469. El clasificador refina los oficiales genuinos después. INDEPENDIENTE de B7.
 > - **Geocoding sucio del scraper [SU-A2/A6]**: `municipality_code` erróneo en algunas fuentes (ej AutosMadrid Alcorcón con muni de Leganés). Corrompe constraints geo. Causa del residuo multimuni de β. → SU-A6.
 > - **1.629 clusters β same-muni multi-nombre**: clase ambigua (multi-marca / nombres históricos / wholesaler relistando). Decisión arquitectural pendiente del Director.
 > - **Cadena abreviada sin org_id [β residuo micro]**: OcasionPlus «A./P./S.» (ciudad abreviada no-INE-matchable, sin domain) escapa los guards. Fix: extender org-link por patrón de nombre.

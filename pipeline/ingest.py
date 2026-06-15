@@ -52,10 +52,10 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
                     municipality_code=muni, address=d.street)
     eulid = ulid()
     await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
+        """INSERT INTO entity (entity_ulid, cdp_code, kind, kind_source, legal_name, trade_name,
                province_code, municipality_code, address, postcode, website, is_tier1,
                status, recipe_version, first_discovered_source, last_seen)
-           VALUES ($1,$2,'concesionario_oficial',$3,$3,$4,$5,$6,$7,$8,FALSE,'active',$9,$10, now())
+           VALUES ($1,$2,'compraventa','platform_label',$3,$3,$4,$5,$6,$7,$8,FALSE,'active',$9,$10, now())
            ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(), recipe_version = EXCLUDED.recipe_version""",
         eulid, code, d.company_name, d.province_code, muni, d.street, d.zip, d.website,
         RECIPE_VERSION, source_key)
