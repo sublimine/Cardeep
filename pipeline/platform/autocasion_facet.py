@@ -640,9 +640,14 @@ async def harvest_facet(make_filter: list[str] | None = None,
         # VAM did not refute. A partial-but-clean run (some slice errored) records the error.
         run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+        # B9 coverage gate: declared_full = Σ(slice <title> totals) from this run's segments
+        # (capture-recapture declared full). harvested_cageable = distinct cageable cars caged.
         outcome = await record_run(
             conn, AC_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
-            error=run_error, http_status=last_http)
+            error=run_error, http_status=last_http,
+            declared_total=stats.get("declared_full"),
+            captured_distinct=stats.get("harvested_cageable"),
+            platform_ulid=platform_ulid)
         stats["health_status"] = outcome.status
         stats["breaker_state"] = outcome.breaker_state
         if not run_ok:

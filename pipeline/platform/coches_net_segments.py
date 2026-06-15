@@ -456,9 +456,24 @@ async def harvest(segments: list[str], concurrency: int = 8) -> dict:
 
         total_caged = sum(s.get("cars_caged", 0) for s in per_segment.values())
         run_ok = fetch_error is None and total_caged > 0
+        # B9 coverage gate (audit P2 SU-A3): the source's declared total for THIS connector is
+        # the sum of the three disjoint offer slices' declared_full (each segment parses its own
+        # meta.totalResults at harvest_segment; new+km0+renting are non-overlapping offerTypeIds).
+        # captured_distinct mirrors it (sum of per-segment distinct (owner_cdp, deep_link) pairs).
+        # Reuse ONLY what the connector already parsed — no total is invented. None when no
+        # segment captured a declared total so the gate stays silent rather than firing on 0.
+        seg_declared = [s["declared_full"] for s in per_segment.values()
+                        if isinstance(s.get("declared_full"), int)]
+        declared_total = sum(seg_declared) if seg_declared else None
+        seg_cageable = [s["harvested_cageable"] for s in per_segment.values()
+                        if isinstance(s.get("harvested_cageable"), int)]
+        captured_distinct = sum(seg_cageable) if seg_cageable else None
         outcome = await record_run(conn, COCHES_SEGMENTS_SOURCE_KEY, ok=run_ok, rows=total_caged,
                                    error=fetch_error, http_status=last_http,
-                                   is_tier1=False, harvest_interval_hours=24)
+                                   is_tier1=False, harvest_interval_hours=24,
+                                   declared_total=declared_total,
+                                   captured_distinct=captured_distinct,
+                                   platform_ulid=platform_ulid)
 
         return {
             "per_segment": per_segment,

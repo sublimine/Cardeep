@@ -735,8 +735,15 @@ async def harvest_member(conn: asyncpg.Connection, member_name: str, geo: GeoRes
 
     run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
     run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+    # B9 coverage gate (audit P2 SU-A3): declared_full = SSR Product.AggregateOffer.offerCount
+    # (the own-site declared total parsed by parse_modrive_page). captured_distinct =
+    # harvested_cageable = distinct (owner_cdp, deep_link) pairs from the drain. Passing
+    # declared_total fires verify_coverage() automatically when the run is ok.
     outcome = await record_run(conn, m.key, ok=run_ok, rows=stats["cars_caged"],
-                               error=run_error, http_status=last_http)
+                               error=run_error, http_status=last_http,
+                               declared_total=stats.get("declared_full"),
+                               captured_distinct=stats.get("harvested_cageable"),
+                               platform_ulid=importer_ulid)
     stats["health_status"] = outcome.status
     stats["breaker_state"] = outcome.breaker_state
     if not run_ok:
