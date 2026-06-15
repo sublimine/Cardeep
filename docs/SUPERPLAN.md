@@ -114,7 +114,7 @@ Estado: ⬜ pendiente · 🔵 en curso · ✅ sellado.
 | **SU-A3** | Scrapear TODO el stock | exhaustividad universal | B9 coverage gate corrido en **47/47** fuentes; cada drain `Σleaf==declared` o causa; AS24/milanuncios REFUTED resueltos | ⬜ |
 | **SU-A4** | Delta uniforme | altas/bajas/Δprecio/Δfoto/historial en TODOS los conectores | cada conector wholesale emite NEW/GONE/PRICE/PHOTO/KM verificado en 2ª pasada; no solo AS24 | ⬜ |
 | **SU-A5** | Receta guardada | formato bundle per-dealer | receta YAML v3 versionada por dealer en su path geo; 100% en `main`; reproducible | ⬜ |
-| **SU-A6** | Geo país/prov/ciudad | cerrar gap + jerarquía | gap municipio <2%; `/geo/tree` completo; comarca asignada; sin sentinel-drift | ⬜ |
+| **SU-A6** | Geo país/prov/ciudad | cerrar gap + jerarquía | gap municipio <2%; `/geo/tree` completo; comarca asignada; sin sentinel-drift | ⬜ RECON: geo CONSISTENTE (0 mismatch muni-prefijo↔provincia); POS muni-gap **11%** (6.746 sin muni, mejorado de 14,5%); errores within-province sutiles (causa residuo β fino, no grueso). Pend: cerrar 11% (B4.2 address→INE) |
 | **SU-A7** | Código único por dealer | (= SU-A1) cdp_code inmutable | átomo confirmado | ⬜ |
 | **SU-A8** | Falla→alerta→auto-repara→no cae | lazo €0 cerrado | fallo inyectado → 1 alerta origen-exacto → auto-repair €0 efectivo (refingerprint/re_receta) → API sigue; spend-gated declarado | ⬜ |
 | **SU-A9** | API viva sirviendo | hardening + sirve canónico | sin hazard sin-LIMIT; envelope; auth; tests; sirve `v_canonical`/`v_resolved_dealer`/`v_canonical_vehicle` una vez sellados | ⬜ |
