@@ -368,3 +368,18 @@
   Cuantificado: **6.876 canónicos (16,3%) comparten nombre+provincia** → el dealer-count **42.259 es un TECHO**
   (real ~≥35.400; la cota incluye cadenas D-11 + homónimos genuinos, el gap real de B1 es un subconjunto).
   **Nuevo SU-B-DEDUP: re-gate B1/ingest entity-dedup.** No invalida B7 ni el fix del API.
+
+## 2026-06-15 — SU-B-DEDUP diagnóstico: B1 limpio por su clave; duplicación por geocoding
+- Investigado a fondo por caminos distintos:
+  - **excess_name_muni = 0**: B1 NO tiene ni un canónico duplicado por su clave exacta
+    (nombre+municipio). Su dedup es LIMPIO. ✓
+  - Los 6.876 "duplicados" nombre+provincia están TODOS en municipios distintos → no es fallo de la
+    lógica B1, es **geocoding inconsistente** (mismo dealer/listing ingestado con muni_code distinto,
+    2 pipelines/2 crawls → derrota la clave nombre+municipio).
+  - **Piso DEFINITIVO**: **34.904 deep_links** (un listing único) atribuidos a **>1 canónico**;
+    **4.621 canónicos** involucrados. La misma URL de listing bajo 2 "dealers" = duplicación real.
+  - **Caveat del sello B1** (verdict 640): 42.259 es TECHO; sobre-cuenta ~2.300 (definitivo, deep_link)
+    a ~6.876 (cota nombre+provincia). Dealer-count real **~35.400–40.000**. Honestidad sobre el sello.
+- **FIX diseñado (SU-B-DEDUP)**: overlay dedup NO-destructivo que fusiona canónicos conectados por
+  deep_link compartido (union-find; guarda anti-hub: excluir deep_links de alta colisión >K), vam_verified
+  tras gate, re-sella B1, la API sirve el canónico fusionado. 1 listing = 1 dealer → alta precisión, no sobre-fusiona.
