@@ -13,11 +13,14 @@ Two edge types, both reproducible from current DB state:
      GUARD km=0/NULL: disabled for new-car stock (see below).
 
   B. firma (make + model + year + km EXACT + price ±2% + same province_code):
-     Cross-entity duplicate.  REQUIRES at least one corroborating guard:
-       b1. normalized title matches, OR
-       b2. same entity_ulid (same dealer listed twice).
+     Cross-entity duplicate ONLY.  REQUIRES all of:
+       1. DIFFERENT entity_ulid (same-entity stock-bulk is NEVER firma-merged).
+       2. same normalized title (exact cross-platform corroboration).
      Anti-FP: NEVER merge cross-province.  Two identical cars can exist in
-     the same province at the same price — guard b1/b2 prevents collapse.
+     the same province at the same price — title guard prevents collapse.
+     Same-entity pairs (same dealer listing multiple units of the same model)
+     are explicitly excluded: if they are the same physical car, Signal A
+     (shared photo URL) already catches it.
      GUARD km=0/NULL: disabled for new-car stock (see below).
 
 km=0 / km=NULL guard — prevents over-merging of new-car stock:
@@ -98,7 +101,9 @@ BLOCKING_RULES: list[str] = [
     "photo_url normalized (exact): same CDN photo = same physical car [signal A, sufficient alone]; DISABLED for km=0/NULL unless shared non-null vin_ref",
     (
         "firma = exact(make, model, year, km) + price ±2% + same province_code "
-        "+ (same normalized_title OR same entity_ulid) [signal B, anti-FP guards mandatory]; DISABLED for km=0/NULL unless shared non-null vin_ref"
+        "+ DIFFERENT entity_ulid + same normalized_title [signal B, cross-entity only; "
+        "same-entity pairs never firma-merged — if same physical car, Signal A (shared photo) catches it]; "
+        "DISABLED for km=0/NULL unless shared non-null vin_ref"
     ),
     "km=0/NULL guard: new/catalogue stock listing treated as distinct unit unless vin_ref matches; declared bias = possible cross-platform over-count of new-car stock",
     (
@@ -399,14 +404,20 @@ def _build_edges(
                 if not _prices_within_tolerance(va.get("price"), vb.get("price")):
                     continue
 
-                # Anti-FP guard: require at least one corroborating signal
-                # (1) same entity_ulid, OR (2) same normalized title
-                same_entity = va["entity_ulid"] == vb["entity_ulid"]
+                # Anti-FP guard: Signal B is CROSS-ENTITY ONLY.
+                # Same-entity pairs (same dealer with multiple units of the same
+                # model) MUST NOT be firma-merged — they are distinct physical
+                # units.  If they were the same car re-listed, Signal A (shared
+                # photo_url) already catches it.
+                # Cross-entity merges require same normalized title as the sole
+                # corroborating guard (title is the only reliable cross-platform
+                # identity signal when photos differ).
+                if va["entity_ulid"] == vb["entity_ulid"]:
+                    continue
+
                 ta = _normalize_title(va.get("title"))
                 tb = _normalize_title(vb.get("title"))
-                same_title = bool(ta and tb and ta == tb)
-
-                if not (same_entity or same_title):
+                if not (ta and tb and ta == tb):
                     continue
 
                 a, b = va["vehicle_ulid"], vb["vehicle_ulid"]

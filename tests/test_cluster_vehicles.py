@@ -7,15 +7,19 @@ Covers:
   - title normalization
   - price tolerance
   - Signal A: photo_url merge
-  - Signal B: firma merge (with anti-FP guards)
-  - Anti-FP: cross-province NEVER merges
+  - Signal B: firma merge (cross-entity + same title only)
+  - Anti-FP: same-entity firma does NOT merge (fleet-bulk fix 2026-06-15)
+  - Anti-FP: same-entity same-photo STILL merges via Signal A (genuine re-listing)
+  - Anti-FP: cross-entity firma without matching title does NOT merge
+  - Anti-FP: cross-province NEVER merges (firma)
   - Anti-FP: price >2% difference does NOT merge
   - Anti-FP: no shared signal does NOT merge
-  - Anti-FP: firma-only without title/entity guard does NOT merge
   - Canonical selection: oldest first_seen wins
   - Singleton has match_signal='none'
   - UnionFind correctness
   - km=0/NULL guard: new-car stock not merged without matching VIN
+  - Photo high-collision guard: catalogue/stock photo excluded from Signal A
+  - Firma non-null-price guard: NULL price blocks Signal B
 """
 from __future__ import annotations
 
@@ -232,20 +236,48 @@ class TestSignalAPhotoUrl:
 
 
 class TestSignalBFirma:
-    def test_firma_exact_same_entity_merges(self) -> None:
-        """Same dealer, same make/model/year/km/price → same entity guard fires."""
+    def test_firma_same_entity_does_not_merge(self) -> None:
+        """CRITICAL (fleet-bulk fix): same dealer, same firma + same title must NOT merge.
+
+        A dealer with 207 Renault Zoe units (same model, same price, same generic title,
+        DIFFERENT physical cars) must remain 207 distinct clusters.  Signal A (shared
+        photo_url) is the only permitted merge path for same-entity duplicates.
+        """
         va = _vehicle("V1", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza")
         vb = _vehicle("V2", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza")
-        # same entity_ulid → anti-FP guard satisfied
 
         edges, esm = _build_edges([va, vb])
         cluster_rows = _build_cluster_table([va, vb], edges, esm)
 
         canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
-        assert len(canonical_ids) == 1
+        assert len(canonical_ids) == 2, (
+            "Same-entity firma match MUST NOT merge — these are distinct stock units; "
+            "Signal A (photo) is the only valid same-entity merge path"
+        )
 
-    def test_firma_exact_same_title_merges(self) -> None:
-        """Different dealers, same firma + same title → title guard fires."""
+    def test_firma_same_entity_same_photo_still_merges_via_signal_a(self) -> None:
+        """Same dealer + same photo URL = same car re-listed → Signal A fires correctly."""
+        shared_photo = "https://cdn.example.com/car_repost.jpg"
+        va = _vehicle("V1", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza",
+                      photo_url=shared_photo)
+        vb = _vehicle("V2", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza",
+                      photo_url=shared_photo)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            "Same-entity same-photo must still merge via Signal A (genuine re-listing)"
+        )
+        for r in cluster_rows:
+            if r["cluster_size"] > 1:
+                assert r["match_signal"] in ("photo_url", "both"), (
+                    "Signal A must be the recorded signal for same-entity photo merge"
+                )
+
+    def test_firma_cross_entity_same_title_merges(self) -> None:
+        """Different dealers, same firma + same title → legitimate cross-platform merge."""
         va = _vehicle("V1", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza 2020")
         vb = _vehicle("V2", entity_ulid="ENT2", price=Decimal("8000"), title="Seat Ibiza 2020")
 
@@ -253,12 +285,32 @@ class TestSignalBFirma:
         cluster_rows = _build_cluster_table([va, vb], edges, esm)
 
         canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
-        assert len(canonical_ids) == 1
+        assert len(canonical_ids) == 1, (
+            "Cross-entity firma + same normalized title must merge (same car on two platforms)"
+        )
+
+    def test_firma_cross_entity_different_title_does_not_merge(self) -> None:
+        """Different dealers, same firma but DIFFERENT title → must NOT merge.
+
+        Without title corroboration there is no cross-entity identity signal;
+        two dealers can legitimately stock the same make/model/year/km at the same price.
+        """
+        va = _vehicle("V1", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza Sport")
+        vb = _vehicle("V2", entity_ulid="ENT2", price=Decimal("8000"), title="Seat Ibiza Reference")
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "Cross-entity firma with different titles must NOT merge — no identity corroboration"
+        )
 
     def test_firma_signal_recorded(self) -> None:
         """Merged cluster via firma must record match_signal='firma' or 'both'."""
         va = _vehicle("V1", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza")
-        vb = _vehicle("V2", entity_ulid="ENT1", price=Decimal("8000"), title="Seat Ibiza")
+        vb = _vehicle("V2", entity_ulid="ENT2", price=Decimal("8000"), title="Seat Ibiza")
+        # cross-entity + same title → firma merge
 
         edges, esm = _build_edges([va, vb])
         cluster_rows = _build_cluster_table([va, vb], edges, esm)
@@ -329,8 +381,12 @@ class TestAntiFP:
         canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
         assert len(canonical_ids) == 2
 
-    def test_firma_without_title_or_entity_guard_does_not_merge(self) -> None:
-        """Firma match without title match AND different entity must NOT merge."""
+    def test_firma_cross_entity_without_title_does_not_merge(self) -> None:
+        """Cross-entity firma with different titles must NOT merge.
+
+        Signal B requires BOTH cross-entity AND same normalized title.
+        Different titles = no identity corroboration = no merge.
+        """
         va = _vehicle(
             "V1", entity_ulid="ENT1",
             price=Decimal("8000"), title="Seat Ibiza Sport",
@@ -341,15 +397,15 @@ class TestAntiFP:
             price=Decimal("8000"), title="Seat Ibiza Reference",  # different title
             province_code="28",
         )
-        # Same firma, same province, price matches, but different entity AND different title
-        # → anti-FP guard must block merge
+        # Cross-entity, same firma, same province, price matches, but different titles
+        # → title guard must block merge
 
         edges, esm = _build_edges([va, vb])
         cluster_rows = _build_cluster_table([va, vb], edges, esm)
 
         canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
         assert len(canonical_ids) == 2, (
-            "Firma-only without title/entity corroboration must NOT merge"
+            "Cross-entity firma without same title must NOT merge"
         )
 
     def test_singleton_has_signal_none(self) -> None:
@@ -551,12 +607,12 @@ class TestNewCarGuard:
     # --- Regression: km>0 unaffected ---
 
     def test_km_positive_firma_still_merges(self) -> None:
-        """km>0 vehicles with matching firma and same entity must still merge
-        exactly as before the km=0 guard was introduced."""
+        """km>0 cross-entity vehicles with matching firma + same title must still merge
+        (Signal B unaffected by km=0 guard — regression for the km=0 guard introduction)."""
         va = _vehicle("V1", entity_ulid="ENT1", km=50000,
                       price=Decimal("8000"), title="Seat Ibiza 2020",
                       province_code="28", vin_ref=None)
-        vb = _vehicle("V2", entity_ulid="ENT1", km=50000,
+        vb = _vehicle("V2", entity_ulid="ENT2", km=50000,  # different entity
                       price=Decimal("8000"), title="Seat Ibiza 2020",
                       province_code="28", vin_ref=None)
 
@@ -565,7 +621,7 @@ class TestNewCarGuard:
 
         canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
         assert len(canonical_ids) == 1, (
-            "km>0 firma merge must be unaffected by the km=0 guard"
+            "km>0 cross-entity firma merge must be unaffected by the km=0 guard"
         )
 
     def test_km_positive_photo_still_merges(self) -> None:
@@ -776,7 +832,8 @@ class TestFirmaNonNullPriceGuard:
         )
 
     def test_firma_valid_price_within_tolerance_merges(self) -> None:
-        """Regression: both vehicles with valid price ±2% must still merge via firma."""
+        """Regression: cross-entity vehicles with valid price ±2% + same title must still merge
+        (non-null-price guard must not break legitimate cross-platform merges)."""
         va = _vehicle(
             "V1", entity_ulid="ENT1",
             make="seat", model="ibiza", year=2020, km=50000,
@@ -785,7 +842,7 @@ class TestFirmaNonNullPriceGuard:
             province_code="28",
         )
         vb = _vehicle(
-            "V2", entity_ulid="ENT1",
+            "V2", entity_ulid="ENT2",  # different entity — cross-platform
             make="seat", model="ibiza", year=2020, km=50000,
             price=Decimal("8100"),  # +1.25%, within ±2%
             title="Seat Ibiza 2020",
@@ -796,7 +853,8 @@ class TestFirmaNonNullPriceGuard:
         cluster_rows = _build_cluster_table([va, vb], edges, esm)
         canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
         assert len(canonical_ids) == 1, (
-            "Both-valid-price firma match within ±2% must still merge (non-null-price guard must not break legitimate merges)"
+            "Cross-entity both-valid-price firma match within ±2% + same title must merge "
+            "(non-null-price guard must not break legitimate cross-platform merges)"
         )
 
     def test_km0_guard_still_applies_with_null_price(self) -> None:
