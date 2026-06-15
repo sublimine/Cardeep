@@ -553,3 +553,22 @@
   el path exacto que crasheaba. Suite gestionador 56✓; sweep 87✓.
 - §Deuda δ: escribir `superseded_by` tras RESOLVED = fase posterior (el scheduler ya lo respeta excluyendo
   supersedidos); dedupe_key usa el claim completo (refinar a hash si varía). Pend B2: ε (V3 inquisition); G5=corrida.
+
+## 2026-06-15 — SU-B2 ε1: V3 Inquisición — fundación tabular (0032) + invariante DB
+- Leído el spec autoritativo `docs/architecture/verification/V3-INQUISITION.md` (630 líneas): 3 leyes
+  (DEFAULT-REFUTED / PRODUCER-EXCLUSION / ORTHOGONAL-QUORUM), 5 lentes ortogonales (A re-query / B raw-recount /
+  C live-refetch / D cross-source / E batch-hash), gate de independencia numérico D(s,P)≥2 §4, quórum con veto
+  hard §5.4, manager router §7 (acciones = lanes del gestionador γ), denominador Chapman §6.
+- ε descompuesto (Director, atom, €0): **ε1** schema → ε2 motores puros → ε3 lentes A/B/D/E (C harvest-gated) →
+  ε4 prosecutor+router. Lente C (live re-fetch) = scraping → fase harvest.
+- **ε1✓**: `migrations/0032_inquisition.sql` (escrito por mí — schema casi-especificado en §8, tenía todo el
+  contexto): `inquisition_claim` (envelope §2.1, producer_state JSONB para Law II, cola PENDING indexada) +
+  `inquisition_skeptic` (audit por escéptico, lens CHECK 5 valores, indep_distance 0..4) + `inquisition_verdict`
+  con **invariante DB `trustworthy_needs_independence`** (`verdict<>'TRUSTWORTHY' OR (indep_score≥2 ∧ assert_n≥2
+  ∧ refute_hard_n=0)`) → Leyes II+III como invariante físico, imposible persistir TRUSTWORTHY sin quórum
+  independiente. **Mejoras de Director sobre §8**: FK `denom_estimate_id`→`denominator_estimate(id)` (un veredicto
+  de cobertura sin estimador citado es inauditable) + índice parcial cola PENDING. GRANT SELECT a cardeep_inquisitor.
+- Verificado contra DB viva: aplicado (`migrate up`, 26 migs, hash f03493↔archivo, sin deriva); invariante probado
+  (TRUSTWORTHY indep=1 → RECHAZADO; indep=2/assert=2/hard=0 → OK; REFUTED indep=0 → OK). `tests/test_inquisition_schema.py`
+  **9✓ real-DB** (3 rechazos del invariante + 3 aceptaciones + tablas/CHECK/grant/FK). Egress CHECK del lente-C
+  diferido a harvest (documentado en el .sql). Pend B2: ε2/ε3/ε4; G5=corrida.
