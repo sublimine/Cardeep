@@ -842,7 +842,9 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
         ok = fetch_error is None and stats["cars_caged"] > 0
         if ok:
             await record_run(conn, SC_SOURCE_KEY, ok=True, rows=stats["cars_caged"],
-                             http_status=200)
+                             http_status=200,
+                             declared_total=stats.get("declared_full"),
+                             platform_ulid=platform_ulid)
             write_recipe(platform_code, SUBASTACAR_RECIPE)
             # VAM: distinct cars caged this run vs the site's declared total.
             live_edges = await conn.fetchval(
