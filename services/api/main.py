@@ -23,12 +23,16 @@ Sealed product surface
   - /entities/{cdp}/inventory dedups WITHIN the dealer cluster by
     canonical_vehicle_ulid (collapses the dealer's own cross-platform
     duplicates; KEEPS cars whose global canonical sits in another dealer —
-    the dealer genuinely lists them). /health reports the GLOBAL unique count
-    (v_canonical_vehicle canonical-only + available = 1 486 285).
+    the dealer genuinely lists them). /stats (authed) reports the GLOBAL unique
+    count (v_canonical_vehicle canonical-only + available).
   - /geo endpoints serve only active non-particular entities (status='active'
-    AND kind <> 'particular').
-  - /health reports sealed dealer count (v_canonical) and sealed vehicle
-    count (v_canonical_vehicle canonical + available).
+    AND kind <> 'particular'). NOTE (audit P2 E-platforms-status): the per-dealer
+    /entities/{cdp}/inventory and /platforms/{cdp}/inventory endpoints deliberately
+    do NOT apply the entity-status filter — a directly-requested dealer's stock is
+    served regardless of verification status ("sacarle TODO su stock"), whereas /geo
+    is the curated map of confirmed (active) dealers. The divergence is intentional.
+  - /health is a liveness probe (status + DB ping, UNAUTHENTICATED); product counts
+    moved to /stats (authed) — coverage scale is a competitive signal (audit P2/P1).
   - /delta is cluster-aware: events from ALL cluster members.
   - /vehicles/{ulid} resolves aliases to canonical; /vehicles/{ulid}/history
     returns the full event stream for a vehicle.
