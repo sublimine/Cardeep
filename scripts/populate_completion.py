@@ -58,6 +58,9 @@ import psycopg2.extras
 
 # Gate patterns (mirrors pipeline/complete.py constants exactly)
 _PROVINCE_PATTERN = r"^(0[1-9]|[1-4][0-9]|5[0-2])$"
+# National kinds carry a NULL province by design (mirrors _NATIONAL_KINDS in
+# complete.py); for them a NULL province is the correct geo, not an identity gap.
+_NATIONAL_KINDS_SQL = "'subasta','plataforma','oem_vo_portal','importador'"
 _CDP_CODE_PATTERN = r"^CDP-ES-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$"
 _FIELD_INTEGRITY_FLOOR = 0.98
 
@@ -86,16 +89,20 @@ served_dealers AS (
 -- G1: identity check (mirrors check_g1 in complete.py)
 --   PASS iff:
 --     - entity row exists for cdp_code (guaranteed by universe CTE above)
---     - province_code ~ valid 2-digit Spanish province (01-52)
---     - cdp_code ~ CDP-ES-NN-XXXXXXXX format
+--     - cdp_code ~ CDP-ES-NN-XXXXXXXX format, AND
+--     - province_code ~ valid 2-digit Spanish province (01-52), OR the entity is a
+--       NATIONAL kind (subasta/plataforma/oem_vo_portal/importador) with NULL province
+--       (that NULL is its correct geo — §Deuda B2 closed 2026-06-15, ~100 entities).
 -- ---------------------------------------------------------------------------
 g1_check AS (
     SELECT
         e.cdp_code,
         (
-            e.province_code IS NOT NULL
-            AND e.province_code ~ '{_PROVINCE_PATTERN}'
-            AND e.cdp_code ~ '{_CDP_CODE_PATTERN}'
+            e.cdp_code ~ '{_CDP_CODE_PATTERN}'
+            AND (
+                (e.province_code IS NOT NULL AND e.province_code ~ '{_PROVINCE_PATTERN}')
+                OR (e.kind::text IN ({_NATIONAL_KINDS_SQL}) AND e.province_code IS NULL)
+            )
         ) AS g1_identity
     FROM entity e
     WHERE e.cdp_code IN (SELECT cdp_code FROM served_dealers)

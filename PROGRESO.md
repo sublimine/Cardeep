@@ -753,3 +753,20 @@
   trabajo €0 sin tocar. SU-SEAL: Capa A €0-firmable con gaps declarados; 52/52-pleno "no €0 hoy" (Overture/OEM/
   censo = semanas+gasto). **Conclusión honesta: el €0-config A-Z está sustancialmente completo**; lo que resta es
   la fase "cosecha/spend DESPUÉS" que el usuario difirió explícitamente hasta tener todo configurado.
+
+## 2026-06-15 — SU-B2 §Deuda: G1 national-entity CERRADO (corrección + datos consistentes)
+- §Deuda B2: el gate G1 exigía provincia 01-52 → las entidades NACIONALES (subastas/plataformas/OEM-portales/
+  importadores) fallaban G1 por estar mal-juzgadas, no incompletas. **Anti-alucinación clave**: asumí sentinel
+  '00' pero la DB lo desmintió — el '00' vive SOLO en el cdp_code (`CDP-ES-00-*`); la columna `province_code` de
+  los nacionales es **NULL** (verificado: oem/plataforma 100% NULL, subasta 97 NULL + 4 con provincia, importador
+  1 NULL + 10 con provincia). Corregí el fix a `province NULL ∧ kind nacional`.
+- Fix de raíz en DOS sitios (no solo el síntoma): `pipeline/complete.py::check_g1` (`row.get("kind")` — robusto
+  a asyncpg.Record real Y mock-dict parcial; `_NATIONAL_KINDS`) **Y** `scripts/populate_completion.py` g1_check SQL
+  (mismo criterio inline — el populate NO importa check_g1, tiene SQL propio; sin arreglarlo el dato persistido
+  quedaba stale). +2 tests (`test_g1_pass_national_kind_null_province` × 4 kinds, `test_g1_fail_geo_kind_null_province`).
+- Verificado VIVO (no confié): check_g1 sobre cdp reales → subasta/plataforma/oem_vo_portal/importador NULL=G1 True,
+  compraventa NULL=G1 False (gap genuino). Re-poblé entity_completion: **g1_false 310→210** (−100 exacto: 97
+  subasta + 2 plataforma + 1 importador), national_g1_true=100, total 37.657, COMPLETED=0 (invariante G5 intacto),
+  asserts del populate PASS. 83 tests completion✓ (0 regresión). Código + SQL + datos persistidos consistentes.
+- Resta del §Deuda B2 (declarado): 210 compraventa sin-provincia = gap-geo SU-A6 genuino (data-blocked €0);
+  price_trap floor-particulares; supersesión post-RESOLVED; egress CHECK lente-C — todos harvest/data-gated.

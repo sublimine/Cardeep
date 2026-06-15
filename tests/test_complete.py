@@ -97,6 +97,36 @@ class TestCheckG1:
         assert reason == "ok"
 
     @pytest.mark.asyncio
+    async def test_g1_pass_national_kind_null_province(self) -> None:
+        """National kinds carry a NULL province by design (the '00' lives only in the
+        cdp_code) — G1 accepts it. §Deuda B2 closed 2026-06-15: ~130 national entities
+        (subasta/plataforma/oem_vo_portal/importador) were wrongly failing G1."""
+        for kind in ("subasta", "plataforma", "oem_vo_portal", "importador"):
+            conn = _make_conn()
+            conn.fetchrow = AsyncMock(return_value={
+                "cdp_code": _VALID_CDP,
+                "province_code": None,
+                "kind": kind,
+            })
+            passed, reason = await check_g1(conn, _VALID_CDP)
+            assert passed is True, f"national kind {kind!r} + NULL province must pass G1"
+            assert reason == "ok"
+
+    @pytest.mark.asyncio
+    async def test_g1_fail_geo_kind_null_province(self) -> None:
+        """A geo-located kind (compraventa) with NULL province is a genuine identity
+        gap → fail. Distinguishes the national exception from the SU-A6 geo gap."""
+        conn = _make_conn()
+        conn.fetchrow = AsyncMock(return_value={
+            "cdp_code": _VALID_CDP,
+            "province_code": None,
+            "kind": "compraventa",
+        })
+        passed, reason = await check_g1(conn, _VALID_CDP)
+        assert passed is False
+        assert "invalid_province_code" in reason
+
+    @pytest.mark.asyncio
     async def test_g1_fail_entity_not_found(self) -> None:
         conn = _make_conn()
         conn.fetchrow = AsyncMock(return_value=None)

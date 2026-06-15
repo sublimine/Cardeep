@@ -72,6 +72,18 @@ import asyncpg
 # Valid province codes for Spain: 01–52 (as zero-padded 2-char strings)
 _PROVINCE_RE = re.compile(r"^(0[1-9]|[1-4][0-9]|5[0-2])$")
 
+# National entities operate country-wide and carry a NULL province_code by design
+# (the '00' lives only in the CDP-ES-00-* code, NOT in the province_code column —
+# verified live 2026-06-15): marketplaces, OEM-VO portals, auctions, importers.
+# For these, a NULL province is the CORRECT geo, not a missing one — so G1 accepts
+# it. A geo-located kind (compraventa/garaje/concesionario/particular) with NULL
+# province is a genuine identity gap and still fails G1 (SU-A6 geo debt). A national
+# kind that DOES have a real province (e.g. an importer with a HQ) passes via the
+# normal 01-52 path.
+_NATIONAL_KINDS: frozenset[str] = frozenset(
+    {"subasta", "plataforma", "oem_vo_portal", "importador"}
+)
+
 # cdp_code format: CDP-ES-{NN}-{8×Crockford-base32}
 # Crockford alphabet: digits + uppercase excluding I, L, O, U
 _CDP_CODE_RE = re.compile(r"^CDP-ES-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$")
@@ -98,16 +110,19 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
     Returns (passed: bool, reason: str).
     PASS iff:
       - Exactly one entity row exists for cdp_code
-      - province_code is a valid 2-digit Spanish province (01-52)
+      - province_code is a valid 2-digit Spanish province (01-52), OR the entity
+        is a NATIONAL kind (subasta/plataforma/oem_vo_portal/importador) carrying
+        the '00' sentinel — for those, '00' is the correct geo, not a gap (§Deuda
+        B2 closed 2026-06-15: ~130 national entities were wrongly failing identity).
       - cdp_code matches the CDP-ES-NN-XXXXXXXX pattern (Crockford base32)
 
     lat/lon are NOT checked: the geo gap (6,601 dealers without geo signal) is
     a declared SU-A6 data gap, not an identity failure. Identity = entity exists
-    and is well-formed with province; geo detail is enrichment, not a gate criterion.
+    and is well-formed with the correct geo for its kind; geo detail is enrichment.
     """
     row = await conn.fetchrow(
         """
-        SELECT cdp_code, province_code
+        SELECT cdp_code, province_code, kind::text AS kind
         FROM entity
         WHERE cdp_code = $1
         LIMIT 1
@@ -118,7 +133,13 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
         return False, "entity_not_found"
 
     prov = row["province_code"]
-    if prov is None or not _PROVINCE_RE.match(str(prov)):
+    prov_str = str(prov) if prov is not None else None
+    # National kinds (auctions/platforms/OEM portals/importers) carry a NULL
+    # province by design — that NULL is their correct geo, not a gap. row.get()
+    # works on both asyncpg.Record (real query selects kind) and partial dict mocks
+    # (kind absent → None → treated as non-national = fail-closed, the safe default).
+    is_national = row.get("kind") in _NATIONAL_KINDS and prov_str is None
+    if not is_national and (prov_str is None or not _PROVINCE_RE.match(prov_str)):
         return False, f"invalid_province_code:{prov!r}"
 
     if not _CDP_CODE_RE.match(cdp_code):
