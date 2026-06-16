@@ -415,11 +415,16 @@ async def check_g4(conn: asyncpg.Connection, cdp_code: str, d_landed: int | None
     if not ulids:
         return False, "entity_not_found", None
 
+    # LEFT JOIN + COALESCE (NOT inner join): v_canonical_vehicle only covers vehicles in a
+    # vam_verified cluster run. An INNER JOIN returns served_count=0 for an entity whose entire
+    # available inventory is outside that view (subastas, rentacar VO) — falsely failing G4 for a
+    # genuinely-served dealer. The COALESCE falls back to the raw vehicle_ulid, matching
+    # scripts/populate_completion.py exactly (which already documents this as the DB-equivalent).
     served_count: int = await conn.fetchval(
         """
-        SELECT count(DISTINCT vc.canonical_vehicle_ulid)
+        SELECT count(DISTINCT COALESCE(vc.canonical_vehicle_ulid, v.vehicle_ulid))
         FROM vehicle v
-        JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
+        LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
         WHERE v.entity_ulid = ANY($1::text[]) AND v.status = 'available'
         """,
         ulids,
