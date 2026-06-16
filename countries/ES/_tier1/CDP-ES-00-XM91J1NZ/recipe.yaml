@@ -8,7 +8,7 @@ segments:
   vo: /coches-segunda-mano/{make-slug}.htm?page=N · classifieds.total=92,381 · seoData[all-makes] 93-make MECE partition · classified card (dealer+geo)
   km0: /km0/{make-slug}.htm?page=N · Σ /km0/ brands == popularClassified.total=15,630 · STRUCTURAL TWIN of vo (same card, same per-make SRP, seoData[all-makes]) · SAME visibleId as the VO row -> ONE vehicle (km0 recorded as a segment FLAG, not a 2nd row); deep_link is surface-stable so km0∩vo converge, edge listing_url keeps the real /km0/ surface for provenance
   vn: /coches-nuevos/coches-nuevos.htm?page=N · search.total=826 · 20 version OFFERS/page (make/model/version, pvp, discount) · NO dealer -> owned by the PLATFORM entity · PVP->price discount captured as price_drop for delta
-  renting: /renting-coches/{make-slug}/?page=N -> data.search.classifiedList[<=12] (the SAME __NEXT_DATA__ SSR surface as VO; a GET, ZERO proxy, NO XHR/JWT) · makeOptions (52 makes) is a PERFECT MECE partition: Σ per-make data.search.total == |union of distinct card ids| (verified live, no cross-make dup) so the per-make walk reaches 100% of the paginable list · each offer caged PLATFORM-OWNED (seller is a UUID, no geo on this surface) · the hub totalOffers (~8.9k) is a HEADLINE facet (each model counted across dealers/configs), NOT the paginable ceiling — the REAL captured set == Σ per-make paginable total (~1k live)
+  renting: "/renting-coches/{make-slug}/?page=N -> data.search.classifiedList[<=12] (the SAME __NEXT_DATA__ SSR surface as VO; a GET, ZERO proxy, NO XHR/JWT) · makeOptions (52 makes) is a PERFECT MECE partition: Σ per-make data.search.total == |union of distinct card ids| (verified live, no cross-make dup) so the per-make walk reaches 100% of the paginable list · each offer caged PLATFORM-OWNED (seller is a UUID, no geo on this surface) · the hub totalOffers (~8.9k) is a HEADLINE facet (each model counted across dealers/configs), NOT the paginable ceiling — the REAL captured set == Σ per-make paginable total (~1k live)"
   all: drains vo->km0->vn->renting in SEQUENCE under ONE governor/breaker (one host).
 reconcile: vo 92,381 + km0 15,630 + vn 826 + renting 8,908 = ~117,745 captureable; the gap to the displayed 230,000 is the platform's offer-inflation, not stock.
 engine: curl_cffi+chrome131_impersonate+srp_next_data(GET)+make_partition
@@ -34,10 +34,10 @@ field_map:
   km: card.mileage.amount
   price: card.price.amount (card.price.currency)
   price_offer: card.priceOffer.amount (precio contado; drop signal when < price)
-  fuel: card.fuel.name (UTF-8: Híbrido Gasolina/Diésel/...)
+  fuel: "card.fuel.name (UTF-8: Híbrido Gasolina/Diésel/...)"
   transmission: card.transmission.name (Automática/Manual)
   photo_url: card.image (ready URL) | https://images.coches.com/_ccom_/ + card.imageList[0].name
   dealer: card.dealer {name, crmId, type, uuid, taxIdNumber(=CIF when present)}
   location: card.currentProvince {id(=INE province code), name}
 parallelization: 93 independent make streams under ONE per-host governor bucket; a concurrent sliding window of SRP pages keeps the bucket saturated.
-escalation_reserve: if Imperva flips to active JS challenge (interstitial / _Incapsula_Resource / 403): camoufox/nodriver homepage warm-up to mint incap_ses_*, export cookies to curl_cffi (vectors #5/#6). The pvt JSON API (api-coches.pro.pvt.coches.com, X-App header + anonymous JWT/fingerprint gate) is mapped but token-walled.
+escalation_reserve: "if Imperva flips to active JS challenge (interstitial / _Incapsula_Resource / 403): camoufox/nodriver homepage warm-up to mint incap_ses_*, export cookies to curl_cffi (vectors #5/#6). The pvt JSON API (api-coches.pro.pvt.coches.com, X-App header + anonymous JWT/fingerprint gate) is mapped but token-walled."

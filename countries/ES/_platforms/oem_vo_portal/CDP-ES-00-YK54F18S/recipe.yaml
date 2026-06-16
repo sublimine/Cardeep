@@ -23,7 +23,7 @@ field_map:
   model: car.modelo
   version: car.version
   year: car.any (fallback car.matriculacion[-4:])
-  km: car.kilometros (Spanish-formatted: thousands '.')
+  km: "car.kilometros (Spanish-formatted: thousands '.')"
   price: car.precio (€, Spanish-formatted; precio_alcontado = cash price)
   fuel: car.combustible
   transmission: car.transmision (Manual/Automático)

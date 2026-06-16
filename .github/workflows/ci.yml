@@ -59,6 +59,9 @@ jobs:
       - name: Import smoke — the 4 bring-up entrypoints
         run: python -c "import scripts.migrate, services.api.main, pipeline.ops.scheduler, pipeline.ops.silence_watchdog; print('IMPORTS OK')"
 
+      - name: Recipe YAML lint (every countries/ES/**/recipe.yaml must parse — audit Q3)
+        run: python scripts/fix_recipe_yaml.py --check
+
       - name: Wait for Postgres (host-side TCP — beats the initdb restart race)
         run: |
           for i in $(seq 1 40); do

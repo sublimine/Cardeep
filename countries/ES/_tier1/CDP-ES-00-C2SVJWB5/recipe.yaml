@@ -29,7 +29,7 @@ field_map:
   fuel: vehiculos[].combustible (latin-1 repaired)
   transmission: vehiculos[].transmision (latin-1 repaired)
   dealer: vehiculos[].concesionario (NAME) + telefono (PHONE) -> joined to installations API
-  dealer_geo: installations API: {concesionario_id, name, phone, zipcode, zone, city, lat, lon}. Join car->installation by PHONE (exact) then NAME (normalized + token-subset). Province = zipcode[:2] (INE, authoritative); lat/lon fallback.
+  dealer_geo: "installations API: {concesionario_id, name, phone, zipcode, zone, city, lat, lon}. Join car->installation by PHONE (exact) then NAME (normalized + token-subset). Province = zipcode[:2] (INE, authoritative); lat/lon fallback."
 caveats:
   token_rotation: the detail-page vehiculo_id token ROTATES on every listado fetch (0/2036 stable across consecutive fetches) — it is ephemeral, NOT a car id. The VIN (bastidor) is the stable dedup key + deep_link anchor.
   single_flat_response: the listado returns the WHOLE national stock in one GET — no pagination.

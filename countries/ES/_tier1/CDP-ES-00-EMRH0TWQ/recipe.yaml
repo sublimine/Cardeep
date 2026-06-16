@@ -4,7 +4,7 @@ version: 1
 source: wallapop.com
 scope: platform-wholesale (api.wallapop.com /api/v3/search/section app JSON API)
 engine: curl_cffi+chrome131_impersonate+json_api(GET)+jwt_pagination
-access: FREE: public mobile-app JSON API answers a Chrome TLS fingerprint cold (no proxy, no browser, no cookie warm-up, no JS challenge). is_tier1=TRUE (giant Tier-1 brand) but defense_tier=t1_soft (API host unwalled to curl_cffi). No auth bearer for public search.
+access: "FREE: public mobile-app JSON API answers a Chrome TLS fingerprint cold (no proxy, no browser, no cookie warm-up, no JS challenge). is_tier1=TRUE (giant Tier-1 brand) but defense_tier=t1_soft (API host unwalled to curl_cffi). No auth bearer for public search."
 data_surface: app_api
 surface_intent: json_api
 endpoints:
@@ -16,7 +16,7 @@ request:
   pagination: opaque next_page JWT in meta.next_page replayed as &next_page=<jwt>, ~40/page
 enumeration: keyword sweep (~40 car brands) x ES geo-centroid grid (lat/long HONORED); each (keyword,centroid) paged by the meta.next_page JWT until the chain ends; dedup by item id across the whole run
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=marketplace_generalist, role=platform, data_surface=app_api
-attribution: per-item user_id -> GET /users/{id} (cached per run): type 'professional' -> compraventa DEALER; type 'normal' -> PER-SELLER 'particular' entity (cdp particular:wallapop:{user_id}; one human=one entity, sells_cars=TRUE; car+edge+delta caged identically to a dealer)
+attribution: "per-item user_id -> GET /users/{id} (cached per run): type 'professional' -> compraventa DEALER; type 'normal' -> PER-SELLER 'particular' entity (cdp particular:wallapop:{user_id}; one human=one entity, sells_cars=TRUE; car+edge+delta caged identically to a dealer)"
 dual_membership: vehicle.entity_ulid=SELLING DEALER/particular; platform_listing edge=platform<->vehicle
 geo: dealer province from user.location.zip[:2] (INE) -> item region2/city via GeoResolver -> item lat/long via ProvinceGeocoder (first hit wins)
 field_map:

@@ -4,15 +4,15 @@ version: 1
 source: ford (Ford Selección — secure.ford.es/compra/explora/vehiculos-de-ocasion)
 scope: platform-wholesale (Ford ES certified-used; AngularJS GUXFOE SPA + eUsed JSON API)
 engine: curl_cffi+chrome131_impersonate+internal_eused_json_api(POST)
-access: OPEN-via-fingerprint+soft-gate. The eUsed API 401s plain curl (Akamai source check + consumer gate). Two computed headers unlock it: x-eusl-consumer='b-gux_approved_used-prod', x-eusl-k=base64('{millis}:{nonce}') (16-byte hex nonce), regenerated per request, plus Referer https://secure.ford.es/. No proxy, no browser, no cookie, no auth, €0. Public API behind Akamai -> is_tier1=TRUE; the soft reproducible gate (no JS challenge) -> defense_tier=t1_soft.
+access: "OPEN-via-fingerprint+soft-gate. The eUsed API 401s plain curl (Akamai source check + consumer gate). Two computed headers unlock it: x-eusl-consumer='b-gux_approved_used-prod', x-eusl-k=base64('{millis}:{nonce}') (16-byte hex nonce), regenerated per request, plus Referer https://secure.ford.es/. No proxy, no browser, no cookie, no auth, €0. Public API behind Akamai -> is_tier1=TRUE; the soft reproducible gate (no JS challenge) -> defense_tier=t1_soft."
 data_surface: internal_api
 surface_intent: internal_eused_json_api
 endpoint: POST https://www.servicescache.ford.com/api/eUsed/v1/searchVehicles
 request:
   headers: Accept application/json, Content-Type application/json, Referer https://secure.ford.es/, Origin https://secure.ford.es, x-eusl-consumer b-gux_approved_used-prod, x-eusl-k base64('{epoch_millis}:{16B-hex-nonce}')
-  eusl_algo: reverse-engineered from guxfoeApprovedUsed.js v5.35.0 generateToken: consumer='b-'+applicationName+'-'+env (applicationName='gux_approved_used' is the SPA bslHeaderValue; env='prod' from host); k=base64(Date.now()+':'+nonce), nonce=16 random bytes hex.
-  body: JSON: locale=es_ES, vehicleCategory='10' (Personal/turismos), distance (km), longLatCoordinates='{lng},{lat}', price/enginePower/ageOfVehicle/mileage ranges, resultOrder={orderBy,sortOrder}, pagination={maxRecords,startingRecord}
-enumeration: SINGLE national geo-radius query: longLatCoordinates='-3.70,40.0' + distance=2500 km (swallows peninsula + Canaries; 482 cars at <=1500 km, 543 at >=2000 km). pagination.maxRecords=20000 returns ALL 543 in ONE response (FLAT, no depth wall). startingRecord is a ROW cursor for safety; totalMatches + empty VehicleInventoryItem bound the run; dedup on Vehicle.Identity.ID.
+  eusl_algo: "reverse-engineered from guxfoeApprovedUsed.js v5.35.0 generateToken: consumer='b-'+applicationName+'-'+env (applicationName='gux_approved_used' is the SPA bslHeaderValue; env='prod' from host); k=base64(Date.now()+':'+nonce), nonce=16 random bytes hex."
+  body: "JSON: locale=es_ES, vehicleCategory='10' (Personal/turismos), distance (km), longLatCoordinates='{lng},{lat}', price/enginePower/ageOfVehicle/mileage ranges, resultOrder={orderBy,sortOrder}, pagination={maxRecords,startingRecord}"
+enumeration: "SINGLE national geo-radius query: longLatCoordinates='-3.70,40.0' + distance=2500 km (swallows peninsula + Canaries; 482 cars at <=1500 km, 543 at >=2000 km). pagination.maxRecords=20000 returns ALL 543 in ONE response (FLAT, no depth wall). startingRecord is a ROW cursor for safety; totalMatches + empty VehicleInventoryItem bound the run; dedup on Vehicle.Identity.ID."
 denominator: data.VehicleInventoryList.totalMatches (543) == distinct Vehicle.Identity.ID == Σ dealer attribution
 platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=TRUE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=ford_vo
 dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle

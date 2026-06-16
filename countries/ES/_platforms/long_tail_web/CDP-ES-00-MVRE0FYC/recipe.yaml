@@ -11,7 +11,7 @@ surface_intent: ssr_jsonld_itemlist
 endpoint: GET https://www.modrive.com/coches-segunda-mano/
 enumeration: the SSR JSON-LD ItemList is a FIXED featured block of 19 Vehicle objects; page/N/ returns the SAME id-set (verified live) — the full catalog paginates ONLY in the AutoUncle widget, not the SSR JSON-LD. The harvester reads the own-site ItemList and stops when the next page adds no new ids.
 platform_entity: kind=importador, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=long_tail_web, role=standalone_pos, family=modrive
-ownership: IMPORTER-AS-OWNER: the SSR listing does not attribute a car to a physical branch, so the importer OWNS every car (vehicle.entity_ulid=importer). platform_listing edge=importer<->vehicle. owner entity == platform entity.
+ownership: "IMPORTER-AS-OWNER: the SSR listing does not attribute a car to a physical branch, so the importer OWNS every car (vehicle.entity_ulid=importer). platform_listing edge=importer<->vehicle. owner entity == platform entity."
 field_map:
   deep_link: ItemList.itemListElement[].item.url (per-car PDP)
   listing_ref: deep-link numeric tail before trailing '/' (native stock id)

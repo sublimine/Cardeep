@@ -9,9 +9,9 @@ access: OPEN server-rendered HTML carrying schema.org JSON-LD (Chrome TLS finger
 data_surface: json_ld
 surface_intent: ssr_jsonld_vehicles
 endpoint: GET https://www.carplus.es/coches-segunda-mano/?page=N
-enumeration: ?page=1..N paginates server-side; 16 standalone @type:Vehicle blocks/page (NOT an ItemList). Boundary walked live: pages 1..25=16, page 26=12, 27+=0 (=412 cars). Carplus does not declare a machine-readable full count on the SRP.
+enumeration: "?page=1..N paginates server-side; 16 standalone @type:Vehicle blocks/page (NOT an ItemList). Boundary walked live: pages 1..25=16, page 26=12, 27+=0 (=412 cars). Carplus does not declare a machine-readable full count on the SRP."
 platform_entity: kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=chain, role=chain, family=carplus
-ownership: CHAIN-AS-OWNER: the SRP does not attribute a car to a 'centro', so the chain owns every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle.
+ownership: "CHAIN-AS-OWNER: the SRP does not attribute a car to a 'centro', so the chain owns every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle."
 field_map:
   deep_link: Vehicle.offers.url (.../coche/{slug}-{vin}/)
   listing_ref: deep-link tail before trailing '/' = VIN (stable native id)

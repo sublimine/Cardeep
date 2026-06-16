@@ -11,7 +11,7 @@ surface_intent: ssr_jsonld_itemlist
 endpoint: GET https://www.ocasionplus.com/coches-segunda-mano?page=N
 enumeration: ?page=1..N; the JSON-LD ItemList holds 20 Vehicle objects/page; the page-level Product.offers.offerCount declares the full stock (14052 live).
 platform_entity: kind=cadena, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=chain, role=chain, family=ocasionplus
-ownership: CHAIN-AS-OWNER: the per-car branch ('centro') is NOT on the SRP data-layer, so the chain is the singular selling point and OWNS every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle. owner entity == platform entity. Per-branch attribution is a future detail-page pass (the PDP carries centro/provincia).
+ownership: "CHAIN-AS-OWNER: the per-car branch ('centro') is NOT on the SRP data-layer, so the chain is the singular selling point and OWNS every car (vehicle.entity_ulid=chain). platform_listing edge=chain<->vehicle. owner entity == platform entity. Per-branch attribution is a future detail-page pass (the PDP carries centro/provincia)."
 field_map:
   deep_link: ItemList.itemListElement[].offers.url (per-car PDP)
   listing_ref: deep-link tail after last '-' (stable native id, e.g. 'togx7qan')

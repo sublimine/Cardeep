@@ -38,4 +38,4 @@ caveats:
   encoding: CLEAN UTF-8 — no mojibake on this surface (unlike spoticar/toyota_lexus). _fix() is a defensive no-op guard only; the wire already decodes correctly.
   no_vin: the search payload carries no VIN (vin_ref stays NULL).
   no_private_sellers: OEM certified-used portal — every car belongs to an official CUPRA dealer.
-  seat_split: the 'seat_cupra' brand front splits: SEAT certified-used redirects into Das WeltAuto (already covered by dasweltauto_wholesale); CUPRA is THIS portal.
+  seat_split: "the 'seat_cupra' brand front splits: SEAT certified-used redirects into Das WeltAuto (already covered by dasweltauto_wholesale); CUPRA is THIS portal."

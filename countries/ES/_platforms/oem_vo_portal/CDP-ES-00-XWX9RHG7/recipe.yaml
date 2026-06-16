@@ -11,7 +11,7 @@ endpoint: GET https://www.dasweltauto.es/esp/coches-de-segunda-mano-en-{provinci
 request:
   headers: Accept text/html, Accept-Language es-ES, Referer /esp/
   enumeration_entry: per-province slug routes (homepage province links); ZIP[:2] is the authoritative geo anchor
-enumeration: PER-PROVINCE: /esp/coches-de-segunda-mano-en-{provincia}?pagina=1..N (23 cards/page). The bare national /coches-de-segunda-mano route IGNORES ?pagina. The last page CLAMP-REPEATS, so the stop signal is 'a page adds 0 NEW VehicleIds', not 'empty page'. Madrid drains to 1,043 distinct cars over 47 pages (verified live).
+enumeration: "PER-PROVINCE: /esp/coches-de-segunda-mano-en-{provincia}?pagina=1..N (23 cards/page). The bare national /coches-de-segunda-mano route IGNORES ?pagina. The last page CLAMP-REPEATS, so the stop signal is 'a page adds 0 NEW VehicleIds', not 'empty page'. Madrid drains to 1,043 distinct cars over 47 pages (verified live)."
 card_path: each result card embeds data-configuration='{...car...}' + data-partner='{...dealer...}' as single-quoted HTML attributes; \uXXXX-escaped accents -> valid UTF-8 JSON.
 platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t1_soft, source_group=oem_vo_portal, role=platform, family=vw_group
 dual_membership: vehicle.entity_ulid=SELLING DEALER (compraventa); platform_listing edge=platform<->vehicle

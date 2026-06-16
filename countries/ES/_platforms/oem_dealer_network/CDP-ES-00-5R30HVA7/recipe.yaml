@@ -12,9 +12,9 @@ request:
   stock_type:
     seat: stesnwb
     cupra: cuesnwb
-  headers: x-pattern: seatwebfe|cuprawebfe (ACCESS GATE), x-page (1-based PAGE), x-page-items (page size, <=12), x-sort PRICE_SALE, x-sort-direction ASC
+  headers: "x-pattern: seatwebfe|cuprawebfe (ACCESS GATE), x-page (1-based PAGE), x-page-items (page size, <=12), x-sort PRICE_SALE, x-sort-direction ASC"
   note: no region matrix param -> the full national set; PER-CAR dealer zip yields province.
-enumeration: PER BRAND: x-page=1..N step 1 (PAGE_SIZE=12). The default sort is NOT stable across pages -> DEDUP on car.carid across the whole drain. Stop on empty cars[] or page*size >= declared total.
+enumeration: "PER BRAND: x-page=1..N step 1 (PAGE_SIZE=12). The default sort is NOT stable across pages -> DEDUP on car.carid across the whole drain. Stop on empty cars[] or page*size >= declared total."
 denominator: Σ criteria.search.criterias[t_body].possibleItems[].number (cars matching empty filter)
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_dealer_network, role=platform, family=vw_group_new
 dual_membership: vehicle.entity_ulid=SELLING official dealer (concesionario_oficial); platform_listing edge=platform<->vehicle, segment='new'
@@ -32,7 +32,7 @@ field_map:
   photo: car.images[].imageGroup.images[].image.href (render)
   dealer: car.hypermediadealer.dealer.items {dealer_id_snw, name, city, region, street, zip, phone, website, position.latitude/longitude}
   location: dealer.zip[:2] = INE province (authoritative); position lat/lon -> ProvinceGeocoder fallback; dealer.city -> municipality (INE-resolved)
-segment: new (every car: available_from=Immediately, dateproduction set, no mileage)
+segment: "new (every car: available_from=Immediately, dateproduction set, no mileage)"
 caveats:
   x_pattern_gate: the x-pattern header is the only access gate; it is brand-specific.
   page_size: x-page-items <= 12; the host 500s on larger page sizes.

@@ -8,7 +8,7 @@ access: OPEN-via-fingerprint. A public, unauthenticated token endpoint mints a f
 data_surface: internal_api
 surface_intent: aws_appsync_graphql_api
 token_endpoint: GET https://apigateway-eu-prod.nissanpace.com/euw1nisprod/public-access-token?brand=NISSAN&dataSourceType=live&market=ES&client=euecomm
-endpoint: POST https://gq-eu-prod.nissanpace.com/graphql (Authorization: <idToken>)
+endpoint: "POST https://gq-eu-prod.nissanpace.com/graphql (Authorization: <idToken>)"
 operation: GetUsedCarsInventoryData(marketConfig, usedCarsInventoryInputData{pageNumber, queryFilters:[make=Nissan]})
 dealer_locator: getDealersData(marketConfig, locationDataInput{lat:40.4,long:-3.7,radius:2000,unit:K}) -> 180 concesionarios each with postCode + city + location{gpsLatitude,gpsLongitude}; fetched ONCE; maps inventory dealerId -> geo
 enumeration: usedCarsInventoryInputData.pageNumber=1..104 (15 cars/page; page 104 = 1 trailing car, 105+ = 0). metaData.totalCount (1546) + first-empty-page bound the run; dedup on vehiclesku.
@@ -26,7 +26,7 @@ field_map:
   km: vehicles[].mileage ('91587.0' -> float -> int)
   price: vehicles[].discountedPrice (fallback rrpPrice)
   fuel: vehicles[].fuelType (normalized vocabulary)
-  transmission: vehicles[].transmission (gearbox: manual/automatico -> Manual/Automático)
+  transmission: "vehicles[].transmission (gearbox: manual/automatico -> Manual/Automático)"
   dealer: vehicles[].dealer {dealerId, dealerName}; geo from the getDealersData roster by dealerId
   location: roster postCode (first 2 digits = INE province, primary) -> ProvinceGeocoder lat/lng fallback; roster city -> municipality (INE-resolved)
 caveats:

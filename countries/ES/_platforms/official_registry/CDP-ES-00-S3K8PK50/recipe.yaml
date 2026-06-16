@@ -12,7 +12,7 @@ endpoint: GET https://www.subastacar.com/coches-segunda-mano-ocasion/?pagina=N (
 enumeration: page the listing ?pagina=N collecting detail anchors (/coches-segunda-mano-ocasion/comprar-<slug>/<hash>), stop when a page yields no NEW link (natural end) bounded by a runaway guard; dedup on the URL hash; fetch each detail and parse its schema.org vehicle JSON-LD. Aged-out cars (a Subastacar edge not seen this run) are reconciled to status=gone/removed (no phantom stale).
 denominator: the site's own '<N> resultados en <P> Páginas' total (238 verified live 2026-06-13) — the EXACT denominator, not a guess. This is the VAM denominator.
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=official_registry, role=platform, family=subastacar
-seller_model: Subastacar is a SINGLE auction marketplace (no calendar of discrete sale events), so the selling point is the platform-as-auction-house: ONE national entity kind='subasta' (province NULL), role='registry'. Every car is owned by it. No per-lot dealer/province exists on this surface; no province is fabricated.
+seller_model: "Subastacar is a SINGLE auction marketplace (no calendar of discrete sale events), so the selling point is the platform-as-auction-house: ONE national entity kind='subasta' (province NULL), role='registry'. Every car is owned by it. No per-lot dealer/province exists on this surface; no province is fabricated."
 dual_membership: vehicle.entity_ulid=national auction-house seller (subasta); platform_listing edge=platform<->vehicle
 field_map:
   deep_link: the detail URL

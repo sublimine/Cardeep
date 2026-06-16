@@ -10,7 +10,7 @@ surface_intent: es_facet_json_loader
 endpoint: GET https://es.renew.auto/vehiculos.data?<es_facets>&page=N
 request:
   headers: Accept */*, Referer /vehiculos, X-Requested-With XMLHttpRequest
-  facets: RAW Elasticsearch params: brand.label.raw=RENAULT, model.label.raw=CLIO, ... (omit for full census)
+  facets: "RAW Elasticsearch params: brand.label.raw=RENAULT, model.label.raw=CLIO, ... (omit for full census)"
 enumeration: page=1..N (23 cars/page, zero cross-page id overlap — clean stable paginator); block.totalElements/totalPages drive the full drain (~5,739 cars / ~250 pages unfiltered)
 block_path: content.contentZone.slice243v0.data {totalElements, totalPages, data[], facets}
 platform_entity: kind=oem_vo_portal, province_code=NULL (sentinel 00 in cdp_code only), is_tier1=FALSE, defense_tier=t0_open, source_group=oem_vo_portal, role=platform, family=renault_group

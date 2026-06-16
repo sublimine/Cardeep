@@ -9,9 +9,9 @@ access: OPEN server-rendered Next.js App Router on Vercel (Chrome TLS fingerprin
 data_surface: next_data
 surface_intent: sitemap_index_pdp_rsc
 endpoint: GET sitemap /peninsula-baleares/sitemap/coches-ficha.xml -> per-car PDP /es/es/ficha/{slug}-{id_mf}
-enumeration: the SRP /coches/ocasion/compra resolves results through a DEFERRED RSC server promise (?page=N ignored; browser pages via a Next.js server action, not header-reachable). CANONICAL full index = sitemap coches-ficha.xml (21,989 PDP URLs live). Drain PDP-by-PDP: each PDP re-emits the RSC car object with full attribution.
+enumeration: "the SRP /coches/ocasion/compra resolves results through a DEFERRED RSC server promise (?page=N ignored; browser pages via a Next.js server action, not header-reachable). CANONICAL full index = sitemap coches-ficha.xml (21,989 PDP URLs live). Drain PDP-by-PDP: each PDP re-emits the RSC car object with full attribution."
 platform_entity: kind=plataforma, province_code=NULL (sentinel 00 in cdp_code), is_tier1=FALSE, defense_tier=t0_open, source_group=marketplace_motor, role=platform, family=faciliteacoches
-ownership: PER-SHOP: each car attributes to its REAL physical selling shop (shopData: name+cp(INE prov)+city), parented by dealerData group. vehicle.entity_ulid=shop; platform_listing edge=platform<->vehicle. A car whose shop/dealer geo cannot be resolved cages under the platform bucket (never dropped, never fabricated).
+ownership: "PER-SHOP: each car attributes to its REAL physical selling shop (shopData: name+cp(INE prov)+city), parented by dealerData group. vehicle.entity_ulid=shop; platform_listing edge=platform<->vehicle. A car whose shop/dealer geo cannot be resolved cages under the platform bucket (never dropped, never fabricated)."
 field_map:
   deep_link: https://www.faciliteacoches.com/es/es/ficha/{car.slug}
   listing_ref: car.id_mf (Facilitea native stock id == PDP slug tail)
