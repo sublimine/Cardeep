@@ -15,7 +15,9 @@ import type {
   VehicleListItem,
 } from './types';
 
-const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? 'http://127.0.0.1:8000';
+// Default = the canonical local API port (uvicorn services.api.main:app --port 8090). Override with
+// VITE_API_BASE (e.g. web/.env.local in dev, or .env.production / CI for a real deployment).
+const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? 'http://127.0.0.1:8090';
 const API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? '';
 
 export class ApiError extends Error {

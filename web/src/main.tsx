@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import './styles/global.css';
 import { Layout } from './components/Layout';
 import { Landing } from './routes/Landing';
+import { Explore } from './routes/Explore';
 
 const qc = new QueryClient({
   defaultOptions: {
@@ -29,7 +30,7 @@ const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <Landing /> },
-      { path: 'explore', element: <Stub title="Explorar inventario" /> },
+      { path: 'explore', element: <Explore /> },
       { path: 'dealer/:cdp', element: <Stub title="Dealer" /> },
       { path: 'vehicle/:ulid', element: <Stub title="Vehiculo" /> },
     ],

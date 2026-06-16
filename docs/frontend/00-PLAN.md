@@ -90,9 +90,22 @@ Verificación en cada fase (no confiamos en ningún resultado).
   **Verificación:** bug Earcut (vértice de cierre duplicado) cazado y arreglado en raíz; las 52
   provincias extruyen (0 fallos); render comprobado desktop 1440 + móvil 390; HUD de Toledo
   (290/458, 63%, PARCIAL) cruzado exacto contra `v_province_seal`; orientación norte-arriba confirmada.
-- **P3 · Marketplace — ▶ SIGUIENTE.** `/explore` (hoy stub) consumirá `?prov=NN`: buscar/filtrar +
-  grid de resultados (facetas adaptadas de competidores).
-- P4–P6 — pendientes (ver fases arriba).
+- **P3 · Marketplace — ✅ HECHO y verificado.** `/explore`: rejilla de las 52 provincias (sello
+  vivo/snapshot, ordenable cobertura/A–Z) → `DealerBrowser` por provincia (cabecera con cobertura,
+  filtros kind/Tier1/búsqueda, paginación page/size, cards → `/dealer/:cdp`). Reutiliza `useSealMap`;
+  `lib/{provinces,format,kinds}` + `ui/Badge`. Limitación honesta: la API no tiene facetas globales →
+  los filtros aplican a la página cargada (documentado).
+  **Verificación contra API viva (:8090):** ProvinceGrid con `/geo/seal` real (Salamanca 128% … Ceuta
+  4%); Madrid `/geo/28/entities` → 'Sellado · 100% · 3026 dealers servidos / techo 3013' + 60 cards
+  reales; 0 errores de consola (CORS OK); build verde.
+- **P4 · Detalle — ▶ SIGUIENTE.** `/dealer/:cdp` (entidad + inventario + delta) y `/vehicle/:ulid`
+  (detalle + historial + plataformas) — las páginas de coches reales.
+- P5–P6 — pendientes (ver fases arriba).
 
-**Dev local:** `npm --prefix web run dev` → `http://localhost:5173`. El cwd del shell PowerShell es
-`…\cardeep\web`. La API (para datos en vivo) se levanta aparte con uvicorn contra `cardeep-pg`.
+**Dev local:** `npm --prefix web run dev` → `http://localhost:5173`. El cliente API apunta por
+defecto a `http://127.0.0.1:8090` (puerto canónico); override con `VITE_API_BASE` en un `web/.env.local`
+(gitignored). API viva, desde la raíz del repo:
+`CARDEEP_API_RATELIMIT_ENABLED=0 uvicorn services.api.main:app --host 127.0.0.1 --port 8090`
+(modo público, DSN→cardeep-pg:5433). CORS añadido en `services/api/main.py` (orígenes dev,
+configurable con `CARDEEP_CORS_ORIGINS`). Nota: `/stats` es lento sin cache (≈varios s; 1 query 2,4 s)
+→ optimización backend pendiente; el front cae a fallback mientras tanto.

@@ -62,6 +62,7 @@ from contextlib import asynccontextmanager
 
 import asyncpg
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -103,6 +104,23 @@ app = FastAPI(title="Cardeep API", version="0.2.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# ---------------------------------------------------------------------------
+# CORS — the browser frontend (web/) is served from a different origin in dev
+# (Vite :5173 / preview :4173) and would otherwise be blocked. Origins are
+# configurable via CARDEEP_CORS_ORIGINS (comma-separated) for other deployments.
+# Added last so it is the outermost middleware and handles preflight first.
+# ---------------------------------------------------------------------------
+_cors_origins = os.environ.get(
+    "CARDEEP_CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in _cors_origins.split(",") if o.strip()],
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["X-API-Key", "Content-Type"],
+)
 
 app.include_router(ops.router)
 app.include_router(entities.router)
