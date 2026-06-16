@@ -130,3 +130,53 @@ F1 46→62 tests — son snapshot-drift esperado, no defectos; cdp uniqueness/co
   solo verificable estructuralmente (no end-to-end sin correr scrape=spend) → FASE-2, no a ciegas.
 - **Próximo paso real = tu decisión de gasto** (abrir harvest a escala) o el rebuild union-find de
   cross-source/β (sub-1%, fresh-context). No queda trabajo seguro-Y-valioso a €0 sin abrir esos gates.
+
+---
+
+## ACTUALIZACIÓN 2026-06-16 — Sesión de endurecimiento (€0-config A-Z SELLADO + data-path hardened)
+
+> El certificado de arriba (06-15) probó que la **infraestructura €0 estaba construida**. Esta sesión la
+> llevó de "construida" a **reproducible + CI-enforced + operacionalmente documentada + endurecida** — es
+> decir, completó el **"config del A al Z, runbook claro, absolutamente toda la implementación"** que TÚ
+> nombraste como prerequisito literal del gasto. El gate del gasto está, por su parte, satisfecho.
+
+**1. Bring-up reproducible (artefacto-gate del gasto):** `docker-compose.yml` (postgres:16 :5433, fiel al
+container vivo) + `docs/runbook/DEPLOY.md` (cold-start A→Z, cada comando [VERIFICADO]). Cazó **7 deps faltantes**
+(apscheduler[sqlalchemy], psycopg2-binary, pytest, pytest-asyncio, numpy, httpx, curl_cffi) — el bring-up
+era IRREPRODUCIBLE sin ellas. El sistema entero se levanta desde el repo en 8 pasos verificados.
+
+**2. CI (de 0 CI → verde en GitHub):** `.github/workflows/ci.yml` — bring-up smoke (install·import·migrate·
+collect) sobre postgres:16, **verde en infra GitHub**. Enforcement automático y permanente de DEPLOY.md.
+
+**3. Runbook operativo:** `docs/runbook/OPERATE.md` — monitorizar / verificar-delta / triar-alertas-por-origin /
+diagnosticar-breaker / remediar / capacidad, **cada query verificada contra la DB viva**. Completa el "cómo
+del A al Z" a nivel operación (DEPLOY = bring-up, OPERATE = día a día, 06-RESILIENCE-OPS = diseño).
+
+**4. Data-path ENDURECIDO — 3 green-reviews adversariales, ~36 bugs reales eliminados** (cada uno verificado a
+mano contra código+DB; ~30% de los CRITICAL de los agentes resultaron FALSOS POSITIVOS → la verificación
+obligatoria fue lo decisivo, y corrigió incluso fixes sugeridos erróneos):
+  - **Núcleo (9):** evict cascade→tombstone (silent data-loss), health no-op breaker, reconcile_gone guarda+txn
+    atómico, scheduler crash-safety-net, prosecute conn-error. `docs/REVIEW_FINDINGS_2026-06-16.md`.
+  - **Pipeline (14):** **NULL→valid price/km fill** (sistémico — precios/km nunca se rellenaban en ingest + los
+    26 conectores wholesale; 12k/53k vehículos), geo article-guard (cdp erróneo irreversible), discover atómico+
+    in_db scope, complete G4 LEFT JOIN (184 entities), recipe yaml.dump (recetas ilegibles), harvest_dealer alertas,
+    delta sanitize+COALESCE (wipe latente). `docs/REVIEW_FINDINGS_PIPELINE_2026-06-16.md`.
+  - **Conectores (13):** 2 CRIT (wallapop monitoring-dark, coches_com VN/renting coverage-blind), THEME-1
+    monitoring-dark en los 5 conectores, Flexicar fetcher (Referer correcto → atribución por sucursal de 23.874
+    coches), + 5 MED anti-detección/data-loss/defensivos. `docs/REVIEW_FINDINGS_CONNECTORS_2026-06-16.md`.
+
+**5. Correcciones de estado del certificado:**
+- **A4 (Delta uniforme): 🟡 GATED → ✅ €0-COMPLETO + ENDURECIDO.** El delta (NEW/GONE/PRICE/KM/PHOTO) está
+  cableado en los 26 conectores wholesale (`emit_change_deltas` compartido) + ingest AS24; GONE auto-activa vía
+  `prior_last_ok` en record_run (coverage-gated, sin cablear per-conector); y esta sesión arregló el bug
+  sistémico que impedía rellenar price/km NULL. El correr-a-escala sigue siendo harvest, pero la MAQUINARIA
+  del delta está completa, tested y endurecida — no "FASE-2 estructural".
+- **A8 (Falla→alerta→auto-repara): reforzado.** El green-review cerró 5 huecos monitoring-dark (harvest_dealer +
+  los 5 conectores wholesale) donde una excepción de setup saltaba record_run → fuente invisible. Ahora todo
+  fallo se registra con origin exacto. El lazo "no se cae" es más fuerte que en el certificado original.
+
+**Lo GATED sigue igual (tu fase de gasto):** A2 denominador (DATA), A3 drains/A5 recipe-hunting/C1 anti-detección/
+R1/R2/R4 (HARVEST), D1 LLM (HARDWARE), SEAL-CapaB (spend), β/cross-source identidad-HIGH (fresh-context). **La
+diferencia clave vs 06-15:** el €0-config que gateaba el gasto ya no solo está "construido" — está reproducible,
+CI-verificado, documentado A-Z (DEPLOY+OPERATE+RUNBOOK+06-RESILIENCE) y con el data-path endurecido (~36 bugs
+menos). El prerequisito que pusiste para el gasto está cumplido; abrir harvest es ahora tu decisión.
