@@ -32,3 +32,15 @@ python -m pipeline.ops.scheduler                     # 7. motor durable
   long-tail en datos, código y operación.
 - **Huella total:** recetas, estado y decisiones commiteadas en `main`; cualquiera
   puede retomar el proyecto desde este repo.
+
+## Mapa del proyecto (para retomar)
+
+| Quiero… | Ir a |
+|---|---|
+| Ver el backlog A→F clasificado y filtrable | [Issues en GitHub](https://github.com/sublimine/Cardeep/issues) (label por letra/estado/gate/área · 4 milestones) — se regenera con `python scripts/github_classify.py` |
+| Entender el plan de sellado punto-por-punto | [`docs/SUPERPLAN.md`](docs/SUPERPLAN.md) §4 (fuente de verdad de las Sealing Units) |
+| Ver el estado certificado A→F | [`docs/AUDIT_A-F_STATUS.md`](docs/AUDIT_A-F_STATUS.md) |
+| Entender los workflows (E2E per-dealer + verificación) | [`docs/workflows/`](docs/workflows/README.md) — `e2e/` (descubrir→scrapear→receta→API→borrar) + `verification/` (VAM→ledger→Inquisición→gestionador) |
+| Levantar el sistema de cero | [`docs/runbook/DEPLOY.md`](docs/runbook/DEPLOY.md) |
+| Operarlo (monitor / verify / remediar) | [`docs/runbook/OPERATE.md`](docs/runbook/OPERATE.md) |
+| Entender el stack de verificación (4 capas) | [`docs/architecture/10-VERIFICATION-STACK.md`](docs/architecture/10-VERIFICATION-STACK.md) |
