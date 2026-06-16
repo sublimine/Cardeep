@@ -64,6 +64,11 @@ class TestServableStatusFilter:
     def test_no_nonpositive_price_is_servable(self) -> None:
         assert _scalar("SELECT count(*) FROM servable_vehicle WHERE price <= 0") == 0
 
+    def test_no_over_ceiling_price_is_servable(self) -> None:
+        # Migration 0047: the served surface caps price at EUR 5M (mirrors sanitize_price); a sentinel
+        # above that (e.g. a 9,999,999 'price-on-request' all-9s) can never reach a consumer.
+        assert _scalar("SELECT count(*) FROM servable_vehicle WHERE price > 5000000") == 0
+
     def test_servable_is_subset_of_available(self) -> None:
         servable = _scalar("SELECT count(*) FROM servable_vehicle")
         available = _scalar("SELECT count(*) FROM vehicle WHERE status='available'")
