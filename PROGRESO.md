@@ -1469,3 +1469,17 @@
   Restante: D7-re-cluster (heavy gated op, 0,02%), D8-decimal (parser locale milanuncios/coches.net, ~4+), D1-recipe (harvest),
   + reds (Ceuta/Melilla/Overture/OEM/D1-hardware = spend/harvest-gated). **El valor sustancial ahora requiere tu decisión de
   gasto** — el €0-config está exhaustivamente verificado + endurecido (precondición de gasto más que cumplida). Próximo €0: D8-decimal.
+
+### 2026-06-16 (cont.) — D8-decimal + D3-completion (mi gap) + saneo platform_price: 6.214 coherizados
+- **La doctrina (verificar mi PROPIO trabajo) cazó que D3 fue INCOMPLETO:** nulifiqué 3.484 vehicle.price (cuota-mensual)
+  pero dejé platform_price mostrando la cuota → la mentira persistía en /platforms. **Completado: 3.484 platform_price→NULL.**
+  (Forward-fix D3 OK: el conector acopla platform_price=v.price, futuros quedan NULL ambos.)
+- **D8-decimal (4):** factor-10 (1850/18000, 2000/20000 — verificado decimal-parse, no monthly) → platform_price=v.price (correcto).
+- **Finding NUEVO — platform_price nunca saneado:** los conectores bulk insertan platform_price crudo; el backfill de
+  price-sanity limpió vehicle.price pero NO platform_price → **2.726 junk (≤0 o >5M) servidos en /platforms**. Nulificados
+  (mismos umbrales que vehicle.price). junk_after=0. Cola ambigua (v.price NULL + platform_price plausible) = 9 (defer).
+- **D9 (forward-fix documentado, anti-atajo):** raíz = bulk connectors no aplican sanitize_price → platform_price (y posible
+  v.price) re-junk en harvest. Fix = sanitize en ingest bulk O null served-layer (espejo de servable_vehicle). Recurrencia
+  = harvest-phase (no live ahora). Bloque enfocado.
+- **Sesión: ~17 defectos/coherencias €0 manejados.** Frente €0-CÓDIGO casi agotado; quedan D7-re-cluster (gated), D9-forward
+  (connector), D1-recipe (harvest), reds (spend). El valor sustancial = decisión de gasto del owner.
