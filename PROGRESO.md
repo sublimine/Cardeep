@@ -1348,3 +1348,20 @@
 - **3 DEUDAS scopeadas confirmadas (no nuevas, no críticas)**: `INV1=75` under-merge nombre+muni (B1-recall) · `INV2=1.765` deep_link→>1 canónico (geocoding-dup residual) · `INV11=711` casing de make long-tail (normalizer cubre ~70 marcas, cola sin mapa).
 - **Hallazgo paralelo DOCUMENTADO (no bundleado a ciegas)**: `servable_entity` tiene el MISMO bypass (la API lee `entity` crudo) — fix semántico (¿404 vs ocultar un dealer cuarentenado?) → unidad deliberada, GitHub.
 - **Commit**: 0045 + 4 routers + test + esta entrada. La campaña sigue hasta pasada limpia (doctrina: paro cuando no queda nada, no por cansancio).
+
+### 2026-06-16 (cont.) — Workflow adversarial (12 escépticos) triado a mano: P3 SELLADO + 4 hallazgos corregidos
+- **Workflow `cardeep-coherence-verify` (run wf_c3dda3f6-994, 12 escépticos Sonnet, 247 tool-uses) cerró: 5 DEFECT_FOUND.**
+  Cada uno verificado A MANO contra DB viva (doctrina: salida de agente sospechosa). **2 severidades infladas, 1 fix peligroso.**
+- **P3 servable_entity SELLADO** (`3f7b456`): las superficies-listado de `/geo` leían `entity` crudo (bypass de `servable_entity`,
+  mismo invariante 0031 que servable_vehicle). Enrutadas las 3 (+ count province-only del tree) a la vista. 0 migración (vista ya
+  existe). +TestServableEntity (subset + prueba de cuarentena rolled-back). 0 regresión (servable_entity=entity=391.944). 6+68 verdes.
+- **P4 delta-gone CORREGIDO high→media** (el agente sobre-declaró): **"650 zombies vivos" = FALSO** — los 650 REAPARECIERON
+  (last_seen>gone_at, status correcto); 0 zombies reales. **El fix del agente (UPDATE status='gone') habría matado 650 coches vivos.**
+  Real (media, "historial completo"): 1.823 bajas sin evento GONE, raíz = `group_subastas_wholesale:1045` + `localizavo:_reconcile_aged_out:702`
+  hacen `UPDATE status='gone'` sin el `INSERT vehicle_event GONE` del `reconcile_gone` compartido (delta.py:227-238). Fix = helper
+  `emit_gone_events` + cablear ambos + backfill → unidad tested aparte (toca harvest no-E2E + ledger inmutable). GitHub #35.
+- **P6 platform-listing = by-design** (agente lo confirmó): 74.034 platform_entity no-'plataforma' = VO-portals/cadenas que listan
+  legítimamente. Residual = guard opcional (0 filas malas). **P8 year×km** y **P12 precio-alto** = gaps YA documentados-diferidos en
+  `price_sanity.py` (agente re-descubrió; sus "1.030 systematic"/"650 high" sobre-declarados — banda real imposible P8=26, P12 no crece).
+- **Estado: 2 sellos de coherencia este día (servable_vehicle 0045 + servable_entity), invariante 0031 ahora REAL en ambas superficies.**
+  Pendiente €0 root-causeado: P4 forward-emit + backfill (bloque tested). GitHub #35 con triaje completo. La campaña sigue hasta pasada limpia.
