@@ -140,7 +140,11 @@ class GeoResolver:
         self._prov.setdefault(_sorted_key(name), code)
         for part in re.split(r"[/,]", name):
             p = _norm(part)
-            if p:
+            # Skip bare articles ('la','las','a','el') from bilingual names like "Rioja, La" /
+            # "Coruña, A" / "Palmas, Las" — they would otherwise mint a WRONG province_code (and
+            # thus a wrong cdp_code, irreversibly) for any source delivering 'la'/'a'/'las'. The
+            # municipality loader below already enforces this exact guard; provinces must match.
+            if p and len(p) >= 4:
                 self._prov.setdefault(p, code)
 
     @classmethod

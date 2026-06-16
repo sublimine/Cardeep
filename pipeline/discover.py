@@ -70,15 +70,18 @@ async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntit
                website, is_tier1, status, first_discovered_source, last_seen)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'active',$18, now())
            ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
-           RETURNING (xmax = 0) AS inserted""",
+           RETURNING entity_ulid, (xmax = 0) AS inserted""",
         eulid, code, e.kind, e.legal_name, e.trade_name, e.cif, e.cnae,
         prov, muni, e.address, e.postcode, e.lat, e.lon, e.phone, e.email,
         e.website, e.is_tier1, e.source_key)
-    # resolve the actual entity_ulid (may differ on conflict)
-    real_ulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
+    # entity_ulid comes back atomically from RETURNING (the existing one on conflict, the new
+    # one on insert). No separate SELECT → no race window where a concurrent delete returns NULL
+    # and aborts the rest of the run on a NOT NULL violation.
+    real_ulid = row["entity_ulid"]
     await conn.execute(
         "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
+        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now(), "
+        "source_ref = COALESCE(EXCLUDED.source_ref, entity_source.source_ref)",
         real_ulid, e.source_key, e.source_ref)
     return (bool(row["inserted"]), muni is not None, True)
 
