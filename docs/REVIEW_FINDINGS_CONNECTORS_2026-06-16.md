@@ -45,9 +45,24 @@ pero no es bug de corrección. Prioridad media → tracked.
 - vo_chains ventana concurrente descarta páginas en error (MED) · OcasionPlus listing_ref frágil (MED).
 - wallapop captured_distinct cuenta re-touched (LOW).
 
-## Acción
-- **FIJAR (verificados, alto valor):** CRIT #1 wallapop (except-wrap) + CRIT #2 coches_com (declared_total forward).
-- **TEMA 1 sistémico** → aplicar el except-wrap a coches_net/autoscout24/subastas/autocasion (mecánico, per-SOURCE_KEY).
-- **TEMA 3 scoping** → análisis del módulo `coverage_verify.py` compartido (captured_db per-run) — contexto fresco.
-- **TEMA 4** → Flexicar fetcher (claro) + los MED de anti-detección (last_http, supplement-stop) → contexto fresco.
-- Verdict por hallazgo: la mayoría REAL (evidencia viva); ninguno descartado aún como falso — verificar al fijar.
+## Acción — PROGRESO
+
+**FIJADOS + VERIFICADOS + PUSHEADOS (todos los de alto valor):**
+- `dd93759` **CRIT #1** wallapop except-wrap (+ test mock) · **CRIT #2** coches_com VN/renting declared_total forward
+  (+ renting denominador headline→paginable).
+- `64a3627`/`071ec4e` **TEMA 1 COMPLETO** — except-wrap en los 5 conectores (wallapop CRIT, coches_net, autoscout24,
+  subastas, autocasion). Ningún harvest monitoring-dark ante excepción de setup.
+- `30db4c2` **TEMA 4 Flexicar (HIGH)** — `fetch_flexicar_srp` con FLEXI_HEADERS (Referer correcto; OcasionPlus intacto).
+- `8e4b175` wallapop supplement-sweep para en error de flat-pass (no profundiza el ban) · `5101571` autoscout24
+  resetea `last_status` (no 200 stale → repair bien clasificado).
+
+**PENDIENTE (contexto fresco — nuance/riesgo/juicio):**
+- **TEMA 3** declared_total scoping per-conector (coches_net proof-slice → alerta low_coverage espuria; milanuncios
+  partial-run; coches_com VO/km0 db_edges acumulativo). `coverage_verify.py` YA maneja >ceiling→UNVERIFIED; el fix es
+  per-conector (pasar declared correcto / scopear db_edges a `last_seen>=run_start`) → **verificar intent de cada
+  conector (proof-slice vs full-drain) antes de tocar, riesgo de romper coverage-gating.**
+- **TEMA 2** breaker-skip sin record_run (autoscout24/vo_chains/milanuncios) → juicio de diseño (skip intencional;
+  ¿escribir fila 'skipped'?). No es bug de corrección claro.
+- **MEDs defensivos:** delta_guard should_emit_gone(declared=0) (rescatado por check downstream), milanuncios
+  bands_capped (warning de under-count), vo_chains ventana concurrente descarta páginas en error + listing_ref frágil.
+- Verdict: todos los fijados eran REALES (evidencia viva); ninguno falso positivo en esta capa.
