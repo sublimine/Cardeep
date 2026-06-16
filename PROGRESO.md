@@ -1384,3 +1384,18 @@
   correcto) — mejora de "historial completo" de 2º orden (necesitaría event_type RELISTED nuevo); documentada, no bloquea.
 - **Estado: 3 sellos de coherencia hoy** (servable_vehicle 0045 + servable_entity 3f7b456 + P4 delta-gone). Invariante
   0031 real en ambas superficies + ledger de bajas completo. GitHub #35. Campaña sigue hasta pasada limpia.
+
+### 2026-06-16 (cont.) — Pass-3 verificación (10 escépticos, aspectos no cubiertos): convergencia hacia "dry"
+- **Workflow `cardeep-coherence-verify-2` (run wf_27402199-297, 10 escépticos) cerró.** Mayormente LIMPIO (señal de
+  convergencia: pass-1/2 hallaron structural high/medium; pass-3 = 1 medium + low/cosmético). Cada hallazgo gateado a mano.
+- **CLEAN (6):** Q1 cdp-determinismo · Q2 org-rollup · **Q4 contrato-API 199=199=199 (confirma 0045/3f7b456 funcionan)** ·
+  Q7 change-events · Q8 timestamps · Q9 null-fill (100%-NULL = by-design: subastas/clásicos/importador).
+- **SELLADOS (commit b6e3307):** Q5 (media) árbol `/geo` desglosaba 4 kinds pero el total contaba todos → 7.208 nac
+  (garaje 7.220 grueso) ausentes; añadidos 5 kinds, verificado desglose 5993==total 5993; 146 tests. Q10 (low) docstring
+  /stats stale → lógica. Q6 (low) attest_count drift 6 filas → UPDATE 6, drift 0.
+- **Backlog LOW documentado (Q3, GitHub #35):** 30 recipe.yaml hand-authored inparseables (pipeline vivo NO afectado —
+  G3 usa DB, no parsea; conectores=receta real en código) → re-quote+CI-lint en bloque; AS24 slug placeholder no-persistido
+  → harvest-phase.
+- **Balance de la campaña de coherencia: 6 defectos €0 reales sellados** (0045 servable_vehicle gone-leak · 3f7b456
+  servable_entity bypass · 1c02dd3 P4 silent-baja · Q5 geo-tree · Q6 attest · Q10 docstring) que los audits de 7+48
+  agentes NO cazaron. La verificación adversarial continua rinde defectos reales. Convergencia hacia pasada-limpia.
