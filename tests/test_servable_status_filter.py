@@ -105,3 +105,53 @@ class TestServableStatusFilter:
         assert before == 1, "target should be servable before quarantine"
         assert after == 0, "quarantined car must vanish from servable_vehicle"
         assert restored == 1, "rollback must restore the car (live data untouched)"
+
+
+@pytest.mark.skipif(not DB_AVAILABLE, reason="cardeep-pg not reachable at 127.0.0.1:5433")
+class TestServableEntity:
+    """servable_entity is the dealer-listing publish-gate (0031). The /geo listing endpoints now
+    read through it (not raw `entity`), so a quarantined dealer vanishes from province/municipality/
+    tree listings — the same 0031 invariant the servable_vehicle fix restored for inventory."""
+
+    def test_servable_entity_subset_of_entity(self) -> None:
+        servable = _scalar("SELECT count(*) FROM servable_entity")
+        total = _scalar("SELECT count(*) FROM entity")
+        # servable_entity removes only entities with an open quarantine -> never exceeds entity.
+        assert servable <= total, f"servable_entity {servable} must not exceed entity {total}"
+
+    def test_quarantine_hides_dealer_from_servable_entity_mechanically(self) -> None:
+        """Open a quarantining gestion_item (keyed by cdp_code) -> the dealer vanishes. Rolled back."""
+        async def _go() -> tuple[int, int, int]:
+            import asyncpg
+            conn = await asyncpg.connect(DSN)
+            try:
+                cdp = await conn.fetchval(
+                    "SELECT cdp_code FROM servable_entity WHERE kind <> 'particular' "
+                    "AND cdp_code IS NOT NULL LIMIT 1")
+                assert cdp is not None, "no servable dealer to test with"
+                tr = conn.transaction()
+                await tr.start()
+                try:
+                    before = await conn.fetchval(
+                        "SELECT count(*) FROM servable_entity WHERE cdp_code=$1", cdp)
+                    await conn.execute(
+                        "INSERT INTO gestion_item "
+                        "(detector, subject_type, subject_key, severity, measured, lane, "
+                        " quarantines, dedupe_key) "
+                        "VALUES ('coherence_test','entity',$1,'critical','{}'::jsonb,'QUARANTINE',"
+                        " true,'coherence_test_entity:'||$1)",
+                        cdp)
+                    after = await conn.fetchval(
+                        "SELECT count(*) FROM servable_entity WHERE cdp_code=$1", cdp)
+                finally:
+                    await tr.rollback()
+                restored = await conn.fetchval(
+                    "SELECT count(*) FROM servable_entity WHERE cdp_code=$1", cdp)
+                return before, after, restored
+            finally:
+                await conn.close()
+
+        before, after, restored = asyncio.run(_go())
+        assert before == 1, "dealer should be servable before quarantine"
+        assert after == 0, "quarantined dealer must vanish from servable_entity"
+        assert restored == 1, "rollback must restore the dealer (live data untouched)"

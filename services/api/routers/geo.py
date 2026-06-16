@@ -179,7 +179,7 @@ async def entities_by_province(
             """
             SELECT cdp_code, kind, trade_name, legal_name, municipality_code,
                    is_tier1, status
-              FROM entity
+              FROM servable_entity
              WHERE province_code = $1
                AND status = 'active'
                AND kind <> 'particular'
@@ -231,7 +231,7 @@ async def entities_by_municipality(
             """
             SELECT cdp_code, kind, trade_name, legal_name, municipality_code,
                    is_tier1, status
-              FROM entity
+              FROM servable_entity
              WHERE province_code = $1
                AND municipality_code = $2
                AND status = 'active'
@@ -290,7 +290,7 @@ async def province_inventory_tree(
                       count(*) FILTER (WHERE e.kind='concesionario_oficial') AS oficial,
                       count(*) FILTER (WHERE e.kind='desguace')             AS desguace,
                       count(*) FILTER (WHERE e.kind='plataforma')           AS plataforma
-                 FROM entity e
+                 FROM servable_entity e
                  JOIN geo_municipality m ON m.code = e.municipality_code
                  JOIN geo_comarca      co ON co.id = m.comarca_id
                 WHERE e.province_code = $1 AND e.comarca_id IS NOT NULL
@@ -316,7 +316,7 @@ async def province_inventory_tree(
         # response (e.kind<>'particular' at :242) and /geo/{province}/entities — otherwise this
         # summary count silently included C2C particulares + unverified rows the tree excludes.
         province_only = await c.fetchval(
-            "SELECT count(*) FROM entity WHERE province_code=$1 AND municipality_code IS NULL "
+            "SELECT count(*) FROM servable_entity WHERE province_code=$1 AND municipality_code IS NULL "
             "AND kind <> 'particular' AND status = 'active'",
             province_code)
         tree = {
