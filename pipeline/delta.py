@@ -106,6 +106,42 @@ SELECT entity_ulid FROM vehicle WHERE vehicle_ulid = $1
 MIN_INVENTORY_FOR_GUARD = 20
 
 
+async def emit_gone_events(
+    conn: asyncpg.Connection,
+    vehicle_ulids,
+) -> int:
+    """Emit the GONE event for vehicles a connector retired DIRECTLY (status already flipped to 'gone').
+
+    group_subastas_wholesale and localizavo_wholesale retire aged-out lots by their platform-edge set
+    (not by last_seen), so they cannot route through reconcile_gone — but they MUST still record the
+    baja in the immutable timeline, exactly as reconcile_gone does. Before this helper they flipped
+    vehicle.status='gone' WITHOUT emitting the event, leaving silent bajas (audit P4: 1,823 gone
+    vehicles with no GONE event, all from these two connectors).
+
+    Contract (mirrors reconcile_gone): one GONE event per vehicle, old_value={"price": <float|null>}
+    snapshot from the current row, new_value=null, observed_at defaults to now() (the baja is detected
+    now). Idempotent: a vehicle that already has a GONE event is skipped — the timeline has no UNIQUE
+    on (vehicle_ulid, event_type), so dedup is enforced here. The caller must have already set
+    status='gone'; this writes ONLY the event. Returns the number of events emitted.
+    """
+    emitted = 0
+    for vulid in vehicle_ulids:
+        row = await conn.fetchrow(
+            "SELECT entity_ulid, price FROM vehicle WHERE vehicle_ulid = $1", vulid)
+        if row is None or row["entity_ulid"] is None:
+            continue  # orphan / missing vehicle — cannot attribute an event
+        if await conn.fetchval(
+            "SELECT 1 FROM vehicle_event WHERE vehicle_ulid = $1 AND event_type = 'GONE' LIMIT 1",
+            vulid,
+        ):
+            continue  # idempotent: never a duplicate GONE on the immutable timeline
+        old_value = {"price": float(row["price"]) if row["price"] is not None else None}
+        await conn.execute(
+            _INSERT_GONE_EVENT, ulid(), vulid, row["entity_ulid"], json.dumps(old_value))
+        emitted += 1
+    return emitted
+
+
 async def reconcile_gone(
     conn: asyncpg.Connection,
     source_key: str,

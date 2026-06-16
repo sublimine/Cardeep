@@ -106,6 +106,7 @@ from curl_cffi import requests as cffi_requests
 
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
+from pipeline.delta import emit_gone_events
 from pipeline.delta_guard import should_emit_gone
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run, resolve_alerts
 from pipeline.recipe import write_recipe
@@ -701,6 +702,9 @@ async def _reconcile_aged_out(conn: asyncpg.Connection, platform_ulid: str,
         await conn.execute(
             "UPDATE vehicle SET status='gone', last_seen=now() "
             "WHERE vehicle_ulid = ANY($1::text[])", aged)
+        # P4: record the baja in the immutable timeline (was a silent gone before —
+        # this connector flipped status directly without emitting the GONE event).
+        stats["gone_events"] = stats.get("gone_events", 0) + await emit_gone_events(conn, aged)
     stats["retired_listings"] += len(aged)
     stats["retired_vehicles"] += len(aged)
 

@@ -112,7 +112,7 @@ from dataclasses import dataclass
 import asyncpg
 from curl_cffi import requests as cffi_requests
 
-from pipeline.delta import emit_change_deltas
+from pipeline.delta import emit_change_deltas, emit_gone_events
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
 from pipeline.delta_guard import should_emit_gone
@@ -1048,6 +1048,10 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
                             RETURNING vehicle_ulid""", stale)
                     stats["retired_listings"] = len(rl)
                     stats["retired_vehicles"] = len(rv)
+                    # P4: record the baja in the immutable timeline (was a silent gone before —
+                    # this connector flipped status directly without emitting the GONE event).
+                    stats["gone_events"] = await emit_gone_events(
+                        conn, [r["vehicle_ulid"] for r in rv])
                 print(f"[group_subastas_wholesale] reconciled aged-out: retired "
                       f"{stats['retired_listings']} listings / {stats['retired_vehicles']} vehicles.")
             # Auto-resolve any prior gone_guard alert: harvest is now complete, suppression lifted.

@@ -1365,3 +1365,22 @@
   `price_sanity.py` (agente re-descubrió; sus "1.030 systematic"/"650 high" sobre-declarados — banda real imposible P8=26, P12 no crece).
 - **Estado: 2 sellos de coherencia este día (servable_vehicle 0045 + servable_entity), invariante 0031 ahora REAL en ambas superficies.**
   Pendiente €0 root-causeado: P4 forward-emit + backfill (bloque tested). GitHub #35 con triaje completo. La campaña sigue hasta pasada limpia.
+
+### 2026-06-16 (cont.) — P4 delta-gone SELLADO (forward-emit + backfill) — gap "historial completo" cerrado
+- **Concedido el punto justo del hook: P4 era €0 y lo diferí. Corregido — ejecutado entero, no diferido.**
+- **Causa raíz** (ya root-causeada): `group_subastas_wholesale` y `localizavo_wholesale` retiran lotes aged-out
+  por su set de aristas de plataforma (no por last_seen) → hacían `UPDATE vehicle SET status='gone'` SIN emitir
+  el evento GONE que el `reconcile_gone` compartido sí emite → 1.823 bajas silenciosas (gone en tabla, ausentes
+  del timeline inmutable). Las 650 "available con último evento GONE" = **reapariciones legítimas** (verificado:
+  last_seen>gone_at en las 650; status correcto), NO zombies — el fix del agente las habría matado.
+- **Forward-emit** (`pipeline/delta.py` `emit_gone_events`, DRY, idempotente, mismo convenio que reconcile_gone:
+  old_value={"price":…}, new_value=null): cableado en ambos conectores DENTRO de su transacción de retire (atómico
+  con el flip de status). +2 tests (emit+idempotencia+skip-orphan, tx rolled-back).
+- **Backfill** (`scripts/backfill_gone_events.py`, dry-run/--apply): 1.823 eventos GONE reconstruidos con
+  observed_at=last_seen (cota inferior defendible; provenance = reconstruido, documentado aquí + en el script + commit;
+  NO maquillaje — los coches SÍ están gone). Idempotente. **Aplicado**: 1.823 commiteados, **gone_without_GONE_event=0**.
+- **Verificado**: 109 tests delta/reconcile/gone/emit verdes; imports de conectores OK; P4-A vivo = 0.
+- **Residual menor (no defecto)**: las 650 reapariciones no re-emiten evento de re-listado (status correcto, servido
+  correcto) — mejora de "historial completo" de 2º orden (necesitaría event_type RELISTED nuevo); documentada, no bloquea.
+- **Estado: 3 sellos de coherencia hoy** (servable_vehicle 0045 + servable_entity 3f7b456 + P4 delta-gone). Invariante
+  0031 real en ambas superficies + ledger de bajas completo. GitHub #35. Campaña sigue hasta pasada limpia.
