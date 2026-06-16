@@ -1296,6 +1296,10 @@
     erróneo irreversible); guarda `len>=4` (live: la/a/las→None, reales OK). discover `RETURNING entity_ulid`
     atómico (mata carrera que abortaba el resto del run). source_ref COALESCE.
   - `ed9d57d` **Q3**: complete G4 INNER→`LEFT JOIN+COALESCE` (live: entity 0→278; **184 entities** des-corruptas).
-- **PENDIENTES (contexto fresco):** P2+Q9+Q10 (silent-failure harvest_dealer/scale_as24), Q4+R2+R3 (recipe yaml.dump
-  +validación+clobber), Q8 (sanitize en delta), Q7 (in_db acumulativo), R4 (observabilidad). Q2 juicio (tracked).
-- **Sesión acumulada: 16 hallazgos reales fijados (núcleo 9 + pipeline 7), todos con test, todos en `main`.**
+- **PENDIENTES (contexto fresco):** Q4+R2+R3 (recipe yaml.dump+validación+clobber), Q8 (sanitize en delta),
+  Q7 (in_db acumulativo). Q2 juicio (tracked).
+- **2ª tanda pipeline (silent-failure + observabilidad):** `b902276` **P2+Q9** harvest_dealer alerta dealer-específica
+  en cada fallo (fire_alert NO record_run — corregí la granularidad del agente; inesperado→alerta+RE-RAISE; 3 tests);
+  `84309ee` **Q10** autoscout24 loguea truncación de discovery; `c8a1c2f` **R4** discover traza per-entity de skipped.
+- **Sesión acumulada: 19 hallazgos reales fijados (núcleo 9 + pipeline 10), todos con test/verif, todos en `main`,
+  CI verde.** Restan 4 careful (recipe yaml, sanitize+COALESCE, in_db) con diseño preciso en el triage.

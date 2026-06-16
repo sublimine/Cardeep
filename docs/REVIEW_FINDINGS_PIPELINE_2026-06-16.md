@@ -45,9 +45,19 @@ con evidencia de DB viva). Cada uno se verifica a mano antes de tocar.
   `RETURNING entity_ulid` atómico (mata la carrera) + source_ref COALESCE.
 - `ed9d57d` **Q3** (complete): G4 `LEFT JOIN + COALESCE` (live: entity 0→278; 184 entities des-corruptas).
 
-**PENDIENTES (contexto fresco — necesitan trabajo cuidadoso):** P2+Q9+Q10 (cluster silent-failure
-harvest_dealer/scale_as24/autoscout24 — wiring try/except + record_run) → Q4+R2+R3 (recipe: migrar a
-`yaml.dump` + validación de schema + guard anti-clobber) → Q8 (sanitize en emit_change_deltas — mi
-código, defensivo, cuidado con tests de junk) → Q7 (discover in_db acumulativo → scope `seen_at>=run_start`)
-→ R4 (discover skipped: log estructurado). Q2 = juicio (keep-old defendible), tracked.
+**FIJADOS (2ª tanda, 3 commits):**
+- `b902276` **P2+Q9** (harvest_dealer): alerta dealer-específica (`fire_alert`, NO record_run source-level —
+  corregí al agente) en cada fallo (scrape exc / no-dealer / ingest-error); inesperado → alerta + RE-RAISE. 3 tests.
+- `84309ee` **Q10** (autoscout24): `collect_dealer_slugs` loguea la truncación en vez de `break` silencioso.
+- `c8a1c2f` **R4** (discover): traza per-entity de skipped-no-province.
+
+**PENDIENTES (contexto fresco — necesitan trabajo cuidadoso):**
+- **Q8** (sanitize en delta) — diseño preciso: sanitize_price/km EN diff_vehicle (eventos) + EN up_price/up_km
+  (emit_change_deltas) **+ COALESCE en `_BULK_REFRESH`** (`price=COALESCE(u.price,v.price)`) para NO NULL-ear
+  un precio válido cuando junk→None coincide con otro cambio. Toca SQL compartido de 26 conectores → cuidado.
+  Defensivo (no hay junk hoy). La verificación reveló que sin el COALESCE el fix introduce un wipe-regression.
+- **Q7** (discover in_db acumulativo) → capturar run_start + `WHERE source_key=$1 AND seen_at>=$run_start`.
+- **Q4+R2+R3** (recipe) → migrar `_yaml_dump`→`yaml.dump` + validación de schema (REQUIRED keys) + guard
+  anti-clobber (comparar contenido/source antes de sobrescribir). Decisión de dependencia (PyYAML ya instalado).
+- Q2 = juicio (keep-old defendible ante junk), tracked como no-bug.
 Cada uno: verificar a mano → fix → test → commit.
