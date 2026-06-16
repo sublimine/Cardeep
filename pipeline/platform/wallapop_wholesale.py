@@ -1424,6 +1424,18 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
                 conn, WP_SOURCE_KEY, run_error or "harvest failed",
                 phase="scrape", http_status=last_http)
         return stats
+    except Exception as exc:  # noqa: BLE001 — any setup/fatal error must be RECORDED, not silent.
+        # Without this, an exception BEFORE the record_run above (GeoResolver.load,
+        # ensure_platform_entity, a setup query) skipped record_run entirely → the source went
+        # monitoring-dark: no harvest_run, breaker never trips, no alert (green-review CRIT, the
+        # exact "138-dealer scar was invisible" anatomy the resilience module exists to prevent).
+        try:
+            await record_run(conn, WP_SOURCE_KEY, ok=False, rows=0,
+                             error=f"harvest fatal: {type(exc).__name__}: {exc}")
+            await auto_repair(conn, WP_SOURCE_KEY, str(exc), phase="scrape")
+        except Exception:  # noqa: BLE001 — recording the failure must never mask the original error
+            pass
+        raise
     finally:
         await conn.close()
 

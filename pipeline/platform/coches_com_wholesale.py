@@ -1813,7 +1813,11 @@ async def harvest_renting(limit: int = DEFAULT_LIMIT, drain_all: bool = False,
                              http_status=last_http)
             return {"skipped": True, "reason": "renting_discovery_failed", "error": fetch_error,
                     "segment": SEGMENT_RENTING, "platform_code": platform_code}
-        stats["declared_full"] = declared
+        # declared_full = the PAGINABLE ceiling (Σ per-make totals, the VAM/coverage denominator),
+        # NOT the headline totalOffers (~8.9k counts each model across dealers/configs and is not the
+        # capturable set). Headline kept separately for the report (green-review connector HIGH).
+        stats["declared_full"] = sum_totals
+        stats["renting_headline_facet"] = declared
         stats["renting_paginable_total"] = sum_totals
         stats["makes_discovered"] = len(partitions)
         target = "ALL offer cards" if drain_all else f"{cage_limit} offers (proof cap)"
@@ -1940,8 +1944,15 @@ async def _finalize_platform_segment(conn, stats, platform_ulid, platform_code, 
     stats["dealers_distinct"] = 0  # platform-owned: no per-car dealer on these surfaces
     run_ok = (fetch_error is None and stats["cars_caged"] > 0 and verdict != "REFUTED")
     run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+    # Forward declared_total/captured_distinct/platform_ulid so the B9 coverage gate FIRES for the
+    # segments routed through here (VN, renting) — the VO/km0 path already passes them, so without
+    # this VN/renting were coverage-blind (green-review CRIT). stats['declared_full'] is set by the
+    # caller (harvest_vn / harvest_renting) before delegating here.
     outcome = await record_run(conn, COCHES_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
-                               error=run_error, http_status=last_http)
+                               error=run_error, http_status=last_http,
+                               declared_total=stats.get("declared_full"),
+                               captured_distinct=stats.get("cars_caged"),
+                               platform_ulid=platform_ulid)
     stats["health_status"] = outcome.status
     stats["breaker_state"] = outcome.breaker_state
     if not run_ok:
