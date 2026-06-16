@@ -273,31 +273,25 @@ def diff_vehicle(
     """
     events: list[dict[str, Any]] = []
 
-    # -- PRICE_CHANGE --
+    # -- PRICE_CHANGE -- (includes the NULL→valid promotion: a vehicle first listed without a
+    # price that later gets one must FILL, not stay NULL forever. The old asymmetric guard
+    # `old_price is not None` silently dropped that transition across all 26 wholesale connectors.)
     old_price = old.get("price") if isinstance(old, dict) else getattr(old, "price", None)
     new_price = getattr(new, "price", None)
-    if (
-        old_price is not None
-        and new_price is not None
-        and float(old_price) != float(new_price)
-    ):
+    if new_price is not None and (old_price is None or float(old_price) != float(new_price)):
         events.append({
             "event_type": "PRICE_CHANGE",
-            "old_value": {"price": float(old_price)},
+            "old_value": {"price": float(old_price) if old_price is not None else None},
             "new_value": {"price": float(new_price)},
         })
 
-    # -- KM_CHANGE --
+    # -- KM_CHANGE -- (same NULL→valid promotion: km first absent then published must fill)
     old_km = old.get("km") if isinstance(old, dict) else getattr(old, "km", None)
     new_km = getattr(new, "km", None)
-    if (
-        old_km is not None
-        and new_km is not None
-        and int(old_km) != int(new_km)
-    ):
+    if new_km is not None and (old_km is None or int(old_km) != int(new_km)):
         events.append({
             "event_type": "KM_CHANGE",
-            "old_value": {"km": int(old_km)},
+            "old_value": {"km": int(old_km) if old_km is not None else None},
             "new_value": {"km": int(new_km)},
         })
 

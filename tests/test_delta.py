@@ -73,12 +73,16 @@ class TestDiffVehicle:
         events = diff_vehicle(old, new)
         assert not any(e["event_type"] == "PRICE_CHANGE" for e in events)
 
-    def test_price_none_old_no_event(self) -> None:
-        """If old price is None, no PRICE_CHANGE can be detected."""
+    def test_price_null_old_promotes_to_value(self) -> None:
+        """NULL→valid promotion: a vehicle first listed without a price that later gets one must
+        FILL (emit PRICE_CHANGE old=None→new), not stay NULL forever (green-review CRITICAL)."""
         old = {"price": None, "km": None, "photo_url": None}
         new = FakeVehicle(price=8_000.0)
         events = diff_vehicle(old, new)
-        assert not any(e["event_type"] == "PRICE_CHANGE" for e in events)
+        pc = [e for e in events if e["event_type"] == "PRICE_CHANGE"]
+        assert len(pc) == 1
+        assert pc[0]["old_value"] == {"price": None}
+        assert pc[0]["new_value"] == {"price": 8_000.0}
 
     def test_price_none_new_no_event(self) -> None:
         """If new price is None, no PRICE_CHANGE emitted."""
@@ -112,11 +116,15 @@ class TestDiffVehicle:
         events = diff_vehicle(old, new)
         assert not any(e["event_type"] == "KM_CHANGE" for e in events)
 
-    def test_km_none_old_no_event(self) -> None:
+    def test_km_null_old_promotes_to_value(self) -> None:
+        """NULL→valid km promotion fills (emit KM_CHANGE old=None→new), not a silent drop."""
         old = {"price": None, "km": None, "photo_url": None}
         new = FakeVehicle(km=50_000)
         events = diff_vehicle(old, new)
-        assert not any(e["event_type"] == "KM_CHANGE" for e in events)
+        kc = [e for e in events if e["event_type"] == "KM_CHANGE"]
+        assert len(kc) == 1
+        assert kc[0]["old_value"] == {"km": None}
+        assert kc[0]["new_value"] == {"km": 50_000}
 
     # ---- PHOTO_CHANGE ----
 

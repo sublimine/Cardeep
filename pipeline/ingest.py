@@ -102,22 +102,39 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
         else:
             vulid = row["vehicle_ulid"]
             changed = False
-            if price_clean is not None and row["price"] is not None and float(price_clean) != float(row["price"]):
-                await conn.execute("UPDATE vehicle SET price=$1 WHERE vehicle_ulid=$2", price_clean, vulid)
-                await _event(conn, vulid, eulid, "PRICE_CHANGE", {"price": float(row["price"])}, {"price": price_clean})
+            set_cols = {}   # columns to fold into ONE merged UPDATE (no per-field dead tuples)
+            # Price: fill on NULL→valid promotion AND on value change. The old guard
+            # `row["price"] is not None` silently dropped the NULL→valid fill (12k+ vehicles
+            # stuck NULL despite the scraper carrying a price).
+            if price_clean is not None and (row["price"] is None or float(price_clean) != float(row["price"])):
+                set_cols["price"] = price_clean
+                await _event(conn, vulid, eulid, "PRICE_CHANGE",
+                             {"price": float(row["price"]) if row["price"] is not None else None},
+                             {"price": price_clean})
                 counts["price_change"] += 1; changed = True
-            if km_clean is not None and row["km"] is not None and int(km_clean) != int(row["km"]):
-                await conn.execute("UPDATE vehicle SET km=$1 WHERE vehicle_ulid=$2", km_clean, vulid)
+            if km_clean is not None and (row["km"] is None or int(km_clean) != int(row["km"])):
+                set_cols["km"] = km_clean
                 await _event(conn, vulid, eulid, "KM_CHANGE", {"km": row["km"]}, {"km": km_clean})
                 counts["km_change"] += 1; changed = True
             if v.photo_url and v.photo_url != row["photo_url"]:
-                await conn.execute("UPDATE vehicle SET photo_url=$1 WHERE vehicle_ulid=$2", v.photo_url, vulid)
+                set_cols["photo_url"] = v.photo_url
                 await _event(conn, vulid, eulid, "PHOTO_CHANGE", {"photo": row["photo_url"]}, {"photo": v.photo_url})
                 counts["photo_change"] += 1; changed = True
             if row["status"] != "available":
-                await conn.execute("UPDATE vehicle SET status='available' WHERE vehicle_ulid=$1", vulid)
+                set_cols["status"] = "available"
                 changed = True
-            await conn.execute("UPDATE vehicle SET last_seen=now() WHERE vehicle_ulid=$1", vulid)
+            # ONE merged UPDATE (changed columns + last_seen) → exactly one tuple version per row,
+            # instead of a separate UPDATE per field plus an unconditional last_seen UPDATE (which
+            # produced up to 3 instantly-dead tuples per changed vehicle per run). Column names are
+            # a fixed internal set (never user input); values are parameterized.
+            if set_cols:
+                cols = list(set_cols.keys())
+                assignments = ", ".join(f"{c}=${i + 1}" for i, c in enumerate(cols))
+                await conn.execute(
+                    f"UPDATE vehicle SET {assignments}, last_seen=now() WHERE vehicle_ulid=${len(cols) + 1}",
+                    *[set_cols[c] for c in cols], vulid)
+            else:
+                await conn.execute("UPDATE vehicle SET last_seen=now() WHERE vehicle_ulid=$1", vulid)
             counts["unchanged"] += int(not changed)
 
     # GONE: available rows in DB not in this harvest — guarded by B2.3 delta_guard.
