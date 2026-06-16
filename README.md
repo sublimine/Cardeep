@@ -17,7 +17,7 @@ De máquina limpia a sistema corriendo en 8 pasos verificados — ver
 ```bash
 docker compose up -d cardeep-pg          # 1. DB (postgres:16 en :5433)
 python -m venv .venv && pip install -r requirements.txt   # 2. deps
-cp .env.example .env                     # 3. config
+cp .env.example .env                     # 3. config (opcional — local corre con defaults)
 python scripts/migrate.py up             # 4. esquema (→0040)
 python -m pytest -q                      # 5. smoke test
 uvicorn services.api.main:app --port 8090            # 6. API

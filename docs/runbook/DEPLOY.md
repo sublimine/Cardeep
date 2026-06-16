@@ -63,14 +63,19 @@ scheduler durable (jobstore en PG). Sin él, el motor de cadencia no arranca.
 
 ## 4. Configuración
 
+**Local funciona sin configurar nada**: cada variable tiene un default en código que ya
+apunta al `cardeep-pg` de Compose. El fichero `.env.example` es **referencia** y **NO se
+auto-carga** (el código lee `os.environ` con defaults — modelo 12-factor). Para sobrescribir
+en un deploy real, **exporta** las variables al entorno (dos DSN: async para API/pipeline,
+sync para el scheduler):
+
 ```bash
-cp .env.example .env
+export CARDEEP_DSN=postgres://USER:PASS@HOST:5433/cardeep                  # asyncpg (API + pipeline)
+export CARDEEP_DB_URL=postgresql+psycopg2://USER:PASS@HOST:5433/cardeep    # psycopg2 (scheduler jobstore)
 ```
 
-El default de `.env.example` ya apunta al `cardeep-pg` de Compose
-(`postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`). Para un deploy real,
-sobrescribe `CARDEEP_DB_PASSWORD` antes del paso 2 y ajusta el DSN. La capa de pago
-(`DECODO_PROXY`, `CAPSOLVER_KEY`) se deja vacía hasta autorización.
+Si cambias la contraseña, hazlo en el paso 2 (`CARDEEP_DB_PASSWORD`) y en **ambas** DSN. La
+capa de pago (`DECODO_PROXY`, `CAPSOLVER_KEY`) se deja vacía hasta autorización del owner.
 
 ## 5. Migraciones — construir el esquema
 
