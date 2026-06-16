@@ -1496,3 +1496,13 @@
   regenera sello, memory-heavy gated), reds (Ceuta/Melilla/Overture/OEM/D1-hardware = spend/harvest).
 - **Sesión: ~18 defectos/coherencias €0 sellados/manejados** en 4 pasadas adversariales + 12 invariantes. El €0-served está
   hecho + verificado + endurecido; el valor sustancial restante = decisión de gasto del owner (la precondición A-Z, cumplida).
+
+### 2026-06-16 (cont.) — D9-root: sanitize_price al parse en los 3 bulk producers proven (ac3995e)
+- **Root-fix (anti-atajo):** los bulk connectors saltaban sanitize_price → vehicle.price (y platform_price acoplado) podían
+  llevar junk <=0/>5M en TABLA. 0047 protege el servido; esto limpia el ORIGEN. Cableado sanitize_price al parse en
+  **wallapop + coches_net + milanuncios** (los 3 que el audit probó productores: factor-10 + jokes >5M + <=0). 1-línea+import
+  c/u; función unit-tested (20 tests verde); 3 import OK.
+- **Follow-on documentado (mismo patrón 1-línea, low-value — servido protegido por 0047 + gestionador):** coches_com/motor_es/
+  autocasion/OEM-family. GitHub #35.
+- **Estado: €0-código de alto valor casi completo.** Restante: D9-remaining (connectors low-value same-pattern), D7-re-cluster
+  (gated 0,02% memory-heavy), reds (spend). ~19 coherencias €0 la sesión. El valor sustancial = decisión de gasto del owner.
