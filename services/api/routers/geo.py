@@ -175,16 +175,26 @@ async def entities_by_province(
 
     offset = (page - 1) * size
     async with request.app.state.pool.acquire() as c:
+        # AUDIT 2026-06-16 fix (F-A): collapse alias entities to their VAM-resolved canonical so the
+        # list shows ONE row per real dealer (was serving raw servable_entity rows → "11Eleven x3",
+        # "QUADIS Autolica x520"). cdp_code returned is the canonical; the dealer page resolves the
+        # full cluster. See docs/DATA_INTEGRITY_AUDIT_2026-06-16.md.
         rows = await c.fetch(
             """
-            SELECT cdp_code, kind, trade_name, legal_name, municipality_code,
-                   is_tier1, status
-              FROM servable_entity
-             WHERE province_code = $1
-               AND status = 'active'
-               AND kind <> 'particular'
-             ORDER BY trade_name, cdp_code
-             LIMIT $2 OFFSET $3
+            SELECT * FROM (
+                SELECT DISTINCT ON (vdr.resolved_cdp_code)
+                       vdr.resolved_cdp_code AS cdp_code,
+                       se.kind, se.trade_name, se.legal_name, se.municipality_code,
+                       se.is_tier1, se.status
+                  FROM servable_entity se
+                  JOIN v_dealer_resolved vdr ON vdr.entity_ulid = se.entity_ulid
+                 WHERE se.province_code = $1
+                   AND se.status = 'active'
+                   AND se.kind <> 'particular'
+                 ORDER BY vdr.resolved_cdp_code, se.trade_name NULLS LAST, se.cdp_code
+            ) q
+            ORDER BY q.trade_name NULLS LAST, q.cdp_code
+            LIMIT $2 OFFSET $3
             """,
             province_code,
             size,
