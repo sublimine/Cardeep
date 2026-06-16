@@ -286,6 +286,26 @@ def _can_merge_new_cars(va: dict, vb: dict) -> bool:
     return str(vin_a).strip().upper() == str(vin_b).strip().upper()
 
 
+# Catalogue-photo cross-generation span guard (audit pass-4 D7).
+PHOTO_YEAR_SPAN_MAX = 2        # model-years; a shared photo across >2 years is catalogue, not one car
+PHOTO_KM_SPAN_MAX = 50_000     # km; a shared photo across >50k km is catalogue, not one car
+
+
+def _photo_pair_spans_generations(va: dict, vb: dict) -> bool:
+    """True if two listings sharing a photo_url are too far apart in year/km to be the SAME physical
+    car — the photo is a catalogue/stock/CDN image reused across generations (audit pass-4 D7: a
+    sub-threshold photo, <K listings, shared by a 2008 Citroen C4 and a 2024 C4). A genuine
+    cross-platform duplicate has the SAME year and km, so span=0 and this never blocks it (monotonic:
+    only removes false photo edges, never a legit one)."""
+    ya, yb = va.get("year"), vb.get("year")
+    if ya is not None and yb is not None and abs(int(ya) - int(yb)) > PHOTO_YEAR_SPAN_MAX:
+        return True
+    ka, kb = va.get("km"), vb.get("km")
+    if ka is not None and kb is not None and abs(int(ka) - int(kb)) > PHOTO_KM_SPAN_MAX:
+        return True
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Edge generation
 # ---------------------------------------------------------------------------
@@ -345,6 +365,12 @@ def _build_edges(
                 if _is_new_car(va) or _is_new_car(vb):
                     if not _can_merge_new_cars(va, vb):
                         continue
+                # Catalogue-photo cross-generation guard (audit pass-4 D7): a sub-threshold shared
+                # photo whose two listings differ by >2 model-years or >50k km is a catalogue image,
+                # not the same physical car. A real duplicate has the same year+km, so this only
+                # removes false edges (78 cross-gen clusters / ~399 listings), never a legit merge.
+                if _photo_pair_spans_generations(va, vb):
+                    continue
                 a, b = va_u, vb_u
                 photo_edges.add((a, b) if a < b else (b, a))
     log.info("  Signal A pairs: %d", len(photo_edges))
