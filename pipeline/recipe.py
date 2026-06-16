@@ -6,9 +6,13 @@ the field map, and the version. Stored as YAML under countries/ES/.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parent.parent
+log = logging.getLogger(__name__)
 
 AS24_RECIPE = {
     "version": 1,
@@ -33,30 +37,47 @@ AS24_RECIPE = {
 }
 
 
-def _yaml_dump(obj, indent=0) -> str:
-    pad = "  " * indent
-    lines = []
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            if isinstance(v, (dict, list)):
-                lines.append(f"{pad}{k}:")
-                lines.append(_yaml_dump(v, indent + 1))
-            else:
-                lines.append(f"{pad}{k}: {v}")
-    elif isinstance(obj, list):
-        for v in obj:
-            lines.append(f"{pad}- {v}")
-    else:
-        lines.append(f"{pad}{obj}")
-    return "\n".join(lines)
+def write_recipe(cdp_code: str, recipe: dict | None = None) -> Path:
+    """Persist recipe.yaml for a dealer under countries/ES/recipes/<cdp_code>.yaml.
 
+    Serialized with the YAML library (NOT a hand-rolled dumper): the old _yaml_dump emitted bare
+    `key: value` with no quoting, so any value containing ': ' (e.g. a facet enumeration like
+    'FACET partition (depth-cap fix): seller_type') produced UNPARSEABLE YAML — silently corrupting
+    the dealer's only durable recipe asset, which then no loader (complete/evict/reshape) could read
+    back (green-review Q4). yaml.dump escapes correctly.
 
-def write_recipe(cdp_code: str, recipe: dict = None) -> Path:
-    """Persist recipe.yaml for a dealer under countries/ES/recipes/<cdp_code>.yaml."""
+    R2: the serialized YAML is round-tripped back here so a serialization defect fails at WRITE time,
+    not silently at read time. R3: overwriting an existing recipe with a semantically DIFFERENT one
+    is logged (the coches.net _tier1 last-writer-wins clobber was previously silent).
+    """
     recipe = recipe or AS24_RECIPE
+    if not isinstance(recipe, dict) or not recipe:
+        raise ValueError(
+            f"write_recipe({cdp_code}): recipe must be a non-empty dict, got {type(recipe).__name__}")
+
     out_dir = ROOT / "countries" / "ES" / "recipes"
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{cdp_code}.yaml"
     header = f"# Cardeep extraction recipe — {cdp_code}\n# Reusable; re-scrape without raw crude.\n"
-    path.write_text(header + _yaml_dump(recipe) + "\n", encoding="utf-8")
+    body = yaml.dump(recipe, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+    # R2 — round-trip self-check: the YAML we are about to persist MUST parse back to the recipe.
+    if yaml.safe_load(body) != recipe:
+        raise ValueError(
+            f"write_recipe({cdp_code}): recipe did not round-trip through YAML — refusing to write a "
+            f"file no loader could read back")
+
+    # R3 — clobber visibility: a different module writing the SAME cdp_code with a DIFFERENT recipe
+    # used to silently last-writer-win. Compare semantically (format-agnostic) and log the clobber.
+    if path.exists():
+        try:
+            old_recipe = yaml.safe_load(path.read_text(encoding="utf-8"))  # ignores the # header
+        except Exception:
+            old_recipe = None  # old file unparseable (the very bug being fixed) — just overwrite
+        if old_recipe is not None and old_recipe != recipe:
+            log.warning(
+                "write_recipe: %s.yaml already holds a DIFFERENT recipe — overwriting (possible "
+                "clobber: two modules writing the same cdp_code)", cdp_code)
+
+    path.write_text(header + body, encoding="utf-8")
     return path
