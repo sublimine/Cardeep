@@ -350,6 +350,11 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
         for page in range(1, max_pages + 1):
             url = _lst_url(page)
             try:
+                # Clear last_status first: a network-layer failure (timeout/DNS/TLS — no HTTP response)
+                # leaves last_status at the prior page's 200, and a stale 200 makes classify_failure
+                # mis-handle a real ban as 'unknown/escalate' instead of re-fingerprint/quarantine
+                # (green-review connectors MED). A clean slate → last_http=None when no response arrived.
+                engine.last_status = None
                 html = await governed_fetch(url)   # paced by the host bucket, off the event loop
             except Exception as e:  # noqa: BLE001 — throttle/transient: back off, report what we got
                 fetch_error = str(e)
