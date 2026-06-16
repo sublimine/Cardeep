@@ -1245,3 +1245,21 @@
   snapshot). Catcha toda regresión de import/dep/migración/colección. **Verde-honesto, no verde-maquillado.**
 - **Total deps que la verificación añadió esta sesión (0 por suposición): apscheduler[sqlalchemy], psycopg2-binary,
   pytest, pytest-asyncio, numpy, httpx, curl_cffi.** El bring-up es ahora reproducible Y verificado en CI.
+
+### 2026-06-16 (cont.) — GREEN-REVIEW del núcleo €0: 21 hallazgos verificados a mano, CRITICAL real fijado (`f0deb74`,`a8944b4`)
+- Caza-bugs adversarial (workflow `wymb8ywor`, 6 revisores especialistas database-reviewer/silent-failure-hunter
+  sobre delta/health/verify/scheduler/evict/inquisition): **5 CRITICAL, 9 HIGH, 6 MEDIUM, 1 LOW**. Triage completo
+  verificado contra código+DB vivos en `docs/REVIEW_FINDINGS_2026-06-16.md` (LEER al retomar).
+- **"No confiamos en ningún resultado" valió durísimo: 2 de 5 CRITICAL eran FALSOS POSITIVOS.** Falacia central
+  del agente: "UPDATE de fila mutada = churn MVCC" — FALSO (un UPDATE de fila genuinamente mutada = 1 tupla, sin
+  importar columnas; la regla prohíbe UPDATE de filas NO mutadas / no-op). #1 delta y #4 verify.tolerance
+  desmentidos (CheckViolation inalcanzable: `drift_ok` exige `top_n>=2` → `quorum_n>=2` siempre). H5/H6 idem.
+- **CRITICAL REAL fijado+probado** (`f0deb74`): evict #2 (`DELETE FROM vehicle`→cascade a `vehicle_event` inmutable
+  →abort para cualquier dealer con eventos) + #3 (archivos borrados pre-txn→pérdida silenciosa). Fix: **tombstone
+  a 'gone'** (preserva historial inmutable, sin cascade) + split medir/borrar (borrar solo post-commit) + fold del
+  OSError-log. **Test de regresión** (dealer CON evento evicta limpio, evento sobrevive). 25/25 evict verde.
+- **2 MEDIUM reales fijados** (`a8944b4`): M1 breaker no-op churn (guarda WHERE en ON CONFLICT, **probado a nivel
+  tupla**: INSERT 0 0) + M2 `opened_at` clobber (COALESCE preserva el primer-trip). 85/85 health verde.
+- **10 reales PENDIENTES tracked** (orden de continuación en el doc): H1+H3 reconcile_gone (guarda status + txn
+  envolvente) → H7+M5 subprocess silent-failure → H9 prosecute conn-error → H2+M4 carreras (advisory lock) →
+  #5 Lens-D denominator (latente, zona A2 diferida). Próximo tick: contexto fresco, fix+test uno por uno.
