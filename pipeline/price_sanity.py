@@ -18,9 +18,19 @@ coherence audit):
     dynamic (current year + 1) so it never goes stale.
 
 The car/row STAYS servable; only the impossible field reads as unknown instead of distorting every
-km/age/price distribution. DELIBERATELY NOT handled (Law I — under-correct over mis-correct): mid-range
-model-implausible price junk (a 2005 Peugeot 407 at €2M beside a legit €2.2M hypercar) and low-side
-deposit placeholders — those need the model-aware price_trap detector, not a flat threshold.
+km/age/price distribution. DELIBERATELY NOT handled here (Law I — under-correct over mis-correct), and
+a flat threshold CANNOT handle it: model-implausible price junk in the legit-hypercar band — a
+mass-market make at €2-4M (Renault Kadjar @ €3,333,333, Ford @ €3.8M, verified served 2026-06-16)
+sitting beside a genuine €3.6M Bugatti Chiron. A flat ceiling that nulls one nulls the other.
+  KNOWN GAP (audit 2026-06-16): this HIGH model-implausible band is currently caught by NEITHER gate —
+  the flat ceiling (€5M) is above it, and the `price_trap` detector targets the LOW band (~€49-999
+  monthly-payment-as-price), not the high band. ~30 served rows (0.002%); tracked, not hacked.
+  The fix needs care: a NAIVE "price > 10×median(make+model)" detector was tested read-only and
+  over-caught 601 rows with catastrophic false positives — it flagged a real €3.65M Ferrari LaFerrari
+  (its median is €200 because LOW-junk listings poison it), a real €55k BMW M3 (median €200), etc. So
+  the robust detector must NOT trust a raw median: filter the low-junk first (or use a high percentile /
+  MAD on a cleaned distribution) before flagging high outliers. A hasty version nulls real hypercars —
+  worse than the 0.002% it fixes. Deferred to a focused, carefully-calibrated unit (Law I).
 """
 from __future__ import annotations
 
