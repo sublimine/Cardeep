@@ -198,6 +198,10 @@ class TestReconcileGoneMocked:
         entity_ulid: str = "ent_111",
     ) -> AsyncMock:
         conn = AsyncMock()
+        # reconcile_gone wraps its retire-sweep in `async with conn.transaction()` (H3 atomicity).
+        # asyncpg's conn.transaction() is a SYNC call returning an async context manager, so mock it
+        # as a MagicMock returning an AsyncMock (AsyncMock supports __aenter__/__aexit__).
+        conn.transaction = MagicMock(return_value=AsyncMock())
 
         # fetchval: first call = available_count SELECT, subsequent = entity_ulid lookups
         fetchval_results = [available_count] + [entity_ulid] * 100

@@ -192,3 +192,45 @@ def test_first_run_no_prior_last_ok_skips_gone():
                                captured_distinct=50)
         assert out is not None
     _run(body)
+
+
+_SRC_IDEM = "test-reconcile-idem"
+
+
+@SKIP
+def test_reconcile_gone_idempotent_no_duplicate_event():
+    # H1 regression (green-review): re-running the sweep must never emit a 2nd GONE event for an
+    # already-retired vehicle. The status='available' guard on _MARK_GONE + the affected-rowcount
+    # skip make the sweep idempotent even if a candidate flips to gone underneath the
+    # (FOR-UPDATE-less) fetch. Also exercises the H3 transaction wrap (no error on a real retire).
+    from datetime import datetime, timezone
+
+    from pipeline.ids import ulid
+
+    eulid = ulid()
+    vulid = ulid()
+
+    async def body(c):
+        await c.execute(
+            "INSERT INTO entity (entity_ulid, cdp_code, kind, status, province_code) "
+            "VALUES ($1,$2,'compraventa','active','28')", eulid, "CDP-ES-28-TIDEMP01")
+        await c.execute(
+            "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,'t')",
+            eulid, _SRC_IDEM)
+        await c.execute(
+            "INSERT INTO vehicle (vehicle_ulid, entity_ulid, deep_link, status, last_seen, price) "
+            "VALUES ($1,$2,'http://t/idem','available', now() - interval '10 days', 1000)",
+            vulid, eulid)
+        now = datetime.now(timezone.utc)
+        # First sweep retires the stale vehicle and emits exactly one GONE event.
+        n1, _ = await reconcile_gone(c, _SRC_IDEM, now)   # min_coverage None → gate skipped
+        assert n1 == 1
+        # Re-run (same boundary): the vehicle is already gone → 0 retired, NO second event.
+        n2, _ = await reconcile_gone(c, _SRC_IDEM, now)
+        assert n2 == 0
+        assert (await c.fetchval(
+            "SELECT status FROM vehicle WHERE vehicle_ulid=$1", vulid)) == "gone"
+        gone_events = await c.fetchval(
+            "SELECT count(*) FROM vehicle_event WHERE vehicle_ulid=$1 AND event_type='GONE'", vulid)
+        assert gone_events == 1, f"duplicate GONE event emitted: {gone_events}"
+    _run(body)

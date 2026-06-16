@@ -86,6 +86,7 @@ UPDATE vehicle
    SET status    = 'gone',
        last_seen = now()
  WHERE vehicle_ulid = $1
+   AND status = 'available'
 """
 
 _INSERT_GONE_EVENT = """
@@ -198,31 +199,42 @@ async def reconcile_gone(
         logger.warning(reason)
         return 0, reason
 
+    # The whole sweep is ONE transaction (H3): either all not-re-seen vehicles are retired or
+    # none are — a crash mid-loop must not leave a half-retired inventory (vehicle table and
+    # vehicle_event inconsistent). reconcile_gone runs after record_run's own transaction, so
+    # this opens a fresh transaction (a savepoint when a caller already holds one).
     gone_count = 0
-    for row in rows:
-        vulid: str = row["vehicle_ulid"]
-        price = row["price"]
+    async with conn.transaction():
+        for row in rows:
+            vulid: str = row["vehicle_ulid"]
+            price = row["price"]
 
-        # Resolve entity_ulid for the event row.
-        entity_ulid: str | None = await conn.fetchval(_GET_ENTITY_ULID, vulid)
-        if entity_ulid is None:
-            # Orphan vehicle (no entity) — skip, log, do not mark gone.
-            logger.warning(
-                "reconcile_gone: vehicle_ulid=%s has no entity_ulid; skipping", vulid
+            # Resolve entity_ulid for the event row.
+            entity_ulid: str | None = await conn.fetchval(_GET_ENTITY_ULID, vulid)
+            if entity_ulid is None:
+                # Orphan vehicle (no entity) — skip, log, do not mark gone.
+                logger.warning(
+                    "reconcile_gone: vehicle_ulid=%s has no entity_ulid; skipping", vulid
+                )
+                continue
+
+            # Mark gone, GUARDED on status='available' (H1): _FIND_STALE takes no FOR UPDATE,
+            # so a concurrent retire (another connector, a re-run) can flip this row between
+            # the fetch and here. The guard makes the UPDATE affect 0 rows when it is already
+            # gone; we then skip the GONE event so the immutable timeline never gets a
+            # duplicate GONE (vehicle_event has no UNIQUE on vehicle_ulid+event_type).
+            mark_tag = await conn.execute(_MARK_GONE, vulid)
+            if mark_tag == "UPDATE 0":
+                continue  # already gone (race / re-run) — no duplicate event
+
+            # Emit GONE event with old_value snapshot matching ingest.py convention:
+            # old_value = {"price": <float|null>}, new_value = null.
+            old_value: dict[str, Any] = {"price": float(price) if price is not None else None}
+            await conn.execute(
+                _INSERT_GONE_EVENT,
+                ulid(), vulid, entity_ulid, json.dumps(old_value),
             )
-            continue
-
-        # Mark gone (status change only — no other mutation).
-        await conn.execute(_MARK_GONE, vulid)
-
-        # Emit GONE event with old_value snapshot matching ingest.py convention:
-        # old_value = {"price": <float|null>}, new_value = null.
-        old_value: dict[str, Any] = {"price": float(price) if price is not None else None}
-        await conn.execute(
-            _INSERT_GONE_EVENT,
-            ulid(), vulid, entity_ulid, json.dumps(old_value),
-        )
-        gone_count += 1
+            gone_count += 1
 
     reason = (
         f"reconcile_gone: source_key={source_key!r} — "
