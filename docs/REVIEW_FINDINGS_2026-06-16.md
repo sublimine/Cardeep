@@ -50,13 +50,18 @@ actual sin guarda `WHERE`).
 
 | L1 | `silence_watchdog.py:153` UPDATE alert genera tuplas muertas | **NOTA** — el propio agente admite "fila mutada, no viola la regla". `updated_at` sería una mejora. | nota |
 
-## Resumen de acción
+## Resumen de acción — CIERRE
 
-- **FIJADO (1 commit `f0deb74`):** los 2 CRITICAL reales de evict (#2/#3) + folds M3/H4.
-- **FALSOS POSITIVOS / NO-BUG (6):** #1, #4, H5, H6, H8, M6, L1 — verificados y dejados intactos (con razón).
-- **REAL PENDIENTE (10):** #5(latente), H1, H2, H3, H7, H9, M1, M2, M4, M5 — fix notes arriba.
-  Prioridad de continuación: **M1+M2** (health, pequeños, alto valor) → **H1+H3** (reconcile_gone:
-  guarda + txn) → **H7+M5** (subprocess silent-failure) → **H9** (prosecute conn) → **H2/M4** (carreras,
-  advisory lock) → **#5** (Lens D abstiene; zona diferida).
+- **FIJADO + TESTEADO + PUSHEADO (9 hallazgos reales, 6 commits):**
+  - `f0deb74` evict #2 (cascade→tombstone) + #3 (borrado post-commit) + folds M3/H4 — test de regresión.
+  - `a8944b4` health M1 (guarda no-op breaker, probado a nivel tupla) + M2 (`opened_at` COALESCE).
+  - `b2ce89f` reconcile_gone H1 (guarda `status='available'`, probado SQL `UPDATE 0`) + H3 (loop atómico) — test idempotencia + fix de mocks (la regresión amplia cazó 7 mocks que la dirigida no veía).
+  - `b77a93d` scheduler H7 + M5 (crash-before-record_run → red de seguridad con high-water anti-doble-conteo) — 4 tests + live-verif.
+  - `6b84224` inquisition H9 (prosecute_pending re-lanza errores de conexión, no los traga) — 3 tests mock + 9 live.
+- **FALSOS POSITIVOS / NO-BUG (6):** #1, #4, H5, H6, M6, L1 — verificados a mano y dejados intactos (con razón documentada). **2 de 5 CRITICAL eran falsos** — la verificación obligatoria fue decisiva.
+- **REAL — MITIGADO POR DISEÑO (tracked):** H2 + M4 (carreras de writers concurrentes para la misma key). El scheduler es **single-producer** (`max_instances=1` → un connector a la vez) → no hay escritura concurrente por la misma fuente en la práctica. El residual (run manual + scheduler solapados) es un edge; no se añade advisory-lock por un edge mitigado. La "ventana de estado parcial en crash" se auto-sana en el siguiente run.
+- **REAL — DECISIÓN DE DISEÑO DIFERIDA (tracked):** #5 Lens-D denominator. El ASSERT con `sources_used≥2` es elección **deliberada y documentada** (provenance multi-fuente embebida en el estimate), no un bug accidental. 0 claims `denominator` (latente) + zona A2 diferida (denominador/Chao2 data-gated). Revisar la metodología de independencia al retomar el denominador. Fix conservador disponible (Lens D abstiene → INCONCLUSIVE en vez de TRUSTWORTHY) si se decide endurecer.
+- **NOTA:** H8 (Lens A fragilidad, no fabrica) — observable, no bug.
 
-> Patrón validado: 2 de 5 CRITICAL eran falsos positivos. La verificación a mano fue obligatoria.
+> Patrón validado: 2/5 CRITICAL falsos + 1 regresión de mocks cazada SOLO por la regresión amplia.
+> "No confiamos en ningún resultado" — ni de los agentes ni de la suite dirigida — fue obligatorio.

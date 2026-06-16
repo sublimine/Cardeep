@@ -1262,4 +1262,23 @@
   tupla**: INSERT 0 0) + M2 `opened_at` clobber (COALESCE preserva el primer-trip). 85/85 health verde.
 - **10 reales PENDIENTES tracked** (orden de continuación en el doc): H1+H3 reconcile_gone (guarda status + txn
   envolvente) → H7+M5 subprocess silent-failure → H9 prosecute conn-error → H2+M4 carreras (advisory lock) →
-  #5 Lens-D denominator (latente, zona A2 diferida). Próximo tick: contexto fresco, fix+test uno por uno.
+  #5 Lens-D denominator (latente, zona A2 diferida).
+
+### 2026-06-16 (cont.) — GREEN-REVIEW CERRADO: 9 reales fijados+testeados, resto resuelto/diferido con causa
+- Continuación sin parar (mandato "prohibidísimo parar"). Los 10 pendientes, resueltos uno por uno con su test:
+  - `b2ce89f` **reconcile_gone H1+H3**: guarda `status='available'` en `_MARK_GONE` (probado SQL: `UPDATE 0` sobre
+    fila ya gone → sin evento GONE duplicado) + loop de retiro en una sola txn (atómico). Test de idempotencia.
+    **La regresión amplia cazó 7 mocks** (`conn.transaction()` no mockeado) que la suite dirigida no veía → fix de
+    mocks. Lección: la dirigida sola es insuficiente; correr la amplia antes de commitear fue obligatorio.
+  - `b77a93d` **scheduler H7+M5**: red de seguridad para crash-before-record_run (connector SIGKILL/launch-error/
+    muere antes de su record_run → salud nunca actualizada, breaker no salta, watchdog tarda 2× intervalo). El
+    scheduler registra el fallo él mismo, con guarda anti-doble-conteo via high-water de `harvest_run.id`. 4 tests
+    + live-verif. Cierra la promesa "si uno falla, salta alerta con origen exacto".
+  - `6b84224` **inquisition H9**: `prosecute_pending` re-lanza errores de conexión (`InterfaceError`/
+    `PostgresConnectionError`) en vez de tragarlos y seguir con conn muerta. 3 tests mock + 9 live.
+- **Resueltos sin fix (con causa):** H2+M4 (carreras) **mitigadas por diseño single-producer** (`max_instances=1`);
+  #5 Lens-D denominator = **decisión de diseño deliberada** (provenance `sources_used≥2`), latente (0 claims), zona
+  A2 diferida → revisar con metodología al retomar denominador. 6 falsos positivos verificados e intactos.
+- **Balance green-review: 9 reales fijados (6 commits, todos con test), 6 falsos positivos, 5 resueltos/diferidos
+  con causa.** 2/5 CRITICAL eran falsos — la verificación a mano de cada hallazgo (no confiar en los agentes) fue
+  lo que separó señal de ruido. Triage completo: `docs/REVIEW_FINDINGS_2026-06-16.md`.
