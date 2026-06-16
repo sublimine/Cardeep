@@ -87,6 +87,7 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -456,6 +457,7 @@ def parse_pdp_vehicle(html: str, card: CardRef) -> Vehicle:
             price = None
     if price is None:
         price = card.card_price
+    price = sanitize_price(price)  # D9: <=0/>5M junk -> None at source (table + platform_price clean)
 
     # JSON-LD productionDate/dateVehicleFirstRegistered is not consistently present; the
     # card's nombre-section <li>year</li> is the live source, but year is non-essential to

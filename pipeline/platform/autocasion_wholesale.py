@@ -62,6 +62,7 @@ from curl_cffi import requests as cffi_requests
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -233,6 +234,7 @@ def parse_ad(ad: dict, pdp_url: str) -> Vehicle:
             price = float(amount)
         except (TypeError, ValueError):
             price = None
+    price = sanitize_price(price)  # D9: <=0/>5M junk -> None at source (table + platform_price clean)
 
     year = _to_int(ad.get("year"))
     if year is not None and not (1900 <= year <= 2100):

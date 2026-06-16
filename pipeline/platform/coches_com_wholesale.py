@@ -67,6 +67,7 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.util.encoding import force_utf8_stdout
@@ -365,6 +366,7 @@ def parse_card_vehicle(card: dict, segment: str = SEGMENT_VO) -> Vehicle:
         price = float(amount) if amount is not None else None
     except (TypeError, ValueError):
         price = None
+    price = sanitize_price(price)  # D9: <=0/>5M junk -> None at source (table + platform_price clean)
 
     # priceOffer (the "precio contado"/financed offer) is the lower headline. When it is
     # below the list price, record it as a price-drop signal (the coches.com analogue of
