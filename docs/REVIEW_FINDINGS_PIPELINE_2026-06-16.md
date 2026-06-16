@@ -51,13 +51,14 @@ con evidencia de DB viva). Cada uno se verifica a mano antes de tocar.
 - `84309ee` **Q10** (autoscout24): `collect_dealer_slugs` loguea la truncación en vez de `break` silencioso.
 - `c8a1c2f` **R4** (discover): traza per-entity de skipped-no-province.
 
-**PENDIENTES (contexto fresco — necesitan trabajo cuidadoso):**
-- **Q8** (sanitize en delta) — diseño preciso: sanitize_price/km EN diff_vehicle (eventos) + EN up_price/up_km
-  (emit_change_deltas) **+ COALESCE en `_BULK_REFRESH`** (`price=COALESCE(u.price,v.price)`) para NO NULL-ear
-  un precio válido cuando junk→None coincide con otro cambio. Toca SQL compartido de 26 conectores → cuidado.
-  Defensivo (no hay junk hoy). La verificación reveló que sin el COALESCE el fix introduce un wipe-regression.
-- **Q7** (discover in_db acumulativo) → capturar run_start + `WHERE source_key=$1 AND seen_at>=$run_start`.
-- **Q4+R2+R3** (recipe) → migrar `_yaml_dump`→`yaml.dump` + validación de schema (REQUIRED keys) + guard
-  anti-clobber (comparar contenido/source antes de sobrescribir). Decisión de dependencia (PyYAML ya instalado).
-- Q2 = juicio (keep-old defendible ante junk), tracked como no-bug.
-Cada uno: verificar a mano → fix → test → commit.
+**FIJADOS (3ª tanda — review pipeline COMPLETO):**
+- `ab0cf3d` **Q4+R2+R3** (recipe): `_yaml_dump`→`yaml.dump` (Q4: reprod. live ScannerError→round-trip OK) +
+  validación non-empty-dict + round-trip self-check (R2) + log de clobber semántico (R3). 4 tests + 31 reshape.
+- `2755aad` **Q7** (discover): in_db scopeado a `seen_at>=run_start` (live: oem_skoda all-time=196 vs this-run=0).
+- **Q8** (delta): sanitize_price/km en diff_vehicle + up_price/km **+ COALESCE en `_BULK_REFRESH`** — junk (0/neg/
+  >10M)→None→sin evento (no sobrescribe válido); COALESCE evita NULL-ear un campo válido cuando otro cambia
+  (live: photo intacto + price=9999). Cazó un wipe latente además del gap de sanitización. Test de junk + COALESCE live.
+
+**PIPELINE REVIEW CERRADO:** los 19 hallazgos resueltos — **15 reales fijados** (P1, P2, Q1, Q3, Q4, Q5, Q6, Q7,
+Q8, Q9, Q10, R1, R2, R3, R4), Q2 = juicio/no-bug (keep-old defendible ante junk). Cada uno verificado a mano
+(incluso corregí la granularidad del fix del agente en P2/Q9) + test + live + commit + CI verde.

@@ -65,6 +65,7 @@ from typing import Any
 import asyncpg
 
 from pipeline.ids import ulid
+from pipeline.price_sanity import sanitize_km, sanitize_price
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +278,7 @@ def diff_vehicle(
     # price that later gets one must FILL, not stay NULL forever. The old asymmetric guard
     # `old_price is not None` silently dropped that transition across all 26 wholesale connectors.)
     old_price = old.get("price") if isinstance(old, dict) else getattr(old, "price", None)
-    new_price = getattr(new, "price", None)
+    new_price = sanitize_price(getattr(new, "price", None))  # junk (<=0 / >10M) -> None -> no event
     if new_price is not None and (old_price is None or float(old_price) != float(new_price)):
         events.append({
             "event_type": "PRICE_CHANGE",
@@ -287,7 +288,7 @@ def diff_vehicle(
 
     # -- KM_CHANGE -- (same NULL→valid promotion: km first absent then published must fill)
     old_km = old.get("km") if isinstance(old, dict) else getattr(old, "km", None)
-    new_km = getattr(new, "km", None)
+    new_km = sanitize_km(getattr(new, "km", None))  # junk -> None -> no event
     if new_km is not None and (old_km is None or int(old_km) != int(new_km)):
         events.append({
             "event_type": "KM_CHANGE",
@@ -324,7 +325,9 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, u.event_type,
 """
 
 _BULK_REFRESH_VEHICLES = """
-UPDATE vehicle v SET price = u.price, km = u.km, photo_url = u.photo_url
+UPDATE vehicle v SET price = COALESCE(u.price, v.price),
+                     km = COALESCE(u.km, v.km),
+                     photo_url = COALESCE(u.photo_url, v.photo_url)
   FROM unnest($1::text[], $2::numeric[], $3::bigint[], $4::text[])
        AS u(vehicle_ulid, price, km, photo_url)
  WHERE v.vehicle_ulid = u.vehicle_ulid
@@ -382,8 +385,8 @@ async def emit_change_deltas(
             ev_new.append(json.dumps(ev["new_value"]))
             counts[ev["event_type"]] = counts.get(ev["event_type"], 0) + 1
         up_v.append(vid)
-        up_price.append(new_obj.price)
-        up_km.append(new_obj.km)
+        up_price.append(sanitize_price(new_obj.price))   # junk -> None -> COALESCE keeps old (no junk write)
+        up_km.append(sanitize_km(new_obj.km))
         up_photo.append(new_obj.photo_url)
     if ev_ulids:
         await conn.execute(_BULK_INSERT_DELTA_EVENTS, ev_ulids, ev_v, ev_e, ev_t, ev_old, ev_new)

@@ -91,6 +91,14 @@ class TestDiffVehicle:
         events = diff_vehicle(old, new)
         assert not any(e["event_type"] == "PRICE_CHANGE" for e in events)
 
+    def test_junk_price_sanitized_no_event(self) -> None:
+        """Junk price (0, negative, >€10M) is sanitized to None → no PRICE_CHANGE, so a junk
+        scrape never overwrites a valid stored price via the delta path (green-review Q8)."""
+        old = {"price": 10_000.0, "km": 50_000, "photo_url": None}
+        for junk in (0, -100, 99_000_000):
+            events = diff_vehicle(old, FakeVehicle(price=junk))
+            assert not any(e["event_type"] == "PRICE_CHANGE" for e in events), f"junk {junk} emitted event"
+
     def test_price_float_precision_no_false_positive(self) -> None:
         """Identical floats expressed differently must not trigger a change."""
         old = {"price": 12_500.0, "km": None, "photo_url": None}
