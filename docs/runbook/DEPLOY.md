@@ -91,11 +91,13 @@ nueva es **0040** (`servable_price_floor`).
 ## 6. Smoke test — probar que todo respira
 
 ```bash
-python -m pytest -q                  # la suite (live, rolled-back contra cardeep-pg)
+pip install -r requirements-dev.txt  # pytest + pytest-asyncio + numpy (SOLO para tests)
+python -m pytest -q                   # la suite (live, rolled-back contra cardeep-pg)
 ```
 
-Los tests que tocan DB hacen SKIP automático si `cardeep-pg` no es alcanzable, así que
-una suite verde confirma que la conexión, el esquema y la lógica están vivos.
+Las deps de test viven aparte (`requirements-dev.txt`) de las de runtime — no se instalan
+en producción. Los tests que tocan DB hacen SKIP automático si `cardeep-pg` no es alcanzable,
+así que una suite verde confirma que la conexión, el esquema y la lógica están vivos.
 
 ## 7. Servir la API
 

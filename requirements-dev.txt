@@ -1,0 +1,8 @@
+# Cardeep test/dev dependencies — needed only to RUN the test suite (CI + local `pytest`).
+# Runtime deps live in requirements.txt. Versions pinned to the combo proven green locally
+# (pytest 9.0.2 / pytest-asyncio 1.4.0 / numpy 2.4.4). Install with:
+#   pip install -r requirements-dev.txt
+pytest>=9,<10
+pytest-asyncio>=1.4,<2     # a few suites use async fixtures (@pytest_asyncio.fixture)
+numpy>=2,<3                # vector / geo math in tests/test_evict.py, tests/test_geo_reverse.py
+httpx>=0.27,<0.29          # starlette.testclient (FastAPI TestClient) needs httpx — API tests only

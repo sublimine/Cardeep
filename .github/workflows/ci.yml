@@ -51,10 +51,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install dependencies (runtime + test)
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Import smoke — the 4 bring-up entrypoints
         run: python -c "import scripts.migrate, services.api.main, pipeline.ops.scheduler, pipeline.ops.silence_watchdog; print('IMPORTS OK')"

@@ -15,8 +15,11 @@ psycopg2-binary>=2.9,<3            # sync PG driver. REQUIRED on the durable-sch
 slowapi>=0.1.9          # FastAPI/Starlette rate-limiter (wraps limits library)
 cachetools>=5.3,<6      # TTLCache: bounded in-memory TTL cache, RAM-safe
 
-# Scraping arsenal (F3+; install as fronts come online)
+# Scraping arsenal. curl_cffi is ACTIVE: it is a module-level import in live connectors
+# (dasweltauto / mercedes_benz / milanuncios wholesale), so importing those connectors —
+# or collecting their tests — requires it. The browser stack stays optional until those
+# heavier fronts come online.
+curl_cffi>=0.15,<0.16   # TLS-fingerprint HTTP client; required to import the live connectors
 # scrapling>=0.4.9
 # camoufox[geoip]
-# curl_cffi>=0.15.1
 # browserforge
