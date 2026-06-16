@@ -1,7 +1,11 @@
+import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useStats } from '../api/hooks';
 import type { Stats } from '../api/types';
 import './Landing.css';
+
+// Three.js map is lazy-loaded so it stays out of the initial bundle.
+const SpainMap = lazy(() => import('../three/SpainMap'));
 
 // Verified live counts as of 2026-06-16 (services/api/routers/ops.py /stats).
 // Used as graceful fallback so the hero never renders empty if the API is offline.
@@ -73,11 +77,14 @@ export function Landing() {
             </div>
           </div>
 
-          <div className="hero__stage" aria-hidden="true">
+          <div className="hero__stage">
             <div className="hero__map-backdrop">
-              <div className="hero__grid" />
-              <div className="hero__sweep" />
-              <div className="hero__glow" />
+              <div className="hero__grid" aria-hidden="true" />
+              <div className="hero__sweep" aria-hidden="true" />
+              <div className="hero__glow" aria-hidden="true" />
+              <Suspense fallback={null}>
+                <SpainMap />
+              </Suspense>
             </div>
           </div>
         </div>

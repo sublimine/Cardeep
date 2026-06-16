@@ -80,10 +80,19 @@ Verificación en cada fase (no confiamos en ningún resultado).
 - **P1 · Síntesis de diseño — ✅ HECHO.** `01-DESIGN.md` + implementado en `styles/tokens.css` +
   `styles/global.css` (dark command-center, cian de firma, tipografía Clash Display/Inter/JetBrains
   Mono cargada en `index.html`). Shell renderable: `components/Layout.tsx` + `routes/Landing.tsx`.
-- **P2 · Héroe 3D — ▶ SIGUIENTE.** Pendiente: (1) sortear GeoJSON/TopoJSON de provincias ES →
-  `public/geo/` (hoy vacío); (2) `03-3D-SPEC.md`; (3) escena R3F del mapa de España extruido por
-  cobertura (`/geo/seal`), drill-down, dealers. Lazy-load del bundle 3D.
-- P3–P6 — pendientes (ver fases arriba).
+- **P2 · Héroe 3D — ✅ HECHO y verificado.** Mapa 3D de España (R3F) extruido por cobertura de
+  venta y coloreado por veredicto; las 52 provincias INE + Canarias (inset vía geoConicConformalSpain).
+  Datos: `public/geo/es-provinces.topo.json` (es-atlas, id=código INE) + `public/geo/seal-snapshot.json`
+  (generado de `v_province_seal`); live `/geo/seal` con fallback al snapshot. Hover→HUD, clic→drill
+  `/explore?prov=NN`, autorotate (respeta reduced-motion), órbita/zoom. Lazy-load (chunk ~249 KB gzip,
+  fuera del bundle inicial ~102 KB). El `03-3D-SPEC` se encodó como código auto-documentado
+  (`three/`, `lib/geo.ts`) en vez de un doc aparte.
+  **Verificación:** bug Earcut (vértice de cierre duplicado) cazado y arreglado en raíz; las 52
+  provincias extruyen (0 fallos); render comprobado desktop 1440 + móvil 390; HUD de Toledo
+  (290/458, 63%, PARCIAL) cruzado exacto contra `v_province_seal`; orientación norte-arriba confirmada.
+- **P3 · Marketplace — ▶ SIGUIENTE.** `/explore` (hoy stub) consumirá `?prov=NN`: buscar/filtrar +
+  grid de resultados (facetas adaptadas de competidores).
+- P4–P6 — pendientes (ver fases arriba).
 
 **Dev local:** `npm --prefix web run dev` → `http://localhost:5173`. El cwd del shell PowerShell es
 `…\cardeep\web`. La API (para datos en vivo) se levanta aparte con uvicorn contra `cardeep-pg`.
