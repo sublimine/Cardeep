@@ -155,3 +155,36 @@ class TestServableEntity:
         assert before == 1, "dealer should be servable before quarantine"
         assert after == 0, "quarantined dealer must vanish from servable_entity"
         assert restored == 1, "rollback must restore the dealer (live data untouched)"
+
+    def test_evicted_or_closed_dealer_excluded_mechanically(self) -> None:
+        """Migration 0046: a tombstoned (status='evicted') dealer vanishes from servable_entity —
+        the entity companion to 0045's gone-vehicle exclusion. Rolled back (live data untouched)."""
+        async def _go() -> tuple[int, int, int]:
+            import asyncpg
+            conn = await asyncpg.connect(DSN)
+            try:
+                eulid = await conn.fetchval(
+                    "SELECT entity_ulid FROM servable_entity WHERE status='active' LIMIT 1")
+                assert eulid is not None
+                tr = conn.transaction()
+                await tr.start()
+                try:
+                    before = await conn.fetchval(
+                        "SELECT count(*) FROM servable_entity WHERE entity_ulid=$1", eulid)
+                    await conn.execute(
+                        "UPDATE entity SET status='evicted', evicted_at=now() WHERE entity_ulid=$1",
+                        eulid)
+                    after = await conn.fetchval(
+                        "SELECT count(*) FROM servable_entity WHERE entity_ulid=$1", eulid)
+                finally:
+                    await tr.rollback()
+                restored = await conn.fetchval(
+                    "SELECT count(*) FROM servable_entity WHERE entity_ulid=$1", eulid)
+                return before, after, restored
+            finally:
+                await conn.close()
+
+        before, after, restored = asyncio.run(_go())
+        assert before == 1, "active dealer should be servable"
+        assert after == 0, "evicted dealer must vanish from servable_entity"
+        assert restored == 1, "rollback must restore the dealer"

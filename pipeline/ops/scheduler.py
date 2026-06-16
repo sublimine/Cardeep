@@ -30,7 +30,7 @@ import logging
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
 
 import psycopg2
@@ -810,7 +810,7 @@ def _start_scheduler() -> None:
     # aggregate request rate. It fails fast if another scheduler holds it and auto-releases when
     # this connection closes at process exit. _lock_conn is intentionally kept open for the
     # process lifetime — do not close it.
-    _SCHEDULER_SINGLETON_LOCK = 0x43415244  # ASCII 'CARD' = 1128415556 — fixed host-singleton key
+    _SCHEDULER_SINGLETON_LOCK = 0x43415244  # ASCII 'CARD' = 1128354372 — fixed host-singleton key
     _lock_conn = psycopg2.connect(_RAW_DSN)
     _lock_conn.autocommit = True
     _cur = _lock_conn.cursor()
@@ -880,6 +880,10 @@ def _start_scheduler() -> None:
         inquisition_prosecute_job,
         trigger="interval",
         hours=INQUISITION_PROSECUTE_CADENCE_HOURS,
+        # Audit pass-4 D6: enforce the +30min stagger the comment above promised but never set.
+        # cadence (no start_date) first-fires at now+CADENCE_HOURS; prosecute first-fires 30min later
+        # and, both being 6h intervals, trails it every cycle (cadence queues -> prosecute drains).
+        start_date=datetime.now(timezone.utc) + timedelta(hours=INQUISITION_CADENCE_HOURS, minutes=30),
         id="inquisition_prosecute",
         name="cardeep inquisition prosecution (adjudicate pending claims)",
         replace_existing=True,
