@@ -10,10 +10,13 @@ a versioned recipe.yaml pointer next to the dealer.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+
+log = logging.getLogger(__name__)
 
 _BASE = "https://www.autoscout24.es"
 _UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -254,7 +257,12 @@ def collect_dealer_slugs(max_pages: int = 20, sort: str = "age") -> dict[str, di
             req = urllib.request.Request(_lst_url(page, sort), headers={"User-Agent": _UA})
             with urllib.request.urlopen(req, timeout=30) as r:  # noqa: S310
                 html = r.read().decode("utf-8", "replace")
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            # Do NOT truncate discovery silently: a network/HTTP failure on page N must be
+            # observable, else the caller cannot tell "no more pages" from "errored at page N"
+            # and may process only a fraction of the dealer universe (green-review Q10).
+            log.warning("collect_dealer_slugs: page %d failed (%s) — discovery TRUNCATED at "
+                        "%d slug(s) collected", page, exc, len(dealers))
             break
         data = _next_data(html)
         listings = _find_listings(data)
