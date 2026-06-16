@@ -144,6 +144,39 @@ export interface VehicleDetail {
   canonical_vehicle_ulid: string;
 }
 
+// GET /vehicles/{ulid}/history -> VehicleHistoryEvent[] (oldest first)
+export interface VehicleHistoryEvent {
+  event_type: string;
+  old_value: unknown;
+  new_value: unknown;
+  observed_at: string;
+}
+
+// GET /vehicles/{ulid}/platforms -> VehiclePlatforms
+export interface PlatformListing {
+  cdp_code: string;
+  trade_name: string | null;
+  website: string | null;
+  is_tier1: boolean;
+  listing_ref: string | null;
+  listing_url: string | null;
+  platform_price: number | null;
+  status: string;
+  first_seen: string;
+  last_seen: string;
+}
+export interface VehiclePlatforms {
+  vehicle: {
+    vehicle_ulid: string;
+    make: string | null;
+    model: string | null;
+    year: number | null;
+    deep_link: string;
+    owning_dealer: { cdp_code: string; name: string | null; kind: EntityKind | string };
+  };
+  platforms: PlatformListing[];
+}
+
 export interface Paginated<T> {
   items: T[];
   page: number;

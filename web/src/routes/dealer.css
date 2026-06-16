@@ -1,0 +1,149 @@
+.dealer,
+.vehicle {
+  padding-block: var(--space-12);
+  min-height: 72vh;
+}
+
+/* ── Dealer header ──────────────────────────────────────────────────── */
+.dealer__head {
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--space-8);
+}
+.dealer__headrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+.dealer__name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.05;
+}
+.dealer__tier {
+  color: var(--price-fair);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dealer__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.dealer__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-6);
+}
+.dealer__facts dt {
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: var(--space-1);
+}
+.dealer__facts dd {
+  font-size: var(--text-base);
+  color: var(--text-1);
+}
+.dealer__cdp {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+.dealer__link {
+  color: var(--accent);
+  font-weight: 600;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.dealer__link:hover {
+  color: var(--accent-hi);
+}
+
+/* ── Dealer layout ──────────────────────────────────────────────────── */
+.dealer__layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: var(--space-8);
+  align-items: start;
+}
+.dealer__h2 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: var(--space-5);
+}
+.dealer__count {
+  font-size: var(--text-sm);
+  color: var(--accent);
+}
+.dealer__muted {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+.dealer__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+/* ── Timeline (dealer activity + vehicle history) ───────────────────── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  list-style: none;
+}
+.timeline__item {
+  display: flex;
+  gap: var(--space-3);
+}
+.timeline__dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--text-3);
+  flex: none;
+}
+.timeline__dot--new { background: var(--price-good); }
+.timeline__dot--gone { background: var(--price-high); }
+.timeline__dot--price_change { background: var(--price-fair); }
+.timeline__dot--photo_change,
+.timeline__dot--km_change { background: var(--accent); }
+.timeline__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.timeline__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.timeline__detail {
+  font-size: var(--text-xs);
+  color: var(--text-2);
+}
+.timeline__date {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+@media (max-width: 820px) {
+  .dealer__layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-12);
+  }
+}

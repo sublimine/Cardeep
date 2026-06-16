@@ -98,9 +98,18 @@ Verificación en cada fase (no confiamos en ningún resultado).
   **Verificación contra API viva (:8090):** ProvinceGrid con `/geo/seal` real (Salamanca 128% … Ceuta
   4%); Madrid `/geo/28/entities` → 'Sellado · 100% · 3026 dealers servidos / techo 3013' + 60 cards
   reales; 0 errores de consola (CORS OK); build verde.
-- **P4 · Detalle — ▶ SIGUIENTE.** `/dealer/:cdp` (entidad + inventario + delta) y `/vehicle/:ulid`
-  (detalle + historial + plataformas) — las páginas de coches reales.
-- P5–P6 — pendientes (ver fases arriba).
+- **P4 · Detalle — ✅ HECHO y verificado.** `/dealer/:cdp`: cabecera de entidad (nombre, kind, Tier1,
+  ubicación, inventario, alias, contacto si existe) + rejilla de inventario real (`VehicleCard` con
+  foto/precio/specs) paginada + 'Actividad reciente' (delta). `/vehicle/:ulid`: foto, precio, specs,
+  **deep link al anuncio original**, sello disponible/alias, historial (`/history`) y plataformas
+  (`/platforms`, cruce multi-plataforma) + link al dealer. Tipos/cliente/hooks de history+platforms
+  añadidos; `lib/events` compartido.
+  **Verificación contra API viva:** dealer 11Eleven (Madrid) → 3 coches reales con foto (Camaro 29.900€,
+  Maserati 26.900€, Jaguar 11.998€); ficha Camaro → 2011/52.400 km/Gasolina/Manual, deep link a
+  coches.net, plataforma coches.net 29.900€; 0 errores; build verde. Flujo completo
+  mapa→explore→dealer→vehículo→anuncio operativo.
+- **P5 · Acabado — ▶ SIGUIENTE.** motion/responsive 320→1920/reduced-motion/CWV/code-split fino.
+- P6 — pendiente (E2E/a11y/Lighthouse/CI).
 
 **Dev local:** `npm --prefix web run dev` → `http://localhost:5173`. El cliente API apunta por
 defecto a `http://127.0.0.1:8090` (puerto canónico); override con `VITE_API_BASE` en un `web/.env.local`

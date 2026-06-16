@@ -6,23 +6,14 @@ import './styles/global.css';
 import { Layout } from './components/Layout';
 import { Landing } from './routes/Landing';
 import { Explore } from './routes/Explore';
+import { Dealer } from './routes/Dealer';
+import { Vehicle } from './routes/Vehicle';
 
 const qc = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false },
   },
 });
-
-function Stub({ title }: { title: string }) {
-  return (
-    <div className="container" style={{ padding: 'var(--space-16) 0', minHeight: '60vh' }}>
-      <h2 style={{ fontSize: 'var(--text-xl)' }}>{title}</h2>
-      <p style={{ color: 'var(--text-2)', marginTop: 'var(--space-3)' }}>
-        En construccion — siguiente fase del plan de implementacion.
-      </p>
-    </div>
-  );
-}
 
 const router = createBrowserRouter([
   {
@@ -31,8 +22,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Landing /> },
       { path: 'explore', element: <Explore /> },
-      { path: 'dealer/:cdp', element: <Stub title="Dealer" /> },
-      { path: 'vehicle/:ulid', element: <Stub title="Vehiculo" /> },
+      { path: 'dealer/:cdp', element: <Dealer /> },
+      { path: 'vehicle/:ulid', element: <Vehicle /> },
     ],
   },
 ]);

@@ -32,3 +32,17 @@ export const useEntityDelta = (cdp: string | undefined, page = 1, size = 50) =>
 
 export const useVehicle = (ulid: string | undefined) =>
   useQuery({ queryKey: ['vehicle', ulid], queryFn: () => api.vehicle(ulid!), enabled: !!ulid });
+
+export const useVehicleHistory = (ulid: string | undefined, page = 1, size = 50) =>
+  useQuery({
+    queryKey: ['vehicle-history', ulid, page, size],
+    queryFn: () => api.vehicleHistory(ulid!, page, size),
+    enabled: !!ulid,
+  });
+
+export const useVehiclePlatforms = (ulid: string | undefined) =>
+  useQuery({
+    queryKey: ['vehicle-platforms', ulid],
+    queryFn: () => api.vehiclePlatforms(ulid!),
+    enabled: !!ulid,
+  });

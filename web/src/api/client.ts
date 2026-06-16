@@ -12,7 +12,9 @@ import type {
   Paginated,
   Stats,
   VehicleDetail,
+  VehicleHistoryEvent,
   VehicleListItem,
+  VehiclePlatforms,
 } from './types';
 
 // Default = the canonical local API port (uvicorn services.api.main:app --port 8090). Override with
@@ -89,4 +91,7 @@ export const api = {
   entityDelta: (cdp: string, page = 1, size = 50, since?: string) =>
     getPaged<DeltaEvent>(`/entities/${cdp}/delta`, { page, size, since }),
   vehicle: (ulid: string) => getData<VehicleDetail>(`/vehicles/${ulid}`),
+  vehicleHistory: (ulid: string, page = 1, size = 50) =>
+    getPaged<VehicleHistoryEvent>(`/vehicles/${ulid}/history`, { page, size }),
+  vehiclePlatforms: (ulid: string) => getData<VehiclePlatforms>(`/vehicles/${ulid}/platforms`),
 };
