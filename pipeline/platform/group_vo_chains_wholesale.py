@@ -315,6 +315,17 @@ def _op_year(production_date) -> int | None:
     return y if 1900 <= y <= 2100 else None
 
 
+def _ocasionplus_listing_ref(url: str) -> str:
+    """The OcasionPlus deep-link tail after the final '-' is the stable native id (e.g. 'togx7qan').
+    Query string, fragment and trailing '/' are stripped FIRST so the same car never yields two
+    refs (?utm=, #anchor, trailing '/'). Falls back to the cleaned URL when no '-' tail exists.
+    Vehicle identity is keyed on deep_link in ingest, so this never affects delta — it only keeps
+    the STORED native ref stable for future cross-source identity use."""
+    clean = url.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+    tail = clean.rsplit("-", 1)[-1] if "-" in clean else clean
+    return tail or clean
+
+
 def parse_ocasionplus_page(html: str) -> tuple[list[Vehicle], int | None]:
     """Parse an OcasionPlus SRP page -> (vehicles, declared_total). The JSON-LD `ItemList` holds
     20 `Vehicle` items; the `Product`/`AggregateOffer` block declares offerCount (full stock)."""
@@ -339,8 +350,8 @@ def parse_ocasionplus_page(html: str) -> tuple[list[Vehicle], int | None]:
             url = offers.get("url") or el.get("url")
             if not url:
                 continue
-            # the deep-link tail after the last '-' is the native stable listing_ref.
-            listing_ref = url.rsplit("-", 1)[-1] if "-" in url else url
+            # stable native listing_ref, robust to ?query/#fragment/trailing-slash variants.
+            listing_ref = _ocasionplus_listing_ref(url)
             price = offers.get("price")
             try:
                 price = float(price) if price is not None else None

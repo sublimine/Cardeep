@@ -103,3 +103,23 @@ estaban marcadas `REFUTED`**, y `reconcile_gone` (delta.py:162) **SKIPea las baj
 84 tests afectados verde; suite completa verde. El claim del agente sobre wallapop ("651k vs 224k→34%") era
 FALSO: captured 588011 = 90,3%. **Lección: la verificación a-nivel-átomo contra DB viva cazó que el agente
 había caracterizado el bug AL REVÉS — diferir habría dejado vivo un fallo de producto (bajas).**
+
+## RESOLUCIÓN TEMA 2 + listing_ref (06-16) — investigados a átomo, NO son bugs de corrección
+
+**TEMA 2 (breaker-skip sin `record_run`) — NO es bug, declarado con prueba.** `is_open` (health.py:443)
+recupera el breaker por TIEMPO, no por `record_run`: state='open' + cooldown vigente → True (skip); cooldown
+vencido (`now() >= cooldown_until`, fijado al abrir en :233) → mueve a `half_open` + return False (deja pasar
+exactamente una sonda); la sonda cierra (ok) o reabre (fail) vía `record_run`. **El skip-sin-record NO impide
+la recuperación** (es time-driven) **ni la observabilidad** (el estado vive en `source_breaker` + la alerta de
+apertura). Una fila `harvest_run 'skipped'` sería granularidad de dashboard, no corrección. Sin cambio.
+
+**vo_chains OcasionPlus `listing_ref` frágil — cosmético, NO bug, pero CERRADO igual.** La identidad de vehículo
+en ingest (`ingest.py:71,79`) se keya en **`deep_link`** (URL completa), NO en `listing_ref` → un ref frágil no
+causaba churn ni colisión de delta. Aun así, el ref nativo ALMACENADO (que la identidad cross-source/B7 futura
+podría usar) era frágil a `?query`/`#fragment`/trailing-`/`. **Cerrado**: helper `_ocasionplus_listing_ref`
+(limpia query/fragment/slash ANTES del tail; backward-compatible para URLs limpias) + 8 tests
+(`test_vo_chains_listing_ref.py`) que fijan la estabilidad (variantes de un coche → 1 ref). Solo OcasionPlus
+usaba el `rsplit` crudo; Flexicar/Clicars/Carplus ya usan ids nativos.
+
+**Capa de conectores CERRADA:** todos los hallazgos del 3er barrido están resueltos (fijados) o investigados-a-
+átomo-y-declarados-no-bug-con-prueba (TEMA 2, listing_ref). Cero pendientes de "juicio/contexto fresco".
