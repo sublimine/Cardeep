@@ -66,8 +66,14 @@ pero no es bug de corrección. Prioridad media → tracked.
   alimenta coverage para un source_key compartido + el scoping de captured_db — análisis cuidadoso, NO fix apresurado.
   Igual milanuncios partial-run + coches_com VO/km0 db_edges acumulativo: **verificar cada mecanismo a mano** (los del
   agente pueden estar mal) antes de tocar; riesgo real de romper coverage-gating. → contexto fresco.
-- **TEMA 2** breaker-skip sin record_run (autoscout24/vo_chains/milanuncios) → juicio de diseño (skip intencional;
-  ¿escribir fila 'skipped'?). No es bug de corrección claro.
-- **MEDs defensivos:** delta_guard should_emit_gone(declared=0) (rescatado por check downstream), milanuncios
-  bands_capped (warning de under-count), vo_chains ventana concurrente descarta páginas en error + listing_ref frágil.
-- Verdict: todos los fijados eran REALES (evidencia viva); ninguno falso positivo en esta capa.
+- **TEMA 2** breaker-skip sin record_run (autoscout24/vo_chains/milanuncios) → **juicio de diseño** (el skip es
+  degradación intencional, no fallo; el propio agente dudó "arguably ok=True"). No es bug de corrección claro → diferido.
+- **MEDs defensivos FIJADOS:** `f1f1de2` vo_chains ventana concurrente (conserva páginas hermanas en error transitorio,
+  live OcasionPlus 500) · `dc10e13` delta_guard should_emit_gone(declared=0) self-consistente (+3 tests) · `c5ca3aa`
+  milanuncios bands_capped → warning observable.
+- **PENDIENTE genuino (contexto fresco/juicio):** TEMA 3 coverage-scoping (verificado nuancado, mecanismos del agente
+  a re-verificar — riesgo coverage-gating) · vo_chains listing_ref frágil (URL live-verificada → design-risk, no bug
+  activo) · TEMA 2 (juicio diseño).
+- **Verdict de la capa:** de los hallazgos accionables/claros, TODOS fijados (2 CRIT + THEME 1×5 + Flexicar + 5 MED).
+  El agente acertó en casi todos CON evidencia viva — salvo el mecanismo de coches_net TEMA 3 (parcialmente mal,
+  cazado al verificar). La verificación a mano fue, otra vez, lo que separó señal de ruido.
