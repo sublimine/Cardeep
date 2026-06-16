@@ -277,3 +277,14 @@ FROM entity WHERE kind <> 'particular';
 4. **Los 343 dealers con province_code NULL:** Irresolvibles sin señal. No son centinelas pero tampoco se pueden ubicar. Si son dealers reales en España, su province_code se perdió en la ingesta.
 
 5. **Errores sutiles within-province:** El caso más frecuente (muni vecino en misma provincia asignado por centroide) no es detectable sin polígonos. La tasa es desconocida pero la doctrina "better a hole" del GeoResolver con el threshold 30 km la limita considerablemente.
+
+---
+
+## VERIFICACIÓN EJECUTADA 2026-06-16 — el §Deuda "backfill 131" NO es €0-cerrable (resuelve 0)
+
+Corrido `scripts/backfill_municipality_geo.py` (dry-run) contra DB viva + diagnóstico per-dealer de los geocoders. **136 dealers con señal geo escaneados → resueltos+self-verified = 0.** NO es bug (el gate self-verify funciona); los DATOS son inconsistentes:
+
+- **PostcodeIndex carga bien** (8.785 unambiguous + 2.266 ambiguous desde el Nomenclátor INE, 4,3 MB presente). De los 106 con postcode: **9 resuelven** pero su muni cae en provincia ≠ `province_code` → rechazados por el gate; **58 ambiguos** (>1 muni, irresolubles por doctrina); **53 unknown**, incluyendo **postcodes de 4 dígitos malformados** ('3760','3590','3205','1138'…) cuya reconstrucción es ambigua (¿leading-zero '03760'-Alicante o trailing-trunc '37600'-Salamanca?) → no se reconstruyen a ciegas.
+- **MunicipalityGeocoder (KNN 30 km, province-constrained)**: de los 30 con lat/lon, **todos rechazados**. Varios tienen `province_code` flatamente erróneo — coords a **614–707 km** de la provincia declarada (prov 39 Cantabria con coords de Málaga; prov 30 Murcia con coords en Portugal); otros boundary genuinos (nearest centroid 32,5 km, justo sobre el umbral 30).
+
+**Conclusión:** el gate self-verify (`code[:2]==province_code`) **correctamente rehúsa escribir** (better a hole than a lie) porque la señal geo es inconsistente con el `province_code` almacenado. **El §Deuda no se cierra a €0** — requiere CORREGIR datos (province_code y/o postcodes malformados) con validación externa caso-por-caso = DATA-gated (Fase-B), no geocoding. El script `backfill_municipality_geo.py` es correcto (escribe 0 honestamente). El "131 resolvable" del recon era optimista (asumido sin correr); el €0-real ≈ 0. **No se muta nada** (no hay resolución segura que escribir).
