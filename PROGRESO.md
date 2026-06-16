@@ -1459,3 +1459,13 @@
 - **Sesión: ~14 defectos €0 sellados/manejados** (…·D2·D1-quar·D8-sent·D3). Frente €0-LIMPIO casi agotado: queda D7
   (sealed-core re-cluster, gated) + harvest/parser. La verificación 4-pasadas + gate-a-mano ha cazado defectos reales en
   CADA capa + desinflado fixes-erróneos de agentes en D2/D3. Substantivo restante = decisión de gasto del owner.
+
+### 2026-06-16 (cont.) — D7 guard-fix (lógica + test); re-cluster gateado
+- **D7 (lógica SELLADA, 31ee86c):** `_photo_pair_spans_generations` (guard pairwise monótono: bloquea merge-por-foto si
+  year_span>2 OR km_span>50k = foto-catálogo cross-gen; preserva duplicados legítimos year+km idénticos). 5 unit-tests.
+  HONESTO: lógica fija+testeada, NO aplicada — los 78 clusters/~399 listings (0,02%) persisten hasta re-cluster (regenera
+  v_canonical_vehicle SELLADO + memory-heavy ~2GB → op gateada contexto-fresco+VAM, no depth-rush). Residuo declarado.
+- **Frente €0-CÓDIGO casi agotado.** Sesión: ~15 defectos €0 sellados/manejados en 4 pasadas adversariales + 12 invariantes.
+  Restante: D7-re-cluster (heavy gated op, 0,02%), D8-decimal (parser locale milanuncios/coches.net, ~4+), D1-recipe (harvest),
+  + reds (Ceuta/Melilla/Overture/OEM/D1-hardware = spend/harvest-gated). **El valor sustancial ahora requiere tu decisión de
+  gasto** — el €0-config está exhaustivamente verificado + endurecido (precondición de gasto más que cumplida). Próximo €0: D8-decimal.
