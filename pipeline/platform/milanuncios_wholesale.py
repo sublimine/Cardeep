@@ -76,6 +76,7 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -364,7 +365,7 @@ def parse_ad_vehicle(ad: dict, photos_by_id: dict) -> Vehicle:
 
     price_obj = ad.get("price") or {}
     cash = price_obj.get("cash") or {}
-    price = _to_float(cash.get("value"))
+    price = sanitize_price(_to_float(cash.get("value")))  # D9: <=0/>5M junk -> None at source
     prev = _to_float(ad.get("previousPrice"))
 
     year = _to_int(at.get("year"))

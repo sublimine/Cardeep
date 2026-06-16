@@ -79,6 +79,7 @@ from pipeline.geo import GeoResolver
 from pipeline.geocode import ProvinceGeocoder
 from pipeline.identity.make_normalizer import normalize_make
 from pipeline.ids import ulid
+from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -340,7 +341,7 @@ _MONTHLY_PAYMENT_RE = re.compile(r"/\s*mes\b|\bal\s+mes\b", re.IGNORECASE)
 def parse_item_vehicle(item: dict) -> Vehicle:
     """Parse the car from a wallapop search item (REAL field map, recipe §2)."""
     price_obj = item.get("price") or {}
-    price = _to_float(price_obj.get("amount"))
+    price = sanitize_price(_to_float(price_obj.get("amount")))  # D9: <=0/>5M junk -> None at source
 
     ta = item.get("type_attributes") or {}
     year = _to_int(ta.get("year"))
