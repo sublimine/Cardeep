@@ -21,29 +21,35 @@ def client():
 
 
 class TestGeoSeal:
-    def test_seal_endpoint_envelope(self, client):
+    def test_seal_endpoint_envelope_has_both_segments(self, client):
         r = client.get("/geo/seal")
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["ok"] is True
-        d = body["data"]
-        assert d["segment"] == "venta"
-        assert len(d["provinces"]) == 52
+        segs = body["data"]["segments"]
+        assert set(segs) >= {"venta", "desguace"}
+        for seg in ("venta", "desguace"):
+            assert len(segs[seg]["provinces"]) == 52
 
-    def test_distribution_sums_to_52(self, client):
-        d = client.get("/geo/seal").json()["data"]
-        assert sum(d["distribution"].values()) == 52
+    def test_venta_distribution_sums_to_52(self, client):
+        venta = client.get("/geo/seal").json()["data"]["segments"]["venta"]
+        assert sum(venta["distribution"].values()) == 52
 
-    def test_national_coverage_is_canonical_band(self, client):
-        """National coverage must be the canonical ~79%, never the entity-level ~165% over-count."""
-        d = client.get("/geo/seal").json()["data"]
-        cov = d["national"]["coverage_pct"]
-        assert 60 <= cov <= 110, f"national coverage {cov} outside sane canonical band"
+    def test_venta_national_coverage_is_canonical_band(self, client):
+        """VENTA national coverage must be the canonical ~79%, never entity-level ~165% over-count."""
+        cov = client.get("/geo/seal").json()["data"]["segments"]["venta"]["national"]["coverage_pct"]
+        assert 60 <= cov <= 110, f"venta national coverage {cov} outside sane canonical band"
+
+    def test_desguace_all_sellado_discovery(self, client):
+        """DESGUACE discovery seal: found >= DGT census in every province → all SELLADO."""
+        desg = client.get("/geo/seal").json()["data"]["segments"]["desguace"]
+        assert desg["distribution"].get("SELLADO", 0) == 52
 
     def test_every_province_has_valid_verdict_and_consistent_coverage(self, client):
-        d = client.get("/geo/seal").json()["data"]
-        for p in d["provinces"]:
-            assert p["verdict"] in _VALID
-            if p["denominator"]:
-                expected = round(100.0 * p["numerator"] / p["denominator"], 1)
-                assert abs(p["coverage_pct"] - expected) < 0.05
+        segs = client.get("/geo/seal").json()["data"]["segments"]
+        for seg in segs.values():
+            for p in seg["provinces"]:
+                assert p["verdict"] in _VALID
+                if p["denominator"]:
+                    expected = round(100.0 * p["numerator"] / p["denominator"], 1)
+                    assert abs(p["coverage_pct"] - expected) < 0.05

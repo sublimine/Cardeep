@@ -50,22 +50,24 @@ def _rows():
     return asyncio.run(_go())
 
 
+def _by_segment(seg: str):
+    return [r for r in _rows() if r["segment"] == seg]
+
+
 @pytest.mark.skipif(not DB_AVAILABLE, reason="cardeep-pg not reachable at 127.0.0.1:5433")
 class TestProvinceSealView:
-    def test_one_row_per_venta_denominator_province(self) -> None:
-        rows = _rows()
-        assert len(rows) == 52, f"expected 52 provinces, got {len(rows)}"
-        assert all(r["segment"] == "venta" for r in rows)
-        # province codes are unique
-        codes = [r["province_code"] for r in rows]
-        assert len(set(codes)) == 52
+    def test_both_segments_cover_52_provinces(self) -> None:
+        for seg in ("venta", "desguace"):
+            rows = _by_segment(seg)
+            assert len(rows) == 52, f"{seg}: expected 52 provinces, got {len(rows)}"
+            assert len({r["province_code"] for r in rows}) == 52, f"{seg}: province codes not unique"
 
     def test_verdicts_in_fixed_set(self) -> None:
         for r in _rows():
             assert r["verdict"] in _VALID_VERDICTS, f"unexpected verdict {r['verdict']!r}"
 
-    def test_verdict_matches_coverage_thresholds(self) -> None:
-        for r in _rows():
+    def test_venta_verdict_matches_85_50_thresholds(self) -> None:
+        for r in _by_segment("venta"):
             cov = float(r["coverage_pct"]) if r["coverage_pct"] is not None else None
             v = r["verdict"]
             if v == "NO_DENOM":
@@ -76,8 +78,21 @@ class TestProvinceSealView:
                 assert cov >= 85, f"{r['province_code']}: SELLADO but cov={cov}"
             elif v == "PARCIAL":
                 assert 50 <= cov < 85, f"{r['province_code']}: PARCIAL but cov={cov}"
-            else:  # GAP
+            else:
                 assert cov < 50, f"{r['province_code']}: GAP but cov={cov}"
+
+    def test_desguace_is_discovery_seal_at_100(self) -> None:
+        """DESGUACE is a discovery seal: SELLADO iff found >= census (coverage >= 100)."""
+        for r in _by_segment("desguace"):
+            v = r["verdict"]
+            if v == "NO_DENOM":
+                assert not r["denominator"]
+                continue
+            cov = float(r["coverage_pct"])
+            if v == "SELLADO":
+                assert cov >= 100, f"{r['province_code']}: desguace SELLADO but cov={cov}"
+            else:
+                assert cov < 100, f"{r['province_code']}: desguace {v} but cov={cov}"
 
     def test_coverage_pct_is_num_over_den(self) -> None:
         for r in _rows():
@@ -86,18 +101,23 @@ class TestProvinceSealView:
                 continue
             expected = round(100.0 * r["numerator"] / den, 1)
             assert abs(float(r["coverage_pct"]) - expected) < 0.05, (
-                f"{r['province_code']}: coverage_pct {r['coverage_pct']} != {expected}")
+                f"{r['segment']}/{r['province_code']}: coverage_pct {r['coverage_pct']} != {expected}")
 
     def test_numerator_nonneg_denominator_positive(self) -> None:
         for r in _rows():
             assert r["numerator"] >= 0
             assert r["denominator"] is None or r["denominator"] > 0
 
-    def test_canonical_numerator_not_overcounting(self) -> None:
-        """National served coverage must be the CANONICAL ~79%, not the entity-level ~165%
+    def test_venta_canonical_numerator_not_overcounting(self) -> None:
+        """VENTA national coverage must be the CANONICAL ~79%, not the entity-level ~165%
         over-count (regression guard for the dedup-in-numerator bug)."""
-        rows = _rows()
+        rows = _by_segment("venta")
         num = sum(r["numerator"] for r in rows)
         den = sum(r["denominator"] for r in rows if r["denominator"])
         nat = 100.0 * num / den
-        assert 60 <= nat <= 110, f"national coverage {nat:.1f}% outside sane canonical band"
+        assert 60 <= nat <= 110, f"venta national coverage {nat:.1f}% outside sane canonical band"
+
+    def test_desguace_found_at_least_census(self) -> None:
+        """Every province must have found >= the DGT census (discovery complete nationally)."""
+        rows = _by_segment("desguace")
+        assert sum(r["numerator"] for r in rows) >= sum(r["denominator"] for r in rows if r["denominator"])

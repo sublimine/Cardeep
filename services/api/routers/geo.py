@@ -95,41 +95,52 @@ async def geo_seal(
     request: Request,
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Per-province VENTA seal (SU-SEAL): served CANONICAL dealers vs the DIRCE CNAE-451 registral
-    ceiling. verdict = SELLADO (>=85%) / PARCIAL (50-85%) / GAP (<50%). Backed by the live view
-    v_province_seal (migration 0042) so it always reflects the current harvest. Cached + EXPENSIVE
-    (GROUP BY over entities + dedup join; stable between harvests)."""
+    """Per-province SU-SEAL, by segment. VENTA = served CANONICAL dealers vs the DIRCE CNAE-451
+    registral ceiling (SELLADO >=85% / PARCIAL 50-85% / GAP <50%). DESGUACE = discovery coverage:
+    scrapyards found vs the DGT official census (SELLADO when found >= census). Backed by the live
+    view v_province_seal (migrations 0042+0043) so it always reflects the current harvest. Cached +
+    EXPENSIVE (GROUP BY over entities + dedup join; stable between harvests)."""
     cached = try_cache_get(request)
     if cached is not None:
         return cached
 
+    _METHODS = {
+        "venta": "served_canonical / DIRCE-451 registral_ceiling (SELLADO>=85%)",
+        "desguace": "found / DGT census (discovery; SELLADO when found>=census)",
+    }
     async with request.app.state.pool.acquire() as c:
         rows = await c.fetch(
             "SELECT province_code, segment, denominator, numerator, coverage_pct, verdict "
-            "FROM v_province_seal ORDER BY province_code")
-        provinces = [{
+            "FROM v_province_seal ORDER BY segment, province_code")
+
+    segments: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        seg = segments.setdefault(r["segment"], {
+            "method": _METHODS.get(r["segment"], ""),
+            "national": {"numerator": 0, "denominator": 0},
+            "distribution": {},
+            "provinces": [],
+        })
+        den = int(r["denominator"]) if r["denominator"] is not None else None
+        num = int(r["numerator"])
+        seg["provinces"].append({
             "province_code": r["province_code"],
-            "segment": r["segment"],
-            "denominator": int(r["denominator"]) if r["denominator"] is not None else None,
-            "numerator": int(r["numerator"]),
+            "denominator": den,
+            "numerator": num,
             "coverage_pct": float(r["coverage_pct"]) if r["coverage_pct"] is not None else None,
             "verdict": r["verdict"],
-        } for r in rows]
-        num = sum(p["numerator"] for p in provinces)
-        den = sum(p["denominator"] for p in provinces if p["denominator"])
-        dist: dict[str, int] = {}
-        for p in provinces:
-            dist[p["verdict"]] = dist.get(p["verdict"], 0) + 1
-        response = ok({
-            "segment": "venta",
-            "method": "served_canonical / DIRCE-451 registral_ceiling (migration 0042 v_province_seal)",
-            "national": {
-                "numerator": num, "denominator": den,
-                "coverage_pct": round(100 * num / den, 1) if den else 0,
-            },
-            "distribution": dist,
-            "provinces": provinces,
         })
+        seg["national"]["numerator"] += num
+        if den:
+            seg["national"]["denominator"] += den
+        seg["distribution"][r["verdict"]] = seg["distribution"].get(r["verdict"], 0) + 1
+
+    for seg in segments.values():
+        nat = seg["national"]
+        nat["coverage_pct"] = round(100 * nat["numerator"] / nat["denominator"], 1) \
+            if nat["denominator"] else 0
+
+    response = ok({"segments": segments})
     return cache_set(request, response)
 
 
