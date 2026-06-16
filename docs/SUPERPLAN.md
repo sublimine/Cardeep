@@ -13,6 +13,12 @@
 > ortogonales + testeada + commiteada a `main`**. NO se pasa a la siguiente SU sin sellar la
 > anterior. Cada número se confirma por una vía distinta a la que lo produjo. Yo (Opus) soy el
 > GATE de Inquisición; los constructores son Sonnet; Fable 5 sin acceso.
+>
+> **Clasificación viva en GitHub** (proyección filtrable de este §4):
+> [Issues](https://github.com/sublimine/Cardeep/issues) — 1 issue por SU, etiquetada por
+> letra/estado/gate/área y agrupada en 4 milestones (Fase 0 · €0-Config-A-Z · Fase-de-gasto ·
+> Terminal). Cerrado = sellado, abierto = restante (todo spend/data/hardware-gated). Se
+> regenera idempotente con `python scripts/github_classify.py` (fuente de verdad = este doc).
 
 ---
 
