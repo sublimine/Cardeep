@@ -80,3 +80,26 @@ jobs:
 
       - name: Pytest collect (no import / collection errors)
         run: python -m pytest --collect-only -q
+
+  frontend-build:
+    name: Frontend build (web/ · typecheck + vite build)
+    runs-on: ubuntu-latest
+    # The web/ SPA must typecheck and build from a clean install on every push, so a
+    # broken type or import in the frontend goes red here (not on a dev's machine).
+    # tsc -b catches type regressions; vite build proves the production bundle compiles.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web deps (npm ci — lockfile-exact)
+        working-directory: web
+        run: npm ci
+
+      - name: Typecheck + production build (tsc -b && vite build)
+        working-directory: web
+        run: npm run build

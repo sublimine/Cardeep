@@ -114,8 +114,9 @@ Verificación en cada fase (no confiamos en ningún resultado).
   autorotate) y code-split del 3D ya en su sitio. Pendiente: auditoría Lighthouse/CWV y split más fino
   del chunk Three.js (≈249 KB gzip, ya lazy).
 - **P6 · Verificación — 🟡 PARCIAL.** Hecho: verificación manual exhaustiva por Playwright en cada
-  fase (render + datos reales cruzados contra la DB viva + 0 errores de consola). Pendiente: suite E2E
-  Playwright commiteada, auditoría a11y formal, paso de build del frontend en CI.
+  fase (render + datos reales cruzados contra la DB viva + 0 errores de consola); **build del frontend
+  en CI** (`.github/workflows/ci.yml` job `frontend-build`: `npm ci` + `tsc -b && vite build`, replicado
+  en limpio → verde). Pendiente: suite E2E Playwright commiteada y auditoría a11y formal.
 
 **Dev local:** `npm --prefix web run dev` → `http://localhost:5173`. El cliente API apunta por
 defecto a `http://127.0.0.1:8090` (puerto canónico); override con `VITE_API_BASE` en un `web/.env.local`
