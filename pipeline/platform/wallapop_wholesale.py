@@ -1297,6 +1297,10 @@ async def harvest(target: int = DEFAULT_TARGET, concurrency: int = DEFAULT_CONCU
             target_reached = True
         elif ferr:
             fetch_error, last_http = ferr, fhttp
+            # A flat-pass error (most likely a 429/ban) must STOP the supplement sweep: firing up to
+            # 320 more keyword×centroid queries against a host that just failed only deepens the
+            # cooldown/ban ("no frontal API attacks"). End the drain; record + exit (green-review MED).
+            target_reached = True
         print(f"[wallapop_wholesale] flat newest-cursor pass done: "
               f"{state.cageable_count} cageable pulls (target {target}); "
               f"seen_ids window={len(state.seen_ids)} seller_cache={len(state.seller_cache)} "
