@@ -289,7 +289,12 @@ async def province_inventory_tree(
                       count(*) FILTER (WHERE e.kind='compraventa')          AS compraventa,
                       count(*) FILTER (WHERE e.kind='concesionario_oficial') AS oficial,
                       count(*) FILTER (WHERE e.kind='desguace')             AS desguace,
-                      count(*) FILTER (WHERE e.kind='plataforma')           AS plataforma
+                      count(*) FILTER (WHERE e.kind='plataforma')           AS plataforma,
+                      count(*) FILTER (WHERE e.kind='garaje')               AS garaje,
+                      count(*) FILTER (WHERE e.kind='subasta')              AS subasta,
+                      count(*) FILTER (WHERE e.kind='oem_vo_portal')        AS oem_vo_portal,
+                      count(*) FILTER (WHERE e.kind='importador')           AS importador,
+                      count(*) FILTER (WHERE e.kind='rent_a_car_vo')        AS rent_a_car_vo
                  FROM servable_entity e
                  JOIN geo_municipality m ON m.code = e.municipality_code
                  JOIN geo_comarca      co ON co.id = m.comarca_id
@@ -311,7 +316,9 @@ async def province_inventory_tree(
                 "municipality_code": r["municipality_code"], "name": r["municipality"],
                 "entities": r["entities"], "compraventa": r["compraventa"],
                 "oficial": r["oficial"], "desguace": r["desguace"],
-                "plataforma": r["plataforma"]})
+                "plataforma": r["plataforma"], "garaje": r["garaje"],
+                "subasta": r["subasta"], "oem_vo_portal": r["oem_vo_portal"],
+                "importador": r["importador"], "rent_a_car_vo": r["rent_a_car_vo"]})
         # Audit P2 E-geo-tree: scope to active non-particular dealers, matching the rest of this
         # response (e.kind<>'particular' at :242) and /geo/{province}/entities — otherwise this
         # summary count silently included C2C particulares + unverified rows the tree excludes.

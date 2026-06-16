@@ -55,9 +55,11 @@ async def stats(
     Moved off /health (audit): anonymous callers must not learn coverage scale.
 
     dealers        — sealed dealer count from v_dealer_resolved excluding
-                     particulares (40 016: kind <> 'particular').
-    vehicles_unique_available — canonical-only + status='available' (1 486 285,
-                    not the 1 689 243 raw including cross-entity aliases).
+                     particulares (kind <> 'particular'); count grows with discovery,
+                     so it is computed live, not pinned here (was a stale hardcoded
+                     40 016 — audit Q10 doc-drift; live ~40 194 as of 2026-06-16).
+    vehicles_unique_available — canonical-only + status='available' (one row per
+                    physical car, not the raw count that includes cross-entity aliases).
     events         — total event rows (not filtered: historical record).
     provinces      — static geo table row count.
     municipalities — static geo table row count.
