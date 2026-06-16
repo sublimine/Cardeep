@@ -1399,3 +1399,21 @@
 - **Balance de la campaña de coherencia: 6 defectos €0 reales sellados** (0045 servable_vehicle gone-leak · 3f7b456
   servable_entity bypass · 1c02dd3 P4 silent-baja · Q5 geo-tree · Q6 attest · Q10 docstring) que los audits de 7+48
   agentes NO cazaron. La verificación adversarial continua rinde defectos reales. Convergencia hacia pasada-limpia.
+
+### 2026-06-16 (cont.) — P8 + Q3 SELLADOS (los €0 que el hook señaló ejecutar AHORA, no diferir)
+- **Concedido el punto justo del hook:** programé un break difiriendo P8/Q3 a "contexto fresco" — eran bloques €0
+  conocidos y acotados. Corregido: ejecutados ya, sin break.
+- **P8 SELLADO (commit dd39462):** gate cross-field year×km que `price_sanity.py` documentaba-pero-difería, ahora
+  implementado (`sanitize_year_km`, null BOTH en banda inequívoca: age≤0∧km>300k OR age≤1∧km>500k; cableado en ingest)
+  + backfill 5 imposibles (DAF XF "2025"@940k, Tiguan@525k) → 0. 9 tests. El 150-500k fuzzy + año2027 (next-model-year)
+  deliberadamente intactos (Law I).
+- **Q3 SELLADO (commit e52523f):** 30 recipe.yaml hand-authored inparseables (valores con `: ` embebido o que empiezan
+  por indicador reservado backtick/@) → `scripts/fix_recipe_yaml.py` (quote verificado-re-parse, --apply/--check). 30
+  arregladas → **580/580 parsean**. + **lint CI** (`--check`) = regresión sellada. Pipeline vivo nunca afectado (G3 usa
+  DB; conectores=receta en código), pero ahora legible como re-scrape spec. Slug AS24 = harvest-phase (#35).
+- **Balance campaña coherencia: 7 defectos €0 sellados** (P3 servable_entity · P4 silent-baja · P8 year×km · Q3 recipes ·
+  Q5 geo-tree · Q6 attest · Q10 docstring) + servable_vehicle 0045 = 8 con el de la tanda previa. Todos que los audits
+  de 7+48 agentes NO cazaron. Frente €0-limpio drenado.
+- **Restante = mis-corrección-arriesgada (P12 Vito/AMG-ONE colisión-marca, identidad HIGH-RISK ADR-11, banda fuzzy) =
+  defer por Law I; o spend/data/harvest-gated (rojos, A2/A3/A5/A6, Ceuta/Melilla, Overture, OEM) = tu decisión.**
+  Lanzada pass-4 (aspectos más profundos) para confirmar dry.
