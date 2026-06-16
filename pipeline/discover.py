@@ -107,7 +107,14 @@ async def discover(source_key: str) -> None:
             was_new, geo_ok, prov_ok = await _upsert(conn, geo, e, geocoder)
             new += int(was_new)
             resolved += int(geo_ok)
-            skipped += int(not prov_ok)
+            if not prov_ok:
+                skipped += 1
+                # Per-entity trace (green-review R4): a systematic geo-resolution gap must be
+                # debuggable from the run output, not just the aggregate "skipped_no_province=N"
+                # — otherwise WHICH entities were dropped (and why) is unrecoverable without a re-fetch.
+                print(f"[{source_key}] SKIP no_province: name={e.legal_name or e.trade_name!r} "
+                      f"province_name={e.province_name!r} municipality={e.municipality_name!r} "
+                      f"source_ref={e.source_ref!r}")
         # provenance count: entities attested by this source (works across sources/overlap)
         in_db = await conn.fetchval(
             "SELECT count(*) FROM entity_source WHERE source_key=$1", source_key)
