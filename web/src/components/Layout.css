@@ -139,6 +139,9 @@
 }
 
 @media (max-width: 560px) {
-  .topnav__link { padding: var(--space-2); }
-  .brand__word { font-size: 1.04rem; }
+  .topbar__inner { height: 56px; }
+  .topnav { gap: var(--space-1); }
+  .topnav__link { padding: var(--space-2) var(--space-1); }
+  .topnav__cta { margin-left: var(--space-2); padding: var(--space-2) var(--space-3); white-space: nowrap; }
+  .brand__word { font-size: 1.02rem; }
 }

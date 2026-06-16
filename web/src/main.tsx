@@ -8,6 +8,7 @@ import { Landing } from './routes/Landing';
 import { Explore } from './routes/Explore';
 import { Dealer } from './routes/Dealer';
 import { Vehicle } from './routes/Vehicle';
+import { NotFound } from './routes/NotFound';
 
 const qc = new QueryClient({
   defaultOptions: {
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
       { path: 'explore', element: <Explore /> },
       { path: 'dealer/:cdp', element: <Dealer /> },
       { path: 'vehicle/:ulid', element: <Vehicle /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 ]);

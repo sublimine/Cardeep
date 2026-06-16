@@ -108,8 +108,14 @@ Verificación en cada fase (no confiamos en ningún resultado).
   Maserati 26.900€, Jaguar 11.998€); ficha Camaro → 2011/52.400 km/Gasolina/Manual, deep link a
   coches.net, plataforma coches.net 29.900€; 0 errores; build verde. Flujo completo
   mapa→explore→dealer→vehículo→anuncio operativo.
-- **P5 · Acabado — ▶ SIGUIENTE.** motion/responsive 320→1920/reduced-motion/CWV/code-split fino.
-- P6 — pendiente (E2E/a11y/Lighthouse/CI).
+- **P5 · Acabado — 🟡 EN CURSO.** Hecho: ruta catch-all 404 (`NotFound`); responsive verificado
+  desktop 1440 + móvil 390 en landing/explore/dealer/vehículo/404 (sidebars→fila, heros→1 col,
+  grids→1 col); topbar móvil ajustado (CTA `nowrap`, una línea); reduced-motion (global + guard de
+  autorotate) y code-split del 3D ya en su sitio. Pendiente: auditoría Lighthouse/CWV y split más fino
+  del chunk Three.js (≈249 KB gzip, ya lazy).
+- **P6 · Verificación — 🟡 PARCIAL.** Hecho: verificación manual exhaustiva por Playwright en cada
+  fase (render + datos reales cruzados contra la DB viva + 0 errores de consola). Pendiente: suite E2E
+  Playwright commiteada, auditoría a11y formal, paso de build del frontend en CI.
 
 **Dev local:** `npm --prefix web run dev` → `http://localhost:5173`. El cliente API apunta por
 defecto a `http://127.0.0.1:8090` (puerto canónico); override con `VITE_API_BASE` en un `web/.env.local`
