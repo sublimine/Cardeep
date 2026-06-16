@@ -1445,3 +1445,17 @@
   (~399, K=12 deja pasar fotos-catálogo → re-cluster, toca core B7]; D1-recipe-scope [harvest]; D8-decimal [parser].
 - **Sesión: ~13 defectos €0 sellados/manejados** (0045·P3·P4·P8·Q3·Q5·Q6·Q10·D5·D6·D2·D1-quar·D8-sent) en 4 pasadas adversariales
   + 12 invariantes a mano — todos que los audits de 7+48 agentes NO cazaron. GitHub #35 = dossier. Próximo bloque: D3.
+
+### 2026-06-16 (cont.) — D3 SELLADO (wallapop precio/km) + D7/restante clasificado
+- **D3 (SELLADO addb1ea):** verificación con muestra confirmó la detección monthly-payment limpia (12/12 'DESDE X€/MES'
+  genuinos). Forward-fix wallapop parser (km≥1.5M sentinel + guard cuota-mensual `_MONTHLY_PAYMENT_RE`) + sanitize_km `>=`
+  + backfill 3.484 precios-cuota→NULL (on-request) + 11 km=1.5M→NULL. 9 tests. Cars siguen servibles (precio/km unknown).
+- **D7 (gated, NO rusheado):** photo-overmerge — guard K=12 deja pasar fotos-catálogo baja-frecuencia → 78 clusters
+  cross-gen (~399 listings, 0,02%; C4-2008 fusionado con C4-2024). Fix = guard `year_span>2 OR km_span>50k` + **re-cluster
+  de 1,7M + re-verificación VAM**. REGENERA el v_canonical_vehicle SELLADO (1.486.285) → bloque gateado contexto-fresco
+  (como las 3 iteraciones del sello B7 original). Residuo declarado (clase nueva junto a los 9 giants existentes).
+- **D1-recipe-scope** (harvest: re-scrape family_dealerk_wp con scope /byd/) + **D8-decimal** (parser locale-aware factor-10 ×4
+  + joke>1M make-aware, trap P12) = harvest/parser-careful.
+- **Sesión: ~14 defectos €0 sellados/manejados** (…·D2·D1-quar·D8-sent·D3). Frente €0-LIMPIO casi agotado: queda D7
+  (sealed-core re-cluster, gated) + harvest/parser. La verificación 4-pasadas + gate-a-mano ha cazado defectos reales en
+  CADA capa + desinflado fixes-erróneos de agentes en D2/D3. Substantivo restante = decisión de gasto del owner.
