@@ -1303,3 +1303,17 @@
   `84309ee` **Q10** autoscout24 loguea truncación de discovery; `c8a1c2f` **R4** discover traza per-entity de skipped.
 - **Sesión acumulada: 19 hallazgos reales fijados (núcleo 9 + pipeline 10), todos con test/verif, todos en `main`,
   CI verde.** Restan 4 careful (recipe yaml, sanitize+COALESCE, in_db) con diseño preciso en el triage.
+
+### 2026-06-16 (cont.) — PIPELINE REVIEW CERRADO (Q4/R2/R3/Q7/Q8) + RUNBOOK OPERATIVO (OPERATE.md)
+- **3ª tanda pipeline, los 4 careful fijados:** `ab0cf3d` Q4/R2/R3 (recipe `_yaml_dump`→`yaml.dump`+round-trip+
+  clobber-log; reprod. live ScannerError), `2755aad` Q7 (discover in_db scopeado a `seen_at>=run_start`; live
+  196 vs 0), `b1bad46` Q8 (delta sanitize+`_BULK_REFRESH` COALESCE — cazó un wipe latente además del gap de
+  sanitización; live photo intacto). **PIPELINE REVIEW COMPLETO: 15 reales fijados** (P1,P2,Q1,Q3-Q10,R1-R4),
+  Q2=juicio. Triage: `docs/REVIEW_FINDINGS_PIPELINE_2026-06-16.md`.
+- **`25f60ca` RUNBOOK OPERATIVO `docs/runbook/OPERATE.md`** — el "cómo del A al Z" que gateaba el gasto:
+  monitorizar/verificar-delta/triar-alertas-por-origin/diagnosticar-breaker/remediar/capacidad, **cada query
+  VERIFICADA contra DB viva** (cacé `vehicle_event.created_at`→`observed_at` al escribir). Complementa DEPLOY.md.
+- **BALANCE DE SESIÓN (€0): ~23 bugs reales eliminados del data-path** (2 green-reviews adversariales, 2/5+0/2
+  CRITICAL del agente eran falsos → verificación a mano obligatoria) + **bring-up reproducible (compose+DEPLOY)** +
+  **CI verde** (de 0 CI; 7 deps faltantes cazadas) + **runbook operativo**. El €0-config que gateabas: hecho y
+  documentado A-Z. Lo restante es harvest/spend/data/hardware (tu fase de gasto) — listo para abrir cuando decidas.
