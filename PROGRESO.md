@@ -1206,3 +1206,27 @@
   servido pragmático + sample-verif, verdict honestamente UNVERIFIED (SUPERPLAN corregido); (3) SU-C2 ⬜→🟢 (recetas
   Tier-1 hechas+documentadas, stale). **Verdad central:** "terminar A→F a €0" tiene límite lógico — los puntos de
   cosecha exigen el gasto que difieres. Infraestructura €0 que lo habilita = construida+verificada. Próximo = tu decisión.
+
+### 2026-06-16 — DEPLOY-READINESS: bring-up reproducible "máquina limpia → sistema corriendo" (`88cd5b2`→`f391c54`, push origin/main)
+- **El artefacto que gatea el gasto, construido**: faltaba el cold-start operativo A→Z (el RUNBOOK existente es de
+  *validación*, no de *bring-up*). Ahora un clon limpio levanta el sistema entero en 8 pasos verificados.
+  - `docker-compose.yml`: reproduce **fiel al átomo** el `cardeep-pg` vivo (postgres:16 :5433, creds, volumen
+    `cardeep_pg_data` adoptado → cero pérdida) +healthcheck +restart +creds env-overridables. La DB ya es
+    reproducible desde el repo (antes: `docker run` crudo no commiteado).
+  - `docs/runbook/DEPLOY.md`: cold-start A→Z, cada comando [VERIFICADO] contra el código. README quickstart.
+  - Retirados `autorola_es_full.json`+`bca_es_full.json` (2.6 MB raw harvests en raíz, 0 lecturas, violaban el
+    propio `.gitignore`). 38 MB de research-data en `docs/research/`: **KEEP** (huella citada en GAP_MAP/TERRITORIAL,
+    CDLA-Permissive) — la disciplina "antes de borrar, mira el objetivo" evitó destruir evidencia.
+- **VERIFICACIÓN cazó 3 defectos que se me pasaron** (el valor de "no confiamos en ningún resultado"):
+  workflow `w3wmbyuh8` (5 agentes adversariales) + clean-room + caminata final.
+  (1) HIGH `requirements.txt` incompleto: `apscheduler[sqlalchemy]` Y `psycopg2-binary` faltaban (scheduler.py +
+  silence_watchdog importan psycopg2 a nivel módulo + jobstore URL `postgresql+psycopg2://`) → motor durable
+  irreproducible en máquina limpia. **PROBADO** con venv limpio: `pip install -r requirements.txt` ahora importa
+  los 4 entrypoints sin un solo install out-of-band. (2) HIGH refs colgantes a los JSON borrados (4 docs + 2
+  recipes) → doc-limpiado (recipes=placeholder, docs+footnote="raw harvest on-demand"). (3) MEDIUM `.env` NO se
+  auto-carga (modelo 12-factor con defaults) pero los docs decían "cp .env.example .env" como si funcionara →
+  honestados + añadido `CARDEEP_DB_URL` (DSN sync del scheduler que faltaba).
+- **Caminata final adversarial (agente independiente, ejecutó cada comando read-only): CLEAN.** compose config
+  resuelve · migrate status→0040 / verify 34 match 0 drift · pytest colecta 863 · scheduler --help/--dry-run corren
+  · refs todas enmarcadas. Árbol limpio, 4 commits en `origin/main`. Patrón validado: la construcción la gatean los
+  agentes adversariales — cazaron 3 defectos reales que un self-report habría sellado en falso.
