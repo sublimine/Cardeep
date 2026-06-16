@@ -57,10 +57,15 @@ pero no es bug de corrección. Prioridad media → tracked.
   resetea `last_status` (no 200 stale → repair bien clasificado).
 
 **PENDIENTE (contexto fresco — nuance/riesgo/juicio):**
-- **TEMA 3** declared_total scoping per-conector (coches_net proof-slice → alerta low_coverage espuria; milanuncios
-  partial-run; coches_com VO/km0 db_edges acumulativo). `coverage_verify.py` YA maneja >ceiling→UNVERIFIED; el fix es
-  per-conector (pasar declared correcto / scopear db_edges a `last_seen>=run_start`) → **verificar intent de cada
-  conector (proof-slice vs full-drain) antes de tocar, riesgo de romper coverage-gating.**
+- **TEMA 3** declared_total scoping per-conector. **VERIFICADO 06-16 que el mecanismo del agente para coches_net
+  estaba PARCIALMENTE MAL:** predijo "coverage 1.8% → alerta low_coverage cada run"; la realidad viva es
+  `declared=271981 / captured=274144 = 100.8% → REFUTED` (sin alerta low_coverage). Causa real: `coverage_verify.
+  captured_db` es **acumulativo** (cuenta TODO lo del facet full-drain, mismo source_key) vs el declared del
+  proof-slice wholesale (DEFAULT_MAX_PAGES=5, ~500 caged). El proof-slice **no debería alimentar el gate** (el facet
+  es el full-drain que sí). Fix candidato: wholesale pasa `declared_total=None`; **PERO** exige decidir qué conector
+  alimenta coverage para un source_key compartido + el scoping de captured_db — análisis cuidadoso, NO fix apresurado.
+  Igual milanuncios partial-run + coches_com VO/km0 db_edges acumulativo: **verificar cada mecanismo a mano** (los del
+  agente pueden estar mal) antes de tocar; riesgo real de romper coverage-gating. → contexto fresco.
 - **TEMA 2** breaker-skip sin record_run (autoscout24/vo_chains/milanuncios) → juicio de diseño (skip intencional;
   ¿escribir fila 'skipped'?). No es bug de corrección claro.
 - **MEDs defensivos:** delta_guard should_emit_gone(declared=0) (rescatado por check downstream), milanuncios
