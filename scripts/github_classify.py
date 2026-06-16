@@ -267,8 +267,10 @@ SUS: list[SU] = [
        "6 garajes con inventario marcados EUR0; 7.195 sin inventario = DATA-gated (mejor hueco que mentira).",
        ["gaps-rojos", "estado:parcial", "gate:data", "area:identidad"], M_GASTO, False),
     SU("SU-R4", "Cobertura 100% + cierre (Canarias/Ceuta/Melilla)",
-       "cada segmento sellado o gap-con-causa; islas/ciudades autonomas cerradas.",
-       ["gaps-rojos", "estado:pendiente", "gate:harvest", "area:descubrimiento"], M_GASTO, False),
+       "DISCOVERY verificado 06-16 (no vacios): Las Palmas 791d/27007v, Tenerife 757d/22363v, "
+       "Ceuta 28d/359v, Melilla 17d/1020v. SELLO data-gated: denominator_estimate solo tiene la "
+       "fila nacional; falta el denominador CNAE-451 per-provincia (=data-task A2-phi).",
+       ["gaps-rojos", "estado:parcial", "gate:data", "area:descubrimiento"], M_GASTO, False),
     # ----- TERMINAL -----
     SU("SU-SEAL", "SPAIN-SEALED 52/52",
        "por provincia: denominador medido + numerador VAM-estable + recall. Capa A EUR0; Capa B deferido.",
