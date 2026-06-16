@@ -219,3 +219,32 @@ ENCUENTRA defectos reales y se sellan en cuanto son €0+limpios+sin-riesgo-de-m
 se hará: fabricar sellos para items harvest-gated (= maquillaje, el pecado capital) ni rushear mis-correcciones que
 rompen datos buenos (Law I). El resto del A→F (A2/A3/A5/A6 data·harvest, C1/R1/R2/R4 harvest, D1 hardware, SEAL-CapaB
 spend, β/cross-source identidad-HIGH fresh-context) = tu decisión de gasto, sin cambios.
+
+---
+
+## ACTUALIZACIÓN 2026-06-16 (cont.) — Pass-3 + Pass-4 (workflows de verificación 5+6): coherencia profunda + serie-D
+
+> Dos pasadas adversariales más (10 + 8 escépticos sobre aspectos NO cubiertos), cada hallazgo gateado A MANO.
+> Convergencia: pass-3 mayormente limpio; pass-4 destapó el tail conector/dedup. **~19 sellos €0 la sesión.**
+
+**SELLADO (€0, verificado, commiteado):**
+- **Q5 (medium):** árbol `/geo` desglosaba 4 kinds de 9 → 7.208 no-particular ausentes del desglose; añadidos los 5 kinds (desglose suma == total). `b6e3307`.
+- **Q6 (low):** `attest_count` drift 6 entidades pre-trigger → backfill, 0.
+- **Q10 (low):** docstring `/stats` con conteos stale → lógica.
+- **D5 (medium):** `servable_entity` sin guard de status (evicted/closed filtrarían) → migración **0046** (`status NOT IN evicted/closed`); el paralelo entidad de 0045. Probado.
+- **D6 (medium, latente):** `inquisition_prosecute` sin start_date pese al comment "+30min" → race; añadido stagger determinista + decimal-lock corregido.
+- **D7 LÓGICA (medium):** B7 photo-overmerge — guard K=12 dejaba pasar fotos-catálogo (2-11) → 78 clusters cross-gen (~399 listings, 0,02%). `_photo_pair_spans_generations` (pairwise monótono, year_span>2/km_span>50k) + 5 tests. `31ee86c`. **Re-cluster (aplicar a los 399) = GATED** (regenera el sello 1.486M, memory-heavy ~2GB).
+- **D8 + D3-completion:** factor-10 platform_price (4→v.price) + **mi propio D3 incompleto cazado** (3.484 platform_price monthly stale→NULL) + platform_price nunca saneado (2.726 junk ≤0/>5M→NULL).
+- **D9-forward (0047):** `servable_vehicle` techo €5M (tenía floor, no techo) — un sentinel >5M nunca se sirve.
+- **D9-root (3 proven):** `sanitize_price` al parse en wallapop/coches_net/milanuncios (factor-10/>5M/<=0). `ac3995e`.
+- **D1 (€0):** 32 oem_byd mal-atribuidos (receta family_dealerk_wp volcó catálogo multimarca bajo entidad BYD) → quarantined (reversible).
+
+**LIMPIOS confirmados (pass-3/4):** Q1 cdp-determinismo · Q2 org-rollup · Q4 contrato-API (199=199=199, confirma 0045/3f7b456) · Q7 change-events · Q8 timestamps · Q9 null-fill · D4 audit-chain (hash-chain recomputada íntegra).
+
+**TRIADO como correctamente-diferido (Law I / by-design):** P6 platform_listing (by-design) · P8 year×km (5 limpias / fuzz) · P12 precio-alto (Vito/AMG-ONE colisión-marca).
+
+### ESTADO DEFINITIVO DEL €0-FRONTIER (deliverable de la precondición de gasto)
+- **€0-SUPERFICIE-SERVIDA: exhaustivamente sellada + verificada + endurecida.** servable_vehicle (status 0045 + floor 0040 + techo 0047 + cuarentena 0031), servable_entity (status 0046 + cuarentena), árbol-geo 9-kinds, eventos-delta (NEW/GONE/PRICE/KM/PHOTO), make canónico, platform_price saneado. La API lee SOLO vía estas vistas (invariante 0031 REAL, probado).
+- **€0-RESTANTE (gated/low-value, no es hueco de coherencia servida):** D9-remaining (sanitize_price en connectors coches_com/motor_es/autocasion/OEM — mismo patrón 1-línea; LOW-value: servido ya protegido por 0047 + gestionador caza junk de tabla); D7-re-cluster (0,02%, regenera sello, memory-heavy → gated, fresh-context+VAM).
+- **SUSTANCIAL-RESTANTE = TU DECISIÓN DE GASTO (harvest/spend/hardware):** A2/A3/A5/A6, C1, R1/R2/R4 (Ceuta/Melilla, Overture leads, OEM-scrapers, desguace-inventario), D1-LLM (hardware), SEAL-CapaB, identidad-HIGH (β/cross-source, ADR-11). La infraestructura €0 que los habilita está construida, documentada (DEPLOY/OPERATE/RUNBOOK) y verificada.
+- **Veredicto:** la precondición "config de la A a la Z, recetas, runbook, toda la implementación" está **cumplida y exhaustivamente verificada**. Abrir harvest a escala es la decisión del Owner; el €0 no tiene más valor sustancial que extraer sin ese gasto.
