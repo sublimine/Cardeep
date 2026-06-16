@@ -1520,3 +1520,15 @@
 - **Sustancial = decisión de gasto del owner** (harvest/spend/hardware): Ceuta/Melilla, Overture, OEM-scrapers, desguace-inv,
   D1-LLM, identidad-HIGH. Infra €0 construida+documentada+verificada. **Precondición "config A-Z" cumplida + verificada.**
 - **Loop: cadencia escalada** (alto valor agotado; sin busywork low-value a profundidad extrema; vivo para task-notifs / nuevo €0 / vuelta del owner).
+
+### 2026-06-16 (cont.) — AUDITORÍA FINAL: 937 tests verde, 0 regresiones (cierre de fase €0)
+- **Suite conductual completa: 937 passed / 0 failed en 603s (exit 0).** Cero regresiones de los ~19 cambios de la sesión
+  (migraciones 0044-0047, parses sanitize_price/normalize_make en 3 connectors, backfills make/platform_price/year×km,
+  vistas servable_vehicle+servable_entity, geo-árbol, emit_gone, cluster guard). + esquema 41 match/0 drift + CI verde.
+- **PUERTA DEL DOCTRINE "cero regresiones confirmadas": CUMPLIDA** (verificado, no asumido).
+- **CIERRE DE FASE €0:** superficie servida exhaustivamente sellada+verificada+endurecida; ~19 coherencias €0 en 4 pasadas
+  adversariales + 12 invariantes; certificado A→F consolidado; bring-up reproducible + CI + runbooks DEPLOY/OPERATE. La
+  precondición "config A-Z, recetas, runbook, toda la implementación" está CUMPLIDA, VERIFICADA y REGRESSION-CLEAN.
+- **Restante = decisión de gasto del owner** (harvest/spend/hardware): reds (Ceuta/Melilla/Overture/OEM/desguace-inv),
+  D1-LLM, identidad-HIGH, D7-apply (memory-gated D1), D9-remaining (low-value, servido-protegido). El €0 no tiene más
+  valor sustancial sin ese gasto. Loop vivo a cadencia larga para task-notifs / nuevo €0 / vuelta del owner.
