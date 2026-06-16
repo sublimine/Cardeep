@@ -274,43 +274,58 @@ async def check_preconditions(
 # LRU raw-file eviction
 # ---------------------------------------------------------------------------
 
-def _evict_raw_files(cdp_code: str) -> tuple[int, int]:
-    """LRU-evict raw harvest files for a dealer from the data/ directory.
+def _measure_raw_files(cdp_code: str) -> tuple[list[Path], int]:
+    """Scan (NEVER delete) the dealer's raw harvest files. Returns (candidates, total_bytes).
 
-    Only removes files under _DATA_DIR that belong to this dealer
-    (directories/files matching the cdp_code pattern). Never touches
-    countries/ES/ (recipes) or any other pipeline artefact.
+    Only considers files under _DATA_DIR matching the cdp_code pattern. Never touches
+    countries/ES/ (recipes) or any other pipeline artefact. Returns ([], 0) when the data
+    dir is absent or disk usage is below DISK_EVICT_THRESHOLD_PCT.
 
-    Eviction fires only when disk usage on the data/ partition exceeds
-    DISK_EVICT_THRESHOLD_PCT. If the threshold is not met, returns (0, 0).
-
-    Returns:
-        (files_deleted, bytes_freed)
+    A stat failure on the partition is LOGGED (not silently swallowed) and treated as
+    "below threshold" — the safe direction. Splitting measure from delete lets evict_dealer
+    record the eviction in the DB FIRST and physically delete files only AFTER the
+    transaction commits, so a failed transaction can never destroy raw data the DB still
+    believes exists.
     """
     if not _DATA_DIR.exists():
-        return 0, 0
+        return [], 0
 
-    # Check disk usage
     try:
         usage = shutil.disk_usage(_DATA_DIR)
         pct_used = (usage.used / usage.total) * 100.0
-        disk_free_bytes = usage.free
-    except OSError:
-        return 0, 0
+    except OSError as exc:
+        print(f"[evict] WARNING: disk_usage({_DATA_DIR}) failed: {exc} — skipping raw-file eviction")
+        return [], 0
 
     if pct_used < DISK_EVICT_THRESHOLD_PCT:
-        # Disk is below threshold; skip raw-file deletion
-        return 0, 0
+        return [], 0
 
-    # Find all raw files/dirs for this dealer (LRU: oldest mtime first)
+    # LRU: oldest mtime first
     candidates: list[Path] = sorted(
         _DATA_DIR.rglob(f"*{cdp_code}*"),
         key=lambda p: p.stat().st_mtime if p.exists() else 0,
     )
+    total_bytes = 0
+    for path in candidates:
+        try:
+            if path.is_file():
+                total_bytes += path.stat().st_size
+            elif path.is_dir():
+                total_bytes += sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+        except OSError:
+            pass  # a vanished file just won't be counted
+    return candidates, total_bytes
 
+
+def _delete_raw_files(candidates: list[Path]) -> tuple[int, int]:
+    """Physically delete pre-measured candidate files/dirs. Returns (files_deleted, bytes_freed).
+
+    Called ONLY after the eviction transaction has committed. Best-effort per path: a failure
+    to remove one entry is logged and does not abort the rest — the DB already records the
+    eviction, so leftover files are a manual-cleanup nuisance, never a data-integrity problem.
+    """
     files_deleted = 0
     bytes_freed = 0
-
     for path in candidates:
         try:
             if path.is_file():
@@ -324,10 +339,19 @@ def _evict_raw_files(cdp_code: str) -> tuple[int, int]:
                 bytes_freed += size
                 files_deleted += 1
         except OSError as exc:
-            # Best-effort: log and continue. A missing raw file is not fatal.
             print(f"[evict] WARNING: could not remove {path}: {exc}")
-
     return files_deleted, bytes_freed
+
+
+def _evict_raw_files(cdp_code: str) -> tuple[int, int]:
+    """Measure + delete in one call (back-compat for direct callers/tests).
+
+    evict_dealer does NOT use this — it calls _measure_raw_files before the DB transaction
+    and _delete_raw_files only after the commit, so files are never destroyed under an
+    aborted transaction.
+    """
+    candidates, _ = _measure_raw_files(cdp_code)
+    return _delete_raw_files(candidates)
 
 
 # ---------------------------------------------------------------------------
@@ -410,25 +434,23 @@ async def evict_dealer(
     # APPLY PATH — destructive, irreversible
     # =========================================================================
 
-    # LRU raw-file eviction (best-effort, outside DB transaction)
-    # Must happen before disk_free_before snapshot
+    # Snapshot free space BEFORE any change (capacity ledger). disk_free_after is left NULL:
+    # files are deleted only after commit, so a post-delete reading cannot be part of this
+    # atomic record.
     try:
         usage_before = shutil.disk_usage(_DATA_DIR) if _DATA_DIR.exists() else None
         disk_free_before = usage_before.free if usage_before else None
     except OSError:
         disk_free_before = None
 
-    raw_files_deleted, raw_bytes_freed = _evict_raw_files(cdp_code)
-    result["raw_files_deleted"] = raw_files_deleted
-    result["raw_bytes_freed"] = raw_bytes_freed
+    # MEASURE the dealer's raw files now (no deletion yet). They are physically removed only
+    # AFTER the DB transaction commits — deleting before risked permanent data loss on abort.
+    raw_candidates, planned_bytes = _measure_raw_files(cdp_code)
 
-    try:
-        usage_after = shutil.disk_usage(_DATA_DIR) if _DATA_DIR.exists() else None
-        disk_free_after = usage_after.free if usage_after else None
-    except OSError:
-        disk_free_after = None
+    # The whole inventory is what this eviction retires (Gate 3 already required available=0).
+    evicted_vehicle_count: int = vehicles_to_delete
 
-    # DB changes — single atomic transaction
+    # DB changes — single atomic transaction. The filesystem is NOT touched here.
     async with conn.transaction():
         # Re-read gates inside the transaction (final gate-check)
         passed_inner, inner_reasons = await check_preconditions(conn, cdp_code)
@@ -442,7 +464,8 @@ async def evict_dealer(
                 "Eviction aborted: gate re-check failed inside transaction"
             )
 
-        # Step 4: tombstone entity (UPDATE, not DELETE — preserve history)
+        # Step 4: tombstone entity (UPDATE, not DELETE — preserve history). Guarded so an
+        # already-evicted entity is never rewritten (no MVCC no-op).
         await conn.execute(
             """
             UPDATE entity
@@ -453,17 +476,20 @@ async def evict_dealer(
             cdp_code,
         )
 
-        # Step 5: delete vehicle rows for this entity
-        deleted_count: int = await conn.fetchval(
-            "SELECT COUNT(*) FROM vehicle WHERE entity_ulid = $1",
-            entity_ulid,
-        )
+        # Step 5: retire the dealer's vehicles as GONE tombstones — NOT DELETE.
+        # DELETE FROM vehicle would cascade into vehicle_event (FK ON DELETE CASCADE), whose
+        # append-only immutability trigger forbids row deletion → the entire eviction would
+        # abort for any dealer that ever emitted an event. Tombstoning keeps the immutable
+        # event history the product promises ("historial completo") and removes the cars from
+        # served inventory. The WHERE status<>'gone' guard avoids rewriting already-gone rows.
         await conn.execute(
-            "DELETE FROM vehicle WHERE entity_ulid = $1",
+            "UPDATE vehicle SET status = 'gone', last_seen = now() "
+            "WHERE entity_ulid = $1 AND status <> 'gone'",
             entity_ulid,
         )
 
-        # Step 6: capacity_ledger entry
+        # Step 6: capacity_ledger entry. raw_bytes_freed records the PLANNED bytes (files are
+        # deleted just after commit); disk_free_after is NULL for the same reason.
         await conn.execute(
             """
             INSERT INTO capacity_ledger
@@ -471,10 +497,10 @@ async def evict_dealer(
             VALUES ($1, $2, $3, $4, $5)
             """,
             cdp_code,
-            deleted_count,
-            raw_bytes_freed,
+            evicted_vehicle_count,
+            planned_bytes,
             disk_free_before,
-            disk_free_after,
+            None,
         )
 
         # Step 7: audit_eviction (append-only, immutable)
@@ -487,12 +513,19 @@ async def evict_dealer(
             cdp_code,
             "manual_eviction: all 3 gates green",
             actor,
-            deleted_count,
-            raw_bytes_freed,
+            evicted_vehicle_count,
+            planned_bytes,
         )
 
+    # --- Transaction committed. ONLY NOW physically delete the raw files. ---
+    # If deletion fails, the DB already reflects the eviction; leftover files are logged for
+    # manual cleanup rather than vanishing under an aborted transaction.
+    raw_files_deleted, raw_bytes_freed = _delete_raw_files(raw_candidates)
+    result["raw_files_deleted"] = raw_files_deleted
+    result["raw_bytes_freed"] = raw_bytes_freed
+
     result["evicted"] = True
-    result["vehicles_to_delete"] = deleted_count
+    result["vehicles_to_delete"] = evicted_vehicle_count
     result["reasons"] = []
     return result
 

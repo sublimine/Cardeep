@@ -528,11 +528,17 @@ class TestEvictApply:
                 )
                 assert evicted_at is not None
 
-                # --- Vehicles deleted ---
+                # --- Vehicles RETAINED as 'gone' tombstones (NOT deleted) ---
+                # DELETE would cascade into the append-only vehicle_event table and abort.
                 veh_count_after = await db_conn.fetchval(
                     "SELECT COUNT(*) FROM vehicle WHERE entity_ulid = $1", _SYNTH_ULID
                 )
-                assert veh_count_after == 0
+                assert veh_count_after == 2
+                all_gone = await db_conn.fetchval(
+                    "SELECT bool_and(status = 'gone') FROM vehicle WHERE entity_ulid = $1",
+                    _SYNTH_ULID,
+                )
+                assert all_gone is True
 
                 # --- audit_eviction row written ---
                 audit_row = await db_conn.fetchrow(
@@ -560,6 +566,77 @@ class TestEvictApply:
             "SELECT EXISTS(SELECT 1 FROM entity WHERE cdp_code = $1)", _SYNTH_CDP
         )
         assert not ent_exists, "Rollback failed: synthetic entity still in DB"
+
+    @pytest.mark.asyncio
+    async def test_apply_with_vehicle_events_does_not_cascade_abort(
+        self, db_conn: asyncpg.Connection
+    ) -> None:
+        """Regression (green-review CRITICAL): a dealer whose vehicle carries an immutable
+        vehicle_event row must still evict cleanly. The old code issued DELETE FROM vehicle,
+        which cascades into the append-only vehicle_event table and aborts the whole eviction
+        — silently, with raw files already deleted. The fix tombstones vehicles to 'gone'
+        instead, so the event history survives and the eviction commits.
+        """
+        _EUL = "01TESTEV0000000000000000E0"
+        _VUL = "01TESTEV0000000000000000V9"
+        _EVT = "01TESTEV0000000000000000X9"
+        _CDP = "CDP-ES-28-TSTEVT01"
+        try:
+            async with db_conn.transaction():
+                await db_conn.execute(
+                    "INSERT INTO entity (entity_ulid, cdp_code, kind, province_code, status) "
+                    "VALUES ($1,$2,'compraventa'::entity_kind,'28','unverified'::entity_status)",
+                    _EUL, _CDP,
+                )
+                # Vehicle already 'gone' (Gate 3 requires available=0)...
+                await db_conn.execute(
+                    "INSERT INTO vehicle (vehicle_ulid, entity_ulid, deep_link, status) "
+                    "VALUES ($1,$2,'https://example.com/ev/evt','gone')",
+                    _VUL, _EUL,
+                )
+                # ...carrying an immutable event — the exact trigger of the cascade bug.
+                await db_conn.execute(
+                    "INSERT INTO vehicle_event (event_ulid, vehicle_ulid, entity_ulid, event_type) "
+                    "VALUES ($1,$2,$3,'GONE')",
+                    _EVT, _VUL, _EUL,
+                )
+                await db_conn.execute(
+                    "INSERT INTO verification_verdict "
+                    "(subject_type, subject_key, claim, verdict, method_version) "
+                    "VALUES ('entity_inventory', $1, 'inventory_count', 'REFUTED', 'vam-1')",
+                    _EUL,
+                )
+                with (
+                    patch("pipeline.evict._check_gate1", return_value=(True, [])),
+                    patch("pipeline.evict._check_gate2", return_value=(True, [])),
+                    patch("pipeline.evict._check_gate3", return_value=(True, [])),
+                    patch("pipeline.evict.shutil.disk_usage",
+                          side_effect=OSError("test: no disk")),
+                ):
+                    result = await evict_dealer(
+                        db_conn, _CDP, dry_run=False, actor="test_suite"
+                    )
+
+                # Eviction SUCCEEDED — no cascade abort (the regression).
+                assert result["evicted"] is True, f"cascade-abort regression: {result}"
+                # Vehicle survives as a 'gone' tombstone (NOT deleted).
+                vstatus = await db_conn.fetchval(
+                    "SELECT status::text FROM vehicle WHERE vehicle_ulid = $1", _VUL
+                )
+                assert vstatus == "gone"
+                # The immutable event survives (was NOT cascade-deleted).
+                ev_exists = await db_conn.fetchval(
+                    "SELECT EXISTS(SELECT 1 FROM vehicle_event WHERE vehicle_ulid = $1)", _VUL
+                )
+                assert ev_exists is True
+                # Entity tombstoned.
+                estatus = await db_conn.fetchval(
+                    "SELECT status::text FROM entity WHERE cdp_code = $1", _CDP
+                )
+                assert estatus == "evicted"
+                raise _TestRollback("rollback cascade-regression test")
+        except _TestRollback:
+            pass
 
 
 # ---------------------------------------------------------------------------
