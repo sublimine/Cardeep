@@ -77,3 +77,29 @@ pero no es bug de corrección. Prioridad media → tracked.
 - **Verdict de la capa:** de los hallazgos accionables/claros, TODOS fijados (2 CRIT + THEME 1×5 + Flexicar + 5 MED).
   El agente acertó en casi todos CON evidencia viva — salvo el mecanismo de coches_net TEMA 3 (parcialmente mal,
   cazado al verificar). La verificación a mano fue, otra vez, lo que separó señal de ruido.
+
+## RESOLUCIÓN TEMA 3 (06-16) — el bug real era el OPUESTO de lo que el agente describió
+
+Al investigar TEMA 3 a nivel átomo (leyendo `coverage_verify.py` + `verify.py::record_count_verdict` + el
+estado vivo de `source_coverage`), el daño real NO era "low_coverage espuria cada run" (lo que predijo el agente)
+sino su **opuesto**: **tres sources con cobertura SANA (autocasion 97,2% · coches_com 99,6% · coches_net 100,8%)
+estaban marcadas `REFUTED`**, y `reconcile_gone` (delta.py:162) **SKIPea las bajas cuando el verdict es REFUTED**
+→ las bajas de ~478k coches nunca se procesaban (rompe "delta completo").
+
+**Causa raíz (dos fallos compuestos):**
+1. `record_count_verdict`: `drift_ok = top_n >= 2 and divergence <= tolerance`. El `top_n>=2` exige ≥2 valores
+   EXACTAMENTE iguales → para 2 paths continuos (`captured_db` vs `declared_total`, nunca idénticos) la tolerancia
+   quedaba anulada → caía a REFUTED. **Pero** el invariante DB `chk_trustworthy_needs_quorum` SÍ exige quorum_n≥2
+   (cluster exacto), así que la corrección no es "→TRUSTWORTHY" sino: drift dentro de tolerancia pero sin cluster
+   exacto → **UNVERIFIED** (honesto: "no certificable por quórum", y NO REFUTED). Fix en `verify.py`.
+2. `verify_coverage` metía `captured_distinct` (contador PER-RUN, proof-slice ~110) junto a `captured_db`
+   (acumulativo ~274k) en los paths del verdict → spread espurio del 99,96% → REFUTED. **Excluido** del verdict
+   (solo `captured_db` vs `declared_total`, ambos acumulativos). +tolerancia derivada del floor por-source
+   (`1-floor`) para que verdict y alerta de under-coverage compartan umbral.
+
+**Efecto verificado:** los 3 sanos pasan REFUTED→UNVERIFIED (re-corrido el gate en vivo, idempotente) →
+`reconcile_gone` (que solo bloquea REFUTED) **desbloquea sus bajas**. milanuncios 150,8% sigue UNVERIFIED
+(override>ceiling). as24 22,5% sigue REFUTED en run real (proof-slice = genuinamente incompleto, correcto).
+84 tests afectados verde; suite completa verde. El claim del agente sobre wallapop ("651k vs 224k→34%") era
+FALSO: captured 588011 = 90,3%. **Lección: la verificación a-nivel-átomo contra DB viva cazó que el agente
+había caracterizado el bug AL REVÉS — diferir habría dejado vivo un fallo de producto (bajas).**

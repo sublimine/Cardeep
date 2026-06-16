@@ -134,13 +134,25 @@ async def record_count_verdict(
         # ingestion loss (collisions/skips). Silent data loss never reads as TRUSTWORTHY.
         primary_agrees = sum(1 for v in values if v == primary_value) >= 2
         modal_ok = top_n >= 2 and not rivals and primary_agrees
-        # F4 fix: tolerance never excuses the absence of a modal cluster (>=2 agreeing).
-        drift_ok = top_n >= 2 and divergence <= tolerance
-        if (modal_ok or drift_ok) and has_independence:
+        # Soft (drift) agreement: >=2 paths whose FULL spread (hi-lo)/hi is within tolerance.
+        # The spread includes the primary path, so a divergent primary (silent ingest loss)
+        # widens it past tolerance and fails here — tolerance never hides real disagreement.
+        # This is len(values)>=2, NOT top_n>=2: continuous 2-path comparisons (e.g. coverage
+        # captured_db=274144 vs declared_total=271981, 0.8% apart) are never EXACTLY equal, so a
+        # top_n>=2 requirement forced them to REFUTED — which then blocked reconcile_gone (delta
+        # bajas) for every healthy-coverage source. Drift agreement is NOT enough to CERTIFY:
+        # the DB CHECK chk_trustworthy_needs_quorum demands quorum_n>=2 (an EXACT modal cluster),
+        # so drift-but-not-exact resolves to UNVERIFIED — honest ("cannot quorum-certify") and
+        # crucially NOT REFUTED, so downstream consumers that only gate on REFUTED proceed.
+        drift_ok = len(values) >= 2 and divergence <= tolerance
+        if modal_ok and has_independence:
+            # Exact modal quorum (>=2 identical values) across >=2 orthogonal families/origins:
+            # the ONLY shape the DB invariant accepts as TRUSTWORTHY.
             verdict = "TRUSTWORTHY"
         elif modal_ok or drift_ok:
-            # Values agree but the paths are not >=2 orthogonal families/origins: cannot
-            # certify (Law I), and the DB CHECK would reject TRUSTWORTHY anyway → UNVERIFIED.
+            # Either a same-family exact cluster (no independence) OR soft drift agreement
+            # (within tolerance but not exactly equal): values do NOT disagree, but cannot be
+            # certified under the quorum invariant → UNVERIFIED (never REFUTED).
             verdict = "UNVERIFIED"
         else:
             verdict = "REFUTED"

@@ -33,12 +33,10 @@ from pipeline.ops.health import (
 )
 from pipeline.verify import record_count_verdict
 
-# Default coverage tolerance for the VAM quorum step.
-# The three paths (declared, captured_db, db_edges) are intentionally heterogeneous:
-# declared is often clamped or estimated; db_edges counts structural rows; captured_db
-# counts vehicles.  A 30 % tolerance lets the quorum fire TRUSTWORTHY when the paths
-# roughly converge, without demanding exact agreement across semantically distinct counts.
-_COVERAGE_TOLERANCE: float = 0.30
+# Coverage verdict tolerance is derived PER-SOURCE as (1 - coverage_floor) inside
+# verify_coverage, so the verdict ("captured converges with declared") and the under-coverage
+# alert share one threshold. A fixed module constant was incoherent with the per-source floor
+# (it certified down to 70% while the floor demanded 85%).
 
 # Coverage floor applied when source_health.coverage_floor cannot be read (e.g. source
 # not yet in source_health).  Matches the migration DEFAULT.
@@ -184,19 +182,33 @@ async def verify_coverage(
     # when coverage is full.
     # When captured_distinct is available it is added as a fourth path.
     # ------------------------------------------------------------------
+    # Floor (per-source) read ONCE here: it drives BOTH the verdict tolerance and the alert
+    # band, so the two stay coherent — captured >= floor*declared  <=>  drift <= tolerance  <=>
+    # TRUSTWORTHY. (It was read post-verdict with a fixed 0.30 tolerance, incoherent with the
+    # 0.85 floor: a 75%-coverage source got a TRUSTWORTHY verdict AND an under-coverage alert.)
+    floor_raw = await conn.fetchval(
+        "SELECT coverage_floor FROM source_health WHERE source_key = $1",
+        source_key,
+    )
+    floor: float = float(floor_raw) if floor_raw is not None else _DEFAULT_FLOOR
+    # tolerance = 1 - floor: captured within `floor` of declared is exactly drift <= tolerance.
+    coverage_tolerance: float = max(0.0, 1.0 - floor)
+
+    # ------------------------------------------------------------------
     # The coverage verdict measures captured-vs-DECLARED — the ONLY orthogonal comparison
     # (declared is the source's external oracle). captured_db and db_edges are BOTH ours and
     # always agree, so feeding db_edges into this verdict would mask a real coverage divergence
     # behind two internal counts that echo each other — exactly how milanuncios 360% slipped
     # through as TRUSTWORTHY. db_edges stays as an INTERNAL coherence figure in source_coverage,
-    # never as a coverage-verdict path. captured_distinct (harvest counter) is also ours; kept
-    # only as a secondary echo of captured_db.
+    # never as a coverage-verdict path. captured_distinct is the per-RUN harvest counter (a
+    # proof-slice / partial run) — a DIFFERENT scope from the cumulative captured_db. Feeding it
+    # here injected a spurious ~99% spread (e.g. coches_net captured_distinct≈110 vs captured_db
+    # ≈274k) that forced a false REFUTED, which then blocked reconcile_gone (delta bajas). It is
+    # therefore EXCLUDED from the verdict paths.
     paths: dict[str, int] = {
         "captured_db": captured_db,
         "declared_total": declared_total,
     }
-    if captured_distinct is not None:
-        paths["captured_distinct"] = captured_distinct
 
     # ------------------------------------------------------------------
     # B9 v2 — over-coverage scope classification.
@@ -233,7 +245,7 @@ async def verify_coverage(
         subject_key=source_key,
         claim=f"captured_db converges with declared_total for source '{source_key}'",
         paths=paths,
-        tolerance=_COVERAGE_TOLERANCE,
+        tolerance=coverage_tolerance,
     )
 
     if over_coverage_unverified:
@@ -263,13 +275,8 @@ async def verify_coverage(
     )
 
     # ------------------------------------------------------------------
-    # Alert logic: read coverage_floor from source_health (fallback = default).
+    # Alert logic: `floor` was read above (it drives both the verdict tolerance and this band).
     # ------------------------------------------------------------------
-    floor_raw = await conn.fetchval(
-        "SELECT coverage_floor FROM source_health WHERE source_key = $1",
-        source_key,
-    )
-    floor: float = float(floor_raw) if floor_raw is not None else _DEFAULT_FLOOR
 
     coverage_origin = build_origin(source_key, "coverage")
     base_payload = {
