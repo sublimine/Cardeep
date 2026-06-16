@@ -3,7 +3,9 @@ asyncpg>=0.29,<0.31
 fastapi>=0.110
 uvicorn[standard]>=0.29
 openpyxl>=3.1
-apscheduler>=3.10,<4   # B2.2 durable scheduler (SQLAlchemyJobStore → PG); NOT 4.0 alpha
+apscheduler[sqlalchemy]>=3.10,<4   # B2.2 durable scheduler (SQLAlchemyJobStore → PG); NOT 4.0 alpha.
+                                   # The [sqlalchemy] extra is MANDATORY: scheduler.py uses
+                                   # SQLAlchemyJobStore, which base APScheduler does NOT install.
 
 # SU-D2: rate-limiting + response caching (in-memory, zero infra coupling)
 slowapi>=0.1.9          # FastAPI/Starlette rate-limiter (wraps limits library)

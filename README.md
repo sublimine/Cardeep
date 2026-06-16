@@ -10,6 +10,20 @@ para el plan maestro A→Z y [PROGRESO.md](PROGRESO.md) para la bitácora viva.
 
 **Gobierno:** [CLAUDE.md](CLAUDE.md) — mandato y doctrina de operación.
 
+## Quickstart (€0, local)
+De máquina limpia a sistema corriendo en 8 pasos verificados — ver
+[docs/runbook/DEPLOY.md](docs/runbook/DEPLOY.md):
+
+```bash
+docker compose up -d cardeep-pg          # 1. DB (postgres:16 en :5433)
+python -m venv .venv && pip install -r requirements.txt   # 2. deps
+cp .env.example .env                     # 3. config
+python scripts/migrate.py up             # 4. esquema (→0040)
+python -m pytest -q                      # 5. smoke test
+uvicorn services.api.main:app --port 8090            # 6. API
+python -m pipeline.ops.scheduler                     # 7. motor durable
+```
+
 ## Principios
 - **Cero confianza:** ningún número es bueno sin quórum ≥2 vías ortogonales (VAM).
 - **Receta sobre crudo:** el activo es la receta versionada por dealer; el crudo

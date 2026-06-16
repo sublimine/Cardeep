@@ -1,0 +1,36 @@
+# Cardeep — local PostgreSQL backbone, reproducible bring-up.
+#
+# Faithfully reproduces the `cardeep-pg` container (postgres:16 on :5433) so any
+# clean machine stands up an IDENTICAL database from the repo alone — the cold-start
+# prerequisite for the whole system. See docs/runbook/DEPLOY.md for the A→Z sequence.
+#
+# Volume note: the named volume is declared with an explicit `name:` so this compose
+# ADOPTS the existing live `cardeep_pg_data` volume on this host (zero data loss) and
+# CREATES it fresh on a clean machine. Bring up with:  docker compose up -d cardeep-pg
+#
+# The dev password is local-only (bound to 127.0.0.1, never exposed) and matches the
+# value already present across the committed codebase. It is env-overridable so a real
+# deployment can inject a strong secret without editing this file.
+
+services:
+  cardeep-pg:
+    image: postgres:16
+    container_name: cardeep-pg
+    environment:
+      POSTGRES_USER: ${CARDEEP_DB_USER:-cardeep}
+      POSTGRES_PASSWORD: ${CARDEEP_DB_PASSWORD:-cardeep_dev_only}
+      POSTGRES_DB: ${CARDEEP_DB_NAME:-cardeep}
+    ports:
+      - "127.0.0.1:5433:5432"   # localhost-only — the DB is NEVER exposed publicly
+    volumes:
+      - cardeep_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped      # durable intent: "Cardeep no se cae"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CARDEEP_DB_USER:-cardeep} -d ${CARDEEP_DB_NAME:-cardeep}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cardeep_pg_data:
+    name: cardeep_pg_data        # exact name → adopts the existing live volume, no prefix
