@@ -1,6 +1,6 @@
 # 07 — EVICT-DELETE
 
-> **ESTADO: IMPLEMENTADO** (€0) — `pipeline/evict.py` + `migrations/0033_evict.sql` + 24 tests. El módulo, los 3 gates y la migración están construidos y probados (tmp/rolled-back). **`--apply` (borrado real) NUNCA se ha ejecutado** sobre los datos reales (161 MB raw / DB): es destructivo y requiere dealer confirmado-muerto + los 3 gates verdes + autorización del Director.
+> **ESTADO: IMPLEMENTADO** (€0) — `pipeline/evict.py` + `migrations/0033_evict.sql` + 25 tests. El módulo, los 3 gates y la migración están construidos y probados (tmp/rolled-back). **`--apply` (borrado real) NUNCA se ha ejecutado** sobre los datos reales (161 MB raw / DB): es destructivo y requiere dealer confirmado-muerto + los 3 gates verdes + autorización del Director.
 
 Borrar de forma segura e irreversible un dealer y su inventario tras confirmar que está muerto: sin actividad, sin verdict `TRUSTWORTHY` vigente (evidencia `REFUTED`/`UNVERIFIED` o gone-reconcile), recipe preservada en git.
 
@@ -47,30 +47,33 @@ Pasa si CUALQUIERA de las dos formas se cumple:
 - `entity_completion.g4_served = False` (inventario vacío confirmado por el gate G4 de completitud).
 - `gestion_item` del dealer en estado `RESOLVED` o sin items `OPEN`.
 
-## Pasos atomo (DISENO — pipeline/evict.py POR CONSTRUIR)
+## Pasos atomo (IMPLEMENTADO — `pipeline/evict.py`, migracion `0033_evict.sql`)
 
-1. **`check_preconditions(conn, cdp_code) -> (bool, list[str])`** — verifica los 3 gates. Solo reads. Retorna `(False, [lista de razones])` si cualquier gate falla.
+Orden real de `evict_dealer(conn, cdp_code, *, dry_run=True, actor="director")`:
 
-2. **Si `--dry-run`** — imprimir plan de borrado detallado (que filas se borrarian, que se actualizaria) y terminar sin ejecutar nada. Siempre disponible, sin permisos adicionales.
+1. **`check_preconditions(conn, cdp_code) -> (bool, list[str])`** — verifica los 3 gates. Solo reads. Si cualquiera falla: `evicted=False` + razones, cero cambios.
 
-3. **LRU evict de raw storage** — borrar archivos raw de harvest en disco por watermark: los mas antiguos primero si disco supera threshold definido. Solo archivos raw del dealer, no recipes ni artefactos de pipeline.
+2. **Si `dry_run` (DEFAULT)** — resuelve `entity_ulid`, cuenta vehiculos, retorna el plan (`vehicles_to_delete`, etc.) sin tocar nada.
 
-4. **`tombstone_entity(conn, cdp_code)`** — `UPDATE entity SET status = 'EVICTED', evicted_at = now()`. NO DELETE de la fila de entity: preservar historial de existencia del dealer.
+3. **Snapshot de disco + `_measure_raw_files(cdp_code)`** — mide los archivos raw del dealer SIN borrarlos aun (se borran solo tras el commit; borrar antes arriesgaba perdida permanente en un abort).
 
-5. **`delete_vehicle_rows(conn, entity_ulid)`** — `DELETE FROM vehicle WHERE entity_ulid = :entity_ulid` (el `entity_ulid` se resuelve desde `cdp_code` vía `entity`; `vehicle` NO tiene `cdp_code`). Los vehículos sí se borran definitivamente: ahorran espacio y no tienen valor histórico post-evicción.
+4. **Transaccion atomica unica** (la DB se toca solo aqui; el filesystem NO):
+   - **Re-check de los 3 gates DENTRO de la transaccion** — si el estado cambio entre el check externo y la transaccion, abort (raise) y rollback total.
+   - **Tombstone entity** — `UPDATE entity SET status='evicted', evicted_at=now() WHERE cdp_code=$1 AND status<>'evicted'`. NO DELETE: preserva el historial de existencia. El guard evita reescribir una fila ya evicted (no MVCC no-op).
+   - **Tombstone vehiculos como GONE** — `UPDATE vehicle SET status='gone', last_seen=now() WHERE entity_ulid=$1 AND status<>'gone'`. **NO `DELETE FROM vehicle`**: el DELETE cascadea a `vehicle_event` (FK ON DELETE CASCADE), cuyo trigger append-only PROHIBE borrar filas -> la eviccion entera abortaria para cualquier dealer que haya emitido un evento. El tombstone conserva el `historial completo` que promete el producto y saca los coches del inventario servido.
+   - **`INSERT INTO capacity_ledger`** `(cdp_code, vehicles_deleted, raw_bytes_freed, disk_free_before, disk_free_after)` — `raw_bytes_freed` = bytes PLANEADOS; `disk_free_after` = NULL (los archivos se borran tras el commit).
+   - **`INSERT INTO audit_eviction`** `(cdp_code, reason, actor, vehicles_deleted, raw_bytes_freed)` — append-only, inmutable.
 
-6. **`update_capacity_ledger(conn, cdp_code)`** — decrementar contadores en `capacity_ledger` (tabla NUEVA, se crea con el build de evict) y `source_health` para reflejar la baja del dealer.
+5. **`_delete_raw_files(...)` tras el commit** — solo entonces se borran fisicamente los archivos raw del dealer (post-commit; un abort no pierde datos).
 
-7. **Log de auditoría** — `INSERT INTO audit_eviction (cdp_code, evicted_at, reason, actor)` (tabla NUEVA, append-only, se crea con el build de evict). Registro permanente e inmutable del borrado.
-
-> **Tablas/columnas a crear con el build** (POR CONSTRUIR, no existen aún): `capacity_ledger`, `audit_eviction`, y `entity.status`/`entity.evicted_at` para el tombstone (o un mecanismo equivalente). El migration del build las añade.
+> Las tablas `capacity_ledger` y `audit_eviction` y las columnas `entity.status`/`entity.evicted_at` YA existen (migracion `0033_evict.sql`). `--apply` (borrado real) NUNCA se ha ejecutado sobre datos reales.
 
 ## Gate de verificacion post-ejecucion
 
 | Check | Condicion esperada |
 |-------|-------------------|
-| entity tombstone | `entity.status == 'EVICTED'` |
-| Vehiculos borrados | `COUNT(vehicle WHERE entity_ulid = :ulid) == 0` |
+| entity tombstone | `entity.status == 'evicted'` |
+| Vehiculos retirados | `COUNT(vehicle WHERE entity_ulid = :ulid AND status='available') == 0` (filas conservadas como `status='gone'`) |
 | Ledger decrementado | `capacity_ledger` refleja la baja del dealer |
 
 ## Artefactos

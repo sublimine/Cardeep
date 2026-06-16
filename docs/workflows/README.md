@@ -14,8 +14,13 @@ DESCUBRIR -> SCRAPEAR -> RECETA -> INGEST -> SERVE-API
                                        |
                                VAM -> DEEP-LEDGER -> INQUISITION -> GESTIONADOR
                                        |
-                                     BORRAR (POR CONSTRUIR)
+                                     BORRAR (IMPLEMENTADO · --apply nunca corrido)
 ```
+
+> **Clasificacion del backlog en GitHub:** cada Sealing Unit (SU) de `docs/SUPERPLAN.md` §4 esta
+> proyectada como [issue filtrable](https://github.com/sublimine/Cardeep/issues) (label por
+> letra/estado/gate/area, 4 milestones). Cerrado = sellado, abierto = restante (spend/data/
+> hardware-gated). Re-sincroniza con `python scripts/github_classify.py`.
 
 ## Indice de documentacion
 
@@ -29,7 +34,7 @@ DESCUBRIR -> SCRAPEAR -> RECETA -> INGEST -> SERVE-API
 | workflows/e2e/ | 04-INGEST.md | pipeline/ingest.py + delta.py + delta_guard.py | IMPLEMENTADO | €0 |
 | workflows/e2e/ | 05-SERVE-API.md | services/api/main.py | IMPLEMENTADO | €0 |
 | workflows/e2e/ | 06-DELTA.md | pipeline/delta.py + delta_guard.py | IMPLEMENTADO | €0 |
-| workflows/e2e/ | 07-EVICT-DELETE.md | pipeline/evict.py | POR CONSTRUIR | €0 |
+| workflows/e2e/ | 07-EVICT-DELETE.md | pipeline/evict.py + migrations/0033_evict.sql | IMPLEMENTADO (--apply nunca corrido) | €0 |
 | workflows/verification/ | 00-VERIFICATION-OVERVIEW.md | pipeline/verify.py | IMPLEMENTADO | €0 |
 | workflows/verification/ | WF-VAM.md | pipeline/verify.py | IMPLEMENTADO | €0 |
 | workflows/verification/ | WF-DEEP-LEDGER.md | verdict_audit + chk_trustworthy_needs_quorum + ops/inquisition_schedule.py | IMPLEMENTADO | €0 |

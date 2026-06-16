@@ -43,7 +43,7 @@ skills/tools aplican a cada caso de uso del pipeline Cardeep.
 | Heartbeat scheduling | `pipeline/ops/scheduler.py` | Python determinista | — | €0 (lógica) / GASTO (scraping Tier-1) |
 | Silence watchdog | `pipeline/ops/silence_watchdog.py` | Python determinista | — | €0 |
 | API serving | `services/api/main.py` | FastAPI determinista | — | €0 |
-| Borrar dealer (EVICT) | `pipeline/evict.py` (POR CONSTRUIR) | Python determinista | — | €0 |
+| Borrar dealer (EVICT) | `pipeline/evict.py` + `migrations/0033_evict.sql` (IMPLEMENTADO · `--apply` nunca corrido) | Python determinista | — | €0 |
 | Completeness gates | `pipeline/complete.py` | Python determinista | — | €0 |
 | Coverage verify | `pipeline/ops/coverage_verify.py` | Python determinista | — | €0 |
 
