@@ -137,7 +137,8 @@ Pasos 1–6 = sistema construido y verificado. Pasos 7–8 = sistema **sirviendo
 
 ## A dónde ir después
 
-- **Operar / qué se scrapea**: [RUNBOOK.md](../../RUNBOOK.md) raíz (validación por unidad, ledger).
+- **Operar (monitorizar / verificar / remediar)**: [OPERATE.md](OPERATE.md) — el runbook del día a día.
+- **Qué se scrapea / validación por unidad**: [RUNBOOK.md](../../RUNBOOK.md) raíz (ledger).
 - **Arquitectura**: [docs/architecture/](../architecture/) (00–11) y [docs/runbook/](.) (00-OVERVIEW…).
 - **Stack de verificación**: [docs/architecture/10-VERIFICATION-STACK.md](../architecture/10-VERIFICATION-STACK.md).
 - **Estado vivo / plan**: `PROGRESO.md`, `docs/SUPERPLAN.md`.
