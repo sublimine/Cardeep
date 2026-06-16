@@ -89,6 +89,17 @@ def should_emit_gone(
     """
     # ---- Branch 1: declared count available (primary probe) ------------------
     if declared is not None:
+        # declared=0 with existing inventory is almost certainly a gateway anomaly (a valid 200
+        # returning count=0 + empty items — e.g. a tenant-scope failure), NOT a real "everything is
+        # gone". Otherwise threshold=0*x=0 and harvested=0 >= 0 = True would authorize a full GONE
+        # sweep that wipes live stock. Suppress it self-consistently (green-review MED; previously the
+        # correctness depended on a downstream cars_caged>0 check in the connector).
+        if declared == 0 and previous_available is not None and previous_available > 0:
+            return (
+                False,
+                f"declared=0 with {previous_available} existing available rows — likely a gateway "
+                f"anomaly (count=0 on a valid response), NOT a real drain; GONE sweep suppressed.",
+            )
         threshold = declared * DECLARED_THRESHOLD
         if harvested >= threshold:
             return (

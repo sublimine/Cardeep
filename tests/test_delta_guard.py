@@ -201,3 +201,23 @@ class TestConstants:
 
     def test_previous_threshold_is_050(self) -> None:
         assert PREVIOUS_THRESHOLD == 0.50
+
+
+class TestZeroDeclaredAnomaly:
+    """green-review MED: declared=0 with existing inventory is a gateway anomaly (a valid 200 with
+    count=0), NOT a real drain — must suppress the GONE sweep. Otherwise threshold=0*0.95=0 lets
+    harvested=0 >= 0 authorize a full sweep that wipes live stock."""
+
+    def test_zero_declared_with_inventory_suppresses(self) -> None:
+        allow, reason = should_emit_gone(harvested=0, declared=0, previous_available=10)
+        assert allow is False
+        assert "anomaly" in reason.lower()
+
+    def test_zero_declared_first_run_unaffected(self) -> None:
+        # No prior inventory → the guard does not apply (nothing to wrongly GONE).
+        allow, _ = should_emit_gone(harvested=0, declared=0, previous_available=0)
+        assert allow is True
+
+    def test_normal_declared_unaffected_by_guard(self) -> None:
+        assert should_emit_gone(harvested=98, declared=100, previous_available=100)[0] is True
+        assert should_emit_gone(harvested=50, declared=100, previous_available=100)[0] is False
