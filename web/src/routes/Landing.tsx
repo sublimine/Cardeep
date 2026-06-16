@@ -1,14 +1,18 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useStats } from '../api/hooks';
-import type { Stats } from '../api/types';
+import { useSealMap } from '../three/useSpainData';
+import { VERDICT_COLOR } from '../three/mapColors';
+import { Panel } from '../components/ui/Panel';
+import { formatInt } from '../lib/format';
+import type { SealVerdict, Stats } from '../api/types';
 import './Landing.css';
 
 // Three.js map is lazy-loaded so it stays out of the initial bundle.
 const SpainMap = lazy(() => import('../three/SpainMap'));
 
 // Verified live counts as of 2026-06-16 (services/api/routers/ops.py /stats).
-// Used as graceful fallback so the hero never renders empty if the API is offline.
+// Graceful fallback so the hero never renders empty if the API is offline.
 const FALLBACK: Stats = {
   dealers: 40_194,
   vehicles_unique_available: 1_486_285,
@@ -16,8 +20,6 @@ const FALLBACK: Stats = {
   provinces: 52,
   municipalities: 8_132,
 };
-
-const nf = new Intl.NumberFormat('es-ES');
 
 interface Metric {
   label: string;
@@ -28,17 +30,37 @@ interface Metric {
 function buildMetrics(s: Stats): Metric[] {
   return [
     { label: 'Coches únicos', value: s.vehicles_unique_available, hint: 'en venta, deduplicados' },
-    { label: 'Puntos de venta', value: s.dealers, hint: 'concesionarios, compraventas, desguaces' },
+    { label: 'Puntos de venta', value: s.dealers, hint: 'concesionarios · compraventas · desguaces' },
     { label: 'Provincias', value: s.provinces, hint: 'cobertura nacional' },
     { label: 'Municipios', value: s.municipalities, hint: 'hasta el último pueblo' },
   ];
 }
+
+const COVERAGE_SEGMENTS: { verdict: SealVerdict; label: string }[] = [
+  { verdict: 'SELLADO', label: 'Sellado' },
+  { verdict: 'PARCIAL', label: 'Parcial' },
+  { verdict: 'GAP', label: 'Gap' },
+];
 
 export function Landing() {
   const { data, isError } = useStats();
   const stats = data ?? FALLBACK;
   const isLive = !!data && !isError;
   const metrics = buildMetrics(stats);
+
+  const seal = useSealMap('venta');
+  const coverage = useMemo(() => {
+    const ps = Object.values(seal);
+    const dist: Record<string, number> = { SELLADO: 0, PARCIAL: 0, GAP: 0, NO_DENOM: 0 };
+    let num = 0;
+    let den = 0;
+    for (const p of ps) {
+      dist[p.verdict] = (dist[p.verdict] ?? 0) + 1;
+      num += p.numerator;
+      den += p.denominator ?? 0;
+    }
+    return { total: ps.length, dist, num, den, pct: den ? (100 * num) / den : 0 };
+  }, [seal]);
 
   return (
     <div className="landing">
@@ -89,23 +111,76 @@ export function Landing() {
           </div>
         </div>
 
-        <div className="hero__metrics">
-          <div className="container hero__metrics-inner">
-            <span className={`hero__livetag${isLive ? ' is-live' : ''}`}>
-              <span className="hero__livedot" aria-hidden="true" />
-              {isLive ? 'Datos en vivo' : 'Última instantánea'}
-            </span>
-            <dl className="metrics">
+        <section className="command" aria-label="Cobertura nacional de venta">
+          <div className="container command__inner">
+            <Panel className="coverage">
+              <div className="coverage__head">
+                <span className="coverage__title">Cobertura nacional · venta</span>
+                <span className={`livetag${isLive ? ' is-live' : ''}`}>
+                  <span className="livetag__dot" aria-hidden="true" />
+                  {isLive ? 'Datos en vivo' : 'Última instantánea'}
+                </span>
+              </div>
+
+              {coverage.total > 0 ? (
+                <>
+                  <div className="coverage__figure">
+                    <span className="coverage__pct mono">
+                      {coverage.pct.toFixed(1)}
+                      <i>%</i>
+                    </span>
+                    <span className="coverage__den mono">
+                      {formatInt(coverage.num)} dealers servidos · censo registral{' '}
+                      {formatInt(coverage.den)}
+                    </span>
+                  </div>
+
+                  <div
+                    className="coverage__bar"
+                    role="img"
+                    aria-label={`${coverage.dist.SELLADO} provincias selladas, ${coverage.dist.PARCIAL} parciales, ${coverage.dist.GAP} con gap`}
+                  >
+                    {COVERAGE_SEGMENTS.map((s) => {
+                      const n = coverage.dist[s.verdict] ?? 0;
+                      const w = coverage.total ? (n / coverage.total) * 100 : 0;
+                      return w > 0 ? (
+                        <span
+                          key={s.verdict}
+                          className="coverage__seg"
+                          style={{ width: `${w}%`, background: VERDICT_COLOR[s.verdict] }}
+                        />
+                      ) : null;
+                    })}
+                  </div>
+
+                  <div className="coverage__keys mono">
+                    {COVERAGE_SEGMENTS.map((s) => (
+                      <span key={s.verdict} className="coverage__key">
+                        <i style={{ background: VERDICT_COLOR[s.verdict] }} />
+                        {s.label} {coverage.dist[s.verdict] ?? 0}
+                      </span>
+                    ))}
+                    <span className="coverage__key coverage__key--muted">
+                      {coverage.total} provincias
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="coverage__skeleton" aria-hidden="true" />
+              )}
+            </Panel>
+
+            <div className="command__stats">
               {metrics.map((m) => (
-                <div key={m.label} className="metric">
-                  <dt className="metric__label">{m.label}</dt>
-                  <dd className="metric__value mono">{nf.format(m.value)}</dd>
-                  <dd className="metric__hint">{m.hint}</dd>
+                <div key={m.label} className="stat">
+                  <span className="stat__label">{m.label}</span>
+                  <span className="stat__value mono">{formatInt(m.value)}</span>
+                  <span className="stat__hint">{m.hint}</span>
                 </div>
               ))}
-            </dl>
+            </div>
           </div>
-        </div>
+        </section>
       </section>
     </div>
   );
