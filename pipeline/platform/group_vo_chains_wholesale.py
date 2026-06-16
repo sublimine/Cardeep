@@ -1288,9 +1288,11 @@ async def harvest_member(conn: asyncpg.Connection, member_name: str, geo: GeoRes
                 fetch_error = str(data)
                 last_http = fetcher.last_status
                 print(f"[group_vo_chains:{member_name}] page {page} fetch failed ({data}); "
-                      f"stopping drain honestly.")
+                      f"will stop after this window but KEEP the sibling pages already fetched.")
                 stop = True
-                break
+                continue  # skip ONLY the failed page — do NOT drop the sibling pages already
+                          # fetched concurrently in this window (green-review MED: a 500 on one
+                          # page silently discarded the rest of the gather window).
             try:
                 vehicles, declared = parse_one(data)
             except Exception as ex:  # a parse failure is recipe drift the breaker must catch.
