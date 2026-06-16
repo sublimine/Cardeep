@@ -92,6 +92,9 @@
   color: var(--text-3);
   font-size: var(--text-sm);
 }
+.dealer__activitypanel {
+  padding: var(--space-5);
+}
 .dealer__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

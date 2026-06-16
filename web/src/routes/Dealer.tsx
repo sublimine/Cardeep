@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useEntity, useEntityDelta, useEntityInventory } from '../api/hooks';
 import { VehicleCard } from '../components/vehicle/VehicleCard';
 import { Badge } from '../components/ui/Badge';
+import { Panel } from '../components/ui/Panel';
 import { kindColor, kindLabel } from '../lib/kinds';
 import { provinceName } from '../lib/provinces';
 import { formatDate, formatInt } from '../lib/format';
@@ -120,6 +121,7 @@ export function Dealer() {
 
         <aside className="dealer__activity">
           <h2 className="dealer__h2">Actividad reciente</h2>
+          <Panel className="dealer__activitypanel">
           {delta.data && delta.data.items.length > 0 ? (
             <ul className="timeline">
               {delta.data.items.map((e, i) => (
@@ -140,6 +142,7 @@ export function Dealer() {
           ) : (
             <p className="dealer__muted">Sin eventos recientes registrados.</p>
           )}
+          </Panel>
         </aside>
       </div>
     </div>
