@@ -89,6 +89,50 @@ async def geo_completeness(
     return cache_set(request, response)
 
 
+@router.get("/geo/seal")
+@limiter.limit(RATE_EXPENSIVE)
+async def geo_seal(
+    request: Request,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """Per-province VENTA seal (SU-SEAL): served CANONICAL dealers vs the DIRCE CNAE-451 registral
+    ceiling. verdict = SELLADO (>=85%) / PARCIAL (50-85%) / GAP (<50%). Backed by the live view
+    v_province_seal (migration 0042) so it always reflects the current harvest. Cached + EXPENSIVE
+    (GROUP BY over entities + dedup join; stable between harvests)."""
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
+    async with request.app.state.pool.acquire() as c:
+        rows = await c.fetch(
+            "SELECT province_code, segment, denominator, numerator, coverage_pct, verdict "
+            "FROM v_province_seal ORDER BY province_code")
+        provinces = [{
+            "province_code": r["province_code"],
+            "segment": r["segment"],
+            "denominator": int(r["denominator"]) if r["denominator"] is not None else None,
+            "numerator": int(r["numerator"]),
+            "coverage_pct": float(r["coverage_pct"]) if r["coverage_pct"] is not None else None,
+            "verdict": r["verdict"],
+        } for r in rows]
+        num = sum(p["numerator"] for p in provinces)
+        den = sum(p["denominator"] for p in provinces if p["denominator"])
+        dist: dict[str, int] = {}
+        for p in provinces:
+            dist[p["verdict"]] = dist.get(p["verdict"], 0) + 1
+        response = ok({
+            "segment": "venta",
+            "method": "served_canonical / DIRCE-451 registral_ceiling (migration 0042 v_province_seal)",
+            "national": {
+                "numerator": num, "denominator": den,
+                "coverage_pct": round(100 * num / den, 1) if den else 0,
+            },
+            "distribution": dist,
+            "provinces": provinces,
+        })
+    return cache_set(request, response)
+
+
 # ---------------------------------------------------------------------------
 # GAP 1 fix: /geo/{province}/entities filters active non-particular
 # GAP 3 new: /geo/{province}/municipalities/{muni}/entities
