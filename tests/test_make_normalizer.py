@@ -55,3 +55,15 @@ class TestNormalizeMake:
     def test_known_make_wins_over_title(self):
         # An already-known make is normalized; the title is only a fallback for empty makes.
         assert normalize_make("bmw", "Audi A3") == "BMW"
+
+    def test_model_as_make_recovered_from_title(self):
+        # audit pass-4 D2: wallapop stores a MODEL in the user-typed 'brand' field. When the make
+        # is not a known brand but the title leads with one, the title's brand is authoritative.
+        assert normalize_make("Golf", "Volkswagen Golf 1.6 TDI") == "Volkswagen"
+        assert normalize_make("Leon", "SEAT Leon ST 2.0 TDI") == "SEAT"
+        assert normalize_make("Clio", "Renault Clio dCi 90") == "Renault"
+
+    def test_unknown_make_with_unknown_title_still_preserved(self):
+        # Law I still holds when there is NO known brand to recover from the title: keep verbatim.
+        assert normalize_make("SomeKitCarMaker", "SomeKitCarMaker Special") == "SomeKitCarMaker"
+        assert normalize_make("Hommell", "Hommell Berlinette RS") == "Hommell"

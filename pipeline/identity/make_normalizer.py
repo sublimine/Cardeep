@@ -57,13 +57,20 @@ def make_from_title(title: str | None) -> str | None:
 def normalize_make(make: str | None, title: str | None = None) -> str | None:
     """Canonical make for ingest/backfill.
 
-    - Known brand (any casing)  -> its canonical form.
-    - Empty/None make           -> recovered from the title's leading brand token (if known).
-    - Non-empty unknown brand    -> kept verbatim (NEVER guessed — Law I: under-fill over mis-fill).
+    - Known brand (any casing)                  -> its canonical form.
+    - Make is NOT a known brand BUT the title leads with one -> the title's brand. This recovers
+      both an empty make AND a model-as-make (audit pass-4 D2: wallapop's user-typed 'brand' field
+      stores a model — make='Golf' with title 'Volkswagen Golf' -> 'Volkswagen'). The title's
+      leading-token brand is the authoritative classifieds signal; a non-brand make value is not.
+    - Make is non-empty, unknown, and the title has NO known brand -> kept verbatim (NEVER guessed —
+      Law I: under-fill over mis-fill; there is no better signal to override it with).
     """
     canon = canonical_make(make)
     if canon:
         return canon
+    from_title = make_from_title(title)
+    if from_title:
+        return from_title  # title leads with a known brand -> authoritative over a non-brand make
     if make and make.strip():
-        return make  # unknown brand — preserve, do not guess
-    return make_from_title(title)
+        return make  # unknown brand, no title brand to recover -> preserve, do not guess
+    return None

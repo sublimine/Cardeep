@@ -76,6 +76,7 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.geocode import ProvinceGeocoder
+from pipeline.identity.make_normalizer import normalize_make
 from pipeline.ids import ulid
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
@@ -1018,7 +1019,9 @@ async def _ingest_window(conn: asyncpg.Connection, platform_ulid: str, cage: lis
             await conn.execute(
                 _BULK_INSERT_VEHICLES,
                 [x[0] for x in ins], [x[1] for x in ins], [x[2] for x in ins],
-                [x[3].title for x in ins], [x[3].make for x in ins], [x[3].model for x in ins],
+                [x[3].title for x in ins],
+                [normalize_make(x[3].make, x[3].title) for x in ins],  # P2 D2: canonicalize + recover model-as-make
+                [x[3].model for x in ins],
                 [x[3].year for x in ins], [x[3].km for x in ins], [x[3].price for x in ins],
                 [x[3].fuel for x in ins], [x[3].transmission for x in ins],
                 [x[3].photo_url for x in ins], [x[3].listing_ref for x in ins])
