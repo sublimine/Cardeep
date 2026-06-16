@@ -16,6 +16,14 @@ coherence audit):
   - year: a future year beyond next model-year is a parse artifact ('SEAT Ibiza 2098', 'Clase GLC 2060',
     field-misalignment); pre-1900 is implausible (genuine classics start ~1900). -> None. Bound is
     dynamic (current year + 1) so it never goes stale.
+  - year×km CROSS (audit 2026-06-16): each field can pass its own gate yet be jointly IMPOSSIBLE — a
+    year>=current (age ~0) with huge km (VW Caravelle 2026 @ 600,000 km; VW Passat 2026 @ 420,000 km —
+    both served). 36 such impossible-age rows (year>=2026 ∧ km>300k) were cleaned to year=km=NULL: NULL
+    BOTH, because which field is the parse error is PRICE-dependent and ambiguous (€3,500/600k = old van,
+    YEAR wrong; €100k/500k CUPRA Born = new car, KM wrong) — no single-field NULL is safe. SYSTEMATIC
+    gap (scoped, not hacked at depth): a cross-field gate `(current_year - year) <= 0 AND km > ~300k ->
+    NULL both` wired at ingest; the 150k-300k band is left out (model-year-vs-registration fuzz makes it
+    ambiguous). This flat per-field module is the wrong home for the model/price-aware disambiguation.
 
 The car/row STAYS servable; only the impossible field reads as unknown instead of distorting every
 km/age/price distribution. DELIBERATELY NOT handled here (Law I — under-correct over mis-correct), and
