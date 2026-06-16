@@ -72,7 +72,7 @@ async def get_entity(
         # canonical and MUST be counted. An INNER JOIN dropped them, reporting 0 stock for live dealers.
         n_available = await c.fetchval(
             "SELECT count(DISTINCT COALESCE(vc.canonical_vehicle_ulid, v.vehicle_ulid)) "
-            "FROM vehicle v "
+            "FROM servable_vehicle v "
             "LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid "
             "WHERE v.entity_ulid = ANY($1::text[]) AND v.status = 'available'",
             cluster.member_ulids,
@@ -131,7 +131,7 @@ async def get_inventory(
                      v.vehicle_ulid, v.deep_link, v.title, v.make, v.model, v.year,
                      v.km, v.price, v.currency, v.fuel, v.transmission, v.photo_url,
                      v.status, v.first_seen, v.last_seen
-                FROM vehicle v
+                FROM servable_vehicle v
                 LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
                WHERE v.entity_ulid = ANY($1::text[])
                  AND v.status = 'available'

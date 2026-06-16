@@ -83,7 +83,7 @@ async def stats(
                 """
                 SELECT count(*)
                   FROM v_canonical_vehicle vc
-                  JOIN vehicle v ON v.vehicle_ulid = vc.vehicle_ulid
+                  JOIN servable_vehicle v ON v.vehicle_ulid = vc.vehicle_ulid
                  WHERE vc.vehicle_ulid = vc.canonical_vehicle_ulid
                    AND v.status = 'available'
                 """

@@ -57,7 +57,7 @@ async def platform_inventory(
                       d.province_code AS dealer_province, d.municipality_code AS dealer_municipality,
                       d.kind AS dealer_kind
                  FROM platform_listing pl
-                 JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
+                 JOIN servable_vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
                  JOIN entity d ON d.entity_ulid = v.entity_ulid
                 WHERE pl.platform_entity_ulid = $1 AND pl.status = 'listed'
                   AND v.status = 'available'
