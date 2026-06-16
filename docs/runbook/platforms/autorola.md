@@ -24,7 +24,9 @@
 
 ## CLI (reproducible)
 ```bash
-python scripts/cage_autorola_bca_subastas.py --autorola autorola_es_full.json   # slice capturado
+# autorola_es_full.json = la respuesta REST del paso 2, capturada on-demand por el stealth
+# browser. Es raw harvest: NO versionado (.gitignore) — se produce al capturar y se cagea.
+python scripts/cage_autorola_bca_subastas.py --autorola autorola_es_full.json
 ```
 
 ## Trampas / notas

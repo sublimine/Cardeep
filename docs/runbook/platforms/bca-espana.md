@@ -24,7 +24,9 @@
 
 ## CLI (reproducible)
 ```bash
-python scripts/cage_autorola_bca_subastas.py --bca bca_es_full.json   # slice capturado del browser vivo
+# bca_es_full.json = el slice capturado del browser vivo. Es raw harvest:
+# NO versionado (.gitignore) — se produce al capturar y se cagea.
+python scripts/cage_autorola_bca_subastas.py --bca bca_es_full.json
 ```
 
 ## Trampas / notas

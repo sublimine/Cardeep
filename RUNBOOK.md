@@ -470,6 +470,9 @@ open · `source_health` 33 healthy / 2 degraded / 0 down · `harvest_run` 170 ok
 
 > Grupo-level: chains (37.319 sellado / 39.201 vivo) · rentacar (166 / 215) · subastas (27 / 6.785).
 > El verdict de grupo cubre cada miembro por su pathA `source_group`/`kind`.
+> Nota subastas: `bca_es_full.json` / `autorola_es_full.json` son slices capturados on-demand del
+> browser vivo (raw harvest, NO versionados — `.gitignore`). Se producen al capturar y se cagean;
+> no son ficheros del repo. Ver `docs/runbook/platforms/{bca-espana,autorola}.md`.
 
 ### 8.4 Long-tail family-slices (7)
 
