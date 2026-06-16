@@ -157,6 +157,20 @@ _MANUAL_RE = re.compile(r"manual", re.I)
 # km from "21.380 km" -> 21380.
 _KM_RE = re.compile(r"[\d.]+")
 
+# Das WeltAuto declares the province result count in an inline JS config object on page 1:
+#   filter = {"SortOrder":"...","filterlist":[],"numberOfResults":"1037","source":"Result List"};
+# This is the SITE-declared total for the province slice — the €0 coverage oracle (B9 gate),
+# orthogonal to our drain-by-exhaustion count. Exactly one per page; a facet count like
+# data-key="puertas" 1.037 is NOT this (it lives in a data-value anchor, not the config object).
+_NUM_RESULTS_RE = re.compile(r'"numberOfResults"\s*:\s*"?(\d+)"?')
+
+
+def _parse_declared_total(html: str) -> int | None:
+    """Extract the province's site-declared result count (numberOfResults) from a page-1 SRP.
+    Returns None when absent so the caller never fabricates a denominator (better a hole)."""
+    m = _NUM_RESULTS_RE.search(html)
+    return int(m.group(1)) if m else None
+
 
 def dwa_platform_cdp_code() -> str:
     """The Das WeltAuto platform's immutable cdp_code. Built from the bare domain identity
@@ -854,6 +868,14 @@ async def _drain_province(conn: asyncpg.Connection, geo: GeoResolver, platform_u
             window_pages.append((page, data))
         new_ids = 0
         if window_pages:
+            # Capture the site-declared province total from page 1 (the B9 coverage oracle), once
+            # per province. Page 1 is always in the first window (next_page starts at 1 per province).
+            for _p, _html in window_pages:
+                if _p == 1:
+                    _decl = _parse_declared_total(_html)
+                    if _decl is not None:
+                        stats["declared_total"] = stats.get("declared_total", 0) + _decl
+                    break
             new_ids = await _ingest_window(conn, geo, platform_ulid, window_pages, seen_ids,
                                            harvested_cageable, stats)
             stats["pages_fetched"] += len(window_pages)
@@ -884,6 +906,7 @@ async def harvest(max_provinces: int = DEFAULT_MAX_PROVINCES,
         "new_cars": 0, "edges_created": 0, "new_events": 0, "seals_captured": 0,
         "dup_ids_collapsed": 0, "dealers_distinct": 0, "concurrency": concurrency,
         "provinces_drained": 0, "provinces_target": target_slugs,
+        "declared_total": 0,  # sum of per-province site-declared numberOfResults (B9 oracle)
     }
     # Harvest-side truth for the VAM: distinct CAGEABLE cars = distinct (bnr, deep_link) pairs
     # that survived dealer-parse + geo-resolution. Like-with-like vs db_edges.
@@ -974,9 +997,16 @@ async def harvest(max_provinces: int = DEFAULT_MAX_PROVINCES,
         # the drain, and the VAM did not refute.
         run_ok = fetch_error is None and stats["pages_fetched"] > 0 and verdict != "REFUTED"
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
+        # Coverage (B9) instrumentation: pass the site-declared total (sum of per-province
+        # numberOfResults) + the in-harvest distinct count + platform ulid so verify_coverage runs.
+        # A PARTIAL drain (subset of provinces) declares less than captured_db holds (all provinces),
+        # which the B9 over-coverage path correctly resolves to UNVERIFIED, not REFUTED.
         outcome = await record_run(
             conn, DWA_SOURCE_KEY, ok=run_ok, rows=stats["cars_caged"],
-            error=run_error, http_status=last_http)
+            error=run_error, http_status=last_http,
+            declared_total=(stats["declared_total"] or None),
+            captured_distinct=len(seen_ids),
+            platform_ulid=platform_ulid)
         stats["health_status"] = outcome.status
         stats["breaker_state"] = outcome.breaker_state
         if not run_ok:
