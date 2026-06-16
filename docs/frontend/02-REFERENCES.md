@@ -35,10 +35,14 @@
 Grids de 3 cards iguales · cards genéricas con sombra plana · todo plano sin profundidad ·
 hero centrado · tipografía sin carácter · "parece una plantilla". (Coincide con `web/design-quality.md`.)
 
-## Plan de re-nivelado (sobre lo ya funcional P0–P4)
-- **R1 (en curso): 3D cinematográfico** — bloom + materiales emisivos + sombras + atmósfera + cámara.
-- **R2: command-center landing** — paneles glass de cobertura/inventario alrededor del mapa, ticker vivo.
-- **R3: explore = mapa+lista** — split con el mapa filtrando resultados.
-- **R4: dealer/vehículo dashboard-grade** — fuera cards planas; paneles, charts de delta, ficha cine.
-- **R5: motion + acabado** — choreography de entrada, hover designed, responsive.
+## Plan de re-nivelado (sobre lo ya funcional P0–P4) — commits 537107a→77f3a0c
+- **R1 ✅ 3D cinematográfico** — bloom + materiales emisivos + ContactShadows + fog. `537107a`.
+- **R2 ✅ command-center landing** — Panel glass "cobertura nacional · venta" (% real + barra
+  segmentada por veredicto) + stats que respiran; kit `ui/Panel` reutilizable. `8b481ce`.
+- **R3 ✅ explore = dashboard de cobertura** — barra de cobertura real por provincia + superficie
+  glass; mata el grid de cards planas. `722c7df`. (El split mapa+lista queda como mejora futura.)
+- **R4 ✅ vehículo cinematográfico** — viñeta de estudio + glow de precio + specs/plataformas glass.
+  `07b787c`. **R5(dealer) ✅** — inventario en cards glass + actividad en panel. `77f3a0c`.
+- **Pendiente:** motion/choreography de entrada (GSAP/stagger), split mapa+lista en explore,
+  visor 3D por ficha si el owner pide "WebGL agresivo", Lighthouse/a11y/E2E.
 Estado vivo en `00-PLAN.md`.
