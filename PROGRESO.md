@@ -1328,9 +1328,12 @@
 - `dd93759` **CRIT #2 coches_com**: `_finalize_platform_segment` sin `declared_total` → VN/renting **coverage-
   blind** (gate nunca disparaba; VO/km0 sí). Forward de declared_total/captured_distinct/platform_ulid + corregido
   el declared del renting (headline 8908 → paginable Σ ~1034, el denominador correcto).
-- **PENDIENTE (contexto fresco, diseño en el triage):** TEMA1 resto (subastas LOW/autocasion), TEMA2 (breaker-skip
-  sin record_run), **TEMA3 scoping de declared_total/coverage** (varios apuntan a `coverage_verify.captured_db`
-  acumulativo vs declared per-run — análisis del módulo COMPARTIDO), TEMA4 (Flexicar usa fetcher/headers de
-  OcasionPlus = bug real; last_http stale; supplement-sweep no para tras ban).
-- **SESIÓN ACUMULADA: ~28 hallazgos reales fijados** (núcleo 9 + pipeline 14 + conectores 5), todos verificados a
-  mano + test/live + en `main` + CI verde. 3 green-reviews adversariales; ~30% de los CRITICAL de agentes = falsos.
+- **CONNECTOR REVIEW COMPLETO (todos los accionables fijados, 10 commits):** TEMA1 los 5 conectores · Flexicar HIGH
+  (`30db4c2` fetch_flexicar_srp) · TEMA4 anti-detección (`8e4b175` supplement-sweep para en ban, `5101571` last_http
+  no-stale) · MEDs (`f1f1de2` vo_chains ventana concurrente conserva páginas, `dc10e13` delta_guard zero-declared,
+  `c5ca3aa` milanuncios bands→warning). **PENDIENTE genuino:** TEMA3 coverage-scoping (verificado nuancado — el
+  mecanismo del agente para coches_net estaba PARCIALMENTE MAL, cazado al verificar; riesgo coverage-gating →
+  contexto fresco) · TEMA2 breaker-skip (juicio diseño) · vo_chains listing_ref (design-risk, no bug activo).
+- **SESIÓN ACUMULADA: ~36 hallazgos reales fijados** (núcleo 9 + pipeline 14 + conectores 13), todos verificados a
+  mano + test/live + en `main` + CI verde. 3 green-reviews adversariales; ~30% de CRITICAL de agentes = falsos →
+  la verificación a mano de CADA hallazgo (no confiar en ningún resultado) fue, repetidamente, lo decisivo.
