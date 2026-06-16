@@ -65,6 +65,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import uuid
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -331,6 +332,11 @@ def parse_seller(user_id: str, payload: dict) -> SellerRef:
     )
 
 
+# Monthly-payment phrases in a wallapop title ("DESDE 313€/MES", "288€ AL MES") mean the price field
+# holds the instalment (cuota), not the sale price (audit pass-4 D3).
+_MONTHLY_PAYMENT_RE = re.compile(r"/\s*mes\b|\bal\s+mes\b", re.IGNORECASE)
+
+
 def parse_item_vehicle(item: dict) -> Vehicle:
     """Parse the car from a wallapop search item (REAL field map, recipe §2)."""
     price_obj = item.get("price") or {}
@@ -341,7 +347,9 @@ def parse_item_vehicle(item: dict) -> Vehicle:
     if year is not None and not (1900 <= year <= 2100):
         year = None
     km = _to_int(ta.get("km"))
-    if km is not None and (km < 0 or km > 5_000_000):
+    # >= 1.5M nulls Wallapop's API default for an UNSET odometer (a sentinel, not a reading) — audit
+    # pass-4 D3. wallapop bypasses ingest's sanitize_km (bulk insert), so the guard lives here too.
+    if km is not None and (km < 0 or km >= 1_500_000):
         km = None
 
     web_slug = item.get("web_slug") or ""
@@ -350,6 +358,12 @@ def parse_item_vehicle(item: dict) -> Vehicle:
     make = ta.get("brand")
     model = ta.get("model")
     title = item.get("title") or " ".join(p for p in (make, model) if p) or None
+
+    # Audit pass-4 D3: a financing-led listing ("DESDE 313€/MES") stores the MONTHLY instalment in the
+    # price field. A small price with a monthly-payment title is the cuota, not the sale price -> null
+    # it (price-on-request) so the instalment never pollutes the served price distribution.
+    if price is not None and price < 1500 and title and _MONTHLY_PAYMENT_RE.search(title):
+        price = None
 
     loc = item.get("location") or {}
     return Vehicle(

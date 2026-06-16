@@ -67,14 +67,18 @@ def sanitize_price(price):
 
 
 def sanitize_km(km):
-    """Return *km* unchanged, or None if physically impossible (<0 or > 1.5M km)."""
+    """Return *km* unchanged, or None if physically impossible (<0 or >= 1.5M km).
+
+    The >= boundary (audit pass-4 D3) nulls exactly 1,500,000 — Wallapop's API default for an UNSET
+    odometer (a sentinel, not a reading). Legit high-mileage commercials stay well under 1M; a real
+    value at exactly the round 1.5M cap does not occur, so >= is safe and kills the sentinel."""
     if km is None:
         return None
     try:
         k = int(km)
     except (TypeError, ValueError):
         return None
-    if k < 0 or k > KM_MAX:
+    if k < 0 or k >= KM_MAX:
         return None
     return km
 

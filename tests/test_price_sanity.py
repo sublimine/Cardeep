@@ -37,6 +37,7 @@ class TestSanitizeKm:
         from pipeline.price_sanity import sanitize_km
         assert sanitize_km(5_000_000) is None    # digit-concatenation artifact
         assert sanitize_km(1_500_001) is None
+        assert sanitize_km(1_500_000) is None    # Wallapop unset-odometer sentinel (audit pass-4 D3)
         assert sanitize_km(-1) is None
         assert sanitize_km(None) is None
 
