@@ -17,6 +17,10 @@ docs/runbook/
 ├── 02-GROUP-SEPARATION.md   ← la lógica que separa Tier-1 / OEM-VO / cadenas / rentacar / subastas / long-tail
 ├── 03-DISCOVERY.md          ← fase DESCUBRIR: arneses de hallazgo de puntos de venta (association-mining · geo-sweep)
 ├── 04-TERRITORIAL.md        ← fase F8 SELLO: censo vs cobertura (INE DIRCE + Overture POI ortogonal), gap-map honesto
+├── 05-HARVEST-EXECUTION-PLAN.md ← plan FORWARD de la fase gated (el "cómo del A al Z"): micro-tareas
+│                              atómicas A3-drains/A4/A5/A2/C/B2/D1/R con comando·arsenal·gate·presupuesto
+├── DEPLOY.md                ← bring-up reproducible de máquina limpia (8 pasos verificados)
+├── OPERATE.md               ← operación diaria: monitor · verify · remediar
 ├── groups/<grupo>.md        ← un capítulo por GRUPO (resumen + tabla de sus miembros validados)
 ├── platforms/<slug>.md      ← un fichero por CONECTOR validado (plantilla §3, uniforme)
 ├── VALIDATION-INDEX.md      ← LEDGER vivo: unidad → verdict id → count → CLI → fecha
