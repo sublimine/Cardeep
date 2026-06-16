@@ -6,7 +6,8 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, ContactShadows } from '@react-three/drei';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { Province } from './Province';
 import { useProvinceShapes, useSealMap } from './useSpainData';
 import { VERDICT_COLOR, verdictColor } from './mapColors';
@@ -67,6 +68,8 @@ export default function SpainMap() {
         gl={{ antialias: true, alpha: true }}
         onPointerMissed={() => setHovered(null)}
       >
+        <color attach="background" args={['#0a0e17']} />
+        <fog attach="fog" args={['#0a0e17', 95, 240]} />
         <SceneLights />
         <group rotation={[-Math.PI / 2, 0, 0]}>
           {shapes.map((s) => {
@@ -85,6 +88,14 @@ export default function SpainMap() {
             );
           })}
         </group>
+        <ContactShadows
+          position={[0, -0.2, 0]}
+          scale={175}
+          blur={2.6}
+          far={46}
+          opacity={0.6}
+          color="#05070c"
+        />
         <OrbitControls
           enablePan={false}
           enableDamping
@@ -97,6 +108,9 @@ export default function SpainMap() {
           autoRotateSpeed={0.35}
           target={[0, 0, 0]}
         />
+        <EffectComposer>
+          <Bloom mipmapBlur luminanceThreshold={0.5} luminanceSmoothing={0.25} intensity={0.9} radius={0.72} />
+        </EffectComposer>
       </Canvas>
 
       <div className="spainmap__legend mono" aria-hidden="true">

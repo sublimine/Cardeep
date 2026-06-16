@@ -61,9 +61,9 @@ export function Province({ shape, depth, color, hovered, dimmed, onHover, onSele
     // Lift along the extrude axis (local +Z → world +Y after the group's -90deg X rotation).
     if (mesh) mesh.position.z += ((hovered ? LIFT : 0) - mesh.position.z) * LERP;
     if (mat) {
-      const targetEmissive = hovered ? 1.05 : 0.28;
+      const targetEmissive = hovered ? 1.35 : 0.42;
       mat.emissiveIntensity += (targetEmissive - mat.emissiveIntensity) * LERP;
-      const targetOpacity = dimmed && !hovered ? 0.32 : 1;
+      const targetOpacity = dimmed && !hovered ? 0.34 : 1;
       mat.opacity += (targetOpacity - mat.opacity) * LERP;
     }
   });
@@ -89,9 +89,9 @@ export function Province({ shape, depth, color, hovered, dimmed, onHover, onSele
         ref={matRef}
         color={baseColor}
         emissive={baseColor}
-        emissiveIntensity={0.28}
-        metalness={0.25}
-        roughness={0.5}
+        emissiveIntensity={0.42}
+        metalness={0.4}
+        roughness={0.32}
         transparent
         opacity={1}
       />
