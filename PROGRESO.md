@@ -1432,3 +1432,16 @@
 - **Balance sesión: ~10 defectos €0 sellados** (0045·P3·P4·P8·Q3·Q5·Q6·Q10·D5·D6) en 4 pasadas adversariales + 12 invariantes
   a mano — todos que los audits previos de 7+48 agentes NO cazaron. GitHub #35 = dossier. Próximo bloque: D2 (make-normalize,
   el más limpio) luego D1/D3/D8/D7. Substantivo restante (rojos/harvest/D1-hardware) = tu decisión de gasto.
+
+### 2026-06-16 (cont.) — Ejecución pass-4: D2 sellado + D1/D8 €0-parte (continuando, no difiriendo)
+- **D2 make (SELLADO f949c5e):** verificar el contrato real de `normalize_make` cazó que el fix sugerido por el agente
+  era INEFECTIVO (mantiene make-desconocido verbatim → 'Golf' seguiría 'Golf'). Root = política Option-C (cuando make no
+  es marca conocida pero el título lidera con una → título autoritativo); wallapop bulk-ingest cableado; backfill 3ª-pasada
+  **6.993 makes→marca canónica** (verificado: 1 conflicto título-correcto, 148 model-puro, ~6.844 variante/typo/concat). 11 tests.
+- **D1 oem_byd (€0-parte):** **32 quarantined** (reversible) → oem_byd servable=0 (dejan de servirse bajo dealer+provincia
+  equivocados). Root receta family_dealerk_wp scope /byd/ = harvest-phase. Reversal: cerrar los 32 items oem_byd_misattribution.
+- **D8 (€0-parte):** 8 platform_price sentinels (111111111/…) → NULL. Decimal factor-10 + joke>1M = queued (make/locale-aware).
+- **QUEUED careful:** D3 wallapop cuota-mensual-como-precio (3.485) + km-sentinel (145) [parser+backfill]; D7 B7 photo-overmerge
+  (~399, K=12 deja pasar fotos-catálogo → re-cluster, toca core B7]; D1-recipe-scope [harvest]; D8-decimal [parser].
+- **Sesión: ~13 defectos €0 sellados/manejados** (0045·P3·P4·P8·Q3·Q5·Q6·Q10·D5·D6·D2·D1-quar·D8-sent) en 4 pasadas adversariales
+  + 12 invariantes a mano — todos que los audits de 7+48 agentes NO cazaron. GitHub #35 = dossier. Próximo bloque: D3.
