@@ -375,6 +375,13 @@ async def prosecute_pending(
                 decided += 1
                 v = summary.get("verdict") or "UNKNOWN"
                 verdicts[v] = verdicts.get(v, 0) + 1
+        except (asyncpg.PostgresConnectionError, asyncpg.InterfaceError):
+            # The connection is dead — continuing the loop would fail every remaining claim
+            # silently (only 'errors' would tick up) and the per-claim SAVEPOINT cannot be
+            # cleanly rolled back over a broken connection. Abort the batch loudly so the caller
+            # sees a real failure instead of a swallowed pile-up. (green-review H9.)
+            logger.exception("prosecutor: connection-level failure — aborting batch")
+            raise
         except Exception:
             errors += 1
             logger.exception(
