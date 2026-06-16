@@ -36,7 +36,18 @@ con evidencia de DB viva). Cada uno se verifica a mano antes de tocar.
 | R3 | `recipe.py:59` write_recipe last-writer-wins clobber | **REAL** (incidente documentado coches.net) | ⏳ PENDIENTE (guard de contenido) |
 | R4 | `discover.py:104` skipped entities sin traza per-entity | **REAL** (observabilidad) | ⏳ PENDIENTE (log estructurado) |
 
-## Orden de ejecución
-P1 ✅ → **Q5 geo (limpio, irreversible) → Q6 discover atómico (limpio) → Q3 complete G4 (claro) →
-Q4+R2+R3 recipe (yaml.dump + validación + guard) → Q8 sanitize → P2+Q9+Q10 silent-failure cluster
-→ Q7 in_db → R1 source_ref → R4 observabilidad.** Cada uno: verificar a mano → fix → test → commit.
+## Orden de ejecución — PROGRESO
+
+**FIJADOS + TESTEADOS + PUSHEADOS (7 hallazgos, 3 commits, cada uno verificado a mano + live):**
+- `9818a9b` **P1 + Q1** (ingest+delta): NULL→valid price/km fill en AMBOS write-paths + UPDATE
+  fusionado (1 tupla). Live: 12.128/53.729 NULL candidatos; merged UPDATE = `UPDATE 1`.
+- `3440423` **Q5 + Q6 + R1** (geo+discover): guarda de artículos (live: la/a/las→None, reales OK) +
+  `RETURNING entity_ulid` atómico (mata la carrera) + source_ref COALESCE.
+- `ed9d57d` **Q3** (complete): G4 `LEFT JOIN + COALESCE` (live: entity 0→278; 184 entities des-corruptas).
+
+**PENDIENTES (contexto fresco — necesitan trabajo cuidadoso):** P2+Q9+Q10 (cluster silent-failure
+harvest_dealer/scale_as24/autoscout24 — wiring try/except + record_run) → Q4+R2+R3 (recipe: migrar a
+`yaml.dump` + validación de schema + guard anti-clobber) → Q8 (sanitize en emit_change_deltas — mi
+código, defensivo, cuidado con tests de junk) → Q7 (discover in_db acumulativo → scope `seen_at>=run_start`)
+→ R4 (discover skipped: log estructurado). Q2 = juicio (keep-old defendible), tracked.
+Cada uno: verificar a mano → fix → test → commit.

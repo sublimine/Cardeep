@@ -1282,3 +1282,20 @@
 - **Balance green-review: 9 reales fijados (6 commits, todos con test), 6 falsos positivos, 5 resueltos/diferidos
   con causa.** 2/5 CRITICAL eran falsos — la verificación a mano de cada hallazgo (no confiar en los agentes) fue
   lo que separó señal de ruido. Triage completo: `docs/REVIEW_FINDINGS_2026-06-16.md`.
+
+### 2026-06-16 (cont.) — GREEN-REVIEW 2: capa PIPELINE compartida (ingest/complete/recipe/geo/discover/price/harvest)
+- 2º barrido adversarial (workflow `wyvlo4ikx`, 7 especialistas) sobre la capa de alto apalancamiento (bugs ahí
+  afectan a los 26 conectores). **19 hallazgos (2 CRIT, 12 HIGH, 5 MED), mucho más productivo que el del núcleo**,
+  con evidencia de DB viva. Triage: `docs/REVIEW_FINDINGS_PIPELINE_2026-06-16.md`. Verificado cada uno a mano.
+- **7 FIJADOS + TESTEADOS + PUSHEADOS (3 commits):**
+  - `9818a9b` **P1+Q1 (CRITICAL)**: el guard `row["price"] is not None` descartaba la promoción **NULL→válido** en
+    AMBOS write-paths (ingest.py AS24 + diff_vehicle/emit_change_deltas = 26 wholesale) → precios/km NUNCA se
+    rellenaban. Live: **12.128 price-NULL, 53.729 km-NULL, 2.712 con NEW.price descartado**. + UPDATE fusionado
+    (mata el churn de 3 tuplas/vehículo). Tests NULL→válido + 2 tests buggy actualizados.
+  - `3440423` **Q5+Q6+R1**: geo `_index_prov` minteaba provincias desde artículos ('Rioja,La'→'la'='26' → cdp_code
+    erróneo irreversible); guarda `len>=4` (live: la/a/las→None, reales OK). discover `RETURNING entity_ulid`
+    atómico (mata carrera que abortaba el resto del run). source_ref COALESCE.
+  - `ed9d57d` **Q3**: complete G4 INNER→`LEFT JOIN+COALESCE` (live: entity 0→278; **184 entities** des-corruptas).
+- **PENDIENTES (contexto fresco):** P2+Q9+Q10 (silent-failure harvest_dealer/scale_as24), Q4+R2+R3 (recipe yaml.dump
+  +validación+clobber), Q8 (sanitize en delta), Q7 (in_db acumulativo), R4 (observabilidad). Q2 juicio (tracked).
+- **Sesión acumulada: 16 hallazgos reales fijados (núcleo 9 + pipeline 7), todos con test, todos en `main`.**
