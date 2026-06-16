@@ -37,7 +37,7 @@ diferiste. No es una parada estratégica: es el límite lógico de "€0 + sin h
 | A6 | Geo país/prov/ciudad | 🟡 GATED | DATA | comarca 99,93% ✓, sentinel-drift 0 ✓; muni-gap ~11% (6.777) = sin señal geo, necesita Overture/geocoder |
 | A7 | Código único por dealer | ✅ **SELLADO** | — | cdp_code inmutable DB-enforced (UNIQUE); 391.944 1:1, 0 null |
 | A8 | Falla→alerta→auto-repara→no cae | ✅ **SELLADO** | — | lazo €0 cerrado (breaker→auto_repair→alert-dedup→recovery); test inyección 8✓ |
-| A9 | API viva sirviendo | ✅ **SELLADO** | — | FastAPI sirve solo sellado; servable_entity 391.944, servable_vehicle 1.704.968; dedup intra-cluster; rate-limit+cache+auth |
+| A9 | API viva sirviendo | ✅ **SELLADO** (reforzado 0045/3f7b456) | — | FastAPI sirve solo sellado; servable_vehicle **1.697.247** (excluye 7.721 `gone`, fix 0045) + la API lee VÍA las vistas (invariante 0031 ahora real, no promesa); dedup intra-cluster; rate-limit+cache+auth. Ver §coherencia 2026-06-16(cont.) |
 
 **Identidad de particulares — SERVIDO este turno:** `v_dealer_resolved` colapsó 706 humanos province-split
 (370.267→369.561) vía canonical_key (verdict TRUSTWORTHY 1423, quorum 2/2/2), regresión 206/206. El conteo
@@ -180,3 +180,42 @@ R1/R2/R4 (HARVEST), D1 LLM (HARDWARE), SEAL-CapaB (spend), β/cross-source ident
 diferencia clave vs 06-15:** el €0-config que gateaba el gasto ya no solo está "construido" — está reproducible,
 CI-verificado, documentado A-Z (DEPLOY+OPERATE+RUNBOOK+06-RESILIENCE) y con el data-path endurecido (~36 bugs
 menos). El prerequisito que pusiste para el gasto está cumplido; abrir harvest es ahora tu decisión.
+
+---
+
+## ACTUALIZACIÓN 2026-06-16 (cont.) — Campaña Inquisidor de COHERENCIA SERVIDA: 3 sellos €0 que las auditorías previas NO cazaron
+
+> "No confiamos en ningún resultado": una 3ª pasada adversarial — 12 invariantes-sello verificados A MANO + un
+> workflow de 12 escépticos independientes (run `wf_c3dda3f6-994`) — sobre las superficies SERVIDAS encontró **3
+> defectos de coherencia €0** que ni el certificado A→F (7 agentes) ni la auditoría Fase-2 (48 agentes) vieron:
+> miraban estructura y conteo, no la **coherencia de lo servido**. Los 3 sellados + verificados + pusheados.
+> Prueba dura de que la verificación continua sigue rindiendo defectos reales (no es teatro).
+
+1. **servable_vehicle servía 7.721 coches `gone` (bajas) como stock vivo**, y los routers leían `vehicle` CRUDO →
+   violaba el invariante 0031 (*"the API reads through these views… the subject vanishes from every served surface,
+   mechanically, not by promise"*) y dejaba la cuarentena del gestionador INERTE sobre lo servido. **Fix (migración
+   0045 + 4 superficies de inventario-vivo enrutadas a la vista):** `status='available'` en la vista; servable_vehicle
+   1.704.968→**1.697.247**; cuarentena probada efectiva (tx rolled-back). 116 tests. Commit **ec2662a**.
+2. **servable_entity — mismo bypass:** los listados `/geo` leían `entity` crudo. Enrutados a la vista (invariante
+   0031 real también para dealers). 0 regresión (servable_entity=entity=391.944). Commit **3f7b456**.
+3. **P4 delta-gone — 1.823 bajas silenciosas:** `group_subastas_wholesale` y `localizavo_wholesale` flipean
+   `status='gone'` en su retire aged-out SIN emitir el evento GONE del `reconcile_gone` compartido → hueco de
+   "historial completo". **Fix:** helper `emit_gone_events` cableado en ambos + backfill de 1.823 (reconstruido,
+   `observed_at=last_seen`, provenance documentada). **`gone_without_GONE_event=0` vivo.** 109 tests. Commit **1c02dd3**.
+   (El "650 zombies servidos" del agente = FALSO: verifiqué que las 650 reaparecieron — status correcto; su fix
+   sugerido `UPDATE status='gone'` habría MATADO 650 coches vivos legítimos. Doctrina anti-confianza en acción.)
+
+**Triados como correctamente-diferidos (Law I — under-correct over mis-correct; el agente sobre-declaró):**
+- **P8 year×km:** subconjunto inequívocamente imposible = **5 filas** (año=2025 ∧ km>500k); el resto (21 en 300-500k +
+  9 en año=2027) es fuzz model-year/registro o dentro de política. El "1.030 systematic/high" fue ~200× inflado.
+- **P12 precio>3,6M:** el Mercedes Vito 2004 @4,8M (basura) y el Mercedes-AMG ONE @4,5M (legítimo) comparten
+  `make='Mercedes'` → un fix por marca NO puede distinguirlos (mis-corregiría). Necesita conciencia de modelo/cohorte.
+- **P6 platform_listing:** by-design (VO-portals/cadenas listan legítimo). Residual = guard opcional, 0 filas malas.
+- Triaje completo en **GitHub #35**.
+
+**Conclusión re-confirmada:** el €0-frontier sigue siendo la verdad — ahora **+3 sellos más profundo** (A9 reforzado,
+delta-ledger completo, ambas superficies servidas coherentes con el invariante 0031). La verificación continua
+ENCUENTRA defectos reales y se sellan en cuanto son €0+limpios+sin-riesgo-de-mis-corrección. Lo que NO se hace y NO
+se hará: fabricar sellos para items harvest-gated (= maquillaje, el pecado capital) ni rushear mis-correcciones que
+rompen datos buenos (Law I). El resto del A→F (A2/A3/A5/A6 data·harvest, C1/R1/R2/R4 harvest, D1 hardware, SEAL-CapaB
+spend, β/cross-source identidad-HIGH fresh-context) = tu decisión de gasto, sin cambios.
