@@ -824,6 +824,15 @@ class ChainFetcher:
         ?page=N. Returns raw HTML (the JSON-LD is embedded). Raises on non-200."""
         return self.fetch_ssr_page(url, OP_HEADERS, page=page, slot=slot)
 
+    def fetch_flexicar_srp(self, url: str, *, page: int = 1, slot: int = 0) -> str:
+        """Synchronous GET of one Flexicar SRP / branch-directory page (SSR HTML). Uses FLEXI_HEADERS
+        (Referer: flexicar.es) — NOT OcasionPlus headers — so the fetch announces the CORRECT host.
+        green-review connectors HIGH: the branch directory was fetched with fetch_ocasionplus, sending
+        Referer: ocasionplus.com to flexicar.es; if Flexicar's CDN adds referrer validation that would
+        silently return {} and collapse all ~23.9k Flexicar cars under the chain entity instead of
+        their real per-branch compraventa owners (the centrepiece of Flexicar's owner attribution)."""
+        return self.fetch_ssr_page(url, FLEXI_HEADERS, page=page, slot=slot)
+
     def fetch_ssr_page(self, url: str, headers: dict, *, page: int = 1, slot: int = 0) -> str:
         """Synchronous GET of one server-rendered HTML SRP page on pool session `slot`. `page` rides
         as ?page=N (>1). Returns raw HTML (Clicars cards / Carplus JSON-LD embedded). Raises on
@@ -1173,7 +1182,7 @@ async def _load_flexicar_branches(fetcher: ChainFetcher, governed_srp, geo: GeoR
     from __NEXT_DATA__. Returns slug -> Branch (geo-resolved). Empty dict on any failure (cars then
     cage under the chain entity rather than dropping)."""
     try:
-        html = await fetcher.fetch_async(governed_srp, fetcher.fetch_ocasionplus, FLEXI_SRP, page=1)
+        html = await fetcher.fetch_async(governed_srp, fetcher.fetch_flexicar_srp, FLEXI_SRP, page=1)
     except Exception:
         return {}
     m = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', html, re.S)
@@ -1197,7 +1206,7 @@ async def harvest_member(conn: asyncpg.Connection, member_name: str, geo: GeoRes
 
     # build the member (Flexicar needs its branch directory loaded first; the rest build directly).
     if member_name == "flexicar":
-        governed_srp = gov.wrap_fetch_text(fetcher.fetch_ocasionplus)  # plain GET wrapper for the SRP
+        governed_srp = gov.wrap_fetch_text(fetcher.fetch_flexicar_srp)  # SRP wrapper with FLEXICAR headers
         branches = await _load_flexicar_branches(fetcher, governed_srp, geo)
         m = build_flexicar(branches)
     else:
