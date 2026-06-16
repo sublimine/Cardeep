@@ -1417,3 +1417,18 @@
 - **Restante = mis-corrección-arriesgada (P12 Vito/AMG-ONE colisión-marca, identidad HIGH-RISK ADR-11, banda fuzzy) =
   defer por Law I; o spend/data/harvest-gated (rojos, A2/A3/A5/A6, Ceuta/Melilla, Overture, OEM) = tu decisión.**
   Lanzada pass-4 (aspectos más profundos) para confirmar dry.
+
+### 2026-06-16 (cont.) — Pass-4 (8 escépticos, aspectos profundos): 7 defectos; D5+D6 sellados, 5 conector/dedup queued
+- **Pass-4 (run w16xoab9d) NO convergió** — la capa profunda (fidelidad conectores + calidad dedup) tiene issues reales.
+  D4 audit-chain LIMPIO (hash-chain recomputada íntegra, 0 mismatches). 7 defectos, cada uno gateado a mano.
+- **SELLADOS (commit 4527c87):** D5 servable_entity (migración 0046, status NOT IN evicted/closed — el paralelo que marqué
+  en P3; probado evicted→desaparece; verify 40/0) + D6 scheduler (inquisition_prosecute start_date +30min stagger que el
+  comment prometía y no existía + decimal lock corregido 1128354372).
+- **QUEUED (bloques conector/dedup cuidadosos, hand-verificados, NO crameados):** D1 oem_byd (32 mal-atribuidos, receta
+  family_dealerk_wp volcó catálogo multimarca bajo entidad BYD → scope /byd/ + quarantine), D2 make-normalize (306
+  model-as-make, normalize_make no cableado en conectores bulk → wire+backfill), D3 wallapop precio (3.485 cuota-mensual-
+  como-precio + 145 km-sentinel → parser+backfill), D7 B7 photo-overmerge (K=12 deja pasar fotos-catálogo → 78 clusters
+  cross-gen falsos → guard year/km-span + re-cluster, toca core B7), D8 platform_price (8 sentinels + 4 factor-10 → backfill+parser).
+- **Balance sesión: ~10 defectos €0 sellados** (0045·P3·P4·P8·Q3·Q5·Q6·Q10·D5·D6) en 4 pasadas adversariales + 12 invariantes
+  a mano — todos que los audits previos de 7+48 agentes NO cazaron. GitHub #35 = dossier. Próximo bloque: D2 (make-normalize,
+  el más limpio) luego D1/D3/D8/D7. Substantivo restante (rojos/harvest/D1-hardware) = tu decisión de gasto.
