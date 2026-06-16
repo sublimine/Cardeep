@@ -1483,3 +1483,16 @@
   = harvest-phase (no live ahora). Bloque enfocado.
 - **Sesión: ~17 defectos/coherencias €0 manejados.** Frente €0-CÓDIGO casi agotado; quedan D7-re-cluster (gated), D9-forward
   (connector), D1-recipe (harvest), reds (spend). El valor sustancial = decisión de gasto del owner.
+
+### 2026-06-16 (cont.) — D9-forward (techo €5M servido, 0047): superficie servida €0 exhaustivamente sellada
+- **D9-forward (0047, dd7f65d):** servable_vehicle tenía floor (price>0) pero NO techo; sanitize_price capa a €5M. Bulk
+  connectors saltan sanitize → un >5M futuro SE serviría. Añadido techo `<=5M` (espejo sanitize_price). 0-regresión
+  (0 servable >5M; rolled-back test price=9.999.999→excluido). verify 41/0. 8 tests servable.
+- **HITO: coherencia €0 de la SUPERFICIE SERVIDA exhaustivamente sellada** — servable_vehicle (status 0045 + floor 0040 +
+  techo 0047 + cuarentena 0031), servable_entity (status 0046 + cuarentena), árbol-geo (9 kinds), eventos-delta, make,
+  platform_price saneado. La API lee SOLO a través de estas vistas (invariante 0031 real).
+- **Restante = gated, NO €0-served-clean:** D9-root (bulk connectors sanitize_price al parse = limpieza tabla; recurrencia
+  harvest-phase, servido YA protegido por 0047 + gestionador caza junk; multi-connector cuidadoso), D7-re-cluster (0,02%,
+  regenera sello, memory-heavy gated), reds (Ceuta/Melilla/Overture/OEM/D1-hardware = spend/harvest).
+- **Sesión: ~18 defectos/coherencias €0 sellados/manejados** en 4 pasadas adversariales + 12 invariantes. El €0-served está
+  hecho + verificado + endurecido; el valor sustancial restante = decisión de gasto del owner (la precondición A-Z, cumplida).
