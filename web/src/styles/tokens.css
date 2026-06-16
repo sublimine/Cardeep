@@ -1,0 +1,80 @@
+/* CARDEEP design tokens — dark "market-intelligence command center".
+   Decisions in docs/frontend/01-DESIGN.md (informed by the 10-platform competitor audit). */
+:root {
+  /* ---- Base / surfaces (near-black so the 3D map + data glow) ---- */
+  --ink: #0a0e17;
+  --surface-1: #121826;
+  --surface-2: #1a2234;
+  --surface-3: #232c42;
+  --line: #2a3450;
+  --line-strong: #38445e;
+
+  /* ---- Text ---- */
+  --text-1: #eaeef7;
+  --text-2: #9aa6be;
+  --text-3: #5c6883;
+
+  /* ---- Accent: signature electric cyan (data signal, ownable) ---- */
+  --accent: #35e0d0;
+  --accent-hi: #5beadd;
+  --accent-dim: #1d8c83;
+  --accent-2: #6c5ce7; /* indigo — focus rings, 3D rim light, depth (never a CTA) */
+
+  /* ---- Price-rating / coverage semantic (the visible bridge to the intelligence layer) ---- */
+  --price-good: #22c55e;
+  --price-fair: #f5b33c;
+  --price-high: #f0556b;
+  --seal-sellado: var(--accent);
+  --seal-parcial: var(--price-fair);
+  --seal-gap: var(--price-high);
+
+  /* ---- Typography ---- */
+  --font-display: 'Clash Display', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: clamp(0.95rem, 0.9rem + 0.2vw, 1.0625rem);
+  --text-lg: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  --text-xl: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+  --text-hero: clamp(2.75rem, 1.5rem + 6vw, 6.5rem);
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-black: 800;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-section: clamp(4rem, 3rem + 5vw, 9rem);
+
+  /* ---- Radii ---- */
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* ---- Elevation (dark-aware: glow + lift, not heavy black shadows) ---- */
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 18px 50px rgba(0, 0, 0, 0.6);
+  --glow-accent: 0 0 24px rgba(53, 224, 208, 0.35);
+
+  /* ---- Motion (compositor-friendly only) ---- */
+  --dur-fast: 140ms;
+  --dur: 260ms;
+  --dur-slow: 520ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --z-nav: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+}

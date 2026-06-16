@@ -1,0 +1,284 @@
+/* ── Hero ───────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  padding-top: clamp(3rem, 2rem + 6vw, 7rem);
+  overflow: clip;
+}
+
+.hero__inner {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: center;
+  gap: clamp(2rem, 1rem + 4vw, 5rem);
+  padding-bottom: clamp(2.5rem, 2rem + 4vw, 5rem);
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: var(--space-5);
+}
+
+.hero__eyebrow-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--glow-accent);
+}
+
+.hero__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-hero);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  margin: 0 0 var(--space-6);
+  text-wrap: balance;
+}
+
+.hero__accent {
+  color: var(--accent);
+  text-shadow: 0 0 36px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+.hero__sub {
+  max-width: 46ch;
+  font-size: var(--text-lg);
+  line-height: 1.55;
+  color: var(--text-2);
+  margin: 0 0 var(--space-8);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+/* ── Buttons (promoted to ui/ component in a later phase) ───────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--text-base);
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-accent);
+  background: var(--accent-hi);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text-1);
+  border-color: var(--line);
+}
+
+.btn--ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* ── Hero stage / map backdrop ──────────────────────────────────────── */
+.hero__stage {
+  position: relative;
+  aspect-ratio: 4 / 3.4;
+  width: 100%;
+}
+
+.hero__map-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 120% at 70% 18%, color-mix(in oklab, var(--surface-2) 80%, transparent), var(--surface-1) 70%);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* perspective grid that recedes toward the top */
+.hero__grid {
+  position: absolute;
+  inset: -20% -20% 0;
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--accent) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--accent) 16%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  transform: perspective(620px) rotateX(58deg) translateY(8%) scale(1.4);
+  transform-origin: center top;
+  mask-image: linear-gradient(to top, #000 8%, transparent 78%);
+  -webkit-mask-image: linear-gradient(to top, #000 8%, transparent 78%);
+  opacity: 0.7;
+}
+
+/* radar sweep travelling across the floor */
+.hero__sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 38%,
+    color-mix(in oklab, var(--accent) 22%, transparent) 50%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+  animation: hero-sweep 6.5s var(--ease-in-out) infinite;
+}
+
+@keyframes hero-sweep {
+  0% { transform: translateX(-65%); opacity: 0; }
+  35% { opacity: 1; }
+  65% { opacity: 1; }
+  100% { transform: translateX(65%); opacity: 0; }
+}
+
+.hero__glow {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 60%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, color-mix(in oklab, var(--accent-2) 40%, transparent), transparent 62%);
+  filter: blur(26px);
+  opacity: 0.55;
+}
+
+/* ── Metrics strip ──────────────────────────────────────────────────── */
+.hero__metrics {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in oklab, var(--surface-1) 60%, transparent);
+}
+
+.hero__metrics-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-block: var(--space-7);
+}
+
+.hero__livetag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.hero__livedot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+
+.hero__livetag.is-live {
+  color: var(--price-good);
+}
+
+.hero__livetag.is-live .hero__livedot {
+  background: var(--price-good);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--price-good) 70%, transparent);
+  animation: live-blink 2s var(--ease-in-out) infinite;
+}
+
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  margin: 0;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--line);
+}
+
+.metric__label {
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+
+.metric__value {
+  font-size: clamp(1.6rem, 1rem + 1.8vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-1);
+  margin: var(--space-1) 0;
+}
+
+.metric__hint {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  margin: 0;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .hero__inner {
+    grid-template-columns: 1fr;
+  }
+  .hero__stage {
+    order: -1;
+    aspect-ratio: 16 / 10;
+    max-height: 320px;
+  }
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-5);
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .hero__sub {
+    font-size: var(--text-base);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__sweep,
+  .hero__livetag.is-live .hero__livedot {
+    animation: none;
+  }
+  .hero__sweep { opacity: 0.5; transform: none; }
+}
