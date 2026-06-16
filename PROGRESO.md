@@ -1230,3 +1230,18 @@
   resuelve · migrate status→0040 / verify 34 match 0 drift · pytest colecta 863 · scheduler --help/--dry-run corren
   · refs todas enmarcadas. Árbol limpio, 4 commits en `origin/main`. Patrón validado: la construcción la gatean los
   agentes adversariales — cazaron 3 defectos reales que un self-report habría sellado en falso.
+
+### 2026-06-16 (cont.) — CI bring-up smoke VERDE en infra GitHub (`256f84c`→`1d64cde`) — el repo pasa de 0 CI
+- `.github/workflows/ci.yml`: postgres:16 service + la secuencia EXACTA del clean-room (install · import 4
+  entrypoints · wait host-side · migrate up sobre DB vacía · verify · pytest collect) en cada push/PR. Enforcement
+  automático y PERMANENTE de DEPLOY.md. Cada paso probado-verde local antes de commitear; el race del initdb
+  (pg_isready vía docker-exec pasa con el server temporal de initdb → puerto aún no sirve) resuelto con readiness
+  **host-side TCP**. `migrate up` sobre DB vacía probado con postgres efímero (34 aplicadas / 0 drift).
+- **El CI cazó 4 deps faltantes** que el dev tenía out-of-band (mis corridas locales las enmascaraban):
+  `pytest`+`pytest-asyncio`+`numpy`+`httpx` (test → nuevo `requirements-dev.txt`) y `curl_cffi` (runtime: import a
+  nivel módulo en conectores vivos dasweltauto/mercedes/milanuncios → front online, descomentado). Clean-room iteró
+  hasta **863 collected / 0 errores**. Run 1 ROJO (faltaba pytest) → fix → Run 2 **VERDE total en GitHub**.
+- Scope honesto: CI hace `--collect-only` (no la suite conductual, que exige DB poblada → diferida a job con
+  snapshot). Catcha toda regresión de import/dep/migración/colección. **Verde-honesto, no verde-maquillado.**
+- **Total deps que la verificación añadió esta sesión (0 por suposición): apscheduler[sqlalchemy], psycopg2-binary,
+  pytest, pytest-asyncio, numpy, httpx, curl_cffi.** El bring-up es ahora reproducible Y verificado en CI.
