@@ -1109,6 +1109,17 @@ async def harvest(concurrency: int = DEFAULT_CONCURRENCY) -> dict:
                 conn, AYVENS_SOURCE_KEY, run_error or "harvest failed",
                 phase="scrape", http_status=last_http)
         return stats
+    except Exception as exc:  # noqa: BLE001 — any setup/fatal error must be RECORDED, not silent.
+        # A pre-record_run exception (ensure_platform_entity, GeoResolver.load, a setup query)
+        # otherwise skipped record_run → monitoring-dark (green-review connectors; same class as the
+        # wallapop CRIT). Record the failure, then re-raise.
+        try:
+            await record_run(conn, AYVENS_SOURCE_KEY, ok=False, rows=0,
+                             error=f"harvest fatal: {type(exc).__name__}: {exc}")
+            await auto_repair(conn, AYVENS_SOURCE_KEY, str(exc), phase="scrape")
+        except Exception:  # noqa: BLE001 — recording must never mask the original error
+            pass
+        raise
     finally:
         await conn.close()
 
