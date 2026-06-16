@@ -76,7 +76,7 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
-from pipeline.ops.health import auto_repair, is_open, record_run
+from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
 from services.api.codes import _base32, cdp_code
@@ -1347,6 +1347,14 @@ async def harvest(provinces: tuple[int, ...] = SPANISH_PROVINCES,
             platform_ulid=platform_ulid)
         stats["health_status"] = outcome.status
         stats["breaker_state"] = outcome.breaker_state
+        if stats.get("bands_still_capped", 0) > 0:
+            # The 10k ES window truncates any price band still saturated after sharding — real
+            # inventory beyond 10k in those cells is NOT captured. Surface it as an observable
+            # warning (the drain otherwise truncated silently — "drain full inventory"). green-review MED.
+            await fire_alert(
+                conn, build_origin(MN_SOURCE_KEY, "coverage"), severity="warning",
+                message=(f"milanuncios: {stats['bands_still_capped']} price band(s) still capped at the "
+                         f"10k ES window — inventory beyond 10k in those cells is truncated/undercounted."))
         if not run_ok:
             stats["repair_action"] = await auto_repair(
                 conn, MN_SOURCE_KEY, run_error or "harvest failed",
