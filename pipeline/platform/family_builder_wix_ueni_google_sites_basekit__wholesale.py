@@ -872,8 +872,12 @@ async def harvest(dealers: list[str] | None, from_fingerprints: bool, limit: int
         # Run is OK if at least one dealer was caged AND the VAM did not refute. A family of
         # JS-only builders with zero structured inventory would (honestly) not pass — but the
         # builder family DOES have a structured member, so a real cage is expected.
-        run_ok = (fetch_error is None and stats["dealers_harvested"] > 0
-                  and verdict != "REFUTED")
+        # A VAM-TRUSTWORTHY verdict means the count (even 0 dealers) is VERIFIED-correct, so a
+        # confirmed-empty family is NOT a failure. Fail only on a fetch error, a REFUTED verdict,
+        # or 0 dealers we CANNOT confirm (UNVERIFIED) — never on a VAM-confirmed-empty run (that
+        # was firing a false CRITICAL "failed: VAM verdict TRUSTWORTHY" + escalate_owner).
+        run_ok = (fetch_error is None and verdict != "REFUTED"
+                  and (stats["dealers_harvested"] > 0 or verdict == "TRUSTWORTHY"))
         run_error = fetch_error or (None if run_ok else f"VAM verdict {verdict}")
         outcome = await record_run(
             conn, FAMILY_KEY, ok=run_ok, rows=stats["cars_ingested"],

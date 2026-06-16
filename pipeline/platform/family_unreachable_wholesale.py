@@ -769,7 +769,9 @@ async def harvest(dealers: list[str] | None, run_all: bool, max_pages: int) -> d
         stats["recipe_path"] = str(recipe_path)
         stats["family_dealers_attested"] = len(family_dealer_ulids)
 
-        run_ok = (stats["dealers_harvested"] > 0 and verdict != "REFUTED")
+        # VAM-TRUSTWORTHY = count (even 0 dealers) VERIFIED-correct -> confirmed-empty is NOT
+        # a failure (was firing false CRITICAL "failed: VAM verdict TRUSTWORTHY" + escalate).
+        run_ok = (verdict != "REFUTED" and (stats["dealers_harvested"] > 0 or verdict == "TRUSTWORTHY"))
         run_error = None if run_ok else f"VAM verdict {verdict}"
         outcome = await record_run(
             conn, FAMILY_KEY, ok=run_ok, rows=stats["cars_ingested"],
