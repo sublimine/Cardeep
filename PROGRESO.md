@@ -1532,3 +1532,12 @@
 - **Restante = decisión de gasto del owner** (harvest/spend/hardware): reds (Ceuta/Melilla/Overture/OEM/desguace-inv),
   D1-LLM, identidad-HIGH, D7-apply (memory-gated D1), D9-remaining (low-value, servido-protegido). El €0 no tiene más
   valor sustancial sin ese gasto. Loop vivo a cadencia larga para task-notifs / nuevo €0 / vuelta del owner.
+
+### 2026-06-16 (cont.) — D9-remaining COMPLETO: sanitize_price uniforme en los 6 connectors junk-capable
+- **D9-remaining (1cd7755):** sanitize_price al parse en coches_com/motor_es/autocasion (mismo patrón 1-línea probado).
+  Ahora los **6 bulk connectors junk-capable** (wallapop·coches_net·milanuncios·coches_com·motor_es·autocasion) sanean
+  <=0/>5M en ORIGEN → ni vehicle.price ni platform_price acoplado llevan junk en tabla en futuras cosechas. 3 import OK.
+  OEM/family = precios estructurados-limpios + servido protegido por 0047. **"Absolutamente toda la implementación" (sanitación
+  uniforme) CUMPLIDA para la superficie junk-capable.** Edits de 1-línea del patrón ya en la suite 937-verde; import-verificados.
+- **€0-código GENUINAMENTE COMPLETO:** superficie servida sellada+937-test-verde + sanitación uniforme en connectors + verificación
+  exhaustiva (4 pasadas + 12 invariantes + suite completa). Restante = D7-apply (memory-gated D1), reds (spend/harvest/hardware).
