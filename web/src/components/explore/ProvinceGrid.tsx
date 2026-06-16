@@ -78,6 +78,15 @@ export function ProvinceGrid({ onPick }: ProvinceGridProps) {
                   </Badge>
                 )}
               </div>
+              <div className="provcard__track" aria-hidden="true">
+                <span
+                  className="provcard__fill"
+                  style={{
+                    width: `${Math.min(100, p.cov?.coverage_pct ?? 0)}%`,
+                    background: verdict ? VERDICT_COLOR[verdict] : 'var(--line)',
+                  }}
+                />
+              </div>
               <span className="provcard__dealers mono">
                 {p.cov ? `${formatInt(p.cov.numerator)} dealers servidos` : 'sin dato'}
               </span>
