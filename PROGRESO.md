@@ -1506,3 +1506,17 @@
   autocasion/OEM-family. GitHub #35.
 - **Estado: €0-código de alto valor casi completo.** Restante: D9-remaining (connectors low-value same-pattern), D7-re-cluster
   (gated 0,02% memory-heavy), reds (spend). ~19 coherencias €0 la sesión. El valor sustancial = decisión de gasto del owner.
+
+### 2026-06-16 (cont.) — Verdict D7-re-cluster: MEMORY-GATED (D1) + €0-alto-valor agotado
+- **D7-re-cluster evaluado (tarea programada): genuinamente GATED por memoria.** RAM libre 2,81GB; cluster_vehicles.py
+  carga 1,7M vehículos en memoria (línea 262) + índices + union-find → pico ~3-4GB > libre → ahogaría el host (D1
+  "sin ahogarlo"). El guard-lógica (`_photo_pair_spans_generations`) ya sellado+testeado; los 399 (0,02%) se aplican
+  en el próximo re-cluster con RAM adecuada (D1-upgrade) o refactor streaming (no €0-trivial). Residuo declarado.
+- **ESTADO €0-FRONTIER: alto valor AGOTADO + verificado.** Superficie servida exhaustivamente sellada (servable_vehicle
+  status+floor+techo+cuarentena, servable_entity, geo-árbol, delta-eventos, make, platform_price); API lee solo vía vistas
+  (0031 real). ~19 coherencias €0 selladas la sesión (4 pasadas adversariales + 12 invariantes). Certificado A→F consolidado (14e5b27).
+- **€0-restante = low-value/gated (NO hueco de coherencia servida):** D9-remaining (sanitize_price en coches_com/motor_es/
+  autocasion/OEM — servido YA protegido por 0047 + gestionador; los 3 proven ya root-fixed); D7-re-cluster (memory-gated D1).
+- **Sustancial = decisión de gasto del owner** (harvest/spend/hardware): Ceuta/Melilla, Overture, OEM-scrapers, desguace-inv,
+  D1-LLM, identidad-HIGH. Infra €0 construida+documentada+verificada. **Precondición "config A-Z" cumplida + verificada.**
+- **Loop: cadencia escalada** (alto valor agotado; sin busywork low-value a profundidad extrema; vivo para task-notifs / nuevo €0 / vuelta del owner).
