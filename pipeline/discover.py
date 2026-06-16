@@ -103,6 +103,7 @@ async def discover(source_key: str) -> None:
             geocoder = await ProvinceGeocoder.load(conn)
             print(f"[{source_key}] province geocoder loaded ({geocoder.size()} labeled points)")
         new = resolved = skipped = 0
+        run_start = await conn.fetchval("SELECT now()")  # boundary for the per-run ingest count (Q7)
         for e in entities:
             was_new, geo_ok, prov_ok = await _upsert(conn, geo, e, geocoder)
             new += int(was_new)
@@ -115,9 +116,14 @@ async def discover(source_key: str) -> None:
                 print(f"[{source_key}] SKIP no_province: name={e.legal_name or e.trade_name!r} "
                       f"province_name={e.province_name!r} municipality={e.municipality_name!r} "
                       f"source_ref={e.source_ref!r}")
-        # provenance count: entities attested by this source (works across sources/overlap)
+        # provenance count scoped to THIS run (Q7): counting ALL entity_source rows ever made the
+        # VAM quorum cumulative — after one full run, in_db == source total, so a LATER run that
+        # silently dropped N entities (geo-skip) still showed in_db==fetched==declared and emitted a
+        # false TRUSTWORTHY. seen_at>=run_start counts only entities actually touched (new or
+        # re-seen) this run, so the quorum is honest about per-run ingestion vs fetched.
         in_db = await conn.fetchval(
-            "SELECT count(*) FROM entity_source WHERE source_key=$1", source_key)
+            "SELECT count(*) FROM entity_source WHERE source_key=$1 AND seen_at >= $2",
+            source_key, run_start)
         muni_rate = resolved / len(entities) if entities else 0
         print(f"[{source_key}] new={new} in_db={in_db} skipped_no_province={skipped} "
               f"municipality_resolved={resolved}/{len(entities)} ({muni_rate:.1%})")
