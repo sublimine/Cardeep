@@ -51,3 +51,23 @@
 ## Estado
 Diagnóstico cerrado y verificado. F-A/F-B/F-C son código/SQL y no necesitan gasto → se ejecutan ya.
 F-D es la cosecha (compute) que el owner había diferido; sin ella no hay "todo completo". Sin maquillaje.
+
+## Actualización (mismo día) — verificado en API viva
+- **F-A HECHO y en vivo** (`3f9ad7c`): `/geo/{prov}/entities` sirve canónicos. Madrid 8.104→4.310;
+  14 GARAGE 4→1; QUADIS 520→6. Reload de explore ya muestra dealers colapsados.
+- **F-B YA FUNCIONABA**: `/entities/{cdp}/inventory` dedupa dentro del clúster (canónico 11Eleven
+  66CNA6T3 → 6 coches, **0 deep_links duplicados servidos**). No hace falta fix de servido.
+- **Residual REAL = clustering incompleto (no servido).** VAM resolvió 11Eleven 3→2 (la alias con
+  `municipality_code` NULL no fusiona con su gemela geocodificada); "35 Motor"/"35Motor" no fusiona por
+  variación de nombre. → Mejora de reglas de dedup (`canonical_dedup`/VAM): fusionar por deep_links
+  compartidos + nombre normalizado + geo relajada, y re-correr. **Sin gasto, pero es trabajo de pipeline
+  + re-run con verificación.** Pendiente.
+- **F-D (la cosecha) sigue siendo la única vía a "todo completo"**: 23.888 dealers sin scrapear. Compute/
+  flota, dentro de límites del PC (D1). No es instantáneo; pretender lo contrario sería el "vacilar" que
+  el owner señala.
+
+### Pendiente priorizado
+1. Clustering dedup re-run (residual de duplicados: ~name-variance + NULL-geo). No-spend.
+2. F-C: honestidad de cifras en UI (separar anuncios / únicos / C2C-vs-dealer; no vender 1,5M como stock navegable).
+3. F-D: campaña de cosecha de los 23.888 vacíos + parciales. Compute/gasto.
+4. Aplicar F-A también a `/geo/{prov}/municipalities/{muni}/entities` (mismo defecto de servido).
