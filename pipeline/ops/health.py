@@ -136,10 +136,11 @@ async def record_run(
 
         # 2) read-modify-write source_health under a row lock (single writer, §2.3).
         row = await conn.fetchrow(
-            "SELECT consecutive_fails, status, tuning FROM source_health "
+            "SELECT consecutive_fails, status, tuning, last_ok FROM source_health "
             "WHERE source_key=$1 FOR UPDATE", source_key)
         prior_status = row["status"] if row else "unknown"
         prior_fails = row["consecutive_fails"] if row else 0
+        prior_last_ok = row["last_ok"] if row else None
         tuning = json.loads(row["tuning"]) if row and row["tuning"] else None
 
         degrade_at = _tuning_int(tuning, "degrade_at", DEGRADE_AT)
@@ -265,10 +266,16 @@ async def record_run(
     # confirms a ~complete harvest (coverage_pct >= _GONE_MIN_COVERAGE, verdict not REFUTED) and the
     # gone fraction is plausible (its >50% cap). Connectors that omit run_started_at skip this entirely
     # (no retirement) — fully backward-compatible. reconcile_gone is the single GONE-event emitter.
-    if ok and run_started_at is not None:
+    # Boundary for "not re-seen": prefer the connector's explicit harvest-start; else fall back to the
+    # PRIOR successful run's last_ok. Vehicles re-seen THIS run have last_seen=now() > prior_last_ok;
+    # vehicles not re-seen since the prior run have last_seen < prior_last_ok. So the fallback auto-
+    # activates GONE for ANY coverage-instrumented source with NO per-connector wiring; on the first
+    # run (prior_last_ok is NULL) it is None → reconcile is skipped (nothing to compare against yet).
+    gone_boundary = run_started_at if run_started_at is not None else prior_last_ok
+    if ok and gone_boundary is not None:
         from pipeline.delta import reconcile_gone  # local import avoids a circular dependency
         gone_n, gone_reason = await reconcile_gone(
-            conn, source_key, run_started_at, min_coverage=_GONE_MIN_COVERAGE)
+            conn, source_key, gone_boundary, min_coverage=_GONE_MIN_COVERAGE)
         log.info("reconcile_gone[%s]: %s", source_key, gone_reason)
 
     return outcome
