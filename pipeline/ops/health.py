@@ -206,7 +206,11 @@ async def record_run(
                    VALUES ($1, 'closed', 0, NULL, NULL)
                    ON CONFLICT (source_key) DO UPDATE
                      SET state = 'closed', consecutive_fails = 0,
-                         opened_at = NULL, cooldown_until = NULL""",
+                         opened_at = NULL, cooldown_until = NULL
+                   WHERE source_breaker.state <> 'closed'
+                      OR source_breaker.consecutive_fails <> 0
+                      OR source_breaker.opened_at IS NOT NULL
+                      OR source_breaker.cooldown_until IS NOT NULL""",
                 source_key)
         elif new_fails >= trip_at:
             # consecutive_fails on the breaker mirrors the fail streak (the column's name);
@@ -224,7 +228,8 @@ async def record_run(
                        opened_at, cooldown_until)
                    VALUES ($1, 'open', $2, now(), now() + ($3 || ' seconds')::interval)
                    ON CONFLICT (source_key) DO UPDATE
-                     SET state = 'open', consecutive_fails = $2, opened_at = now(),
+                     SET state = 'open', consecutive_fails = $2,
+                         opened_at = COALESCE(source_breaker.opened_at, now()),
                          cooldown_until = now() + ($3 || ' seconds')::interval""",
                 source_key, new_breaker_trips, str(cool))
         else:
