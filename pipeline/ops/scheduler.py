@@ -397,6 +397,73 @@ def _run_source(source_key: str) -> int:
     return exit_code
 
 
+def _harvest_run_max_id(source_key: str) -> int | None:
+    """Current high-water harvest_run id for a source (or None if the query fails).
+
+    Captured BEFORE launching a connector so a crash-before-record_run can be told apart from a
+    connector that wrote its own outcome — the idempotency key for _record_crash_if_unrecorded.
+    """
+    try:
+        conn = psycopg2.connect(_RAW_DSN)
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT coalesce(max(id), 0) FROM harvest_run WHERE source_key = %s",
+                (source_key,),
+            )
+            return int(cur.fetchone()[0])
+        finally:
+            conn.close()
+    except Exception as exc:  # noqa: BLE001
+        log.error("scheduler: harvest_run high-water query failed for %s: %s", source_key, exc)
+        return None  # unknown → record unconditionally below (better an extra alert than silence)
+
+
+def _record_crash_if_unrecorded(source_key: str, exit_code: int, pre_max_id: int | None) -> None:
+    """Safety net for the crash-before-record_run gap (green-review H7/M5).
+
+    Connectors own their own record_run on every normal path (the scheduler does NOT write it).
+    But a connector SIGKILLed on timeout, failing to launch, or dying before it reaches its
+    record_run leaves source_health untouched — the circuit breaker never trips and the silence
+    watchdog only notices after 2x the interval. Here the scheduler records the failure itself,
+    but ONLY when no new harvest_run row appeared this cycle (vs the pre-launch high-water), so a
+    connector that DID record its own outcome is never double-counted.
+    """
+    import asyncio
+
+    import asyncpg
+
+    from pipeline.ops.health import record_run
+
+    async def _run() -> bool:
+        conn = await asyncpg.connect(_ASYNCPG_DSN)
+        try:
+            if pre_max_id is not None:
+                newest = await conn.fetchval(
+                    "SELECT coalesce(max(id), 0) FROM harvest_run WHERE source_key = $1",
+                    source_key,
+                )
+                if int(newest) > pre_max_id:
+                    return False  # connector wrote its own record_run this cycle — do not double-count
+            await record_run(
+                conn,
+                source_key,
+                ok=False,
+                error=f"scheduler: connector exited {exit_code} without recording a harvest_run",
+            )
+            return True
+        finally:
+            await conn.close()
+
+    try:
+        if asyncio.run(_run()):
+            log.warning(
+                "scheduler: connector %s exited %d without a record_run — recorded the failure "
+                "(health/breaker engaged)", source_key, exit_code)
+    except Exception as exc:  # noqa: BLE001
+        log.error("scheduler: could not record crash for %s: %s", source_key, exc)
+
+
 # ---------------------------------------------------------------------------
 # Heartbeat tick (the single job APScheduler fires every 15 min)
 # ---------------------------------------------------------------------------
@@ -432,7 +499,10 @@ def heartbeat_tick() -> None:
                 source_key, interval_h, last_ok,
             )
             continue
-        _run_source(source_key)
+        pre_max_id = _harvest_run_max_id(source_key)   # high-water before launch (H7 safety net)
+        exit_code = _run_source(source_key)
+        if exit_code != 0:
+            _record_crash_if_unrecorded(source_key, exit_code, pre_max_id)
 
     log.info("=== heartbeat_tick END ===")
 
