@@ -1317,3 +1317,20 @@
   CRITICAL del agente eran falsos → verificación a mano obligatoria) + **bring-up reproducible (compose+DEPLOY)** +
   **CI verde** (de 0 CI; 7 deps faltantes cazadas) + **runbook operativo**. El €0-config que gateabas: hecho y
   documentado A-Z. Lo restante es harvest/spend/data/hardware (tu fase de gasto) — listo para abrir cuando decidas.
+
+### 2026-06-16 (cont.) — GREEN-REVIEW 3: capa de CONECTORES (24 hallazgos; 2 CRIT + 2 HIGH fijados)
+- 3er barrido adversarial (workflow `wfw5ejlm3`, 7 especialistas sobre 7 conectores, ~9k líneas, read-only —
+  AS24 solo lectura). **24 hallazgos (2 CRIT, 10 HIGH, 10 MED, 2 LOW)**, varios con evidencia de DB viva.
+  Triage: `docs/REVIEW_FINDINGS_CONNECTORS_2026-06-16.md` (LEER al retomar). Verificado a mano lo fijado.
+- **TEMA DOMINANTE sistémico: `try/finally` sin `except` → record_run se salta ante excepción de setup →
+  MONITORING-DARK** (mismo class que la P2 de harvest_dealer). Fijado en los 3 de mayor tráfico:
+  `dd93759` wallapop (CRIT, except-wrap + test mock), `071ec4e` coches_net + autoscout24 (HIGH, mismo patrón).
+- `dd93759` **CRIT #2 coches_com**: `_finalize_platform_segment` sin `declared_total` → VN/renting **coverage-
+  blind** (gate nunca disparaba; VO/km0 sí). Forward de declared_total/captured_distinct/platform_ulid + corregido
+  el declared del renting (headline 8908 → paginable Σ ~1034, el denominador correcto).
+- **PENDIENTE (contexto fresco, diseño en el triage):** TEMA1 resto (subastas LOW/autocasion), TEMA2 (breaker-skip
+  sin record_run), **TEMA3 scoping de declared_total/coverage** (varios apuntan a `coverage_verify.captured_db`
+  acumulativo vs declared per-run — análisis del módulo COMPARTIDO), TEMA4 (Flexicar usa fetcher/headers de
+  OcasionPlus = bug real; last_http stale; supplement-sweep no para tras ban).
+- **SESIÓN ACUMULADA: ~28 hallazgos reales fijados** (núcleo 9 + pipeline 14 + conectores 5), todos verificados a
+  mano + test/live + en `main` + CI verde. 3 green-reviews adversariales; ~30% de los CRITICAL de agentes = falsos.
