@@ -63,3 +63,26 @@ class TestSanitizeYear:
         assert sanitize_year(2015) == 2015
         assert sanitize_year(1925) == 1925       # genuine classic
         assert sanitize_year(datetime.now().year + 1) == datetime.now().year + 1  # next model-year
+
+
+class TestSanitizeYearKm:
+    """Cross-field impossible-age gate (audit P8). NULL BOTH when a ~0-1-yr car has impossible km."""
+
+    def test_impossible_age_km_nulls_both(self):
+        from datetime import datetime
+        from pipeline.price_sanity import sanitize_year_km
+        cur = datetime.now().year
+        assert sanitize_year_km(cur, 350_000) == (None, None)       # 0-yr car, >300k km
+        assert sanitize_year_km(cur - 1, 940_000) == (None, None)   # DAF XF "2025" @ 940k (served pre-fix)
+        assert sanitize_year_km(cur - 1, 500_001) == (None, None)   # just over the 1-yr/500k bar
+
+    def test_legit_or_fuzzy_preserved(self):
+        from datetime import datetime
+        from pipeline.price_sanity import sanitize_year_km
+        cur = datetime.now().year
+        assert sanitize_year_km(cur - 1, 400_000) == (cur - 1, 400_000)  # 1-yr @ 400k: commercial-plausible, LEFT
+        assert sanitize_year_km(cur, 250_000) == (cur, 250_000)          # 0-yr @ 250k: below the bar, LEFT
+        assert sanitize_year_km(2010, 400_000) == (2010, 400_000)        # old car, high km: legit
+        assert sanitize_year_km(cur, 0) == (cur, 0)                      # new car, 0 km
+        assert sanitize_year_km(None, 900_000) == (None, 900_000)        # year None -> can't cross-check
+        assert sanitize_year_km(cur, None) == (cur, None)                # km None -> can't cross-check

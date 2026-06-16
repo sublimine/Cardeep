@@ -21,7 +21,7 @@ import asyncpg
 
 from pipeline.ids import ulid
 from pipeline.identity.make_normalizer import normalize_make
-from pipeline.price_sanity import sanitize_km, sanitize_price, sanitize_year
+from pipeline.price_sanity import sanitize_km, sanitize_price, sanitize_year, sanitize_year_km
 from pipeline.sources.autoscout24 import DealerHarvest, RECIPE_VERSION
 from pipeline.geo import GeoResolver
 from pipeline.verify import record_count_verdict
@@ -83,6 +83,9 @@ async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: Dea
         price_clean = sanitize_price(v.price)
         km_clean = sanitize_km(v.km)
         year_clean = sanitize_year(v.year)
+        # Cross-field impossible-age gate (P8): a ~0-1-yr car with huge km is jointly impossible;
+        # NULL both (which field is the parse error is ambiguous, price-dependent). Conservative band.
+        year_clean, km_clean = sanitize_year_km(year_clean, km_clean)
         if row is None:
             vulid = ulid()
             # Audit P2 A-make-model: canonical make at the ingest boundary — normalizes a known

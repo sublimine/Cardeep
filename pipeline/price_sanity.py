@@ -90,3 +90,31 @@ def sanitize_year(year):
     if y < YEAR_MIN or y > datetime.now().year + 1:
         return None
     return year
+
+
+def sanitize_year_km(year, km):
+    """Cross-field impossible-age gate (audit P8). Each field can pass its own gate yet be JOINTLY
+    impossible: a ~0-1-year-old vehicle cannot have accumulated huge km. Returns (year, km) unchanged,
+    or (None, None) when jointly impossible — NULL BOTH, because which field is the parse error
+    (year wrong vs km wrong) is ambiguous and price-dependent, so nulling one would guess wrong. The
+    car/row STAYS servable; only the impossible pair reads as unknown instead of distorting every
+    age/km distribution.
+
+    Conservative (Law I — under-correct over mis-correct): only the UNAMBIGUOUS band, beyond any
+    legitimate intensive-commercial use (extreme long-haul peaks ~150-200k km/yr):
+      - age <= 0 (current model-year or newer) AND km > 300,000  -> impossible in < 1 year;
+      - age <= 1 (<= 1 model-year old)          AND km > 500,000  -> impossible in < ~1.5 years.
+    The 150k-500k band on a 1-year car is DELIBERATELY left (model-year-vs-registration fuzz +
+    intensive-commercial legitimacy) — see the module docstring's year x km CROSS note.
+    """
+    if year is None or km is None:
+        return year, km
+    try:
+        y = int(year)
+        k = int(km)
+    except (TypeError, ValueError):
+        return year, km
+    age = datetime.now().year - y
+    if (age <= 0 and k > 300_000) or (age <= 1 and k > 500_000):
+        return None, None
+    return year, km
