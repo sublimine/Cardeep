@@ -123,6 +123,26 @@ inherente (sin web).
 
 ---
 
+## Acción ejecutada — colapso de residuales (2026-06-20)
+
+`scripts/build_residual_namemuni_dedup.py` → run `residual-namemuni-v1`
+(vam_verified=TRUE). Overlay no-destructivo sobre `canonical_dedup`, reversible.
+
+- **Set seguro:** 80 grupos `nombre_norm+municipio` con >1 dealer resuelto →
+  **73 colapsados**; excluidos 6 cadenas + 1 con direcciones distintas (posible
+  sucursal). Cada grupo: mismo nombre, mismo municipio, misma/nula dirección,
+  partido entre marketplaces (coches.net/milanuncios/autocasión/as24/OEM).
+- **Asserts de seguridad (pasaron):** 0 merges base rotos, 0 cambios colaterales
+  (solo 73 nodos cambian de representante), representantes base preservados.
+- **Antes→después (API viva):** dealers servidos **29.900 → 29.827** (−73).
+  Caso `automotordursan` (muni 28014): códigos `QV2NZ4CJ` (422) + `MH3ZCJ61`
+  (2) → ahora ambos resuelven a `QV2NZ4CJ`, API `available_inventory=424`
+  unificado, `n_aliases=1`. Cadenas intactas: flexicar.es 87 dealers, 
+  ocasionplus.com 25 (sin colapsar).
+- **Snapshot/rollback:** `canonical_dedup_backup_20260620` (tabla en BD). Revertir:
+  `DELETE FROM canonical_dedup_run WHERE run_id='residual-namemuni-v1';` (CASCADE)
+  → `v_dealer_resolved` vuelve a `particular-canonkey-v1`.
+
 ## Recomendación (la palanca real)
 
 El backend/datos no necesita parches de los defectos 1, 2, 4. La palanca es
