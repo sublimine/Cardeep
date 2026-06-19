@@ -27,6 +27,7 @@ from pipeline.sources.oem_hyundai import HyundaiOemAdapter
 from pipeline.sources.oem_mercedes import OemMercedesAdapter
 from pipeline.sources.oem_seat import OemSeatAdapter
 from pipeline.sources.osm import OsmAdapter
+from pipeline.sources.associations import AedraAdapter, AcevasAdapter, AecsAdapter
 from pipeline.verify import record_count_verdict
 from services.api.codes import cdp_code
 
@@ -43,6 +44,9 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     "oem_mercedes": OemMercedesAdapter,
     "oem_seat": OemSeatAdapter,
     "osm": OsmAdapter,
+    "aedra": AedraAdapter,
+    "acevas": AcevasAdapter,
+    "aecs": AecsAdapter,
 }
 
 
