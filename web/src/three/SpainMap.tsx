@@ -31,8 +31,8 @@ function SceneLights() {
     <>
       <ambientLight intensity={0.55} />
       <directionalLight position={[40, 80, 25]} intensity={1.15} />
-      <pointLight position={[-45, 35, -25]} intensity={0.7} color="#6c5ce7" />
-      <pointLight position={[30, 20, 40]} intensity={0.35} color="#35e0d0" />
+      <pointLight position={[-45, 35, -25]} intensity={0.7} color="#6366f1" />
+      <pointLight position={[30, 20, 40]} intensity={0.4} color="#3b82f6" />
     </>
   );
 }
@@ -68,8 +68,8 @@ export default function SpainMap() {
         gl={{ antialias: true, alpha: true }}
         onPointerMissed={() => setHovered(null)}
       >
-        <color attach="background" args={['#0a0e17']} />
-        <fog attach="fog" args={['#0a0e17', 95, 240]} />
+        <color attach="background" args={['#080c15']} />
+        <fog attach="fog" args={['#080c15', 95, 240]} />
         <SceneLights />
         <group rotation={[-Math.PI / 2, 0, 0]}>
           {shapes.map((s) => {

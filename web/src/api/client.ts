@@ -45,7 +45,7 @@ async function getData<T>(path: string, params?: Params): Promise<T> {
     res = await fetch(url.toString(), {
       headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined,
     });
-  } catch (e) {
+  } catch {
     throw new ApiError(`network error reaching the CARDEEP API at ${BASE}`, 0);
   }
   let body: Envelope<T>;

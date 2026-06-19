@@ -11,11 +11,12 @@ import './Landing.css';
 // Three.js map is lazy-loaded so it stays out of the initial bundle.
 const SpainMap = lazy(() => import('../three/SpainMap'));
 
-// Verified live counts as of 2026-06-16 (services/api/routers/ops.py /stats).
-// Graceful fallback so the hero never renders empty if the API is offline.
+// Verified live counts as of 2026-06-20 (Postgres :5433 census). Graceful fallback
+// so the hero never renders empty if /stats is offline; the live map + coverage +
+// explorer still read straight from the API (/geo/seal, /geo/{prov}/entities).
 const FALLBACK: Stats = {
-  dealers: 40_194,
-  vehicles_unique_available: 1_486_285,
+  dealers: 61_729,
+  vehicles_unique_available: 1_704_968,
   events: 0,
   provinces: 52,
   municipalities: 8_132,

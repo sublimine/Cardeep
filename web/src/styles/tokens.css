@@ -1,24 +1,27 @@
 /* CARDEEP design tokens — dark "market-intelligence command center".
-   Decisions in docs/frontend/01-DESIGN.md (informed by the 10-platform competitor audit). */
+   Sealed to the official cardeep brand: single typeface (Outfit, the wordmark's
+   geometric-rounded family), Cobalt Blue accent, deep-charcoal navy base.
+   Brand palette source: web/public/brand/cardeep-brand-palette.png. */
 :root {
-  /* ---- Base / surfaces (near-black so the 3D map + data glow) ---- */
-  --ink: #0a0e17;
-  --surface-1: #121826;
-  --surface-2: #1a2234;
-  --surface-3: #232c42;
-  --line: #2a3450;
-  --line-strong: #38445e;
+  /* ---- Base / surfaces (deep charcoal navy so the 3D map + data glow) ---- */
+  --ink: #080c15;
+  --surface-1: #0f1626;
+  --surface-2: #161f33;
+  --surface-3: #202c46;
+  --line: #283356;
+  --line-strong: #394879;
 
   /* ---- Text ---- */
-  --text-1: #eaeef7;
-  --text-2: #9aa6be;
-  --text-3: #5c6883;
+  --text-1: #eef2fb;
+  --text-2: #9aa6c4;
+  --text-3: #5d6a8c;
 
-  /* ---- Accent: signature electric cyan (data signal, ownable) ---- */
-  --accent: #35e0d0;
-  --accent-hi: #5beadd;
-  --accent-dim: #1d8c83;
-  --accent-2: #6c5ce7; /* indigo — focus rings, 3D rim light, depth (never a CTA) */
+  /* ---- Accent: cardeep Cobalt Blue (#3B82F6) — the brand signal ---- */
+  --accent: #3b82f6;
+  --accent-hi: #60a5fa;
+  --accent-dim: #1e5fd0;
+  --accent-2: #6366f1; /* indigo — focus rings, 3D rim light, depth (never a CTA) */
+  --on-accent: #04122e; /* readable ink on a cobalt fill */
 
   /* ---- Price-rating / coverage semantic (the visible bridge to the intelligence layer) ---- */
   --price-good: #22c55e;
@@ -28,10 +31,13 @@
   --seal-parcial: var(--price-fair);
   --seal-gap: var(--price-high);
 
-  /* ---- Typography ---- */
-  --font-display: 'Clash Display', system-ui, sans-serif;
-  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  /* ---- Typography — ONE family, sealed to the logo wordmark (Outfit) ----
+     Headlines, body, UI and numbers all render in the brand face. The "display",
+     "ui" and "mono" handles are kept for code clarity but all resolve to Outfit;
+     tabular alignment comes from font-variant-numeric on the .mono utility. */
+  --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-ui: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Outfit', system-ui, -apple-system, sans-serif;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: clamp(0.95rem, 0.9rem + 0.2vw, 1.0625rem);
@@ -40,6 +46,7 @@
   --text-hero: clamp(2.75rem, 1.5rem + 6vw, 6.5rem);
   --weight-regular: 400;
   --weight-medium: 500;
+  --weight-semibold: 600;
   --weight-bold: 700;
   --weight-black: 800;
 
@@ -65,7 +72,7 @@
   /* ---- Elevation (dark-aware: glow + lift, not heavy black shadows) ---- */
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.45);
   --shadow-pop: 0 18px 50px rgba(0, 0, 0, 0.6);
-  --glow-accent: 0 0 24px rgba(53, 224, 208, 0.35);
+  --glow-accent: 0 0 24px rgba(59, 130, 246, 0.38);
 
   /* ---- Motion (compositor-friendly only) ---- */
   --dur-fast: 140ms;

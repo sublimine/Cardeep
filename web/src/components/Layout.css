@@ -26,38 +26,36 @@
   height: 64px;
 }
 
-/* ── Brand ──────────────────────────────────────────────────────────── */
+/* ── Brand (official cardeep mark: blue icon + Outfit wordmark) ──────── */
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   color: var(--text-1);
   text-decoration: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.brand:hover {
+  opacity: 0.86;
 }
 
-.brand__mark {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent), var(--glow-accent);
-  animation: brand-pulse 3.2s var(--ease-out) infinite;
+.brand__icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 10px rgba(59, 130, 246, 0.4));
+  transition: transform var(--dur) var(--ease-out);
 }
-
-@keyframes brand-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.62; transform: scale(0.82); }
+.brand:hover .brand__icon {
+  transform: translateY(-1px) scale(1.04);
 }
 
 .brand__word {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 1.18rem;
-  letter-spacing: 0.04em;
-}
-
-.brand__deep {
-  color: var(--accent);
+  font-size: 1.42rem;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
 }
 
 /* ── Nav ────────────────────────────────────────────────────────────── */
@@ -100,17 +98,18 @@
 .topnav__cta {
   margin-left: var(--space-3);
   padding: var(--space-2) var(--space-4);
-  color: var(--ink);
+  color: #fff;
   font-size: var(--text-sm);
   font-weight: 600;
-  background: var(--accent);
-  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, var(--accent-hi), var(--accent));
+  border-radius: var(--radius-pill);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 6px 16px -6px rgba(59, 130, 246, 0.6);
   transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 
 .topnav__cta:hover {
   transform: translateY(-1px);
-  box-shadow: var(--glow-accent);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) inset, var(--glow-accent), 0 10px 22px -8px rgba(59, 130, 246, 0.7);
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────── */
@@ -125,6 +124,17 @@
   align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
+}
+.appfoot__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.appfoot__brand img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: 0.9;
 }
 
 .appfoot__tag {
@@ -143,5 +153,6 @@
   .topnav { gap: var(--space-1); }
   .topnav__link { padding: var(--space-2) var(--space-1); }
   .topnav__cta { margin-left: var(--space-2); padding: var(--space-2) var(--space-3); white-space: nowrap; }
-  .brand__word { font-size: 1.02rem; }
+  .brand__word { font-size: 1.2rem; }
+  .brand__icon { width: 28px; height: 28px; }
 }

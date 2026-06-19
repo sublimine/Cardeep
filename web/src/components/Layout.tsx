@@ -11,11 +11,16 @@ export function Layout() {
     <div className="app">
       <header className="topbar">
         <div className="container topbar__inner">
-          <Link to="/" className="brand" aria-label="CARDEEP — inicio">
-            <span className="brand__mark" aria-hidden="true" />
-            <span className="brand__word">
-              CARD<span className="brand__deep">EEP</span>
-            </span>
+          <Link to="/" className="brand" aria-label="cardeep — inicio">
+            <img
+              className="brand__icon"
+              src="/brand/cardeep-icon-blue.png"
+              alt=""
+              aria-hidden="true"
+              width={34}
+              height={34}
+            />
+            <span className="brand__word">cardeep</span>
           </Link>
 
           <nav className="topnav" aria-label="Navegacion principal">
@@ -42,7 +47,10 @@ export function Layout() {
 
       <footer className="appfoot">
         <div className="container appfoot__inner">
-          <span className="mono appfoot__tag">CARDEEP · ES</span>
+          <span className="appfoot__brand">
+            <img src="/brand/cardeep-icon-blue.png" alt="" aria-hidden="true" width={20} height={20} />
+            <span className="mono appfoot__tag">cardeep · ES</span>
+          </span>
           <span className="appfoot__note">
             El mapa completo de un mercado que hoy nadie tiene entero.
           </span>

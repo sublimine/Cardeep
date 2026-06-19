@@ -5,6 +5,24 @@
   overflow: clip;
 }
 
+/* staggered entrance — opacity + transform only (compositor-friendly) */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+.hero__eyebrow,
+.hero__title,
+.hero__sub,
+.hero__actions {
+  animation: hero-rise 0.7s var(--ease-out) both;
+}
+.hero__title { animation-delay: 0.07s; }
+.hero__sub { animation-delay: 0.14s; }
+.hero__actions { animation-delay: 0.21s; }
+.hero__stage {
+  animation: hero-rise 0.9s var(--ease-out) 0.1s both;
+}
+
 .hero__inner {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -17,12 +35,18 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--text-2);
-  margin-bottom: var(--space-5);
+  background: color-mix(in oklab, var(--surface-2) 50%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  margin-bottom: var(--space-6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .hero__eyebrow-dot {
@@ -35,18 +59,21 @@
 
 .hero__title {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: var(--text-hero);
   line-height: 1.02;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: var(--text-1);
   margin: 0 0 var(--space-6);
   text-wrap: balance;
 }
 
 .hero__accent {
-  color: var(--accent);
-  text-shadow: 0 0 36px color-mix(in oklab, var(--accent) 45%, transparent);
+  background: linear-gradient(100deg, var(--accent-hi), var(--accent) 55%, var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px color-mix(in oklab, var(--accent) 38%, transparent);
 }
 
 .hero__sub {

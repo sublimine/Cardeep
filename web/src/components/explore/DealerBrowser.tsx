@@ -29,7 +29,7 @@ export function DealerBrowser({ prov }: { prov: string }) {
   const cov = useSealMap('venta')[prov];
   const meta = PROVINCE_BY_CODE[prov];
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data]);
 
   // Facets present on this page (the API has no global facet endpoint; filters
   // apply to the loaded page — see note in docs/frontend/00-PLAN.md).
