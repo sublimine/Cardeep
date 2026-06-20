@@ -36,3 +36,16 @@ def test_nodriver_still_available_as_explicit_optin() -> None:
     # No se elimina nodriver: el owner puede exigirlo explicitamente (con su decision legal).
     eng = FetchEngine(impersonate="chrome131", use_proxy_pool=False, tier1_engine="nodriver")
     assert "nodriver" in eng._tier1_engines
+
+
+@pytest.mark.unit
+def test_solve_challenge_default_engine_is_permissive() -> None:
+    # El footgun a nivel de funcion: un caller que omite engine NO debe caer en AGPL.
+    import inspect
+
+    from pipeline.engine.tier1.browser import solve_challenge
+
+    default = inspect.signature(solve_challenge).parameters["engine"].default
+    assert default not in _AGPL_ENGINES, (
+        f"solve_challenge(engine={default!r}) por defecto es AGPL; debe ser permisivo (camoufox)")
+    assert default == "camoufox"

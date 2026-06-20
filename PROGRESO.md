@@ -1775,3 +1775,24 @@
   egress -> nodo 4G DIY / tethering; LLM/GEO/fotos EUR0 limpio. RE-MARCA bug vivo coches_net_facet.py:295 (7 vs 8
   args) -> VERIFICAR proximo ciclo (mi P05-S0 supuestamente lo arreglo; gana el codigo).
 - Proximo: verificar/cerrar coches_net_facet:295; P03-S3 swap nodriver->Patchright (ruta gratis del dossier); P05.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P03-S3: footgun AGPL cerrado en TODAS las capas (default permisivo) [VERIFICADO]
+- Estado previo (verificado): _TIER1_ENGINE="camoufox" ya era permisivo (MPL-2.0) y el chain de-dupea a ('camoufox',),
+  PERO solve_challenge(engine="nodriver") seguia por defecto en AGPL a nivel de funcion (footgun latente: el unico
+  caller real fetch.py:317 pasa engine explicito, pero un nuevo caller que omita el arg caeria en nodriver/AGPL).
+- FIX (ruta gratis con libs presentes, dossier): solve_challenge default "nodriver"->"camoufox". Docstrings honestas en
+  browser.py (camoufox=DEFAULT/primary; nodriver=OPT-IN ONLY, nunca default, caja de licencia AGPL intacta) y comentarios
+  stale de fetch.py corregidos (decian "nodriver primary [AGPL!]" -> ahora "Camoufox primary; nodriver opt-in").
+- TDD: 4o caso en test_engine_license_default.py (inspect.signature: solve_challenge default NO AGPL == camoufox).
+  18/18 verde (4 licencia + 14 cascade). Estado confirmado: default fn=camoufox, _TIER1_ENGINE=camoufox, chain=('camoufox',).
+- nodriver NO se elimina (opt-in bajo decision legal del owner). Zero gasto, libs ya presentes (camoufox instalado).
+
+## PENDIENTE-OWNER (staged) — actualizado
+- P03 antibot UPGRADE (dossier plans/00-FREE-ROUTES.md, ruta gratis): Patchright (Apache-2.0, Chromium stealth) como
+  motor primario para WAFs Chrome-shaped (DataDome/PerimeterX; camoufox es Firefox-shaped, mas debil contra ellos).
+  Gate: requiere `pip install patchright` + `patchright install chromium` (€0 pero dep + binario) y un _solve_patchright
+  en browser.py que NO escribo a ciegas (codigo de automatizacion no verificable offline = anti-doctrina). Activar en
+  un ciclo que pueda verificarlo en vivo o cuando el owner lo instale. Camoufox cubre el caso permisivo mientras tanto.
+- P03 egress ES residencial (dossier): nodo 4G DIY (Pi+E3372+3proxy) o tethering -> requiere HARDWARE del owner; el
+  codigo ProxyPool ya lee CARDEEP_PROXIES (lease geo=ES). Stage: el owner provee el endpoint del nodo/tethering.
+- (resto de gates del dossier: LLM local Ollama, GEO abierto, captcha por higiene, egress fotos €0 -> ver dossier).

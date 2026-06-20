@@ -9,11 +9,13 @@ User-Agent, same TLS/JA3 shape, same egress IP. If any of those differ, the WAF
 invalidates the cookie on first reuse. This module returns the cookies AND the
 exact User-Agent the browser presented, so the caller can pin them together.
 
-ENGINES:
-  * nodriver  — primary. Drives Chrome over CDP directly, with NO Playwright/
+ENGINES (default is camoufox; nodriver is opt-in only — see the license box):
+  * nodriver  — OPT-IN ONLY (engine="nodriver"); NEVER the default (AGPL, see box).
+    Drives Chrome over CDP directly, with NO Playwright/
     Selenium shim, so it does not expose the automation-protocol fingerprint that
     fingerprint patches cannot hide. In an independent 651-verdict benchmark
-    (ianlpaterson.com, 2026-05-13) it was the only tool with ZERO blocks.
+    (ianlpaterson.com, 2026-05-13) it was the only tool with ZERO blocks — the
+    strongest stealth, available behind the owner's explicit legal opt-in.
         ┌──────────────────────────────────────────────────────────────────┐
         │  LICENSE WARNING — nodriver is AGPL-3.0 (network copyleft).        │
         │  If cardeep ever exposes a NETWORK SERVICE that uses nodriver,     │
@@ -22,8 +24,11 @@ ENGINES:
         │  NOT hidden. Camoufox (MPL-2.0, far more permissive) is provided   │
         │  as a drop-in alternative; set engine="camoufox" to avoid AGPL.    │
         └──────────────────────────────────────────────────────────────────┘
-  * camoufox — secondary. A patched-Firefox stealth browser (MPL-2.0). Use it to
-    avoid AGPL, for Firefox-shaped targets, or as a fallback when nodriver fails.
+  * camoufox — DEFAULT / primary. A patched-Firefox stealth browser (MPL-2.0,
+    file-level copyleft — safe inside a network service). The cost-zero, license-safe
+    default for every Tier-1 solve. (Dossier plans/00-FREE-ROUTES.md: Patchright —
+    Apache-2.0 Chromium stealth — is the staged upgrade for Chrome-shaped WAFs once
+    installed; camoufox remains the permissive baseline meanwhile.)
 
 PROXY: residential ES sticky egress is the transversal requirement for real
 Tier-1 targets (the clearance cookie is bound to the solving IP). A `proxy` arg
@@ -59,7 +64,7 @@ PENDING_CREDENTIAL_PROXY = (
 )
 
 
-def solve_challenge(url: str, *, engine: str = "nodriver",
+def solve_challenge(url: str, *, engine: str = "camoufox",
                     proxy: str | None = None, timeout: float = 60.0,
                     wait_after_load: float = 7.0, headless: bool = False) -> BrowserResult:
     """Solve a challenge at `url` with a real browser and return cookies + UA.

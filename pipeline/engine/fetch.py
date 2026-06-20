@@ -13,7 +13,7 @@ What P2 added on top of the original single-fingerprint Tier-0:
   * SEMANTIC block detection (pipeline/engine/ban_detector.py) — a 403 is not the
     only failure and a 200 is not proof of success (WAFs serve 200 interstitials).
   * A real Tier-1 browser layer (pipeline/engine/tier1/) that solves an active
-    challenge ONCE (nodriver primary [AGPL-3.0!], Camoufox secondary) and mints a
+    challenge ONCE (Camoufox primary [MPL-2.0]; nodriver opt-in [AGPL-3.0]) and mints a
     clearance cookie, which Tier-0 then REUSES with the same UA+fingerprint+IP —
     the cheap engine serves thousands of requests behind one browser solve.
 
@@ -110,7 +110,7 @@ class FetchEngine:
         self._last_fetch_at: float | None = None
         self._allow_tier1 = allow_tier1_escalation
         # Multi-engine escalation chain: a block on one browser engine is "gone
-        # around" by trying the next, never stopping. Default nodriver->camoufox.
+        # around" by trying the next, never stopping. Default camoufox (permissive); nodriver opt-in.
         if tier1_engines is not None:
             self._tier1_engines = tuple(tier1_engines)
         elif tier1_engine is not None:
@@ -286,7 +286,7 @@ class FetchEngine:
         Order, cheapest first (never pause on a block — go around it):
           1) CACHE: replay a cached clearance for this host via curl_cffi (no
              browser launch at all).
-          2) CHAIN: for each Tier-1 engine (nodriver -> camoufox by default), solve
+          2) CHAIN: for each Tier-1 engine (camoufox by default; nodriver opt-in), solve
              once, cache the clearance, and serve via curl_cffi cookie-reuse. A
              block on one engine falls through to the next.
           3) Fail loud only when every engine is exhausted (with a proxy hint when
