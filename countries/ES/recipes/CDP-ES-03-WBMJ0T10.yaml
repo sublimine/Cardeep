@@ -1,0 +1,40 @@
+# Cardeep extraction recipe — CDP-ES-03-WBMJ0T10
+# Reusable; re-scrape without raw crude.
+schema_version: 2
+source: web_generic
+dealer_ref: http://adgautomocion.com/
+kind: compraventa
+cdp_code: CDP-ES-03-WBMJ0T10
+status: FAILED
+reason: empty sample — transport or enumeration yielded no listings
+transport:
+  engine: curl_cffi
+  base_url: http://adgautomocion.com/
+  impersonate: chrome
+  timeout_s: 30
+fingerprint:
+  user_agent: engine-managed
+  ja3: null
+pagination:
+  strategy: single_page
+  url_template: http://adgautomocion.com/
+  page_size: null
+  declared_path: 'page text: N vehículos'
+  stop: empty_page
+parsing:
+  engine: jsonld
+  container_path: schema.org Car|Vehicle|Product
+  field_map:
+    name: jsonld .name
+    price: jsonld .offers.price
+    url: jsonld .url
+evidence:
+  verified_at: '2026-06-20T09:29:20.743102+00:00'
+  sample_k: 5
+  declared: null
+  fetched: 0
+  parsed: 0
+  vam_verdict: TRUSTWORTHY
+  vam_paths:
+    fetched: 0
+    parsed: 0
