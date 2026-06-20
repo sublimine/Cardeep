@@ -2303,3 +2303,23 @@
   Long-tail bespoke generic_custom = manual/diferido (no escala).
 - PROXIMO: investigar el mecanismo de seeds de family_dms_vendor/family_dealerk (¿auto-descubre dealers DealerK/WP de
   la DB por website-host, o seeds hardcoded?) -> ampliar la cobertura a mas dealers con web propia + cosechar.
+
+### 2026-06-21 (loop COBERTURA) — Greenfield own-site: VEREDICTO de cosecha (€0-sin-construir agotado) [VERIFICADO]
+- Pruebas --from-db sobre family connectors maduros: family_dms_vendor --from-db --limit 5 = +0 (5 candidatos, 0
+  matchearon fingerprint inventario.pro/motorflash, 2 NXDOMAIN); family_dealerk --from-db --limit 10 = +0 (8 non-family,
+  2 NXDOMAIN; candidatos incluian reflexologiamparo.com/abogadamariaalonso.com/inmobiliariaenceuta.es = NI SON DEALERS).
+- HALLAZGOS (gana el codigo): (1) las subfamilias maduras (DealerK 43 + inventario.pro/motorflash 31 attested) YA estan
+  cosechadas; --from-db no filtra subfamilia -> saca webs cualquiera que no matchean. (2) la columna entity.website esta
+  CONTAMINADA con webs basura (no-coches: reflexologia/abogados/inmobiliarias) + dominios muertos -> discovery asocio webs
+  incorrectas.
+- VEREDICTO del frente greenfield own-site: es cobertura REAL (8% solapamiento, 92% nuevo) PERO su cosecha esta GATED por
+  CONSTRUCCION (extractores por CMS heterogeneo) + LIMPIEZA de datos (website sucio), NO es €0-sin-construir. Las familias
+  cosechables maduras ya estan exprimidas.
+- CONCLUSION ESTRATEGICA (re-confirma el certificado A-F empiricamente): la cobertura NUEVA €0-SIN-CONSTRUIR esta
+  esencialmente AGOTADA — el grueso (1.7M) ya cosechado; re-drenar = frescura (OPS), no cobertura nueva. El avance de
+  cobertura nueva restante requiere: (a) CONSTRUIR extractores que escalen (WordPress generico heuristico = ~37% de los
+  own-site cosechables) [€0, ingenieria]; (b) scrapers desguace R1 (Opisto) [€0, construccion]; (c) limpiar website sucio
+  [€0]; o (d) drenar walled a escala/frecuente [GASTO].
+- PROXIMO FRENTE (€0, escala, cobertura nueva real): CONSTRUIR un extractor WordPress generico (los 3/8 CONFIRMED WP
+  -valhondo/willys/valenza- como banco de pruebas TDD), que coseche N webs WP de dealer con una sola receta heuristica.
+  Es construccion institucional con TDD + verificacion adversarial, no correr drains.
