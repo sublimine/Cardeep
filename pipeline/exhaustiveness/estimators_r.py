@@ -32,6 +32,46 @@ _R_CANDIDATES = [
     r"C:\Program Files\R\R-4.6.0\bin\x64\Rscript.exe",
 ]
 
+# R_HOME candidates and the Rtools make dir (rpy2's config probe needs make).
+_RHOME_CANDIDATES = [
+    r"C:\Users\elias\R-portable",
+    r"C:\Program Files\R\R-4.6.0",
+]
+_RTOOLS_BIN = r"C:\rtools45\usr\bin"
+
+
+def _configure_r_env() -> None:
+    """Set R_HOME + put R and Rtools make on PATH so rpy2 imports cleanly.
+
+    The Windows rpy2 import probe (``R CMD config``) needs make from Rtools;
+    without this the probe raises and rpy2 is unusable. Idempotent.
+    """
+    if not os.environ.get("R_HOME"):
+        for h in _RHOME_CANDIDATES:
+            if os.path.exists(h):
+                os.environ["R_HOME"] = h
+                break
+    extra = []
+    rhome = os.environ.get("R_HOME")
+    if rhome:
+        extra.append(os.path.join(rhome, "bin", "x64"))
+    if os.path.exists(_RTOOLS_BIN):
+        extra.append(_RTOOLS_BIN)
+    if extra:
+        os.environ["PATH"] = os.pathsep.join(extra) + os.pathsep + os.environ.get("PATH", "")
+
+
+@lru_cache(maxsize=1)
+def rpy2_available() -> bool:
+    """True iff rpy2 can import and talk to R in-process (needs Rtools make)."""
+    _configure_r_env()
+    try:
+        import rpy2.robjects  # noqa: F401
+
+        return True
+    except Exception:
+        return False
+
 
 @lru_cache(maxsize=1)
 def r_executable() -> str | None:
@@ -87,6 +127,49 @@ def run_mse(freqs: dict[tuple[int, ...], int], *, timeout: int = 180) -> dict | 
             tmp.unlink()
         except OSError:
             pass
+
+
+def lcmcr_rpy2(freqs: dict[tuple[int, ...], int], *, samples: int = 8000,
+              burnin: int = 5000) -> dict | None:
+    """In-process LCMCR via rpy2 (fast for batch — R stays resident).
+
+    Returns {n_hat, ci_low, ci_high, method:'lcmcr_rpy2'} or None/{'error'}.
+    Used for the national ≥2-model rollup where spawning Rscript per stratum
+    would be far slower than keeping one R session alive.
+    """
+    if not rpy2_available() or not freqs:
+        return None
+    try:
+        import itertools
+
+        import numpy as np
+        import rpy2.robjects as ro
+        from rpy2.robjects.packages import importr
+
+        lcmcr = importr("LCMCR")
+        base = importr("base")
+        k = len(next(iter(freqs)))
+        patterns = [p for p in itertools.product((0, 1), repeat=k) if any(p)]
+        cols = {}
+        for j in range(k):
+            cols[f"L{j}"] = ro.IntVector([p[j] for p in patterns])
+        cols["Freq"] = ro.IntVector([freqs.get(p, 0) for p in patterns])
+        df = ro.DataFrame(cols)
+        for j in range(k):
+            df[df.colnames.index(f"L{j}")] = base.as_factor(df.rx2(f"L{j}"))
+        ro.r["set.seed"](20260620)
+        sampler = lcmcr.lcmCR(df, tabular=True, K=5, seed=ro.IntVector([20260620]),
+                              buffer_size=10000, thinning=20)
+        post = lcmcr.lcmCR_PostSampl(sampler, burnin=burnin, samples=samples, output=False)
+        arr = np.array(post)
+        return {
+            "n_hat": float(np.median(arr)),
+            "ci_low": float(np.percentile(arr, 2.5)),
+            "ci_high": float(np.percentile(arr, 97.5)),
+            "method": "lcmcr_rpy2",
+        }
+    except Exception as exc:
+        return {"error": str(exc)[:200]}
 
 
 def crosscheck(python_n_hat: float, r_result: dict | None, *, tol: float = 0.25) -> dict:

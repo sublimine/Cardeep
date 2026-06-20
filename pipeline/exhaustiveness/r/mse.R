@@ -30,7 +30,9 @@ out <- list(status = "ok")
 # --- Rcapture closedpMS.t (log-linear model selection) ---
 out$rcapture <- tryCatch({
   if (!ok_rcapture) stop("Rcapture not installed")
-  res <- Rcapture::closedpMS.t(mat, dfreq = TRUE)
+  # maxorder=2 (pairwise interactions only) + stopiflong=FALSE so the model
+  # search is bounded and runs for >=5 lists instead of refusing.
+  res <- Rcapture::closedpMS.t(mat, dfreq = TRUE, maxorder = 2, stopiflong = FALSE)
   tab <- as.data.frame(res$results)
   # pick the model with the lowest BIC
   bic_col <- if ("BIC" %in% colnames(tab)) "BIC" else grep("BIC", colnames(tab), value = TRUE)[1]

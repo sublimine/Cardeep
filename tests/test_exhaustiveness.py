@@ -165,6 +165,18 @@ def test_r_bridge_recovers_known_n():
     assert cc["agree"] is True
 
 
+def test_rpy2_inprocess_lcmcr():
+    from pipeline.exhaustiveness import estimators_r as R
+
+    if not R.rpy2_available():
+        pytest.skip("rpy2 not available (needs R + Rtools make)")
+    freqs = _independent_cells(1000, (0.3, 0.4, 0.5))
+    res = R.lcmcr_rpy2(freqs, samples=2000, burnin=1000)
+    assert res is not None and "n_hat" in res
+    assert res["n_hat"] == pytest.approx(1000, rel=0.10)
+    assert res["method"] == "lcmcr_rpy2"
+
+
 def test_r_crosscheck_flags_divergence():
     from pipeline.exhaustiveness import estimators_r as R
 
