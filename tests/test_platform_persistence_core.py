@@ -22,14 +22,18 @@ from pipeline.platform.coches_net_wholesale import COCHES_SPEC
 from pipeline.platform.localizavo_wholesale import LV_SPEC
 from pipeline.platform.miclasico_wholesale import MC_SPEC
 from pipeline.platform.motorflash_wholesale import MF_SPEC
+from pipeline.platform.oem_audi_wholesale import AUDI_SPEC
+from pipeline.platform.oem_ford_wholesale import FORD_SPEC
+from pipeline.platform.spoticar_wholesale import SPOTICAR_SPEC
 
 DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep")
 
-# Every connector migrated to the _core. Add each new adopter's spec here as it lands.
-# Covers the variation range: coches_net/coches_com (mid+extras), AS24 (minimal), autocasion (maximal:
-# extras+family), miclasico (source_group/role), localizavo (distinct legal_name+kind), motorflash
-# (is_platform_like=True aggregator, conflict_refresh empty).
-SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC, COCHES_COM_SPEC, MF_SPEC]
+# Every connector migrated to the _core. Add each new adopter's spec here as it lands. Covers the
+# variation range: coches_net/coches_com (mid+extras), AS24 (minimal), autocasion (maximal), miclasico
+# (source_group/role), localizavo + the OEM VO portals spoticar/audi/ford (distinct legal_name + kind),
+# motorflash (is_platform_like=True aggregator, empty conflict_refresh).
+SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC, COCHES_COM_SPEC, MF_SPEC,
+         SPOTICAR_SPEC, AUDI_SPEC, FORD_SPEC]
 _IDS = [s.source_key for s in SPECS]
 
 

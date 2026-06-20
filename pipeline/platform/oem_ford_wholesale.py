@@ -104,6 +104,10 @@ from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.geocode import ProvinceGeocoder
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -573,42 +577,26 @@ FORD_PLATFORM_RECIPE = {
 }
 
 
+# P05: OEM VO portal (legal_name/kind class). is_tier1=TRUE (Akamai), POST eUsed API.
+FORD_SPEC = PlatformSpec(
+    cdp_code=ford_platform_cdp_code(), kind=FORD_KIND, legal_name=FORD_LEGAL_NAME,
+    trade_name=FORD_TRADE_NAME, website=FORD_WEBSITE, source_key=FORD_SOURCE_KEY,
+    source_ref=FORD_DOMAIN, data_surface="internal_api",
+    surface_detail={"endpoint": ENDPOINT, "host": host_of(ENDPOINT), "method": "POST",
+                    "page_size": PAGE_SIZE, "denominator": "totalMatches",
+                    "surface_intent": "internal_eused_json_api",
+                    "engine": "curl_cffi/chrome131_impersonate+eusl_soft_gate"},
+    website_waf=FORD_WAF, is_tier1=True, defense_tier=FORD_DEFENSE_TIER,
+    source_group=FORD_SOURCE_GROUP, role=FORD_ROLE, family=FORD_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the ford platform entity + platform_meta exist. Returns the platform
-    entity_ulid. kind='oem_vo_portal' (the platform ontology kind), is_tier1=TRUE (Akamai fronts the
-    eUsed API), multi-axis 0016 classification set explicitly, data_surface='internal_api'."""
-    code = ford_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,TRUE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, FORD_KIND, FORD_LEGAL_NAME, FORD_TRADE_NAME, FORD_WEBSITE,
-        FORD_WAF, FORD_DEFENSE_TIER, FORD_SOURCE_GROUP, FORD_ROLE, FORD_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, FORD_SOURCE_KEY, FORD_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"endpoint": ENDPOINT, "host": host_of(ENDPOINT),
-                           "method": "POST", "page_size": PAGE_SIZE,
-                           "denominator": "totalMatches",
-                           "surface_intent": "internal_eused_json_api",
-                           "engine": "curl_cffi/chrome131_impersonate+eusl_soft_gate"}),
-        FORD_FAMILY)
-    return eulid
+    """Idempotently ensure the ford platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via FORD_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, FORD_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:

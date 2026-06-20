@@ -1943,3 +1943,16 @@
 - Avance P05: 7/29. El superset cubre: minima, media, maxima extras+family, source_group/role, legal_name/kind,
   is_platform_like aggregator. Restan ~19 (conn) + 3 firma extendida (stage).
 - Proximo (ROTAR): mas conectores / P12 frontend / P09-S6 / P06.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: spoticar+audi+ford (OEM VO portals) adoptan _core (10/29) [VERIFICADO]
+- HALLAZGO: los OEM VO-portal (spoticar/audi/ford) son ESTRUCTURALMENTE IDENTICOS = clase legal_name/kind
+  (kind='oem_vo_portal' param, legal_name separado, 0016 axes + family param, conflict_refresh de los 7). Solo cambian
+  constantes/surface_detail/is_tier1 (spoticar T / audi F / ford T). Migrados los 3 en un ciclo (alto throughput).
+- SPOTICAR_SPEC/AUDI_SPEC/FORD_SPEC + delegan en _core. data_surface='internal_api'.
+- TDD: SPECS ahora 10; 20/20 paridad verde (rama INSERT, fila==spec incl. kind/legal_name/extras/family). Regresion
+  spoticar+audi+ford 6/6.
+- Avance P05: 10/29. Los OEM restantes (hyundai/kia/mercedes_benz/toyota_lexus/nissan_mazda_honda/volvo_jlr_suzuki/
+  seat_cupra*/seat_cupra_new_stock) muy probablemente comparten la MISMA plantilla -> lote en proximos ciclos (leer cada
+  uno para confirmar constantes/surface_detail). Restan tambien auction (subastacar/group_subastas/renew) + dasweltauto.
+  3 de firma extendida (faciliteacoches/group_rentacar/oem_bmw) = stage.
+- Proximo (ROTAR o seguir lote OEM): mas OEM / P12 / P06 / P09-S6.
