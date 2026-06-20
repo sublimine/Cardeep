@@ -60,6 +60,7 @@ async def record_count_verdict(
     tolerance: float = 0.0,
     claim_kind: str = "count",
     expires_in: timedelta | None = None,
+    measured_by_observation: bool = False,
 ) -> str:
     """paths: {path_name: count}. Quorum rule (mandate: ">=2 orthogonal paths agree"):
     TRUSTWORTHY when the modal value is supported by >=2 paths and no rival value also
@@ -145,7 +146,14 @@ async def record_count_verdict(
         # so drift-but-not-exact resolves to UNVERIFIED — honest ("cannot quorum-certify") and
         # crucially NOT REFUTED, so downstream consumers that only gate on REFUTED proceed.
         drift_ok = len(values) >= 2 and divergence <= tolerance
-        if modal_ok and has_independence:
+        # EXACT_ZERO fix (P09-S1): a modal value of 0 is almost always "no data observed"
+        # (absence / fetch error / empty metric), NOT a measured empty set. A zero quorum
+        # must NOT certify TRUSTWORTHY unless the caller explicitly OBSERVED the emptiness
+        # (measured_by_observation=True). Otherwise 0==0==0 across orthogonal paths certified
+        # absence-as-truth (10 web_generic recipes carried vam_verdict TRUSTWORTHY with
+        # fetched:0). Better a hole than a lie — a non-observed zero falls to UNVERIFIED.
+        zero_certifiable = top_val != 0 or measured_by_observation
+        if modal_ok and has_independence and zero_certifiable:
             # Exact modal quorum (>=2 identical values) across >=2 orthogonal families/origins:
             # the ONLY shape the DB invariant accepts as TRUSTWORTHY.
             verdict = "TRUSTWORTHY"

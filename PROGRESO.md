@@ -1553,3 +1553,17 @@
   RED antes (7!=8) -> GREEN despues (1 passed). test_coches_net_delta 2 passed (0 regresion).
 - **Estado P05:** S0 cerrado (rama feat/p05-s0-coches-net-ingest-arity). Pendiente PUSH (gate de revision).
   Proximo paso del blueprint: P09-S1 (cerrar la mentira EXACT_ZERO en verify.py).
+### 2026-06-20 (cont.) — P09-S1 SELLADO: cerrada la mentira EXACT_ZERO en verify.py (VAM)
+- **Bug vivo:** record_count_verdict certificaba 0==0==0 (3 familias ortogonales en 0 por AUSENCIA)
+  como TRUSTWORTHY -> un cero por ausencia se vendia como verdad (10 recetas web_generic con
+  fetched:0 llevaban vam_verdict TRUSTWORTHY). El corazon VAM tenia una grieta logica.
+- **Fix backward-compatible:** nuevo flag measured_by_observation (default False). zero_certifiable =
+  top_val!=0 or measured_by_observation; un cero modal NO certifica salvo vacuidad OBSERVADA. Los 111
+  callers quedan intactos (su cero-por-ausencia cae a UNVERIFIED, no REFUTED, asi NO bloquea reconcile_gone).
+- **TDD/verificacion (DB :5433):** tests/test_verify_exact_zero.py RED (all_zero->TRUSTWORTHY) -> GREEN
+  (4 passed). No-regresion: test_verify_quorum 9 passed, test_coverage_verify 4 passed. py_compile+import OK.
+- **Estado P09:** S1 cerrado (rama feat/p09-s1-exact-zero). Pendiente PUSH (gate revision del owner).
+- **Ola-0 codigo COMPLETA (2/2 bugs): P05-S0 + P09-S1.** Resta el GATE operativo de rearranque de cosecha
+  (correr el scheduler -> verificar que el harvest produce delta) = accion EXTERNA/prod -> decision del owner.
+- **Avance blueprint: ~2/100 pasos.** Proximo (reversible, sin gate): Ola-1 P03 engine (AGPL-neutral default
+  + cablear record_ban semantico). Gates pendientes del owner: PUSH, rearranque cosecha, P07-WORM.
