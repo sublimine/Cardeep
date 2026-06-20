@@ -2278,3 +2278,17 @@
 - PROXIMO: workflow de investigacion del greenfield (por lote de dealers sin inventario con dominio conocido: tienen
   web viva con inventario? -> instrumentar/cosechar; sin web -> marcar 0-legitimo). Priorizar concesionario_oficial
   (1.460, alto valor, suelen tener web) y compraventa con dominio. R1 desguace = scrapers nuevos (Opisto) = proyecto aparte.
+
+### 2026-06-21 (loop COBERTURA) — Greenfield own-site: RECON + veredicto [VERIFICADO]
+- Workflow wrtdqoctu (33 agentes, WebFetch real + verificacion adversarial) sobre 24 webs propias de dealers sin
+  inventario (1/provincia de 6.628). Resultado: 8/24 CONFIRMED cosechable (33%, web propia + inventario real de
+  coches, pasa adversarial); 16/24 ruido 0-legitimo (7 subdominio-OEM ya cosechado, 5 no-coches maquinaria/taller,
+  2 presencia-only, 2 muertos). Cuadre investigador==adversarial (0 discrepancias).
+- Extrapolado ~2.200 sitios cosechables (IC 1.180-3.500; CAVEAT muestreo 1/provincia no aleatorio = orden magnitud).
+- HALLAZGO CLAVE (gana el codigo, anti-maquillaje): el ROI esta GATED por SOLAPAMIENTO no medido — el stock own-site
+  suele publicarse tambien en coches.net/wallapop/milanuncios (ya cosechados) -> podrian ser mayormente DUPLICADOS.
+  Cableado fragmentado: solo 1/8 DealerK escala, 3/8 WP heterogeneos, 4/8 bespoke (no escala a 2.200).
+- DECISION (medir antes de construir): proximo frente = MEDIR el solapamiento del stock de los 8 CONFIRMED contra el
+  grafo. >70% -> greenfield espejismo -> pivotar a profundizar marketplaces walled; <40% -> cablear solo DealerK+WP.
+- Artefacto: docs/GREENFIELD_RECON_2026-06-21.md. NO se cablea nada hasta medir (cablear 2.200 bespoke para coches
+  duplicados seria invertir el orden correcto).
