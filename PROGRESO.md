@@ -1812,3 +1812,25 @@
 - GATE (IRREVERSIBLE-PROD): NO apliqué 0050 a la DB viva :5433. Se aplica por la cadena normal (CI build fresh / deploy
   migrate up). Aditiva + backward-compat + idempotente -> segura cuando el owner/deploy corra migrate up en prod/VPS.
 - Proximo: P09-S5 cablear el gate al quorum.decide() (offline, usa sampler.py + estas columnas); P05; P13.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P09-S5 (core): gate de precision cableado a quorum.decide() [VERIFICADO]
+- ADITIVO y no-rompedor: quorum.decide() acepta `precision: PrecisionGate | None = None`. PrecisionGate(passed, ci_upper,
+  p0_contract, precision_n, sample_seed, reason). QuorumResult gana 4 campos de precision (mapean a columnas 0050) con
+  default None.
+- LOGICA: si la rama count-quorum daria TRUSTWORTHY Y hay contrato de precision (precision!=None) que FALLO ->
+  degrada a INCONCLUSIVE con reason PRECISION_GATE_FAILED (NO REFUTED: el valor no se refuta, no es certificable al
+  bar de precision), llevando la metadata para auditoria. precision=None (sin contrato/sin presupuesto) -> NO gatea
+  (coste-cero default: la ausencia nunca bloquea). precision passed -> TRUSTWORTHY + metadata. NO rescata un count-quorum
+  fallido (REFUTED:NO_INDEPENDENT_PATH sigue REFUTED aunque precision pase).
+- TDD: tests/test_quorum_precision_gate.py 4/4 (baseline sin precision intacto; passed lleva metadata; failed->INCONCLUSIVE;
+  no-rescata-REFUTED). Regresion: test_inquisition_engines + test_inquisition_prosecutor 67/67 verde (aditivo, 0 rotura).
+
+## PENDIENTE-OWNER (staged) — P09-S5 sub-partes que exigen cambio cross-cutting (enum verdict + CHECK DB + router):
+- Degradar NO_INDEPENDENT_PATH (indep<2 a coste-cero) de REFUTED->UNVERIFIED para eliminar el spam ESCALATE_OWNER
+  (GAP#1). Requiere: nuevo verdict 'UNVERIFIED' en el enum (quorum + DB CHECK 0032/migracion nueva) + router lane no-escalate
+  + actualizar ~varios tests que hoy aseveran REFUTED:NO_INDEPENDENT_PATH. NO hecho por riesgo cross-cutting; planificar como
+  migracion + cambio de router dedicado.
+- Veredicto 'SEALED-WITH-DECLARED-GAP' (precision pasa pero recall<umbral con gap cuantificado): mismo coste (enum+CHECK+router).
+- Persistir los 4 campos de precision de QuorumResult en inquisition_verdict (columnas 0050) desde el prosecutor (wiring de
+  1 INSERT; hacer cuando se cablee la generacion real de PrecisionGate via sampler+contrato, que necesita re-fetch = GASTO/red).
+- Proximo: P05 unificar _persistence (offline) / P13 CI seeded snapshot / P12 frontend.

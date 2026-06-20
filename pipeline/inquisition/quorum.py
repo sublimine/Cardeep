@@ -86,6 +86,29 @@ class QuorumResult:
     refute_hard_n: int            # count of admitted REFUTE_HARD skeptics (all, not just credible)
     abstain_n: int                # count of admitted ABSTAIN skeptics
     reason_code: str | None       # machine-readable reason; None for TRUSTWORTHY
+    # P09-S5 precision certificate (maps to inquisition_verdict 0050 columns; None when the
+    # subject carries no precision contract / no sampling budget — the cost-zero default).
+    precision_n: int | None = None
+    sample_seed: str | None = None
+    ci_upper: float | None = None
+    p0_contract: float | None = None
+
+
+@dataclass
+class PrecisionGate:
+    """Outcome of evaluating a subject's precision contract (P09-S2 sampler + S4 contract).
+
+    `passed` is True iff the blind acceptance sample met the contract (Wilson ci_upper <= p0).
+    Pass None to decide() when the subject has NO precision contract or no sampling budget: the
+    gate then does NOTHING (cost-zero default — absence never blocks a count-quorum verdict; only
+    an explicit precision FAILURE downgrades a would-be TRUSTWORTHY to INCONCLUSIVE).
+    """
+    passed: bool
+    ci_upper: float | None = None
+    p0_contract: float | None = None
+    precision_n: int | None = None
+    sample_seed: str | None = None
+    reason: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +162,7 @@ def decide(
     *,
     asserted_value: str,
     regime: Regime,
+    precision: "PrecisionGate | None" = None,
 ) -> QuorumResult:
     """Apply the §5.4 six-step quorum decision to a list of skeptics.
 
@@ -255,6 +279,26 @@ def decide(
     # §5.4 Step 4: TRUSTWORTHY condition
     # ------------------------------------------------------------------
     if n_star >= 2 and not rival and (rs + ab) < n_star:
+        # P09-S5: count-quorum says TRUSTWORTHY. If the subject also carries a precision
+        # contract, TRUSTWORTHY additionally requires the precision gate to have PASSED. A
+        # FAILED precision sample (defect-rate upper bound above the contract p0) downgrades
+        # to INCONCLUSIVE — not REFUTED (the value is not refuted, it is not certifiable at the
+        # precision bar). No precision contract / no budget (precision is None) -> no gating.
+        if precision is not None and not precision.passed:
+            return QuorumResult(
+                verdict="INCONCLUSIVE",
+                decided_value=None,
+                indep_score=indep,
+                assert_n=assert_n,
+                refute_soft_n=refute_soft_n,
+                refute_hard_n=refute_hard_n,
+                abstain_n=abstain_n,
+                reason_code=precision.reason or "PRECISION_GATE_FAILED",
+                precision_n=precision.precision_n,
+                sample_seed=precision.sample_seed,
+                ci_upper=precision.ci_upper,
+                p0_contract=precision.p0_contract,
+            )
         return QuorumResult(
             verdict="TRUSTWORTHY",
             decided_value=v_star,
@@ -264,6 +308,10 @@ def decide(
             refute_hard_n=refute_hard_n,
             abstain_n=abstain_n,
             reason_code=None,
+            precision_n=precision.precision_n if precision else None,
+            sample_seed=precision.sample_seed if precision else None,
+            ci_upper=precision.ci_upper if precision else None,
+            p0_contract=precision.p0_contract if precision else None,
         )
 
     # ------------------------------------------------------------------
