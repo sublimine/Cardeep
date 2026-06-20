@@ -1670,3 +1670,19 @@
   recetas); (b) P01/P02 descubrimiento+exhaustividad (P02 en curso por proceso concurrente); (c) P11 certificado de
   cobertura/API; (d) P12 frontend/inteligencia; (e) P13 infra/CI; (f) P07 datos (no-WORM).
 - Loop PAUSADO por agotamiento del frente recipe-first limpio (clausula de honestidad). Decision del proximo frente -> owner.
+
+### 2026-06-20 (loop TODO A->Z) — P09-S2: muestreador de PRECISION (AQL c=0 / SPRT Wald / Wilson) [VERIFICADO]
+- Roto de punto (no anclar en P04). Nuevo modulo PURO pipeline/inquisition/sampler.py (stdlib: math + NormalDist,
+  sin scipy en camino caliente, sin DB ni red). Implementa V6-STATISTICAL-RIGOR.md §2/§3/§5:
+  * plan_zero_defect(N,p0,conf): AQL c=0  n=ceil(ln a/ln(1-p0)) capado a N. Reproduce Tabla 2.2: 299@95/459@99/688@99.9.
+  * sprt_plan/_decision/_evaluate: SPRT de Wald con parada temprana + truncado §3.3. Reproduce §3.2 (k=1.4014,
+    s=0.010841, h1=2.0625, h2=1.6065); 0-defectos acepta a m=191 (63% ahorro vs 523 fijo); 2 defectos rechaza ~m37.
+  * wilson_interval(d,n,conf): IC de Wilson; 0/300@95% -> upper ~1.26%.
+  * precision_estimate: P-hat con precision_lower = 1 - upper(defect) (anti-maquillaje: peor caso defendible).
+- TDD: tests/test_precision_sampler.py 8/8 verde (RED ImportError -> GREEN). Numeros aseverados contra los ejemplos
+  trabajados de V6, no inventados (verificados a mano + por test).
+- Regresion: suite inquisicion/quorum/verify/lens 178/178 verde, 0 regresiones. Modulo nuevo, no toca codigo vivo.
+- Pendiente del propio P09 (siguientes pasos, NO en este commit): S4 migration 0037 (gate de precision en DB) = toca
+  esquema -> se escribira como .sql + test en scratch, NO se aplica a la DB viva (gate IRREVERSIBLE-PROD). S5 cablear
+  al quorum. S3 re-coleccion ciega ortogonal = lente C live -> GASTO (gate). El sampler puro queda listo para ambos.
+- Proximo: otro paso reversible €0 (P10 detectores / P11 certificado / P05 unificar _persistence).
