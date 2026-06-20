@@ -35,6 +35,8 @@ from pipeline.sources.flexicar_census import FlexicarCensusAdapter
 from pipeline.sources.overture import OvertureAdapter
 from pipeline.sources.dork_municipal import DorkMunicipalAdapter
 from pipeline.sources.borme_cnae import BormeCnaeAdapter
+from pipeline.sources.graph_recursive import GraphRecursiveAdapter
+from pipeline.sources.paginas_amarillas import PaginasAmarillasAdapter
 from pipeline.verify import record_count_verdict
 from services.api.codes import cdp_code
 
@@ -61,6 +63,8 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     "overture": OvertureAdapter,
     "dork_municipal": DorkMunicipalAdapter,
     "borme_cnae": BormeCnaeAdapter,
+    "graph_recursive": GraphRecursiveAdapter,
+    "paginas_amarillas": PaginasAmarillasAdapter,
 }
 
 
