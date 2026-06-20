@@ -77,7 +77,7 @@ async def _load_seed_sites(limit: int | None) -> list[str]:
         await conn.close()
 
 
-def _fetch(url: str) -> str | None:
+def _fetch_requests(url: str) -> str | None:
     import requests
 
     try:
@@ -86,6 +86,39 @@ def _fetch(url: str) -> str | None:
         return r.text if (r.status_code == 200 and "html" in ct) else None
     except Exception:  # noqa: BLE001 — a dead/WAF'd seed must not kill the crawl
         return None
+
+
+def _make_engine():
+    """Build the antidetection FetchEngine (Tier-0 curl_cffi + Tier-1 browser on WAF).
+
+    Returns None when the engine is unavailable or disabled (CARDEEP_GRAPH_TIER1=0),
+    in which case the crawl falls back to plain requests. Tier-1 only fires on an
+    actually-detected challenge, so most pages still serve cheaply via Tier-0.
+    """
+    if os.environ.get("CARDEEP_GRAPH_TIER1", "1") == "0":
+        return None
+    try:
+        from pipeline.engine.fetch import FetchEngine
+
+        return FetchEngine(allow_tier1_escalation=True, tier1_headless=False)
+    except Exception:  # noqa: BLE001 — curl_cffi/engine missing: use requests fallback
+        return None
+
+
+def _fetch(url: str, engine=None) -> str | None:
+    """Fetch HTML. Prefers the antidetection engine (gets 200 past Tier-1 WAFs that
+    bare requests cannot), falling back to plain requests on any engine failure."""
+    if engine is not None:
+        try:
+            from pipeline.engine.fetch import FetchError
+
+            try:
+                return engine.fetch_text(url)
+            except FetchError:
+                return None
+        except Exception:  # noqa: BLE001 — engine path broke; try requests below
+            pass
+    return _fetch_requests(url)
 
 
 def _iter_jsonld(html: str):
@@ -180,6 +213,7 @@ class GraphRecursiveAdapter(SourceAdapter):
         self._rows: list[DiscoveredEntity] | None = None
         self._isolated: str | None = None
         self._pages = 0
+        self._engine_kind = "requests"
 
     def _seeds(self) -> list[str]:
         env = os.environ.get("CARDEEP_GRAPH_SEEDS")
@@ -204,12 +238,16 @@ class GraphRecursiveAdapter(SourceAdapter):
         seen_ref: set[str] = set()
         out: list[DiscoveredEntity] = []
         reachable = False
+        # One engine for the whole crawl = one coherent fingerprint + clearance cache,
+        # so a Tier-1 solve on a group domain is reused across its branch pages.
+        engine = _make_engine()
+        self._engine_kind = "tier1" if engine is not None else "requests"
         while frontier and self._pages < max_pages:
             url = frontier.pop(0)
             if url in visited:
                 continue
             visited.add(url)
-            html = _fetch(url)
+            html = _fetch(url, engine)
             self._pages += 1
             if not html:
                 continue
@@ -247,5 +285,6 @@ class GraphRecursiveAdapter(SourceAdapter):
         if self._isolated:
             print(f"[graph_recursive] ISOLATED — {self._isolated}")
             return []
-        print(f"[graph_recursive] pages_crawled={self._pages} branches={len(rows)}")
+        print(f"[graph_recursive] engine={self._engine_kind} pages_crawled={self._pages} "
+              f"branches={len(rows)}")
         return rows
