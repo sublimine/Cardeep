@@ -2262,3 +2262,19 @@
 - PROXIMO: encadenar OEMs abiertas con concurrency 1 (hyundai/audi/toyota_lexus/kia/mercedes/spoticar/motorflash),
   un drain a la vez paced. Walled grandes (coches_net/milanuncios/wallapop/as24) = camoufox+egress; evaluar con c1
   y stage si queman IP.
+
+### 2026-06-21 (loop COBERTURA) — A3 balance + REORIENTACION a greenfield [VERIFICADO]
+- Arco de cosecha re-activada: localizavo +227 (TRUSTWORTHY), oem_volvo +837 (concurrency 1 vence throttle),
+  oem_hyundai +0 (ok=True rows=1962 pero 0 nuevos = SATURADA, drenada 15-jun, inventario estable). Total servido
+  este arco: +1.064 vehiculos verificados (vehicles_total 1.704.968 -> 1.706.032).
+- HALLAZGO ESTRATEGICO (gana el codigo): re-drenar fuentes recientes (15-jun) da +0 cobertura nueva (solo frescura).
+  La cobertura NUEVA esta en el GREENFIELD, no en re-correr lo saturado. Dejar de re-drenar OEM saturadas a ciegas.
+- MAPA GREENFIELD (dealers sin inventario, kind<>particular, contra DB viva): compraventa 24.990/62.505 (39%),
+  garaje 7.874/7.899 (99%, R3 sells_cars sin resolver), desguace 2.700 (100%, R1), concesionario_oficial 1.460/1.651
+  (88%, R2), oem_vo_portal 14 (100%). ~37k dealers sin inventario = el verdadero frente de cobertura.
+- MATIZ HONESTO: NO todos los 37k son cosechables — los que no tienen web propia deben quedar en 0 (objetivo = solo
+  huella digital). El trabajo real = (1) determinar cuales tienen web/fuente propia cosechable, (2) instrumentar/
+  cablear su receta (A3/A5), (3) cosechar. Es construccion + investigacion, no re-drenar.
+- PROXIMO: workflow de investigacion del greenfield (por lote de dealers sin inventario con dominio conocido: tienen
+  web viva con inventario? -> instrumentar/cosechar; sin web -> marcar 0-legitimo). Priorizar concesionario_oficial
+  (1.460, alto valor, suelen tener web) y compraventa con dominio. R1 desguace = scrapers nuevos (Opisto) = proyecto aparte.
