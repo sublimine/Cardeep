@@ -7,8 +7,19 @@ import inspect
 
 import pytest
 
+from pipeline.engine import clearance_cache
 from pipeline.engine import fetch as fetchmod
 from pipeline.engine.fetch import FetchEngine, FetchError
+
+
+@pytest.fixture(autouse=True)
+def _isolate_clearance_cache():
+    # The clearance cache is process-global; clear it around every test so a
+    # cached solve from one test cannot leak into another's queued responses.
+    clearance_cache.clear()
+    yield
+    clearance_cache.clear()
+
 
 _OK_BODY = "<html><body>" + "x" * 40000 + "</body></html>"
 _CF_BODY = "<title>Just a moment...</title> cf-chl- Checking your browser ray id"
@@ -160,3 +171,72 @@ def test_tier1_solve_failure_raises_fetcherror(monkeypatch):
     eng, _ = _engine_with([_Resp(200, _OK_BODY)])
     with pytest.raises(FetchError):
         eng.fetch_text("https://walled.test/", tier=1)
+
+
+def test_tier1_chain_goes_around_a_failing_engine(monkeypatch):
+    # nodriver fails -> the chain falls through to camoufox, which succeeds.
+    # "If you hit a block, go around it, never stop."
+    from pipeline.engine.tier1 import BrowserResult, Tier1Error
+
+    calls = []
+
+    def fake_solve(url, *, engine, **kw):
+        calls.append(engine)
+        if engine == "nodriver":
+            raise Tier1Error("nodriver blocked")
+        return BrowserResult(html=_OK_BODY, cookies={"datadome": "OK"},
+                             user_agent="UA", final_url=url, engine="camoufox")
+
+    monkeypatch.setattr("pipeline.engine.tier1.solve_challenge", fake_solve)
+    eng, _ = _engine_with([_Resp(200, _OK_BODY)])  # camoufox cookie-reuse serves OK
+    out = eng.fetch_text("https://walled.test/", tier=1)
+    assert out == _OK_BODY
+    assert calls == ["nodriver", "camoufox"]  # tried nodriver first, went around
+
+
+def test_clearance_cache_reused_without_relaunching_browser(monkeypatch):
+    # First engine solves and caches the clearance; a SECOND engine on the same
+    # host reuses the cached cookie via curl_cffi and never launches a browser.
+    from pipeline.engine.tier1 import BrowserResult
+
+    solves = []
+
+    def fake_solve(url, *, engine, **kw):
+        solves.append(engine)
+        return BrowserResult(html=_OK_BODY, cookies={"cf_clearance": "C1"},
+                             user_agent="UA-X", final_url=url, engine=engine)
+
+    monkeypatch.setattr("pipeline.engine.tier1.solve_challenge", fake_solve)
+
+    eng1, _ = _engine_with([_Resp(200, _OK_BODY)])
+    assert eng1.fetch_text("https://walled.test/a", tier=1) == _OK_BODY
+    assert len(solves) == 1  # one browser solve
+
+    eng2, fake2 = _engine_with([_Resp(200, _OK_BODY)])
+    assert eng2.fetch_text("https://walled.test/b", tier=1) == _OK_BODY
+    assert len(solves) == 1  # NO second browser launch — cache hit
+    assert fake2.cookies.store.get("cf_clearance") == "C1"  # cached cookie applied
+
+
+def test_proxy_pool_sticky_from_env(monkeypatch):
+    from pipeline.engine import proxies as proxy_mod
+
+    monkeypatch.setenv("CARDEEP_PROXIES",
+                       "http://u:p@es1.proxy:8000, http://u:p@es2.proxy:8000")
+    proxy_mod.reset_default_pool()
+    pool = proxy_mod.default_pool()
+    assert pool.enabled and len(pool) == 2
+    a = pool.sticky_for("dealer:42")
+    assert pool.sticky_for("dealer:42") == a  # sticky: same key -> same IP
+    proxy_mod.reset_default_pool()
+
+
+def test_proxy_pool_empty_is_host_ip(monkeypatch):
+    from pipeline.engine import proxies as proxy_mod
+
+    monkeypatch.delenv("CARDEEP_PROXIES", raising=False)
+    proxy_mod.reset_default_pool()
+    pool = proxy_mod.default_pool()
+    assert not pool.enabled
+    assert pool.next() is None  # cost-zero: goes out on host IP
+    proxy_mod.reset_default_pool()

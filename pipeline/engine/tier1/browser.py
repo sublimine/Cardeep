@@ -137,6 +137,16 @@ async def _solve_nodriver(url: str, *, proxy: str | None, timeout: float,
         page = await asyncio.wait_for(browser.get(url), timeout=timeout)
         # Let the challenge JS run and the clearance cookie settle.
         await asyncio.sleep(wait_after_load)
+        # Behavioral humanization: DataDome/HUMAN flag on intent, not only the
+        # fingerprint. A small scroll + dwell yields a credible interaction signal
+        # so the clearance cookie is granted instead of a silent behavioral ban.
+        try:
+            await page.evaluate("window.scrollTo(0, document.body.scrollHeight/3)")
+            await asyncio.sleep(0.6)
+            await page.evaluate("window.scrollTo(0, 0)")
+            await asyncio.sleep(0.4)
+        except Exception:  # noqa: BLE001 — humanization is best-effort
+            pass
         html = await page.get_content()
         ua = ""
         try:
@@ -164,7 +174,9 @@ async def _solve_camoufox(url: str, *, proxy: str | None, timeout: float,
         raise Tier1Error("camoufox not installed (pip install camoufox[geoip])") from e
 
     proxy_cfg = {"server": proxy} if proxy else None
-    async with AsyncCamoufox(headless=headless, proxy=proxy_cfg) as browser:
+    # humanize=True drives Camoufox's built-in cursor/scroll humanization — the
+    # most aggressive posture against behavioral WAFs (DataDome/PerimeterX).
+    async with AsyncCamoufox(headless=headless, proxy=proxy_cfg, humanize=True) as browser:
         page = await browser.new_page()
         await page.goto(url, timeout=int(timeout * 1000), wait_until="domcontentloaded")
         await asyncio.sleep(wait_after_load)

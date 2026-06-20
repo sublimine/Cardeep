@@ -29,10 +29,12 @@ from __future__ import annotations
 
 import random
 import time
+from urllib.parse import urlsplit
 
 from curl_cffi import requests as cffi_requests
 
-from pipeline.engine import ban_detector
+from pipeline.engine import ban_detector, clearance_cache
+from pipeline.engine import proxies as proxy_mod
 from pipeline.engine.ban_detector import Verdict
 from pipeline.engine.fingerprints import (
     DEFAULT_PROFILE_KEY,
@@ -76,8 +78,11 @@ class FetchEngine:
     def __init__(self, *, impersonate: str | None = None,
                  polite_min: float = _POLITE_MIN, polite_max: float = _POLITE_MAX,
                  allow_tier1_escalation: bool = False,
-                 tier1_engine: str = _TIER1_ENGINE,
+                 tier1_engine: str | None = None,
+                 tier1_engines: tuple[str, ...] | None = None,
                  proxy: str | None = None,
+                 use_proxy_pool: bool = True,
+                 use_clearance_cache: bool = True,
                  rng: random.Random | None = None) -> None:
         self._pool = FingerprintPool(rng=rng)
         if impersonate is None:
@@ -85,13 +90,27 @@ class FetchEngine:
         else:
             self._profile = get_profile(impersonate)
         self._tried_profiles: set[str] = {self._profile.key}
-        self._proxy = proxy            # PENDING-CREDENTIAL when None (host IP)
+        # Egress proxy: explicit > env pool (sticky per engine) > host IP.
+        self._use_proxy_pool = use_proxy_pool
+        self._proxy = proxy or self._lease_proxy()  # PENDING-CREDENTIAL when None
         self._session = self._new_session(self._profile)
         self._polite_min = polite_min
         self._polite_max = polite_max
         self._last_fetch_at: float | None = None
         self._allow_tier1 = allow_tier1_escalation
-        self._tier1_engine = tier1_engine
+        # Multi-engine escalation chain: a block on one browser engine is "gone
+        # around" by trying the next, never stopping. Default nodriver->camoufox.
+        if tier1_engines is not None:
+            self._tier1_engines = tuple(tier1_engines)
+        elif tier1_engine is not None:
+            self._tier1_engines = (tier1_engine,)
+        else:
+            self._tier1_engines = (_TIER1_ENGINE, "camoufox")
+        # de-dup while preserving order
+        seen: set[str] = set()
+        self._tier1_engines = tuple(
+            e for e in self._tier1_engines if not (e in seen or seen.add(e)))
+        self._use_clearance_cache = use_clearance_cache
         self._tier1_cookies: dict = {}
         # Public attributes preserved for callers (governor, connectors, tests).
         self.impersonate = self._profile.impersonate
@@ -99,6 +118,22 @@ class FetchEngine:
         self.last_tier: int = 0
         self.last_verdict: Verdict | None = None
         self.fetch_count = 0
+
+    # ---- egress proxy ------------------------------------------------------
+
+    @staticmethod
+    def _host_of(url: str) -> str:
+        return urlsplit(url).hostname or url
+
+    def _lease_proxy(self) -> str | None:
+        """Lease a sticky proxy from the env pool (host IP when pool is empty)."""
+        if not self._use_proxy_pool:
+            return None
+        pool = proxy_mod.default_pool()
+        if not pool.enabled:
+            return None
+        # one engine == one sticky IP for the whole drain (cookie-reuse invariant)
+        return pool.sticky_for(f"engine:{id(self)}")
 
     # ---- session construction / fingerprint coherence ---------------------
 
@@ -232,30 +267,78 @@ class FetchEngine:
     # ---- Tier-1: real browser solve + cookie-reuse ------------------------
 
     def _fetch_tier1(self, url: str, *, headers: dict) -> str:
-        """Solve a challenge in a real browser, mint cookies, serve via Tier-0.
+        """Browser-assisted fetch with a clearance cache + multi-engine chain.
 
-        After the browser mints the clearance cookie, we reuse it from curl_cffi
-        with the SAME identity. The reuse invariant is strict: a cookie minted
-        under one UA/IP dies if replayed under another. We therefore pin the
-        session UA to the browser's UA for the served request.
+        Order, cheapest first (never pause on a block — go around it):
+          1) CACHE: replay a cached clearance for this host via curl_cffi (no
+             browser launch at all).
+          2) CHAIN: for each Tier-1 engine (nodriver -> camoufox by default), solve
+             once, cache the clearance, and serve via curl_cffi cookie-reuse. A
+             block on one engine falls through to the next.
+          3) Fail loud only when every engine is exhausted (with a proxy hint when
+             the verdict is a hard ban and no residential proxy is wired).
+
+        Reuse invariant: the served request is pinned to the EXACT UA that minted
+        the cookie; egress IP stays on the engine's sticky proxy.
         """
         from pipeline.engine.tier1 import Tier1Error, solve_challenge
 
-        try:
-            result = solve_challenge(url, engine=self._tier1_engine, proxy=self._proxy)
-        except Tier1Error as e:
-            raise FetchError(f"Tier-1 solve failed for {url}: {e}") from e
-
-        self._tier1_cookies = dict(result.cookies)
-        self._apply_cookies(self._tier1_cookies)
         self.last_tier = 1
+        host = self._host_of(url)
 
-        # Pin the served request to the browser's exact UA (reuse invariant).
+        # 1) Clearance cache — a prior solve on this host (any engine instance).
+        if self._use_clearance_cache:
+            cached = clearance_cache.get(host)
+            if cached is not None:
+                self._apply_cookies(cached.cookies)
+                served = self._serve_with_cookies(url, headers, cached.user_agent)
+                if served is not None:
+                    return served
+                clearance_cache.invalidate(host)  # cached cookie rejected — re-solve
+
+        # 2) Multi-engine solve chain.
+        last_err: Exception | None = None
+        for engine in self._tier1_engines:
+            try:
+                result = solve_challenge(url, engine=engine, proxy=self._proxy)
+            except Tier1Error as e:
+                last_err = e
+                continue  # go around: try the next engine
+
+            self._tier1_cookies = dict(result.cookies)
+            self._apply_cookies(self._tier1_cookies)
+            if self._use_clearance_cache:
+                clearance_cache.put(host, result.cookies, result.user_agent)
+
+            served = self._serve_with_cookies(url, headers, result.user_agent)
+            if served is not None:
+                return served
+
+            # Reuse blocked. If the browser itself reached genuine content under a
+            # mere CHALLENGE (not a hard ban), serve that; else try next engine.
+            browser_ok = bool(result.html) and \
+                ban_detector.classify(200, result.html) == Verdict.OK
+            if self.last_verdict == Verdict.CHALLENGE and browser_ok:
+                self.fetch_count += 1
+                return result.html
+            last_err = FetchError(
+                f"{engine} solved but reuse blocked "
+                f"(status={self.last_status}, verdict="
+                f"{self.last_verdict.value if self.last_verdict else None})")
+
+        hint = ""
+        if self.last_verdict == Verdict.BANNED and self._proxy is None:
+            from pipeline.engine.tier1.browser import PENDING_CREDENTIAL_PROXY
+            hint = f" [{PENDING_CREDENTIAL_PROXY}]"
+        raise FetchError(
+            f"Tier-1 chain exhausted for {url} "
+            f"(engines={list(self._tier1_engines)}): {last_err}{hint}")
+
+    def _serve_with_cookies(self, url: str, headers: dict, ua: str) -> str | None:
+        """curl_cffi GET with cookies already in the jar + pinned UA. None if blocked."""
         served_headers = dict(headers)
-        if result.user_agent:
-            served_headers["User-Agent"] = result.user_agent
-
-        browser_ok = bool(result.html) and ban_detector.classify(200, result.html) == Verdict.OK
+        if ua:
+            served_headers["User-Agent"] = ua
         try:
             self._polite_wait()
             resp = self._session.get(url, headers=served_headers, timeout=_TIMEOUT)
@@ -266,31 +349,9 @@ class FetchEngine:
             if resp.status_code == 200 and verdict == Verdict.OK:
                 self.fetch_count += 1
                 return resp.text
-        except Exception as e:  # noqa: BLE001 — served request raised (network/TLS)
-            # Reuse couldn't even complete. Return the browser's content ONLY if it
-            # is genuinely clean (a real solve), never a block page.
-            if browser_ok:
-                self.fetch_count += 1
-                return result.html
-            raise FetchError(f"Tier-1 cookie-reuse fetch failed for {url}: {e}") from e
-
-        # Served a non-OK verdict. Distinguish two cases (fail-loud doctrine):
-        #  * BANNED  -> identity/IP is burned. The browser ran on the SAME burned
-        #    IP, so its HTML is almost certainly the block page too — do NOT trust
-        #    it. Fail loud; the fix is a residential ES proxy (PENDING-CREDENTIAL).
-        #  * CHALLENGE -> the cheap reuse hasn't caught up but the browser DID mint
-        #    a real solve; if its HTML is genuinely clean content, serve that.
-        if self.last_verdict == Verdict.CHALLENGE and browser_ok:
-            self.fetch_count += 1
-            return result.html
-        hint = ""
-        if self.last_verdict == Verdict.BANNED and self._proxy is None:
-            from pipeline.engine.tier1.browser import PENDING_CREDENTIAL_PROXY
-            hint = f" [{PENDING_CREDENTIAL_PROXY}]"
-        raise FetchError(
-            f"Tier-1 for {url}: cookie-reuse still blocked "
-            f"(status={self.last_status}, verdict="
-            f"{self.last_verdict.value if self.last_verdict else None}){hint}")
+        except Exception:  # noqa: BLE001 — served request raised; caller decides
+            self.last_verdict = Verdict.BANNED
+        return None
 
     @staticmethod
     def _backoff(attempt: int, retry_after: str | None) -> None:
