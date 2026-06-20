@@ -2351,3 +2351,14 @@
   inventario solapa parcialmente con coches.net/wallapop pero aporta dealers/coches propios. Cobertura NETA se confirma
   con cluster tras drenar un lote grande.
 - PROXIMO: drenar AS24 en lotes (max_pages 100 ~2k coches/lote) acumulando; medir delta + (tras dedup) cluster_size=1.
+
+### 2026-06-21 (loop COBERTURA) — as24 ESCALA: lote 100pag = +1.842 coches + 202 dealers nuevos [VERIFICADO]
+- as24 max_pages=100: 100 paginas SIN ban (~6min), 1.899 dealer listings, 1.842 NEW, VAM TRUSTWORTHY, ok=True.
+  vehicles_total 1.706.089 -> 1.707.931 (+1.842, >=2 vias). 202 DEALERS NUEVOS atribuidos (cobertura de puntos de
+  venta nueva, no solo coches). vehicles via as24 16.749 -> 34.215.
+- Acumulado AS24 esta sesion: +1.899 coches, +207 dealers nuevos. La veta escala €0 (OPEN curl_cffi, governor pacing,
+  sin ban a 100 paginas). declared full=278.135 -> ~261k greenfield restante.
+- COBERTURA: +1.842 es BRUTO (filas nuevas). NETA (cluster_size=1, descontando duplicados de coches.net/wallapop)
+  pendiente de un dedup-run sobre los nuevos AS24; los 202 dealers nuevos SI son cobertura neta de entidades (no existian).
+- PROXIMO: seguir escalando AS24 en lotes (max_pages 300+) acumulando; tras ~10k coches AS24, correr/consultar dedup
+  para reportar NETA honesta; vigilar IP (si 403 baja ritmo).
