@@ -1642,3 +1642,14 @@
   residencial (gasto). Restan como MULTI-STEP (abiertos, fixture mas pesado): autocasion (SSR + GQL 2-pasos),
   motor_es (facet + PDP por card), familias CMS/DMS (own-site, en buena parte ya cubierto por web_generic
   schema.org). Proximos ciclos del loop: autocasion / motor_es con fixtures multi-doc offline.
+
+### 2026-06-20 (cont.) — P04: AutocasionExtractor recipe-first MULTI-STEP (SSR enumera -> GraphQL hidrata)
+- 5o extractor recipe-first, 1er multi-step: autocasion (abierto, Cloudflare-permisivo a Chrome TLS).
+  Reusa autocasion_wholesale.parse_ssr_refs (SSR -ref{id}) + parse_ad (GraphQL ad() POST) — NO un 2o scraper.
+  sample(k): GET SSR page-1 -> k refs -> por ad GQL POST -> data.ad -> parse_ad; declared=None (subset
+  deliberado), zero-loss => VERIFIED. Full enumerate+hydrate drain = VPS.
+- TDD offline (fake AutocasionFetcher sin warm-up de red, fixtures SSR + ad JSON; write_recipe mockeado):
+  RED (no registrado) -> GREEN (3 passed): registro + E2E (3 ads -> VERIFIED, fetched=parsed=3 TRUSTWORTHY) +
+  SSR sin refs -> FAILED honesto. No-regresion area recipe verde.
+- EXTRACTORS: autoscout24, web_generic, coches_com, coches_net, autocasion. P04 ~6/10 -> ~7/10.
+- Proximo: motor_es (facet + PDP por card) o familias; milanuncios sigue gated (PerimeterX/Tier-1). Drenaje masivo = VPS.

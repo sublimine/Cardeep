@@ -17,7 +17,10 @@ from pipeline.recipe_schema import (
     Recipe,
     Transport,
 )
+import json
+
 from pipeline.engine.fetch import fetch_text
+from pipeline.platform import autocasion_wholesale as ac
 from pipeline.platform import coches_com_wholesale as ccom
 from pipeline.platform import coches_net_wholesale as ccn
 from pipeline.recipe_extract_web import GenericWebExtractor
@@ -210,9 +213,74 @@ class CochesNetExtractor:
         return Sample(declared=declared, fetched=fetched, parsed=parsed, full_dealer=full_dealer)
 
 
+def _ac_valid(v: "ac.Vehicle") -> bool:
+    """An autocasion ad is sample-valid iff it carries the two identity fields."""
+    return bool(v.listing_ref) and bool(v.deep_link)
+
+
+class AutocasionExtractor:
+    """Recipe-first wrapper over :mod:`pipeline.platform.autocasion_wholesale` (MULTI-STEP).
+
+    autocasion is an OPEN Tier-0 surface (Cloudflare-permissive to a Chrome TLS fingerprint):
+    SSR results enumerate ``-ref{id}`` links; each ad is hydrated via a GraphQL ``ad(adId)``
+    POST. The bounded sample enumerates page-1, takes k refs, hydrates each with the module's
+    verified ``parse_ad`` (reuse, NOT a 2nd scraper). dealer_ref is the platform identity; the
+    full enumerate+hydrate drain stays in the wholesale module (VPS)."""
+
+    source = "autocasion"
+
+    def recipe_template(self, dealer_ref: str) -> Recipe:
+        return Recipe(
+            source=self.source, dealer_ref=dealer_ref, kind="plataforma",
+            transport=Transport(engine="curl_cffi", base_url=ac.SSR_HOST,
+                                 impersonate=ac._IMPERSONATE, timeout_s=ac._TIMEOUT),
+            fingerprint=Fingerprint(user_agent="engine-managed"),
+            pagination=Pagination(
+                strategy="ssr_enumerate_then_gql_hydrate",
+                url_template=ac.SSR_RESULTS + "?page={page}",
+                page_size=ac.SSR_ITEMS_PER_PAGE if hasattr(ac, "SSR_ITEMS_PER_PAGE") else 30,
+                declared_path="ssr id-set stops changing",
+                stop="id_set_stable"),
+            parsing=Parsing(
+                engine="ssr_ref_re + graphql_ad",
+                container_path="data.ad",
+                field_map={
+                    "deep_link": "_PDP_BASE + url",
+                    "listing_ref": "id",
+                    "make": "brand.name",
+                    "model": "family.name",
+                    "year": "year",
+                    "km": "kilometers",
+                    "price": "price",
+                    "fuel": "fuel.name",
+                    "transmission": "transmission.name",
+                }),
+        )
+
+    def sample(self, dealer_ref: str, k: int) -> Sample:
+        """Enumerate page-1 SSR refs, take k, hydrate each via the GraphQL ad() POST and parse
+        (recipe-first: a bounded enumerate+hydrate, never the full drain — that is the VPS job)."""
+        fetcher = ac.AutocasionFetcher()
+        html = fetcher.fetch(ac.SSR_RESULTS, method="GET")
+        refs = ac.parse_ssr_refs(html)[:k]
+        fetched = len(refs)
+        parsed = []
+        for url, ad_id in refs:
+            raw = fetcher.fetch(ac.GQL_ENDPOINT, method="POST",
+                                gql={"query": ac._AD_QUERY % int(ad_id)})
+            ad = (json.loads(raw).get("data") or {}).get("ad")
+            if not ad:
+                continue  # un ad que no hidrata = perdida (decide_status lo marca FAILED)
+            v = ac.parse_ad(ad, url)
+            if _ac_valid(v):
+                parsed.append(asdict(v))
+        return Sample(declared=None, fetched=fetched, parsed=parsed, full_dealer=False)
+
+
 EXTRACTORS = {
     "autoscout24": AutoScout24Extractor,
     "web_generic": GenericWebExtractor,
     "coches_com": CochesComExtractor,
     "coches_net": CochesNetExtractor,
+    "autocasion": AutocasionExtractor,
 }
