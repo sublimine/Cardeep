@@ -30,6 +30,8 @@ from pipeline.sources.osm import OsmAdapter
 from pipeline.sources.associations import AedraAdapter, AcevasAdapter, AecsAdapter
 from pipeline.sources.autocasion_census import AutocasionCensusAdapter
 from pipeline.sources.motor_es_census import MotorEsCensusAdapter
+from pipeline.sources.ocasionplus_census import OcasionPlusCensusAdapter
+from pipeline.sources.overture import OvertureAdapter
 from pipeline.verify import record_count_verdict
 from services.api.codes import cdp_code
 
@@ -51,6 +53,8 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     "aecs": AecsAdapter,
     "autocasion_census": AutocasionCensusAdapter,
     "motor_es_census": MotorEsCensusAdapter,
+    "ocasionplus_census": OcasionPlusCensusAdapter,
+    "overture": OvertureAdapter,
 }
 
 
