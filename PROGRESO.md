@@ -2233,3 +2233,19 @@
   141 (41 patron runtime os.environ.get-default) = L multi-ciclo, no S; Rank 3 (ban verdict ignorado por breaker) NO
   es bug: fetch.py:352 lanza FetchError ante ban -> caller registra ok=False -> breaker SI reacciona. LECCION: cada
   item del backlog necesita verificacion adversarial contra codigo antes de ejecutar (los subagentes Explore sobre-afirman).
+
+### 2026-06-20 (loop COBERTURA, harvest €0 agresivo) — A3: cosecha RE-ACTIVADA + motor validado [VERIFICADO]
+- Owner reorientó el loop a COBERTURA (no infra). Harvest agresivo €0 autorizado (recursos locales: Ryzen5 5500U
+  12h, sin CUDA, ~2GB libres; DB viva :5433; stack camoufox/playwright/nodriver/curl_cffi montado). Cosecha estaba
+  PARADA desde 15-jun (0 procesos). 54 fuentes en source_health.
+- PRIMER DRAIN REAL (A3): localizavo_wholesale (fuente abierta/subastas B2B, curl_cffi, concurrency 3, background
+  bqm9dl3o1, exit 0). Resultado verdict TRUSTWORTHY por 4 vías (declared=harvested=live_edges=db_join=227).
+- COBERTURA medida >=2 vías contra DB viva: vehicles_total 1.704.968 -> 1.705.195 (+227); vehicles via localizavo
+  523 -> 750 filas (227 vivos nuevos + 523 retired aged-out = delta GONE/frescura); harvest_run nuevo ok=True
+  rows=227 http=200; source_health healthy last_ok=2026-06-20 22:04Z.
+- LECTURA HONESTA (cero maquillaje): localizavo es fuente pequeña rotativa; el +227 es modesto. El VALOR real del
+  ciclo = motor de cosecha €0 PROBADO end-to-end desde este entorno (fetch->parse->cage->ingest->verify), sin ahogar
+  PC ni banear IP. A3 NO sellado (cosecha continua); esto re-activa la produccion y valida el patron para escalar.
+- PROXIMO: escalar a fuentes abiertas grandes (oem_volvo_jlr_suzuki ~12k, oem_hyundai ~10k, oem_audi ~8k) un drain
+  a la vez paced; walled (coches_net 939k/milanuncios 597k/wallapop 1.66M) requieren camoufox+egress rotado -> cap o
+  stage si 4G ausente.
