@@ -2069,3 +2069,24 @@
   NO exhaustiveness -> proceso anterior a P11). No lo reinicio (server de worker concurrente, efecto colateral). Para
   e2e en vivo basta reiniciar la API dev (reversible, €0): uvicorn services.api.main:app --port 8090. El codigo es correcto.
 - % P12: el sello/certificado nacional ya esta en la UI (antes ausente). Proximo: P05 fase 2 _ingest_window / P06 / P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P06 CAPA-0: validador NIF/NIE/CIF stdlib (hard key certificado) [VERIFICADO]
+- GAP P06 (gana el codigo): services/api/codes.py canonical_key keya la identidad sobre `cif` SIN validar
+  (codes.py:61 `cif:{cif.upper().strip()}`) -> un CIF corrupto mintea identidad sobre basura e infla el denominador.
+  P06 CAPA-0 exige "CIF validado por checksum -> arista certificada". python-stdnum (es.cif/es.nif) AUSENTE = gate
+  de instalacion.
+- RUTA GRATIS (DOCTRINA DINERO, agotar alternativas): el checksum NIF/NIE/CIF es algoritmo BOE corto y determinista
+  -> implementado en STDLIB PURO (services/api/tax_id.py), cero deps, cero gate. is_valid_nif/nie/cif (mod-23 letra
+  control; NIE X/Y/Z->0/1/2; CIF Luhn-like con control digito[ABEH]/letra[KPQS]/ambos[resto]); is_valid_tax_id;
+  canonical_tax_id(raw)->str|None (el hard key CERTIFICADO: None = "no keyees identidad sobre esto").
+- TDD RED->GREEN: tests/test_spanish_tax_id.py (@pytest.mark.unit, 41 casos) con vectores COMPUTADOS del algoritmo
+  oficial (12345678Z, X1234567L, A58818501 digito, Q2826000H letra, F.. ambos) + invalidos (control mal, org-letra
+  invalida, NIF-como-CIF). Un vector mio estaba mal (X0000000T ES valido: 0%23=0->T) -> corregido el TEST, no el modulo.
+- VERIFICADO 2 vias: (1) 41/41 verde. (2) subset unit completo 179 passed (138 previos + 41), 0 regresion. No por
+  ausencia: cada vector es un checksum positivo computado.
+- NO toque codes.py/canonical_key: mutarlo para rechazar CIFs invalidos cambiaria cdp_codes ya minteados (churn del
+  denominador) -> es IRREVERSIBLE-PROD/gated. Entregado el primitivo certificado + STAGED el wiring de minteo.
+- ## PENDIENTE-OWNER (gated, denominador): cablear canonical_tax_id en canonical_key (rechazar CIF invalido -> caer a
+  name+muni) requiere plan de re-key + migracion de cdp_codes historicos minteados sobre CIF corrupto. No aplicar en vivo.
+- % P06: CAPA-0 hard-key de tax-id BLINDADO (primitivo puro, testeado). Proximo: P06 phone E.164 (mismo patron stdlib) /
+  o resolver beta servido (gated) / P05 fase 2 _ingest_window / P09-S7 ODCS.
