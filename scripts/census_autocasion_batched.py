@@ -117,16 +117,25 @@ async def run(limit: int, final_vam: bool, workers: int) -> None:
               f"| pending~{max(0, len(pending) - limit)}")
 
         if final_vam and len(pending) <= limit:
-            # The census is COMPLETE this call -> emit the run-wide VAM count verdict.
+            # The census is COMPLETE this call -> emit the run-wide VAM verdict over the
+            # HONEST, independent counts. We do NOT equate fetched==ingested (that would
+            # paper over the real attrition): the durable independent facts are the
+            # directory's own seller total (source oracle) vs the entities actually
+            # ingested (db). They differ by the directory's non-geocodable + test/campaign
+            # entries, so an EXACT-match quorum will not (and should not) certify TRUSTWORTHY
+            # — coverage is reported as a fraction, not faked as an equality.
             ingested = done_now
+            gap = total_universe - ingested
+            coverage = ingested / total_universe if total_universe else 0.0
             verdict = await record_count_verdict(
                 conn, subject_type="source", subject_key=SOURCE_KEY,
-                claim="autocasion seller census: entity_source == directory sellers",
-                paths={"db_ingested": ingested, "fetched": ingested,
-                       "source_declared": total_universe},
-                tolerance=0.05, claim_kind="coverage")
+                claim=(f"autocasion seller census coverage: {ingested}/{total_universe} "
+                       f"directory sellers ingested ({coverage:.1%}); gap={gap} "
+                       f"(non-geocodable + test/campaign entries)"),
+                paths={"directory_declared": total_universe, "entities_ingested": ingested},
+                tolerance=0.02, claim_kind="coverage")
             print(f"[census] FULL-RUN VAM verdict = {verdict} "
-                  f"(ingested={ingested} declared={total_universe})")
+                  f"(ingested={ingested} declared={total_universe} coverage={coverage:.1%} gap={gap})")
     finally:
         await conn.close()
 
