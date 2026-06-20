@@ -38,6 +38,7 @@ from pipeline.sources.borme_cnae import BormeCnaeAdapter
 from pipeline.sources.graph_recursive import GraphRecursiveAdapter
 from pipeline.sources.paginas_amarillas import PaginasAmarillasAdapter
 from pipeline.sources.autoscout24_census import AutoScout24CensusAdapter
+from pipeline.sources.collapse_invisible import CollapseInvisibleAdapter
 from pipeline.verify import record_count_verdict
 from services.api.codes import cdp_code
 
@@ -67,6 +68,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     "graph_recursive": GraphRecursiveAdapter,
     "paginas_amarillas": PaginasAmarillasAdapter,
     "autoscout24_census": AutoScout24CensusAdapter,
+    "collapse_invisible": CollapseInvisibleAdapter,
 }
 
 
