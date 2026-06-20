@@ -76,6 +76,10 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run
 from pipeline.recipe import write_recipe
@@ -570,46 +574,25 @@ MN_PLATFORM_RECIPE = {
 }
 
 
+# P05: source_group/role class (kind='plataforma', no distinct legal_name). is_tier1=TRUE; family=adevinta.
+MN_SPEC = PlatformSpec(
+    cdp_code=milanuncios_platform_cdp_code(), trade_name=MN_TRADE_NAME, website=MN_WEBSITE,
+    source_key=MN_SOURCE_KEY, source_ref=MN_DOMAIN, data_surface="internal_api",
+    surface_detail={"endpoint": ENDPOINT, "host": host_of(ENDPOINT), "method": "GET",
+                    "category": CATEGORY_CARS, "transaction": TRANSACTION_SUPPLY,
+                    "limit": PAGE_SIZE, "surface_intent": "json_api",
+                    "partition": "province x price-band",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=MN_WAF, is_tier1=True, defense_tier=MN_DEFENSE_TIER,
+    source_group=MN_SOURCE_GROUP, role=MN_ROLE, family=MN_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the milanuncios platform entity + platform_meta exist.
-
-    Returns the platform entity_ulid. is_tier1=TRUE (giant brand) with the explicit multi-axis
-    classification: defense_tier=t1_soft, source_group=marketplace_generalist, role=platform
-    (migrations/0016) and platform_meta.family='adevinta'. data_surface='internal_api'
-    (schema-valid; the SPA's REST gateway). website_waf='none' (the search path is unwalled to
-    curl_cffi — truthful)."""
-    code = milanuncios_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,$5,TRUE,'active','platform_label',
-               $6,$7,$8,$9, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role""",
-        eulid, code, MN_TRADE_NAME, MN_WEBSITE, MN_WAF,
-        MN_DEFENSE_TIER, MN_SOURCE_GROUP, MN_ROLE, MN_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, MN_SOURCE_KEY, MN_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"endpoint": ENDPOINT, "host": host_of(ENDPOINT),
-                           "method": "GET", "category": CATEGORY_CARS,
-                           "transaction": TRANSACTION_SUPPLY, "limit": PAGE_SIZE,
-                           "surface_intent": "json_api", "partition": "province x price-band",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        MN_FAMILY)
-    return eulid
+    P05: thin adopter of _core.ensure_platform_entity via MN_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, MN_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:

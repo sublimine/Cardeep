@@ -1999,3 +1999,16 @@
 - Restan (5): milanuncios + wallapop (2 plain Tier-1 grandes -> leer con cuidado) + faciliteacoches_racc/
   group_rentacar_vo/oem_bmw_mini (3 firma extendida ensure_platform_entity(conn, arg) = diseno spec-por-llamada/stage).
 - Proximo: milanuncios + wallapop / o las 3 extendidas (diseno) / o ROTAR a P12/P06/P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: milanuncios+wallapop adoptan _core (26/29 = TODOS los plain) [VERIFICADO]
+- MN_SPEC (milanuncios, family=adevinta) + WP_SPEC (wallapop, family=wallapop) = clase source_group/role (kind=
+  plataforma, sin legal_name distinto, conflict_refresh=5 sin kind/legal_name). Los 2 Tier-1 grandes. Delegan en _core.
+- TDD: SPECS=26; 52/52 paridad verde + 28/28 regresion. P05: 26/29.
+- TODOS los conectores de firma ensure_platform_entity(conn) estan migrados (26/26). Las 29 copias byte-divergentes
+  reducidas a UN nucleo parametrizado con paridad fila-a-fila probada para CADA conector.
+- Restan SOLO 3 de firma extendida (PENDIENTE-OWNER / siguiente diseno): faciliteacoches_racc(conn, m: Member),
+  group_rentacar_vo(conn, geo, m: Member), oem_bmw_mini(conn, brand: BrandSpec). El _core es por-spec-global; estas
+  construyen el spec POR-LLAMADA desde el arg -> patron: dentro de la funcion construir el PlatformSpec con los campos
+  derivados del arg y delegar (verificable con un test que pase un arg fake + paridad). No es plain-mecanico; diseno aparte.
+- P05 fase 2 (despues): unificar _ingest_window (18 variantes) + _parse_window/_CageRow/_BULK_UPSERT_OWNERS duplicados.
+- Proximo: las 3 extendidas (spec-por-llamada) / o ROTAR a P12/P06/P09-S6 / _ingest_window.

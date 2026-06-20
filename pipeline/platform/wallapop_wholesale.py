@@ -79,6 +79,10 @@ from pipeline.geo import GeoResolver
 from pipeline.geocode import ProvinceGeocoder
 from pipeline.identity.make_normalizer import normalize_make
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
@@ -508,44 +512,25 @@ WP_PLATFORM_RECIPE = {
 }
 
 
+# P05: source_group/role class (kind='plataforma', no distinct legal_name). is_tier1=TRUE; family=wallapop.
+WP_SPEC = PlatformSpec(
+    cdp_code=wallapop_platform_cdp_code(), trade_name=WP_TRADE_NAME, website=WP_WEBSITE,
+    source_key=WP_SOURCE_KEY, source_ref=WP_DOMAIN, data_surface="app_api",
+    surface_detail={"search": SEARCH_ENDPOINT, "seller": USER_ENDPOINT + "/{id}",
+                    "host": host_of(SEARCH_ENDPOINT), "method": "GET",
+                    "category_id": CATEGORY_CARS, "page_items": PAGE_ITEMS,
+                    "surface_intent": "json_api", "pagination": "next_page JWT",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=WP_WAF, is_tier1=True, defense_tier=WP_DEFENSE_TIER,
+    source_group=WP_SOURCE_GROUP, role=WP_ROLE, family="wallapop",
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the wallapop platform entity + platform_meta exist.
-    Returns the platform entity_ulid. is_tier1=TRUE (giant brand) with the explicit
-    multi-axis classification: defense_tier=t1_soft, source_group=marketplace_generalist,
-    role=platform (migrations/0016). data_surface='app_api' (schema-valid; the mobile-app
-    gateway). website_waf='none' (the API path is unwalled to curl_cffi — truthful)."""
-    code = wallapop_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,$5,TRUE,'active','platform_label',
-               $6,$7,$8,$9, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role""",
-        eulid, code, WP_TRADE_NAME, WP_WEBSITE, WP_WAF,
-        WP_DEFENSE_TIER, WP_SOURCE_GROUP, WP_ROLE, WP_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, WP_SOURCE_KEY, WP_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'app_api',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({
-            "search": SEARCH_ENDPOINT, "seller": USER_ENDPOINT + "/{id}",
-            "host": host_of(SEARCH_ENDPOINT), "method": "GET", "category_id": CATEGORY_CARS,
-            "page_items": PAGE_ITEMS, "surface_intent": "json_api",
-            "pagination": "next_page JWT", "engine": "curl_cffi/chrome131_impersonate"}),
-        "wallapop")
-    return eulid
+    P05: thin adopter of _core.ensure_platform_entity via WP_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, WP_SPEC)
 
 
 def _particular_cdp(province_code: str, user_id: str) -> str:
