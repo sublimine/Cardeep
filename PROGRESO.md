@@ -2323,3 +2323,18 @@
 - PROXIMO FRENTE (€0, escala, cobertura nueva real): CONSTRUIR un extractor WordPress generico (los 3/8 CONFIRMED WP
   -valhondo/willys/valenza- como banco de pruebas TDD), que coseche N webs WP de dealer con una sola receta heuristica.
   Es construccion institucional con TDD + verificacion adversarial, no correr drains.
+
+### 2026-06-21 (loop COBERTURA) — Frente extractor WP: CERRADO (bespoke, no escala) + pivote a as24 [VERIFICADO]
+- Probado el connector WP existente (family_cms_wordpress, ya extrae Vehica REST + N card-themes) contra el banco
+  confirmado --dealers valhondo/willys/valenza: +0. valhondo/valenza = WP pero "no Vehica REST, no card-theme conocido";
+  willys = HTTP 403 (antibot). 3a verificacion: NINGUNO expone JSON-LD Vehicle/Car/Offer (curl_cffi: @types solo
+  Organization/WebPage/Breadcrumb; acautomocion 0 ld+json) -> no hay extractor generico que escale.
+- VEREDICTO FINAL frente greenfield own-site WP: GENUINAMENTE BESPOKE (un parser DOM por sitio). 3 verificaciones
+  independientes convergentes: --from-db family connectors +0, card-themes +0, JSON-LD ausente. Construir N parsers
+  bespoke para ~25 coches/sitio a escala 6.628 = ROI nefasto (la sintesis del recon ya lo advirtio). CERRADO: no se
+  construye bespoke masivo. El greenfield own-site queda como cobertura real pero NO-cosechable-a-escala-€0 (staged:
+  requiere o limpieza+parsers, o un servicio de extraccion LLM gated por gasto/hardware).
+- PIVOTE (mayor ROI cobertura nueva €0 SIN construir): as24_wholesale (AutoScout24) — connector EXISTE pero NUNCA dreno
+  (source_health unknown/last_ok=None); marketplace grande con VO español = greenfield real. Solo hay que CORRERLO.
+- PROXIMO: probar as24_wholesale acotado (walled -> camoufox + concurrency 1 + paced; vigila RAM/IP; stage si quema IP);
+  medir cobertura nueva (cluster_size=1). Fallback si as24 falla: otras fuentes unknown / R1 desguace via agregador Opisto.
