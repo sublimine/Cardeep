@@ -28,6 +28,8 @@ class PlatformSpec:
     source_ref: str                # entity_source.source_ref (usually the bare domain)
     data_surface: str              # platform_meta.data_surface (schema-valid literal)
     surface_detail: dict[str, Any] = field(default_factory=dict)
+    kind: str = "plataforma"       # entity.kind (almost always 'plataforma')
+    legal_name: str | None = None  # entity.legal_name; None -> falls back to trade_name
     website_waf: str | None = None
     is_tier1: bool = False
     requires_creds: bool = False

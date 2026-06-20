@@ -1916,3 +1916,18 @@
   trade_name; spec.kind opcional; ampliar allowlist conflict_refresh con kind/legal_name) + migrar localizavo con paridad.
   Resto de conectores (conn): leer cada uno, los que encajen en el superset se migran directos; los que no, extienden core.
 - Avance P05: 4/29. Proximo (ROTAR): P12 frontend / P09-S6 / o seguir P05 con los que encajen.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: _core extendido (kind/legal_name) + localizavo adopta (5/29) [VERIFICADO]
+- _core extendido (backward-compat): contract.PlatformSpec +kind:str='plataforma' +legal_name:str|None=None (None ->
+  trade_name). persistence: kind + legal_name pasan a bind-params (antes kind literal 'plataforma' + legal_name=$3
+  reusado de trade_name); _ALLOWED_REFRESH +kind,legal_name. Los 4 specs previos no cambian (kind default, legal_name
+  None) -> comportamiento identico.
+- localizavo migrado (clase legal_name/kind): LV_SPEC con legal_name distinto del trade_name + 0016 axes + family +
+  conflict_refresh=(is_tier1,website_waf,defense_tier,source_group,role,legal_name,kind) = EXACTO al legacy. Delega en _core.
+- TDD: SPECS=[COCHES,AS24,AC,MC,LV]; test aserta kind==spec.kind y legal_name==(spec.legal_name or trade_name). 10/10
+  paridad verde (rama INSERT). Regresion localizavo 8/8 + unit 138/138 (extension no rompe nada).
+- Avance P05: 5/29. El superset cubre ahora: minima (AS24), media (coches_net), maxima extras+family (autocasion),
+  source_group/role (miclasico), legal_name/kind distinto (localizavo). Resto de (conn): leer cada uno, casi todos
+  encajan ya; los de firma extendida (faciliteacoches/group_rentacar/oem_bmw, parametrizados por arg) = spec por-llamada,
+  diseno aparte (stage).
+- Proximo (ROTAR): migrar 1-2 conectores mas que encajen / P12 frontend / P09-S6 / P06.

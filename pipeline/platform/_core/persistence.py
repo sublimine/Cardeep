@@ -17,15 +17,17 @@ from pipeline.platform._core.contract import PlatformSpec
 
 # Columns the entity ON CONFLICT may refresh. A spec.conflict_refresh is validated against this
 # allowlist before being interpolated into SQL, so the dynamic SET clause can never inject.
-_ALLOWED_REFRESH = ("is_tier1", "website_waf", "defense_tier", "source_group", "role")
+_ALLOWED_REFRESH = (
+    "is_tier1", "website_waf", "defense_tier", "source_group", "role", "kind", "legal_name")
 
 # Superset INSERT: every optional classification column is listed and bound NULL when the spec
 # omits it -> byte-for-byte the same row the legacy copy wrote (which simply defaulted them NULL).
+# kind + legal_name are bind params (some connectors carry a distinct legal_name / refresh kind).
 _ENTITY_INSERT = """
     INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
            province_code, website, website_waf, is_tier1, status, kind_source,
            defense_tier, source_group, role, first_discovered_source, last_seen)
-    VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,$5,$6,'active','platform_label',$7,$8,$9,$10, now())
+    VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,'active','platform_label',$9,$10,$11,$12, now())
     ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(){extra}
 """
 
@@ -61,10 +63,11 @@ async def ensure_platform_entity(conn: asyncpg.Connection, spec: PlatformSpec) -
     any given spec the rows written (and refreshed) are identical to its legacy copy.
     """
     eulid = ulid()
+    legal_name = spec.legal_name if spec.legal_name is not None else spec.trade_name
     await conn.execute(
-        _entity_sql(spec.conflict_refresh), eulid, spec.cdp_code, spec.trade_name, spec.website,
-        spec.website_waf, spec.is_tier1, spec.defense_tier, spec.source_group, spec.role,
-        spec.source_key)
+        _entity_sql(spec.conflict_refresh), eulid, spec.cdp_code, spec.kind, legal_name,
+        spec.trade_name, spec.website, spec.website_waf, spec.is_tier1, spec.defense_tier,
+        spec.source_group, spec.role, spec.source_key)
     eulid = await conn.fetchval(
         "SELECT entity_ulid FROM entity WHERE cdp_code=$1", spec.cdp_code)
     await conn.execute(

@@ -106,6 +106,10 @@ from curl_cffi import requests as cffi_requests
 
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.delta import emit_gone_events
 from pipeline.delta_guard import should_emit_gone
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run, resolve_alerts
@@ -463,45 +467,39 @@ LOCALIZAVO_RECIPE = {
 }
 
 
+# P05: LocalizaVO is the legal_name/kind class — distinct legal_name + 0016 axes, and the legacy
+# refreshed is_tier1/website_waf/defense_tier/source_group/role/legal_name/kind on conflict.
+# data_surface='next_data' (no ssr_html literal in the CHECK; intent kept in surface_detail).
+LV_SPEC = PlatformSpec(
+    cdp_code=localizavo_platform_cdp_code(),
+    kind=LV_PLATFORM_KIND,
+    legal_name=LV_LEGAL_NAME,
+    trade_name=LV_TRADE_NAME,
+    website=LV_WEBSITE,
+    source_key=LV_SOURCE_KEY,
+    source_ref=LV_DOMAIN,
+    data_surface="next_data",
+    surface_detail={"index": _INDEX_URLS, "event": _EVENT_URL, "host": host_of(_BASE),
+                    "method": "GET", "drain": "&nReg=0 (Todos)",
+                    "price_gate": "bid_registration_gated",
+                    "surface_intent": "ssr_html_lot_cards",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=LV_WAF,
+    is_tier1=False,
+    defense_tier=LV_DEFENSE_TIER,
+    source_group=LV_SOURCE_GROUP,
+    role=LV_PLATFORM_ROLE,
+    family=LV_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the LocalizaVO platform entity + platform_meta exist. Returns its entity_ulid.
-    kind='plataforma', is_tier1=FALSE, 0016 axes set explicitly. The platform_meta.data_surface CHECK has
-    no 'ssr_html'/'html_scrape' literal, so it is stored as 'next_data' (the closest schema-valid
-    first-party-render literal — the SAME choice the Clicars SSR-HTML member of group_vo_chains makes),
-    with the precise surface_intent='ssr_html_lot_cards' kept in surface_detail."""
-    code = localizavo_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,FALSE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, LV_PLATFORM_KIND, LV_LEGAL_NAME, LV_TRADE_NAME, LV_WEBSITE,
-        LV_WAF, LV_DEFENSE_TIER, LV_SOURCE_GROUP, LV_PLATFORM_ROLE, LV_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, LV_SOURCE_KEY, LV_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'next_data',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"index": _INDEX_URLS, "event": _EVENT_URL,
-                           "host": host_of(_BASE), "method": "GET",
-                           "drain": "&nReg=0 (Todos)",
-                           "price_gate": "bid_registration_gated",
-                           "surface_intent": "ssr_html_lot_cards",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        LV_FAMILY)
-    return eulid
+    """Idempotently ensure the LocalizaVO platform entity + platform_meta exist. Returns its
+    entity_ulid. P05: thin adopter of _core.ensure_platform_entity via LV_SPEC (legal_name/kind
+    class), behaviour preserved (parity-verified)."""
+    return await _core_ensure_platform_entity(conn, LV_SPEC)
 
 
 async def ensure_sale_entities(conn: asyncpg.Connection, sales: dict[str, str]) -> dict[str, str]:

@@ -18,14 +18,15 @@ from pipeline.platform._core.persistence import ensure_platform_entity
 from pipeline.platform.autocasion_wholesale import AC_SPEC
 from pipeline.platform.autoscout24_wholesale import AS24_SPEC
 from pipeline.platform.coches_net_wholesale import COCHES_SPEC
+from pipeline.platform.localizavo_wholesale import LV_SPEC
 from pipeline.platform.miclasico_wholesale import MC_SPEC
 
 DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep")
 
 # Every connector migrated to the _core. Add each new adopter's spec here as it lands.
 # Covers the variation range: coches_net (mid), AS24 (minimal), autocasion (maximal: extras+family),
-# miclasico (source_group/role + conflict_refresh on those, no defense_tier/waf).
-SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC]
+# miclasico (source_group/role refresh), localizavo (distinct legal_name + kind/legal_name refresh).
+SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC]
 _IDS = [s.source_key for s in SPECS]
 
 
@@ -72,9 +73,10 @@ class TestPlatformPersistenceCore:
                     "first_discovered_source, status, defense_tier, source_group, role "
                     "FROM entity WHERE cdp_code=$1", spec.cdp_code)
                 assert e is not None
-                assert e["kind"] == "plataforma"
+                assert e["kind"] == spec.kind
                 assert e["trade_name"] == spec.trade_name
-                assert e["legal_name"] == spec.trade_name
+                assert e["legal_name"] == (spec.legal_name if spec.legal_name is not None
+                                           else spec.trade_name)
                 assert e["website"] == spec.website
                 assert e["website_waf"] == spec.website_waf
                 assert e["is_tier1"] == spec.is_tier1
