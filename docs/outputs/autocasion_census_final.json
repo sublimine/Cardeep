@@ -1,0 +1,10 @@
+{
+ "universe_sitemap": 2928,
+ "entity_source_census": 2909,
+ "distinct_entities_with_census": 2909,
+ "new_entities_census_first": 769,
+ "collapsed_onto_existing": 2140,
+ "census_source_refs": 2909,
+ "entities_total": 392713,
+ "dup_cdp_global": "0"
+}
