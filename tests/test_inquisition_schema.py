@@ -176,3 +176,133 @@ class TestInquisitionSchemaShape:
                 assert can_select is True, f"cardeep_inquisitor must have SELECT on {tbl}"
         finally:
             await conn.close()
+
+
+# ---------------------------------------------------------------------------
+# P09-S4: the PRECISION gate (migration 0050). Skips unless 0050 is applied to the
+# target DB (gated on live; runs in CI and the ephemeral verify where `migrate up`
+# builds the full schema incl. 0050). Target DB overridable via CARDEEP_DSN.
+# ---------------------------------------------------------------------------
+_P09_DSN = os.environ.get("CARDEEP_DSN", DSN)
+
+_VERDICT_PREC_INSERT = """
+    INSERT INTO inquisition_verdict
+        (claim_id, verdict, indep_score, assert_n, refute_soft_n, refute_hard_n, abstain_n,
+         precision_n, sample_seed, ci_upper, p0_contract)
+    VALUES ($1, $2, 2, 2, 0, 0, 0, $3, $4, $5, $6)
+"""
+
+
+def _precision_ready(dsn: str) -> bool:
+    async def _chk() -> bool:
+        import asyncpg
+        try:
+            conn = await asyncpg.connect(dsn, timeout=3)
+        except Exception:
+            return False
+        try:
+            return await conn.fetchval(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='inquisition_verdict' AND column_name='p0_contract'"
+            ) is not None
+        finally:
+            await conn.close()
+    try:
+        return asyncio.run(_chk())
+    except Exception:
+        return False
+
+
+PRECISION_READY = _precision_ready(_P09_DSN)
+
+
+@pytest.mark.skipif(
+    not PRECISION_READY,
+    reason="migration 0050 not applied to target DB (gated on live; runs in CI / ephemeral verify)",
+)
+class TestPrecisionGate:
+    """trustworthy_needs_precision (0050): a TRUSTWORTHY verdict that declares a precision
+    contract can only be written when its defect-rate upper bound is <= the contract p0."""
+
+    def test_precision_columns_exist(self) -> None:
+        asyncio.run(self._cols())
+
+    async def _cols(self) -> None:
+        import asyncpg
+        conn = await asyncpg.connect(_P09_DSN)
+        try:
+            rows = await conn.fetch(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name='inquisition_verdict' "
+                "AND column_name IN ('precision_n','sample_seed','ci_upper','p0_contract')"
+            )
+            assert {r["column_name"] for r in rows} == {
+                "precision_n", "sample_seed", "ci_upper", "p0_contract"}
+        finally:
+            await conn.close()
+
+    def test_trustworthy_over_contract_is_rejected(self) -> None:
+        asyncio.run(self._reject(ci_upper=0.05, p0=0.01))
+
+    def test_trustworthy_within_contract_is_accepted(self) -> None:
+        asyncio.run(self._accept(ci_upper=0.005, p0=0.01))
+
+    def test_trustworthy_without_contract_is_accepted(self) -> None:
+        # Legacy verdict: no precision contract (p0 NULL) -> the precision gate does not apply.
+        asyncio.run(self._accept(ci_upper=None, p0=None))
+
+    async def _reject(self, *, ci_upper: float, p0: float) -> None:
+        import asyncpg
+        conn = await asyncpg.connect(_P09_DSN)
+        try:
+            async with conn.transaction():
+                await conn.execute(_CLAIM_INSERT, "__prec_reject__", "count")
+                with pytest.raises(asyncpg.exceptions.CheckViolationError) as exc:
+                    await conn.execute(
+                        _VERDICT_PREC_INSERT, "__prec_reject__", "TRUSTWORTHY", 300, "seed-x",
+                        ci_upper, p0)
+                assert "trustworthy_needs_precision" in str(exc.value)
+                raise _Rollback
+        except _Rollback:
+            pass
+        finally:
+            await conn.close()
+
+    async def _accept(self, *, ci_upper, p0) -> None:
+        import asyncpg
+        conn = await asyncpg.connect(_P09_DSN)
+        try:
+            async with conn.transaction():
+                await conn.execute(_CLAIM_INSERT, "__prec_accept__", "count")
+                await conn.execute(
+                    _VERDICT_PREC_INSERT, "__prec_accept__", "TRUSTWORTHY", 459, "seed-y",
+                    ci_upper, p0)
+                row = await conn.fetchrow(
+                    "SELECT p0_contract FROM inquisition_verdict WHERE claim_id='__prec_accept__'")
+                assert row is not None
+                raise _Rollback
+        except _Rollback:
+            pass
+        finally:
+            await conn.close()
+
+    def test_sample_event_and_contract_accept_rows(self) -> None:
+        asyncio.run(self._provenance())
+
+    async def _provenance(self) -> None:
+        import asyncpg
+        conn = await asyncpg.connect(_P09_DSN)
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "INSERT INTO verification_contract (subject_pattern, gates, ttl_seconds) "
+                    "VALUES ($1, $2::jsonb, $3)", "platform:*", '{"p0":0.01,"conf":0.99}', 86400)
+                await conn.execute(
+                    "INSERT INTO sample_event (seed, plan, sampled_keys) "
+                    "VALUES ($1, $2::jsonb, $3::jsonb)",
+                    "seed-z", '{"n":459,"c":0}', '["k1","k2","k3"]')
+                raise _Rollback
+        except _Rollback:
+            pass
+        finally:
+            await conn.close()

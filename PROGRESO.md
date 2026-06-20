@@ -1796,3 +1796,19 @@
 - P03 egress ES residencial (dossier): nodo 4G DIY (Pi+E3372+3proxy) o tethering -> requiere HARDWARE del owner; el
   codigo ProxyPool ya lee CARDEEP_PROXIES (lease geo=ES). Stage: el owner provee el endpoint del nodo/tethering.
 - (resto de gates del dossier: LLM local Ollama, GEO abierto, captcha por higiene, egress fotos €0 -> ver dossier).
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P09-S4: migration 0050 gate de PRECISION en DB (verificado en efimera) [VERIFICADO]
+- Numero libre real = 0050 (el blueprint decia "0037" pero esta tomado; esquema iba por 0049). migrations/0050_precision_gate.sql:
+  (1) ALTER inquisition_verdict ADD COLUMN IF NOT EXISTS precision_n/sample_seed/ci_upper/p0_contract (nullable ->
+  retrocompat, filas historicas satisfacen el CHECK trivialmente). (2) CONSTRAINT trustworthy_needs_precision (DO-block
+  idempotente): un TRUSTWORTHY con contrato de precision (p0_contract NOT NULL) exige ci_upper<=p0_contract -> 2o
+  invariante en DB que hace imposible fabricar precision (complementa 0032 trustworthy_needs_independence). (3) tabla
+  sample_event (seed+plan+sampled_keys+per_item_scores+ci = certificado RE-EJECUTABLE, V6 Appendix A). (4) tabla
+  verification_contract (subject_pattern+gates ODCS+ttl). GRANTs a cardeep_inquisitor. Rollback doc (stripped por migrate.py).
+- TDD: tests/test_inquisition_schema.py +clase TestPrecisionGate (5 casos), DSN via CARDEEP_DSN, skip si 0050 no aplicada.
+- VERIFICADO en DB EFIMERA (cardeep_p09s4_scratch, creada+migrate up 0001->0050 + tests + DROP; NUNCA la viva):
+  11/11 verde (5 precision + 6 invariante-independencia). En la VIVA: 9 pasan, 5 PrecisionGate SKIP (gate: 0050 no
+  aplicada a prod; p0_contract ausente confirmado). 0050 aplica limpio sobre esquema completo (44 migraciones).
+- GATE (IRREVERSIBLE-PROD): NO apliqué 0050 a la DB viva :5433. Se aplica por la cadena normal (CI build fresh / deploy
+  migrate up). Aditiva + backward-compat + idempotente -> segura cuando el owner/deploy corra migrate up en prod/VPS.
+- Proximo: P09-S5 cablear el gate al quorum.decide() (offline, usa sampler.py + estas columnas); P05; P13.
