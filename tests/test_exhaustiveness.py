@@ -188,3 +188,28 @@ def test_splink_union_find_merges_transitively():
     uf.union("b", "c")
     uf.union("c", "d")
     assert uf.find("b") == uf.find("d") == "b"  # lowest id is root
+
+
+# ---------------------------------------------------------------------------
+# External triangulation seam (§2.7)
+# ---------------------------------------------------------------------------
+def test_triangulation_verdicts():
+    from pipeline.exhaustiveness import triangulation as T
+
+    assert T.triangulate(1000, 1000)["verdict"] == "consistent"
+    assert T.triangulate(2000, 1000)["verdict"] == "n_hat_high"
+    assert T.triangulate(500, 1000)["verdict"] == "n_hat_low"
+    assert T.triangulate(1000, None)["verdict"] == "no_anchor"
+
+
+def test_triangulation_loads_csv(tmp_path):
+    from pipeline.exhaustiveness import triangulation as T
+
+    csv_file = tmp_path / "c.csv"
+    csv_file.write_text(
+        "province_code,segment,n_external\n28,compraventa,1200\n,,40000\n",
+        encoding="utf-8",
+    )
+    d = T.load_external_census(csv_file)
+    assert d[("28", "compraventa")] == 1200.0
+    assert d[(None, None)] == 40000.0

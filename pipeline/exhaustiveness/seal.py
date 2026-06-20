@@ -21,6 +21,7 @@ import psycopg2
 from pipeline.exhaustiveness import capture
 from pipeline.exhaustiveness import estimators as est
 from pipeline.exhaustiveness import estimators_r
+from pipeline.exhaustiveness import triangulation
 
 DSN = capture.DSN
 DEFAULT_THRESHOLD = 0.95
@@ -62,7 +63,10 @@ def compute(
     external_census : optional {(province_code, segment): N_external} triangulation
                       seam (e.g. CNAE-451/DIRCE). When a stratum has an external
                       anchor, it is stored in exhaustiveness_estimate.external_ref.
+                      If None, the CSV at countries/ES/census/ is auto-loaded.
     """
+    if external_census is None:
+        external_census = triangulation.load_external_census()
     patterns, buckets = capture.read_patterns(
         build_run_id, dsn=dsn, include_mkt=include_mkt
     )
@@ -136,6 +140,12 @@ def compute(
         "uncertified": {
             "n_obs": n_obs_uncert,
             "note": "denominator unknown (insufficient overlap) — NOT counted as covered",
+        },
+        "triangulation": {
+            "status": triangulation.status(),
+            "national": triangulation.triangulate(
+                n_hat_sum, external_census.get((None, None))
+            ),
         },
         "national_pooled_crosscheck": (
             {
