@@ -1620,3 +1620,14 @@
   __NEXT_DATA__ -> FAILED honesto. No-regresion area recipe verde.
 - EXTRACTORS: autoscout24, web_generic, coches_com. P04 ~4/10 -> ~5/10.
 - Proximo: mas extractores (motor_es via PDP, familias CMS/DMS, coches_net API JSON). Drenaje masivo = VPS.
+
+### 2026-06-20 (cont.) — P04: CochesNetExtractor recipe-first (platform-as-entity coches.net)
+- 4o extractor recipe-first: coches.net (API JSON abierta web.gw.coches.net/search). Reusa
+  coches_net_wholesale.parse_item_vehicle + CochesFetcher.fetch_page (NO un 2o scraper): POST page-1
+  size=k -> muestra -> VAM -> receta persistida; el drain faceted (provincia x banda) sigue en
+  wholesale/facet (VPS).
+- TDD offline (CochesFetcher.fetch_page + write_recipe mockeados): RED (no registrado) -> GREEN (3 passed):
+  registro + E2E (3 items -> VERIFIED, 3==3==3 TRUSTWORTHY) + gateway vacio (DataDome/0 results) -> FAILED honesto.
+  No-regresion area recipe verde.
+- EXTRACTORS: autoscout24, web_generic, coches_com, coches_net. P04 ~5/10 -> ~6/10.
+- Proximo: milanuncios (parse_ad_vehicle, necesita photos_by_id), autocasion (SSR+GQL), motor_es (PDP), familias. Drenaje masivo = VPS.

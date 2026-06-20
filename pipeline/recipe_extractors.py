@@ -19,6 +19,7 @@ from pipeline.recipe_schema import (
 )
 from pipeline.engine.fetch import fetch_text
 from pipeline.platform import coches_com_wholesale as ccom
+from pipeline.platform import coches_net_wholesale as ccn
 from pipeline.recipe_extract_web import GenericWebExtractor
 from pipeline.sources import autoscout24 as as24
 
@@ -150,8 +151,68 @@ class CochesComExtractor:
         return Sample(declared=declared, fetched=fetched, parsed=parsed, full_dealer=full_dealer)
 
 
+def _ccn_valid(v: "ccn.Vehicle") -> bool:
+    """A coches.net item is sample-valid iff it carries the two identity fields."""
+    return bool(v.listing_ref) and bool(v.deep_link)
+
+
+class CochesNetExtractor:
+    """Recipe-first wrapper over :mod:`pipeline.platform.coches_net_wholesale`.
+
+    coches.net's data layer is an OPEN first-party JSON gateway (POST web.gw.coches.net/search).
+    The bounded sample POSTs page-1 (size=k) and parses k items with the module's verified
+    ``parse_item_vehicle`` (reuse, NOT a 2nd scraper). ``dealer_ref`` is the platform identity;
+    the full faceted drain (province x price band) stays in the wholesale/facet module (VPS)."""
+
+    source = "coches_net"
+
+    def recipe_template(self, dealer_ref: str) -> Recipe:
+        return Recipe(
+            source=self.source, dealer_ref=dealer_ref, kind="plataforma",
+            transport=Transport(engine="curl_cffi", base_url=ccn.ENDPOINT,
+                                 impersonate=ccn._IMPERSONATE, timeout_s=ccn._TIMEOUT),
+            fingerprint=Fingerprint(user_agent="engine-managed"),
+            pagination=Pagination(
+                strategy="json_post_page",
+                url_template=ccn.ENDPOINT,
+                page_size=ccn.PAGE_SIZE,
+                declared_path="meta.totalResults",
+                stop="declared_reached"),
+            parsing=Parsing(
+                engine="json_api",
+                container_path="items",
+                field_map={
+                    "deep_link": "_PDP_BASE + url",
+                    "listing_ref": "id",
+                    "make": "make",
+                    "model": "model",
+                    "year": "year",
+                    "km": "km",
+                    "price": "price.amount",
+                    "fuel": "fuelType",
+                    "transmission": "transmissionTypeId->map",
+                    "photo_url": "resources[0]",
+                }),
+        )
+
+    def sample(self, dealer_ref: str, k: int) -> Sample:
+        """POST page-1 (size=k) to the open search gateway and parse the k items (recipe-first:
+        a single bounded request, never the faceted full drain — that is the VPS job)."""
+        fetcher = ccn.CochesFetcher(pool_size=1)
+        data = fetcher.fetch_page(ccn.ENDPOINT, page=1, size=k)
+        items = data.get("items") or []
+        declared = ccn._to_int((data.get("meta") or {}).get("totalResults"))
+        sliced = items[:k]
+        fetched = len(sliced)
+        parsed = [asdict(ccn.parse_item_vehicle(it)) for it in sliced
+                  if _ccn_valid(ccn.parse_item_vehicle(it))]
+        full_dealer = declared is not None and declared <= fetched
+        return Sample(declared=declared, fetched=fetched, parsed=parsed, full_dealer=full_dealer)
+
+
 EXTRACTORS = {
     "autoscout24": AutoScout24Extractor,
     "web_generic": GenericWebExtractor,
     "coches_com": CochesComExtractor,
+    "coches_net": CochesNetExtractor,
 }
