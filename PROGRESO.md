@@ -2292,3 +2292,14 @@
   grafo. >70% -> greenfield espejismo -> pivotar a profundizar marketplaces walled; <40% -> cablear solo DealerK+WP.
 - Artefacto: docs/GREENFIELD_RECON_2026-06-21.md. NO se cablea nada hasta medir (cablear 2.200 bespoke para coches
   duplicados seria invertir el orden correcto).
+
+### 2026-06-21 (loop COBERTURA) — Greenfield: SOLAPAMIENTO medido = 8% (NO espejismo) [VERIFICADO]
+- Medicion €0 con el dedup existente (vehicle_cluster.cluster_size) sobre 11.007 coches own-site ya cosechados via
+  family_* connectors: 92% UNICOS (cluster_size=1 = cobertura nueva genuina), 8% duplicados. Solapamiento ~8% <<70%.
+- VEREDICTO (gana el codigo): el greenfield own-site NO es espejismo — es cobertura NUEVA real. Los dealers locales
+  con web propia mayormente NO republican en marketplaces. CAVEAT: dedup mono-metodo -> 92% es cota superior de unicos.
+- DECISION: cablear own-site VALE. Via family connectors que escalan (family_dms_vendor/DealerK + family_cms_wp/WP);
+  añadir dealers con web propia (de los 6.628 candidatos) a seeds / auto-descubrir de la DB; cosechar concurrency 1.
+  Long-tail bespoke generic_custom = manual/diferido (no escala).
+- PROXIMO: investigar el mecanismo de seeds de family_dms_vendor/family_dealerk (¿auto-descubre dealers DealerK/WP de
+  la DB por website-host, o seeds hardcoded?) -> ampliar la cobertura a mas dealers con web propia + cosechar.

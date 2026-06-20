@@ -24,3 +24,15 @@
 Cruzar el stock de los 8 CONFIRMED (marca+modelo+año+km+precio) contra el grafo CARDEEP ya cosechado.
 - solapamiento >70% -> greenfield own-site = espejismo -> profundizar marketplaces walled (coches.net/wallapop/milanuncios).
 - solapamiento <40% -> valor incremental real -> cablear SOLO DealerK + extractor WP heuristico (escalan); long-tail bespoke = manual/nunca.
+
+## MEDICION DE SOLAPAMIENTO (2026-06-21) — refuta el espejismo
+Medido con el dedup ya computado (vehicle_cluster.cluster_size) sobre los 11.007 coches own-site YA
+cosechados via family_* connectors (muestra real grande, €0, sin cosechar nada nuevo):
+- UNICOS (cluster_size=1, cobertura nueva genuina): 10.135 = **92%**
+- DUPLICADOS (cluster_size>1, ya en otra fuente): 872 = **8%**
+- Solapamiento ~8% << 70% -> NO es espejismo. El stock own-site es mayoritariamente NUEVO (los dealers
+  locales no siempre publican en coches.net/wallapop). CAVEAT: dedup mono-metodo (B7 UNVERIFIED) ->
+  92% es COTA (algun duplicado no cazado); aun asi la señal es contundente.
+VEREDICTO: cablear el greenfield own-site VALE LA PENA. Via = family connectors que ESCALAN
+(family_dms_vendor/DealerK + family_cms_wp/WP), añadiendo dealers con web propia a sus seeds /
+auto-descubriendolos de la DB. Long-tail bespoke (generic_custom) = manual/diferido.
