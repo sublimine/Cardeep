@@ -6,6 +6,9 @@ export const useStats = () => useQuery({ queryKey: ['stats'], queryFn: api.stats
 
 export const useGeoSeal = () => useQuery({ queryKey: ['geo-seal'], queryFn: api.geoSeal });
 
+export const useGeoExhaustiveness = () =>
+  useQuery({ queryKey: ['geo-exhaustiveness'], queryFn: api.geoExhaustiveness });
+
 export const useProvinceEntities = (province: string | undefined, page = 1, size = 50) =>
   useQuery({
     queryKey: ['prov-entities', province, page, size],

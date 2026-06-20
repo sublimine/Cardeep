@@ -8,6 +8,7 @@ import type {
   EntityDetail,
   EntitySummary,
   Envelope,
+  Exhaustiveness,
   GeoSeal,
   Paginated,
   Stats,
@@ -80,6 +81,7 @@ async function getPaged<T>(path: string, params?: Params): Promise<Paginated<T>>
 export const api = {
   stats: () => getData<{ counts: Stats }>('/stats').then((d) => d.counts),
   geoSeal: () => getData<GeoSeal>('/geo/seal'),
+  geoExhaustiveness: () => getData<Exhaustiveness>('/geo/exhaustiveness'),
   provinceEntities: (province: string, page = 1, size = 50) =>
     getPaged<EntitySummary>(`/geo/${province}/entities`, { page, size }),
   municipalityEntities: (province: string, muni: string, page = 1, size = 50) =>

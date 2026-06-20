@@ -4,6 +4,7 @@ import { useStats } from '../api/hooks';
 import { useSealMap } from '../three/useSpainData';
 import { VERDICT_COLOR } from '../three/mapColors';
 import { Panel } from '../components/ui/Panel';
+import { Certificate } from '../components/coverage/Certificate';
 import { formatInt } from '../lib/format';
 import type { SealVerdict, Stats } from '../api/types';
 import './Landing.css';
@@ -169,6 +170,8 @@ export function Landing() {
               ) : (
                 <div className="coverage__skeleton" aria-hidden="true" />
               )}
+
+              <Certificate />
             </Panel>
 
             <div className="command__stats">

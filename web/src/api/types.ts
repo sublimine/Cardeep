@@ -58,6 +58,37 @@ export interface GeoSeal {
   segments: { venta?: SealSegment; desguace?: SealSegment };
 }
 
+// GET /geo/exhaustiveness -> Exhaustiveness (capture-recapture / MSE coverage CERTIFICATE).
+// The statistical LOWER bound on completeness (k orthogonal discovery lists), distinct from the
+// registral ceiling in GeoSeal. Honest by construction: a thin stratum (or no build) yields a null
+// national cert / coverage_lower near 0 + sealed=false, never a fabricated 100%.
+export interface ExhaustivenessCert {
+  k_lists: number;
+  n_obs: number;
+  n_hat: number | null;
+  ci_low: number | null;
+  ci_high: number | null;
+  coverage_point: number | null; // fraction 0..1
+  coverage_lower: number | null; // fraction 0..1 (the conservative floor)
+  method: string;
+  confidence: number | string | null;
+  seal_threshold: number | null;
+  sealed: boolean;
+  province_code?: string;
+}
+export interface ExhaustivenessSegment {
+  national: ExhaustivenessCert | null;
+  provinces: ExhaustivenessCert[];
+}
+export interface Exhaustiveness {
+  certificate: string;
+  method: string;
+  build_run_id: string | null;
+  generated_at: string | null;
+  national: ExhaustivenessCert | null;
+  by_segment: Record<string, ExhaustivenessSegment>;
+}
+
 // GET /geo/{prov}/entities  (+ /municipalities/{muni}/entities) -> EntitySummary[]
 export interface EntitySummary {
   cdp_code: string;

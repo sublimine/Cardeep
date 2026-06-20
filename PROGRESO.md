@@ -2050,3 +2050,22 @@
   paridad fila-a-fila probada por conector. Solo queda group_rentacar (bespoke, documentado).
 - Proximo: P05 fase 2 _ingest_window (18 variantes) -> _core/ingest unico / o ROTAR a P12 frontend (/geo/exhaustiveness)
   / P06 resolver beta / P09-S6 detectores stub (migracion efimera).
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P12: frontend surfacea el certificado MSE (/geo/exhaustiveness) [VERIFICADO]
+- GAP detectado: P11 expone /geo/exhaustiveness (certificado nacional capture-recapture/MSE, cota INFERIOR estadistica)
+  pero web/ solo consumia /geo/seal (techo registral DIRCE). Las dos verdades complementarias; faltaba el suelo.
+- Implementado (datos reales, sin placeholder): api/types.ts (Exhaustiveness/ExhaustivenessCert/Segment, tipados 1:1
+  con _cert() de geo.py), api/client.ts (geoExhaustiveness), api/hooks.ts (useGeoExhaustiveness, TanStack Query),
+  lib/exhaustiveness.ts (certView: proyeccion pura -> fracciones 0..1 a %, IC N̂, maneja national=null honestamente),
+  components/coverage/Certificate.tsx + certificate.css (tira-credencial DENTRO del Panel de cobertura: el % grande =
+  cobertura servida/techo registral, la credencial = "suelo estadistico >= X% MSE" + sello Sellado/Parcial). Wire en
+  Landing.tsx. En-sistema: tokens + Badge + Panel + .mono; cero estilo huerfano.
+- HONESTO POR CONSTRUCCION (VAM): sin build MSE -> national=null -> certView hasData=false -> UI muestra "pendiente de
+  build", NUNCA un numero fabricado. Degradacion grafica tambien si el endpoint da error.
+- VERIFICADO 2 vias: (1) npm run build (tsc -b + vite build) VERDE + eslint limpio (CSS 27.27->28.16kB y JS crecieron
+  = componente+estilos bundleados). (2) Paridad de contrato: 16/16 claves _cert()+respuesta de geo.py == interfaces TS;
+  ruta /geo/exhaustiveness REGISTRADA en el app canonico (assert in-proceso: True). No por ausencia.
+- NOTA OPS (no bloqueante, ## PENDIENTE-OWNER): el uvicorn vivo en :8090 es STALE (expone seal/completeness/stats pero
+  NO exhaustiveness -> proceso anterior a P11). No lo reinicio (server de worker concurrente, efecto colateral). Para
+  e2e en vivo basta reiniciar la API dev (reversible, €0): uvicorn services.api.main:app --port 8090. El codigo es correcto.
+- % P12: el sello/certificado nacional ya esta en la UI (antes ausente). Proximo: P05 fase 2 _ingest_window / P06 / P09-S6.
