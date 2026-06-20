@@ -42,14 +42,15 @@ def run(run_id: str, threshold: float, include_mkt: bool,
         f"{res['n_obs_uncertified']})  sealed={res['n_strata_sealed']}"
     )
     print()
-    nat = res["national"]
-    print("NATIONAL DENOMINATOR (stratified sum of N_hat):")
-    print(f"  observed (>=1 orthogonal list) n_obs = {nat['n_obs']}")
-    print(f"  N_hat (stratified sum)                   = {nat['n_hat_stratified_sum']}")
+    nat = res["national_certified"]
+    print("NATIONAL CERTIFIED DENOMINATOR (identified strata only):")
+    print(f"  observed in identified strata n_obs  = {nat['n_obs']}")
+    print(f"  N_hat (stratified sum)               = {nat['n_hat_stratified_sum']}")
     print(f"  95% CI                               = [{nat['ci_low']}, {nat['ci_high']}]")
-    print(f"  coverage (point)                     = {nat['coverage_point']:.2%}")
-    print(f"  coverage (lower bound, certified)    = {nat['coverage_lower']:.2%}")
+    print(f"  certified coverage (point)           = {nat['coverage_point']:.2%}")
+    print(f"  certified coverage (lower bound)     = {nat['coverage_lower']:.2%}")
     print(f"  SEALED at {threshold:.0%}?                       = {nat['sealed']}")
+    print(f"  UNCERTIFIED (denominator unknown)    = {res['uncertified']['n_obs']} observed dealers")
     print()
     cc = res["national_pooled_crosscheck"]
     if cc:

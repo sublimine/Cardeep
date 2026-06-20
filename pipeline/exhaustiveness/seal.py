@@ -77,14 +77,19 @@ def compute(
             s.estimate.diagnostics["r_crosscheck"] = cc
         seals.append(s)
 
-    # national roll-up: only IDENTIFIED strata contribute their N̂; unidentified
-    # strata (sparse overlap) contribute their observed floor only, so the
-    # certified denominator is never inflated by explosive sparse estimates.
+    # national roll-up — HONEST split (anti-maquillaje):
+    #   CERTIFIED  = identified strata only. Their N̂ is real, so coverage here is
+    #                a genuine certification.
+    #   UNCERTIFIED = strata with insufficient overlap. Their true denominator is
+    #                UNKNOWN, so they are NOT folded in as "100% covered" (doing so
+    #                would inflate national coverage). They are reported separately
+    #                as observed-but-uncertified.
     identified = [s for s in seals if s.estimate.identified]
     unidentified = [s for s in seals if not s.estimate.identified]
     n_obs_total = sum(s.estimate.n_obs for s in seals)
-    n_hat_sum = sum(s.estimate.n_hat for s in identified)
-    n_hat_sum += sum(s.estimate.n_obs for s in unidentified)  # floor for the rest
+    n_obs_cert = sum(s.estimate.n_obs for s in identified)
+    n_obs_uncert = sum(s.estimate.n_obs for s in unidentified)
+    n_hat_sum = sum(s.estimate.n_hat for s in identified)  # certified denominator
     usable = identified
     half_widths = [
         (s.estimate.ci_high - s.estimate.n_hat)
@@ -92,10 +97,10 @@ def compute(
         if math.isfinite(s.estimate.ci_high)
     ]
     nat_se = math.sqrt(sum((hw / 1.96) ** 2 for hw in half_widths)) if half_widths else 0.0
-    nat_ci_low = max(n_obs_total, n_hat_sum - 1.96 * nat_se)
+    nat_ci_low = max(n_obs_cert, n_hat_sum - 1.96 * nat_se)
     nat_ci_high = n_hat_sum + 1.96 * nat_se
-    nat_cov_point = n_obs_total / n_hat_sum if n_hat_sum else float("nan")
-    nat_cov_lower = n_obs_total / nat_ci_high if nat_ci_high else float("nan")
+    nat_cov_point = n_obs_cert / n_hat_sum if n_hat_sum else float("nan")
+    nat_cov_lower = n_obs_cert / nat_ci_high if nat_ci_high else float("nan")
 
     # pooled national fit (cross-check only, flagged unreliable)
     pooled_freqs: dict[tuple[int, ...], int] = {}
@@ -105,7 +110,7 @@ def compute(
     pooled = est.estimate_stratum(pooled_freqs) if pooled_freqs else None
 
     _persist(build_run_id, seals, threshold, buckets,
-             national=(n_obs_total, n_hat_sum, nat_ci_low, nat_ci_high,
+             national=(n_obs_cert, n_hat_sum, nat_ci_low, nat_ci_high,
                        nat_cov_point, nat_cov_lower), dsn=dsn,
              external_census=external_census)
 
@@ -115,16 +120,22 @@ def compute(
         "n_strata": len(seals),
         "n_strata_identified": len(identified),
         "n_strata_unidentified": len(unidentified),
-        "n_obs_uncertified": sum(s.estimate.n_obs for s in unidentified),
+        "n_obs_observed_total": n_obs_total,
+        "n_obs_uncertified": n_obs_uncert,
         "n_strata_sealed": sum(1 for s in seals if s.sealed),
-        "national": {
-            "n_obs": n_obs_total,
+        "national_certified": {
+            "scope": "identified strata only (overlap pins N down)",
+            "n_obs": n_obs_cert,
             "n_hat_stratified_sum": round(n_hat_sum, 1),
             "ci_low": round(nat_ci_low, 1),
             "ci_high": round(nat_ci_high, 1),
             "coverage_point": round(nat_cov_point, 4),
             "coverage_lower": round(nat_cov_lower, 4),
-            "sealed": nat_cov_lower >= threshold,
+            "sealed": bool(nat_cov_lower >= threshold),
+        },
+        "uncertified": {
+            "n_obs": n_obs_uncert,
+            "note": "denominator unknown (insufficient overlap) — NOT counted as covered",
         },
         "national_pooled_crosscheck": (
             {
