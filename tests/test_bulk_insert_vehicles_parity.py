@@ -14,11 +14,22 @@ import re
 
 import pytest
 
-from pipeline.platform._core.sql import BULK_INSERT_VEHICLES, BULK_UPSERT_OWNER_SOURCES
+from pipeline.platform._core.sql import (
+    BULK_INSERT_EVENTS,
+    BULK_INSERT_VEHICLES,
+    BULK_TOUCH_VEHICLES,
+    BULK_UPSERT_ENTITY_SOURCE,
+)
 
 pytestmark = pytest.mark.unit
 
-_INLINE_OWNER_SRC = re.compile(r'_BULK_UPSERT_OWNER_SOURCES\s*=\s*"""')
+# Local names that were collapsed to a single _core.sql constant — none may be re-declared inline.
+_COLLAPSED_LOCAL_NAMES = (
+    "_BULK_UPSERT_OWNER_SOURCES",
+    "_BULK_UPSERT_DEALER_SOURCES",
+    "_BULK_TOUCH_VEHICLES",
+    "_BULK_INSERT_EVENTS",
+)
 
 # sha256 (whitespace-normalized) of the canonical variant-A statement.
 _CANON_HASH = "42622b75e6"
@@ -64,18 +75,26 @@ def test_no_connector_reintroduces_the_canonical_inline() -> None:
     assert not offenders, f"connectors must import BULK_INSERT_VEHICLES from _core.sql: {offenders}"
 
 
-def test_owner_sources_core_constant_shape() -> None:
-    assert "INSERT INTO entity_source" in BULK_UPSERT_OWNER_SOURCES
+def test_core_constants_have_expected_shapes() -> None:
+    # entity_source upsert (owner/dealer synonyms collapse here)
+    assert "INSERT INTO entity_source" in BULK_UPSERT_ENTITY_SOURCE
     assert ("ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()"
-            in BULK_UPSERT_OWNER_SOURCES)
+            in BULK_UPSERT_ENTITY_SOURCE)
+    # touch (refresh last_seen + mark available)
+    assert "UPDATE vehicle" in BULK_TOUCH_VEHICLES and "last_seen = now()" in BULK_TOUCH_VEHICLES
+    # NEW vehicle_event emit
+    assert "INSERT INTO vehicle_event" in BULK_INSERT_EVENTS and "'NEW'" in BULK_INSERT_EVENTS
 
 
-def test_no_connector_redeclares_owner_sources_inline() -> None:
-    # The 4 users import BULK_UPSERT_OWNER_SOURCES from _core.sql (one identical variant); no connector
-    # may re-declare it inline. (The owner-source link is identical wherever it is used.)
-    offenders = [
-        path.replace("\\", "/").split("/")[-1]
-        for path in glob.glob("pipeline/platform/*.py")
-        if _INLINE_OWNER_SRC.search(open(path, encoding="utf-8").read())
-    ]
-    assert not offenders, f"import BULK_UPSERT_OWNER_SOURCES from _core.sql instead: {offenders}"
+def test_no_connector_redeclares_a_collapsed_statement_inline() -> None:
+    # Every collapsed local name must be an import alias of a _core.sql constant — never an inline
+    # literal — so the drift the strangler removed cannot creep back in any of the four statements.
+    patterns = {n: re.compile(rf'{n}\s*=\s*"""') for n in _COLLAPSED_LOCAL_NAMES}
+    offenders = []
+    for path in glob.glob("pipeline/platform/*.py"):
+        src = open(path, encoding="utf-8").read()
+        fname = path.replace("\\", "/").split("/")[-1]
+        for name, pat in patterns.items():
+            if pat.search(src):
+                offenders.append(f"{fname}:{name}")
+    assert not offenders, f"these must import from _core.sql instead of declaring inline: {offenders}"

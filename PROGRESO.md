@@ -2154,3 +2154,27 @@
   artefacto de encoding en el docstring -> merece su propio ciclo cuidadoso. _BULK_UPSERT_OWNERS (3) y _parse_window
   (17) NO se unifican (genuinamente distintos, documentado). _ingest_window el ultimo.
 - Proximo: cluster OEM _CageRow (dataclass) / o ROTAR a P09-S7 ODCS / P12.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05 fase 2: BULK_TOUCH_VEHICLES(35)+BULK_INSERT_EVENTS(35)+entity_source(21) [VERIFICADO]
+- MEDIDO mas helpers SQL: _BULK_TOUCH_VEHICLES = 35 archivos/1 variante; _BULK_INSERT_EVENTS = 35/1;
+  _BULK_UPSERT_DEALER_SOURCES = 17/1 e IDENTICO a _BULK_UPSERT_OWNER_SOURCES (4) -> mismo upsert generico a
+  entity_source bajo 2 nombres locales sinonimos. (_BULK_UPSERT_EDGES 27/3 mayor=24 y _BULK_UPSERT_DEALERS 17/5
+  mayor=13 quedan para proximos ciclos.)
+- HECHO: _core/sql.py ahora 4 constantes canonicas. Renombrado BULK_UPSERT_OWNER_SOURCES -> BULK_UPSERT_ENTITY_SOURCE
+  (nombre neutro real); ambos nombres locales (owner 4 + dealer 17 = 21) lo aliasan. Anadidos BULK_TOUCH_VEHICLES
+  (refresh last_seen+available) y BULK_INSERT_EVENTS (emit NEW). Migrados via reemplazo exacto por import-alias
+  preservando el nombre local: TOUCH 35, EVENTS 35, DEALER_SOURCES 17, + re-apuntados los 4 owner. Total 91 copias/refs
+  colapsadas este ciclo.
+- BUG INTRODUCIDO Y CORREGIDO (anti-maquillaje, lo reporto): al reescribir _core/sql.py derive BULK_INSERT_VEHICLES con
+  un helper que toma el PRIMER archivo con def inline; como los 27 ya lo importan (cycle anterior), tomo la variante-B
+  divergente (family, sin transmission) -> habria roto los 27 en runtime. El guard test_core_constant_is_the_canonical_
+  statement lo CAZO (hash f536a51fbb != 42622b75e6). Restaurado desde git HEAD (canonico). Leccion: post-migracion no
+  re-derivar un canonico desde el codigo fuente (ya migrado).
+- VERIFICADO 4 vias: py_compile (35+core); guard 4/4 (pin canonico + shapes ENTITY_SOURCE/TOUCH/EVENTS + anti-drift de
+  los 4 nombres locales); import-smoke (alias IS core en muestras coches_net/oem_audi/wallapop incl. BULK_INSERT_VEHICLES);
+  0 copias inline residuales de los 4; subset unit 216 passed, 0 regresion.
+- Security: SQL identico (constantes estaticas), sin nueva superficie de inyeccion.
+- % P05 fase 2: 4 statements SQL colapsados (BULK_INSERT_VEHICLES 27, ENTITY_SOURCE 21, TOUCH 35, EVENTS 35) + guard.
+  Restan _BULK_UPSERT_EDGES (24 unif.) y _BULK_UPSERT_DEALERS (13 unif.) como targets limpios; _CageRow/Vehicle/
+  _parse_window NO unificar (per-conector, documentado); _ingest_window el ultimo.
+- Proximo: _BULK_UPSERT_EDGES/_BULK_UPSERT_DEALERS / o ROTAR a P09-S7 / P12.

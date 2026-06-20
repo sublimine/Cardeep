@@ -699,19 +699,9 @@ SELECT u.vehicle_ulid, u.entity_ulid, u.deep_link, u.title, u.make, u.model,
 ON CONFLICT (entity_ulid, deep_link) DO NOTHING
 """
 
-_BULK_TOUCH_VEHICLES = """
-UPDATE vehicle v SET last_seen = now(), status = 'available'
-  FROM unnest($1::text[]) AS u(vehicle_ulid)
- WHERE v.vehicle_ulid = u.vehicle_ulid
-"""
+from pipeline.platform._core.sql import BULK_TOUCH_VEHICLES as _BULK_TOUCH_VEHICLES
 
-_BULK_INSERT_EVENTS = """
-INSERT INTO vehicle_event (event_ulid, vehicle_ulid, entity_ulid, event_type,
-        old_value, new_value)
-SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::jsonb
-  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[])
-       AS u(event_ulid, vehicle_ulid, entity_ulid, new_value)
-"""
+from pipeline.platform._core.sql import BULK_INSERT_EVENTS as _BULK_INSERT_EVENTS
 
 
 async def ingest_dealer_vehicles(conn: asyncpg.Connection, dealer_ulid: str,

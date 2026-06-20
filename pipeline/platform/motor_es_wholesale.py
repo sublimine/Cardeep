@@ -624,21 +624,11 @@ SELECT u.entity_ulid, u.cdp_code, 'compraventa', u.name, u.name,
 ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
 """
 
-_BULK_UPSERT_DEALER_SOURCES = """
-INSERT INTO entity_source (entity_ulid, source_key, source_ref)
-SELECT e.entity_ulid, $3, u.source_ref
-  FROM unnest($1::text[], $2::text[]) AS u(cdp_code, source_ref)
-  JOIN entity e ON e.cdp_code = u.cdp_code
-ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()
-"""
+from pipeline.platform._core.sql import BULK_UPSERT_ENTITY_SOURCE as _BULK_UPSERT_DEALER_SOURCES
 
 from pipeline.platform._core.sql import BULK_INSERT_VEHICLES as _BULK_INSERT_VEHICLES
 
-_BULK_TOUCH_VEHICLES = """
-UPDATE vehicle v SET last_seen = now(), status = 'available'
-  FROM unnest($1::text[]) AS u(vehicle_ulid)
- WHERE v.vehicle_ulid = u.vehicle_ulid
-"""
+from pipeline.platform._core.sql import BULK_TOUCH_VEHICLES as _BULK_TOUCH_VEHICLES
 
 _BULK_UPSERT_EDGES = """
 INSERT INTO platform_listing (vehicle_ulid, platform_entity_ulid, listing_url,
@@ -654,13 +644,7 @@ ON CONFLICT (vehicle_ulid, platform_entity_ulid)
 RETURNING (xmax = 0) AS inserted
 """
 
-_BULK_INSERT_EVENTS = """
-INSERT INTO vehicle_event (event_ulid, vehicle_ulid, entity_ulid, event_type,
-        old_value, new_value)
-SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::jsonb
-  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[])
-       AS u(event_ulid, vehicle_ulid, entity_ulid, new_value)
-"""
+from pipeline.platform._core.sql import BULK_INSERT_EVENTS as _BULK_INSERT_EVENTS
 
 
 @dataclass
