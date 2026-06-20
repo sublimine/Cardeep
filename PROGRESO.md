@@ -1631,3 +1631,14 @@
   No-regresion area recipe verde.
 - EXTRACTORS: autoscout24, web_generic, coches_com, coches_net. P04 ~5/10 -> ~6/10.
 - Proximo: milanuncios (parse_ad_vehicle, necesita photos_by_id), autocasion (SSR+GQL), motor_es (PDP), familias. Drenaje masivo = VPS.
+
+### 2026-06-20 (cont.) — chore(tests): pytest.ini registra markers + assessment del frente recipe-first
+- pytest.ini registra markers unit/integration (la suite los usaba SIN registrar -> PytestUnknownMarkWarning
+  en cada run). asyncio_mode sin tocar (strict por defecto, sin cambio de comportamiento). Verificado: 58 tests
+  verde en muestra amplia, 0 warnings de marker.
+- ASSESSMENT frente recipe-first (P04): 4 extractores single-fetch de plataformas ABIERTAS hechos (autoscout24,
+  web_generic, coches_com, coches_net). milanuncios SALTADO con causa: fetch live bloqueado por PerimeterX
+  (route-around / Tier-1, spend-gated) -> su recipe-first NO valida en local; depende de P03 Tier-1 + proxy
+  residencial (gasto). Restan como MULTI-STEP (abiertos, fixture mas pesado): autocasion (SSR + GQL 2-pasos),
+  motor_es (facet + PDP por card), familias CMS/DMS (own-site, en buena parte ya cubierto por web_generic
+  schema.org). Proximos ciclos del loop: autocasion / motor_es con fixtures multi-doc offline.
