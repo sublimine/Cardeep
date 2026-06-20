@@ -1890,3 +1890,15 @@
   spec, delegar, anadir a SPECS] + 3 de firma extendida (faciliteacoches/group_rentacar/oem_bmw, parametrizados por arg
   -> spec por-llamada, diseno aparte). Luego _ingest_window (18 variantes).
 - Proximo: migrar 2-3 conectores mas (coches_com, group_subastas, localizavo...) / P13 CI seeded / P12 frontend.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P13: CI ejecuta la suite unit (sin DB), no solo --collect-only [VERIFICADO]
+- HUECO: ci.yml solo hacia `pytest --collect-only` (los tests se colectaban pero NUNCA se ejecutaban; el run
+  data-dependent estaba diferido por falta de datos en la CI DB). Los 138 tests @pytest.mark.unit son PUROS (sin DB/
+  red/browser) y nunca corrian en CI.
+- FIX: nuevo job unit-tests en .github/workflows/ci.yml -> instala deps + `python -m pytest -m unit -q`, SIN servicio
+  postgres (a proposito, prueba la independencia de DB). Ejecuta los 138 unit en cada push.
+- VERIFICADO localmente (anti-maquillaje): `pytest -m unit` = 138 passed (16.8s). Repetido con DSN MUERTO
+  (127.0.0.1:1) = 138 passed -> los unit NO tocan DB, el job sin postgres sera verde. ci.yml YAML valida (jobs:
+  bring-up-smoke, frontend-build, secret-scan, unit-tests).
+- El run data-dependent (tests integration sobre snapshot sembrado) sigue diferido -> P13 siguiente (seed fixture).
+- Proximo: P13 seeded snapshot para integration / migrar mas conectores P05 / P12 frontend.

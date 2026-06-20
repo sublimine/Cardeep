@@ -121,3 +121,26 @@ jobs:
           docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
             detect --source=/repo --no-git --config=/repo/.gitleaks.toml \
             --redact --no-banner --exit-code=1 -v
+
+  unit-tests:
+    name: Unit tests (pytest -m unit · DB-free)
+    runs-on: ubuntu-latest
+    # The bring-up job only `--collect-only`s (a fresh CI DB lacks the live data the integration
+    # tests need). But the @pytest.mark.unit subset is pure — no DB, network or browser — and is
+    # PROVEN DB-free (138 pass with a dead DSN). So it RUNS on every push here (no postgres service
+    # on purpose), closing the "tests collect but never execute" gap for the pure subset. The
+    # data-dependent run stays deferred to a future seeded-snapshot job (P13).
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (runtime + test)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run the pure unit suite (no DB service — proves DB independence)
+        run: python -m pytest -m unit -q
