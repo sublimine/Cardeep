@@ -17,6 +17,7 @@ from pipeline.recipe_schema import (
     Recipe,
     Transport,
 )
+from pipeline.recipe_extract_web import GenericWebExtractor
 from pipeline.sources import autoscout24 as as24
 
 
@@ -87,4 +88,5 @@ class AutoScout24Extractor:
 
 EXTRACTORS = {
     "autoscout24": AutoScout24Extractor,
+    "web_generic": GenericWebExtractor,
 }

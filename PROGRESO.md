@@ -1595,3 +1595,18 @@
 - **Estado P03:** S2 + S3 cerrados (ramas feat/p03-s2-record-ban-scar, feat/p03-s3-agpl-neutral).
 - **Avance blueprint: ~4/100.** 5 ramas locales verificadas SIN PUSH (gate del owner: push policy).
   Gates pendientes: push, rearranque cosecha (externo), P07-WORM. Proximo reversible: P14-S1 gitleaks / mas P03.
+
+### 2026-06-20 (cont.) — P04: GenericWebExtractor registrado (recipe-first para dealers con web propia)
+- **Reencuadre del owner:** el objetivo de "cosecha" es recipe-first (extraer MUESTRA -> verificar 100%
+  por VAM -> GUARDAR receta/config -> borrar muestra) por entidad; el drenaje masivo/100% va a la VPS.
+- GenericWebExtractor (own-site schema.org JSON-LD/microdata, pipeline/recipe_extract_web.py) ya cumplia
+  el protocolo Extractor pero NO estaba en EXTRACTORS -> ni el harness ni RecipeRunner.replay podian usarlo.
+  Registrado 'web_generic' en pipeline/recipe_extractors.py (sin import circular: replay importa lazy).
+- Ahora CADA dealer con web propia: RecipeHarness.run extrae k -> VAM (offline o DB) -> persiste receta
+  VERIFIED/FAILED honesto -> borra muestra; RecipeRunner.replay la reproduce SOLO desde el YAML.
+- **TDD/verificacion (offline, fetch mockeado, sin DB):** tests/test_recipe_web_generic.py RED (no registrado)
+  -> GREEN (3 passed): registro + funcional E2E (3 coches JSON-LD -> VERIFIED, receta persistida con evidence)
+  + muestra vacia (web JS sin JSON-LD) -> FAILED honesto (no exito falso). No-regresion area recipe 46 passed.
+  P09-S1 (ya en main) hace honesto el vam_verdict de la muestra-cero.
+- **Estado P04: 3/10 -> ~4/10** (2a fuente recipe-first viva). Proximo: extractores por familia/plataforma
+  (CMS/DMS, marketplaces) con el mismo patron (recipe_template + sample reusando su modulo). Drenaje masivo = VPS.
