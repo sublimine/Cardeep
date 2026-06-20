@@ -2338,3 +2338,16 @@
   (source_health unknown/last_ok=None); marketplace grande con VO español = greenfield real. Solo hay que CORRERLO.
 - PROXIMO: probar as24_wholesale acotado (walled -> camoufox + concurrency 1 + paced; vigila RAM/IP; stage si quema IP);
   medir cobertura nueva (cluster_size=1). Fallback si as24 falla: otras fuentes unknown / R1 desguace via agregador Opisto.
+
+### 2026-06-21 (loop COBERTURA) — VETA: as24/AutoScout24 cosecha €0 grande [VERIFICADO]
+- as24/AutoScout24 (autoscout24_wholesale, source_key as24_wholesale) — fuente OPEN (curl_cffi+chrome_impersonate+
+  __NEXT_DATA__, is_tier1=FALSE, NO walled, NO camoufox). Proof slice max_pages=3: 57 coches caged, 57 NEW, VAM verdict
+  TRUSTWORTHY, ok=True, http OK, SIN ban, ~14s. vehicles_total 1.706.032 -> 1.706.089 (+57).
+- DECLARED FULL (source) = 278.137 coches ES en AS24. Ya en DB via as24 ~16.749 (~6%) -> GREENFIELD ~261k cosechable €0.
+- HALLAZGO: tras cerrar greenfield own-site (bespoke), AS24 es la VETA de cobertura nueva grande €0-sin-construir
+  (marketplace OPEN, connector existente, solo correrlo paced). ESCALANDO en lotes (max_pages alto, governor per-host
+  pacing, vigilar IP/RAM aunque es curl_cffi ligero).
+- PENDIENTE medir: solapamiento de los nuevos AS24 (cluster_size) tras un dedup-run — AS24 es marketplace distinto, su
+  inventario solapa parcialmente con coches.net/wallapop pero aporta dealers/coches propios. Cobertura NETA se confirma
+  con cluster tras drenar un lote grande.
+- PROXIMO: drenar AS24 en lotes (max_pages 100 ~2k coches/lote) acumulando; medir delta + (tras dedup) cluster_size=1.
