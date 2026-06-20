@@ -17,16 +17,19 @@ import pytest
 from pipeline.platform._core.persistence import ensure_platform_entity
 from pipeline.platform.autocasion_wholesale import AC_SPEC
 from pipeline.platform.autoscout24_wholesale import AS24_SPEC
+from pipeline.platform.coches_com_wholesale import COCHES_COM_SPEC
 from pipeline.platform.coches_net_wholesale import COCHES_SPEC
 from pipeline.platform.localizavo_wholesale import LV_SPEC
 from pipeline.platform.miclasico_wholesale import MC_SPEC
+from pipeline.platform.motorflash_wholesale import MF_SPEC
 
 DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep")
 
 # Every connector migrated to the _core. Add each new adopter's spec here as it lands.
-# Covers the variation range: coches_net (mid), AS24 (minimal), autocasion (maximal: extras+family),
-# miclasico (source_group/role refresh), localizavo (distinct legal_name + kind/legal_name refresh).
-SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC]
+# Covers the variation range: coches_net/coches_com (mid+extras), AS24 (minimal), autocasion (maximal:
+# extras+family), miclasico (source_group/role), localizavo (distinct legal_name+kind), motorflash
+# (is_platform_like=True aggregator, conflict_refresh empty).
+SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC, COCHES_COM_SPEC, MF_SPEC]
 _IDS = [s.source_key for s in SPECS]
 
 

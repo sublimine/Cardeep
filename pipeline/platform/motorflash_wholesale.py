@@ -61,6 +61,10 @@ from pipeline.engine.fetch import FetchEngine
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -254,34 +258,32 @@ def parse_pdp_vehicle(pdp_html: str, pdp_url: str, listing_ref: str) -> Vehicle 
 # ---------------------------------------------------------------------------
 
 
+# P05: spec for the unified _core.ensure_platform_entity. is_platform_like=TRUE (aggregator),
+# is_tier1=FALSE, only source_group set; legacy refreshed nothing but last_seen -> conflict_refresh=().
+# (family='aggregator' is value-stable; the core's family-refresh is a no-op here, sole writer.)
+MF_SPEC = PlatformSpec(
+    cdp_code=mf_platform_cdp_code(),
+    trade_name=MF_TRADE_NAME,
+    website=MF_WEBSITE,
+    source_key=MF_SOURCE_KEY,
+    source_ref=MF_DOMAIN,
+    data_surface="json_ld",
+    surface_detail={"endpoint": "/concesionario/{slug}/coches-segunda-mano/{id}/",
+                    "pdp": "/coche-segunda-mano/{slug}/ocasion/{id}-es/",
+                    "host": _BASE, "engine": "curl_cffi/chrome_impersonate",
+                    "dealer_index": "sitemap.concesionarios.xml"},
+    is_tier1=False,
+    source_group="marketplace_motor",
+    is_platform_like=True,
+    family="aggregator",
+    conflict_refresh=(),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the Motorflash platform entity + platform_meta exist."""
-    code = mf_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, is_tier1, status, kind_source, source_group,
-               first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,FALSE,'active','platform_label',
-                   'marketplace_motor',$5, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()""",
-        eulid, code, MF_TRADE_NAME, MF_WEBSITE, MF_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, MF_SOURCE_KEY, MF_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'json_ld',$2::jsonb,FALSE,TRUE,'aggregator')
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail""",
-        eulid, json.dumps({"endpoint": "/concesionario/{slug}/coches-segunda-mano/{id}/",
-                           "pdp": "/coche-segunda-mano/{slug}/ocasion/{id}-es/",
-                           "host": _BASE, "engine": "curl_cffi/chrome_impersonate",
-                           "dealer_index": "sitemap.concesionarios.xml"}))
-    return eulid
+    """Idempotently ensure the Motorflash platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via MF_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, MF_SPEC)
 
 
 def dealer_cdp_code(d: DealerRef) -> str:

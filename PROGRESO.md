@@ -1931,3 +1931,15 @@
   encajan ya; los de firma extendida (faciliteacoches/group_rentacar/oem_bmw, parametrizados por arg) = spec por-llamada,
   diseno aparte (stage).
 - Proximo (ROTAR): migrar 1-2 conectores mas que encajen / P12 frontend / P09-S6 / P06.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: coches_com + motorflash adoptan _core (7/29) [VERIFICADO]
+- coches_com: COCHES_COM_SPEC (is_tier1=True/imperva, defense_tier=t1_soft, source_group=marketplace_motor, role=platform,
+  family=independent, conflict_refresh=(is_tier1,website_waf,defense_tier,source_group,role) = EXACTO al legacy). Encaja.
+- motorflash: MF_SPEC = combo NUEVO is_platform_like=TRUE (aggregator), is_tier1=False, solo source_group, family=aggregator,
+  conflict_refresh=() (legacy refresca solo last_seen). Nota: el core refresca family iff spec.family!=None -> en mf es
+  no-op value-stable (mf es el unico escritor de su platform_meta), comportamiento identico. Encaja.
+- TDD: SPECS ahora 7 [COCHES,AS24,AC,MC,LV,COCHES_COM,MF]; 14/14 paridad verde (rama INSERT, fila==spec incl.
+  is_platform_like). Regresion coches_com+motorflash 7/7.
+- Avance P05: 7/29. El superset cubre: minima, media, maxima extras+family, source_group/role, legal_name/kind,
+  is_platform_like aggregator. Restan ~19 (conn) + 3 firma extendida (stage).
+- Proximo (ROTAR): mas conectores / P12 frontend / P09-S6 / P06.
