@@ -1541,3 +1541,18 @@
   uniforme) CUMPLIDA para la superficie junk-capable.** Edits de 1-línea del patrón ya en la suite 937-verde; import-verificados.
 - **€0-código GENUINAMENTE COMPLETO:** superficie servida sellada+937-test-verde + sanitación uniforme en connectors + verificación
   exhaustiva (4 pasadas + 12 invariantes + suite completa). Restante = D7-apply (memory-gated D1), reds (spend/harvest/hardware).
+
+### 2026-06-20 (cont.) — P03-S2 SELLADO: record_ban cicatriz in-memory real + wiring del ban semantico
+- **Maquillaje cazado en codigo existente:** governor.record_ban prometia en su docstring una cicatriz
+  in-memory ("stricter per-host override") pero el codigo solo delegaba al backend (no cableado en prod)
+  -> no-op + docstring que miente. Ademas el Verdict.BANNED del ban_detector NUNCA llegaba al governor
+  (solo reaccionaba el breaker por http_status): dos sistemas de cicatriz desconectados.
+- **Fix raiz (anti-maquillaje):** record_ban marca _ban_until[host] (deadline monotonic) que acquire()
+  honra (el host pausa hasta expirar, luego resume); wrap_fetch_text alimenta engine.last_verdict==BANNED
+  -> record_ban (duck-typed por .name, sin importar el enum). Docstring corregido. Backend distribuido
+  sigue delegado si existe.
+- **TDD/verificacion:** tests/test_governor_ban_scar.py RED (4 fail) -> GREEN (4 passed). Suite engine
+  completa 45 passed (0 regresion). py_compile OK.
+- **Estado P03:** S2 + S3 cerrados (ramas feat/p03-s2-record-ban-scar, feat/p03-s3-agpl-neutral).
+- **Avance blueprint: ~4/100.** 5 ramas locales verificadas SIN PUSH (gate del owner: push policy).
+  Gates pendientes: push, rearranque cosecha (externo), P07-WORM. Proximo reversible: P14-S1 gitleaks / mas P03.

@@ -239,6 +239,11 @@ class RateGovernor:
         # math + ban scars are shared across processes; the in-memory buckets are
         # bypassed. None = single-process in-memory (default, no behavior change).
         self._backend = backend
+        # In-memory ban scar: host -> monotonic deadline. A semantic ban (ban_detector
+        # BANNED) records a per-host cooldown that acquire() honors, so the next fetches to
+        # that host back off even with NO distributed backend (the dead-record_ban gap).
+        self._ban_until: dict[str, float] = {}
+        self._ban_cooldown_s = 900.0  # 15 min, mirrors the S-HEALTH breaker base cooldown
 
     def configure_host(self, host: str, *, rate_per_sec: float | None = None,
                        burst: float | None = None, min_spacing_s: float | None = None,
@@ -287,14 +292,27 @@ class RateGovernor:
             return await self._backend.acquire(
                 host, rate=rate, burst=burst, min_spacing=spacing, jitter=jitter)
         bucket = await self._bucket(host)
-        return await bucket.acquire()
+        # Honor an in-memory ban scar: pause this host until its cooldown elapses, then resume.
+        ban_until = self._ban_until.get(host)
+        scar_wait = 0.0
+        if ban_until is not None:
+            now = time.monotonic()
+            if now < ban_until:
+                scar_wait = ban_until - now
+                await asyncio.sleep(scar_wait)
+            else:
+                self._ban_until.pop(host, None)  # scar elapsed -> clear
+        return scar_wait + await bucket.acquire()
 
     async def record_ban(self, host: str, cooldown_s: float) -> None:
-        """Record a ban scar for `host`. Shared across processes via the backend.
+        """Record a ban scar for `host`: subsequent fetches to it back off for cooldown_s.
 
-        In-memory mode keeps the scar as a stricter per-host override (best-effort);
-        the distributed backend persists a real cooldown all workers observe.
+        In-memory mode (default) holds the scar as a per-host cooldown deadline that
+        acquire() honors — the host pauses until it elapses, then resumes. The distributed
+        backend, when set, ALSO persists a real cooldown every worker observes. (Previously
+        this was a silent no-op without a backend despite the docstring promising a scar.)
         """
+        self._ban_until[host] = time.monotonic() + cooldown_s
         if self._backend is not None and hasattr(self._backend, "record_ban"):
             await self._backend.record_ban(host, cooldown_s)
 
@@ -328,7 +346,15 @@ class RateGovernor:
         async def governed_fetch(url: str, **kwargs) -> str:
             host = host_of(url)
             await self.acquire(host)
-            return await asyncio.to_thread(fetch_callable, url, **kwargs)
+            result = await asyncio.to_thread(fetch_callable, url, **kwargs)
+            # Feed the engine's SEMANTIC ban verdict back into the governor: a detected hard
+            # ban records a per-host cooldown so the next fetches back off. Without this the
+            # ban_detector.BANNED signal was lost (only the http_status breaker reacted).
+            # Duck-typed on .name to avoid importing the Verdict enum here.
+            v = getattr(engine, "last_verdict", None) if engine is not None else None
+            if v is not None and getattr(v, "name", None) == "BANNED":
+                await self.record_ban(host, self._ban_cooldown_s)
+            return result
 
         return governed_fetch
 
