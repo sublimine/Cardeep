@@ -62,7 +62,9 @@ _BAN_MARKERS = (
 # page size (some block pages ship 100KB+ of inert markup). A real inventory page
 # never contains these, so there is no size gate on them.
 _STRONG_BLOCK_MARKERS = (
-    "pardon our interruption",            # PerimeterX / HUMAN
+    "pardon our interruption",            # PerimeterX / HUMAN (EN)
+    "algo se detuvo",                     # PerimeterX / HUMAN (ES, milanuncios)
+    "para continuar, completa el captcha",
     "geo.captcha-delivery.com",           # DataDome captcha
     "blocked by datadome",
     "/_incapsula_resource",               # Imperva Incapsula

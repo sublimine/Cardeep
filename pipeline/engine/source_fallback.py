@@ -78,9 +78,11 @@ DEFAULT_PRIORITIES = {
     "coches_com": 25,
     "motor_es": 30,
     "wallapop": 40,
-    "milanuncios": 50,
-    "coches_net": 90,   # hard (DataDome) — last, with tier=1
-    "autoscout24": 90,
+    "coches_net": 90,    # hard (DataDome) — last, with tier=1
+    "autoscout24": 90,   # hard (DataDome) — won live, but still last
+    "milanuncios": 95,   # HARDEST (PerimeterX press-and-hold): free browser vías
+                         # exhausted (nodriver+camoufox+CDP hold all blocked) — route
+                         # AROUND it. Tried last; coverage closes via own_site/others.
 }
 
 
