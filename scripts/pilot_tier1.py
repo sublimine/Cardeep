@@ -57,14 +57,15 @@ def run_tier0() -> None:
         _report(url, eng, html, err)
 
 
-def run_tier1(engine: str) -> None:
-    print(f"== Tier-1 (real browser={engine}, cookie-reuse, host IP / no proxy) ==\n")
+def run_tier1(engine: str | None) -> None:
+    # None -> full multi-engine chain (nodriver -> camoufox): the go-around posture.
+    chain = (engine,) if engine else ("nodriver", "camoufox")
+    print(f"== Tier-1 (real-browser chain={list(chain)}, cookie-reuse, host IP / no proxy) ==\n")
     for url in WALLED_TARGETS:
-        eng = FetchEngine(allow_tier1_escalation=True, tier1_engine=engine)
+        eng = FetchEngine(allow_tier1_escalation=True, tier1_engines=chain)
         html = err = None
         try:
-            # tier=1 forces the browser-assisted path explicitly.
-            html = eng.fetch_text(url, tier=1)
+            html = eng.fetch_text(url, tier=1)  # forces browser-assisted path
         except FetchError as e:
             err = str(e)
         _report(url, eng, html, err)
@@ -74,14 +75,14 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tier1", action="store_true",
                     help="exercise the real-browser Tier-1 path (downloads a browser if absent)")
-    ap.add_argument("--engine", default="nodriver", choices=["nodriver", "camoufox"],
-                    help="Tier-1 engine (nodriver=AGPL-3.0, camoufox=MPL-2.0)")
+    ap.add_argument("--engine", default=None, choices=["nodriver", "camoufox"],
+                    help="pin a single Tier-1 engine; omit for the full chain")
     args = ap.parse_args()
 
     run_tier0()
     if args.tier1:
-        if args.engine == "nodriver":
-            print("NOTE: nodriver is AGPL-3.0 (network copyleft) — see README_TIER1.md.\n")
+        if args.engine in (None, "nodriver"):
+            print("NOTE: nodriver is AGPL-3.0 (network copyleft) -- see README_TIER1.md.\n")
         run_tier1(args.engine)
     return 0
 
