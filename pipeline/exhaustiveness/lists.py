@@ -33,10 +33,20 @@ _EXACT: dict[str, str] = {
     "aedra": "ASSOC",
     "aecs": "ASSOC",
     "acevas": "ASSOC",
+    # Discovery vectors V3–V6 (pipeline/sources/{dork_municipal,borme_cnae,
+    # graph_recursive,collapse_invisible}). DORK and REG are genuinely orthogonal
+    # capture mechanisms (programmatic search of own domains; mercantile registry);
+    # GRAPH (seeded from already-known sites) and COLLAPSE (resolution, not a new
+    # observation) are dependent and kept OUT of the MSE list set on purpose.
+    "dork_municipal": "DORK",
+    "borme_cnae": "REG",
+    "graph_recursive": "GRAPH",
+    "collapse_invisible": "COLLAPSE",
 }
 
-# Orthogonal lists used by the MSE. MKT is intentionally excluded (see module doc).
-ORTHOGONAL_LISTS: tuple[str, ...] = ("GEO", "CENSUS", "DGT", "ASSOC", "OEM")
+# Orthogonal lists used by the MSE. MKT/GRAPH/COLLAPSE are intentionally excluded
+# (digital-marketplace bias, graph-dependence, and resolution respectively).
+ORTHOGONAL_LISTS: tuple[str, ...] = ("GEO", "CENSUS", "DGT", "ASSOC", "OEM", "DORK", "REG")
 
 LIST_METADATA: dict[str, tuple[str, str]] = {
     "GEO": ("physical_presence", "Physical-presence catalogues (OSM, Overture, geo sweep)"),
@@ -44,6 +54,10 @@ LIST_METADATA: dict[str, tuple[str, str]] = {
     "DGT": ("official_registry", "DGT authorised technical/sales centres"),
     "ASSOC": ("association_roll", "Trade-association membership (AEDRA/AECS/ACEVAS)"),
     "OEM": ("oem_network", "Manufacturer official VO networks"),
+    "DORK": ("search_own_domain", "Municipal dorking — dealer-owned domains via search (V3)"),
+    "REG": ("mercantile_registry", "BORME mercantile-registry automotive incorporations (V4)"),
+    "GRAPH": ("graph_dependent", "Recursive corporate-graph crawl (V5, dependent — non-orthogonal)"),
+    "COLLAPSE": ("resolution", "Invisible-vendor collapse (V6, resolution — not an MSE list)"),
     "MKT": ("digital_marketplace", "Digital classified marketplaces (non-orthogonal)"),
 }
 
