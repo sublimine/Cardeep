@@ -226,7 +226,8 @@ class RateGovernor:
     def __init__(self, *, rate_per_sec: float = DEFAULT_RATE_PER_SEC,
                  burst: float = DEFAULT_BURST,
                  min_spacing_s: float | None = None,
-                 jitter_s: float = DEFAULT_JITTER_S) -> None:
+                 jitter_s: float = DEFAULT_JITTER_S,
+                 backend=None) -> None:
         self._default_rate = rate_per_sec
         self._default_burst = burst
         self._default_spacing = min_spacing_s if min_spacing_s is not None else (1.0 / rate_per_sec)
@@ -234,6 +235,10 @@ class RateGovernor:
         self._buckets: dict[str, _Bucket] = {}
         self._overrides: dict[str, dict] = {}
         self._registry_lock = asyncio.Lock()
+        # Optional distributed backend (e.g. PostgresRateLimiter). When set, token
+        # math + ban scars are shared across processes; the in-memory buckets are
+        # bypassed. None = single-process in-memory (default, no behavior change).
+        self._backend = backend
 
     def configure_host(self, host: str, *, rate_per_sec: float | None = None,
                        burst: float | None = None, min_spacing_s: float | None = None,
@@ -246,6 +251,19 @@ class RateGovernor:
             "min_spacing": min_spacing_s, "jitter": jitter_s,
         }
 
+    def _profile(self, host: str) -> tuple[float, float, float, float]:
+        """Resolve (rate, burst, min_spacing, jitter) for a host from overrides."""
+        ov = self._overrides.get(host, {})
+        rate = ov.get("rate") or self._default_rate
+        burst = ov.get("burst") or self._default_burst
+        spacing = ov.get("min_spacing")
+        if spacing is None:
+            spacing = self._default_spacing
+        jitter = ov.get("jitter")
+        if jitter is None:
+            jitter = self._default_jitter
+        return rate, burst, spacing, jitter
+
     async def _bucket(self, host: str) -> _Bucket:
         b = self._buckets.get(host)
         if b is not None:
@@ -253,23 +271,32 @@ class RateGovernor:
         async with self._registry_lock:
             b = self._buckets.get(host)
             if b is None:
-                ov = self._overrides.get(host, {})
-                rate = ov.get("rate") or self._default_rate
-                burst = ov.get("burst") or self._default_burst
-                spacing = ov.get("min_spacing")
-                if spacing is None:
-                    spacing = self._default_spacing
-                jitter = ov.get("jitter")
-                if jitter is None:
-                    jitter = self._default_jitter
+                rate, burst, spacing, jitter = self._profile(host)
                 b = _Bucket(rate, burst, spacing, jitter)
                 self._buckets[host] = b
             return b
 
     async def acquire(self, host: str) -> float:
-        """Await a token for `host`. Returns the seconds waited. THE throttle (§5)."""
+        """Await a token for `host`. Returns the seconds waited. THE throttle (§5).
+
+        Routes through the distributed backend when one is configured (shared state
+        across processes), else the in-memory per-host bucket (single process).
+        """
+        if self._backend is not None:
+            rate, burst, spacing, jitter = self._profile(host)
+            return await self._backend.acquire(
+                host, rate=rate, burst=burst, min_spacing=spacing, jitter=jitter)
         bucket = await self._bucket(host)
         return await bucket.acquire()
+
+    async def record_ban(self, host: str, cooldown_s: float) -> None:
+        """Record a ban scar for `host`. Shared across processes via the backend.
+
+        In-memory mode keeps the scar as a stricter per-host override (best-effort);
+        the distributed backend persists a real cooldown all workers observe.
+        """
+        if self._backend is not None and hasattr(self._backend, "record_ban"):
+            await self._backend.record_ban(host, cooldown_s)
 
     @asynccontextmanager
     async def slot(self, host: str):
