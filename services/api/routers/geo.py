@@ -144,6 +144,83 @@ async def geo_seal(
     return cache_set(request, response)
 
 
+@router.get("/geo/exhaustiveness")
+@limiter.limit(RATE_EXPENSIVE)
+async def geo_exhaustiveness(
+    request: Request,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """National coverage CERTIFICATE — capture-recapture / MSE (Multi-Source Estimation).
+
+    Distinct from /geo/seal (registral DIRCE ceiling): this serves the live view
+    v_exhaustiveness_seal — the STATISTICAL lower bound on completeness from k orthogonal
+    discovery lists (Chapman / stratified-sum). The grand-national row (segment AND
+    province NULL) is the headline certificate: coverage_lower with CI, method, confidence,
+    sealed flag, and build_run_id (re-executable provenance). Honest by construction — a
+    thin stratum reports coverage_lower near 0 and sealed=false, never a fabricated 100%.
+    Cached + EXPENSIVE; stable within a build. Authed (coverage scale is a competitive signal).
+    """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
+    async with request.app.state.pool.acquire() as c:
+        rows = await c.fetch(
+            "SELECT province_code, segment, k_lists, n_obs, n_hat, ci_low, ci_high, "
+            "coverage_point, coverage_lower, method, confidence, seal_threshold, sealed, "
+            "build_run_id, created_at FROM v_exhaustiveness_seal "
+            "ORDER BY segment NULLS FIRST, province_code NULLS FIRST")
+
+    def _cert(r: Any) -> dict[str, Any]:
+        def _f(key: str, nd: int) -> float | None:
+            return round(float(r[key]), nd) if r[key] is not None else None
+        return {
+            "k_lists": r["k_lists"],
+            "n_obs": r["n_obs"],
+            "n_hat": _f("n_hat", 1),
+            "ci_low": _f("ci_low", 1),
+            "ci_high": _f("ci_high", 1),
+            "coverage_point": _f("coverage_point", 4),
+            "coverage_lower": _f("coverage_lower", 4),
+            "method": r["method"],
+            "confidence": r["confidence"],
+            "seal_threshold": _f("seal_threshold", 4),
+            "sealed": r["sealed"],
+        }
+
+    national: dict[str, Any] | None = None
+    build_run_id: str | None = None
+    generated_at: str | None = None
+    by_segment: dict[str, dict[str, Any]] = {}
+
+    for r in rows:
+        build_run_id = build_run_id or r["build_run_id"]
+        if generated_at is None and r["created_at"] is not None:
+            generated_at = r["created_at"].isoformat()
+        seg, prov = r["segment"], r["province_code"]
+        if seg is None:
+            if prov is None:
+                national = _cert(r)            # grand-national headline certificate
+            continue                           # (no segmentless province rows today; defensive)
+        bucket = by_segment.setdefault(seg, {"national": None, "provinces": []})
+        if prov is None:
+            bucket["national"] = _cert(r)
+        else:
+            entry = _cert(r)
+            entry["province_code"] = prov
+            bucket["provinces"].append(entry)
+
+    response = ok({
+        "certificate": "national_exhaustiveness_mse",
+        "method": "capture-recapture / MSE (k orthogonal discovery lists)",
+        "build_run_id": build_run_id,
+        "generated_at": generated_at,
+        "national": national,
+        "by_segment": by_segment,
+    })
+    return cache_set(request, response)
+
+
 # ---------------------------------------------------------------------------
 # GAP 1 fix: /geo/{province}/entities filters active non-particular
 # GAP 3 new: /geo/{province}/municipalities/{muni}/entities

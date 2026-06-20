@@ -1703,3 +1703,20 @@
   reales (no solo price). Todo reversible (cerrar el item re-muestra; nunca NULL/DELETE). Si el scheduler esta
   parado (cosecha detenida 15-jun) el cambio queda listo e inerte hasta arrancarlo.
 - Proximo: otro paso reversible €0 (P11 certificado / P05 unificar _persistence / P08 reconcile_gone+Dfoto).
+
+### 2026-06-20 (loop TODO A->Z) — P11: endpoint certificado de cobertura NACIONAL (MSE) [VERIFICADO]
+- HALLAZGO: /geo/seal ya servia el sello REGISTRAL por-provincia (v_province_seal), pero el certificado
+  ESTADISTICO nacional (v_exhaustiveness_seal, capture-recapture/MSE) NO tenia endpoint.
+- FIX: nuevo GET /geo/exhaustiveness (services/api/routers/geo.py) authed + RATE_EXPENSIVE + cache, mismo
+  patron que /geo/seal. Sirve la fila gran-nacional (segment+province NULL = k=7, n_obs=1755, n_hat~2399,
+  coverage_lower=0.553, coverage_point=0.732, method=stratified_sum, confidence=high, sealed=False,
+  build_run_id=re-ejecutable) + desglose por los 4 segmentos (compraventa/concesionario/desguace/otros) y
+  sus ~52 provincias. Honesto por construccion: un estrato fino reporta coverage_lower~0 y sealed=false,
+  jamas un 100% fabricado.
+- TDD: tests/test_api_exhaustiveness.py 5/5 verde (TestClient vs DB viva). Invariante MSE aseverado en TODA
+  fila: 0 <= coverage_lower <= coverage_point <= 1; y guard anti-maquillaje: sealed=true exige coverage_lower
+  >= seal_threshold.
+- Regresion: test_api_seal + test_api_auth + test_province_seal_view 21/21 verde.
+- NOTA: lee una vista de dominio P02 (committer concurrente) pero SIN colision de fichero (endpoint en
+  services/api/, no en pipeline/exhaustiveness/); si P02 renombra columnas, el test lo caza.
+- Proximo: P08 perceptual photo-hash (libreria libre, offline) / P05 unificar _persistence / P09-S4 migration scratch.
