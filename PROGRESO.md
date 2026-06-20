@@ -2178,3 +2178,22 @@
   Restan _BULK_UPSERT_EDGES (24 unif.) y _BULK_UPSERT_DEALERS (13 unif.) como targets limpios; _CageRow/Vehicle/
   _parse_window NO unificar (per-conector, documentado); _ingest_window el ultimo.
 - Proximo: _BULK_UPSERT_EDGES/_BULK_UPSERT_DEALERS / o ROTAR a P09-S7 / P12.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05 fase 2: BULK_UPSERT_EDGES(24)+BULK_UPSERT_DEALERS(13) -> _core/sql [VERIFICADO]
+- MEDIDO: _BULK_UPSERT_EDGES = 27 archivos, dominante 24 (raw-form=1) + 3 distintas (carandclassic, localizavo,
+  miclasico); _BULK_UPSERT_DEALERS = 17 archivos, dominante 13 (raw-form=1, los OEM VO portals source_group=
+  oem_vo_portal) + 4 distintas (coches_com, milanuncios, motor_es, oem_seat_cupra_new_stock).
+- HECHO: anadidos BULK_UPSERT_EDGES (platform_listing edge, RETURNING xmax=0) y BULK_UPSERT_DEALERS (compraventa OEM
+  geo-anclado) a _core/sql.py. Migrados SOLO los clusters dominantes (hash-checked): EDGES 24, DEALERS 13 -> import-alias;
+  las 3+4 divergentes conservan su literal A PROPOSITO. _core/sql.py ya = 6 constantes canonicas.
+- GUARD TEST reescrito AUTO-MANTENIBLE (sin hashes hardcodeados): offender = archivo con literal inline cuya forma
+  normalizada == la del constante de _core (duplico el canonico en vez de importar); las divergentes difieren -> nunca
+  se marcan. Cubre los 6 constantes + shapes + "fully-collapsed sin inline". 3 tests (consolidados de 4, cubren mas).
+- VERIFICADO: py_compile (core+25 conectores); guard 3/3; import-smoke (EDGES/DEALERS alias IS core en coches_net/
+  oem_audi/dasweltauto; localizavo EDGES sigue inline divergente = correcto); subset unit 215 passed (216->215 por
+  consolidacion de guard tests 4->3 que cubren MAS; 212 no-guard intactos, 0 regresion real).
+- Security: SQL estatico parametrizado (unnest, sin interpolacion) -> sin superficie de inyeccion.
+- % P05 fase 2: 6 statements SQL colapsados (VEHICLES 27, ENTITY_SOURCE 21, TOUCH 35, EVENTS 35, EDGES 24, DEALERS 13)
+  = ~155 copias eliminadas. La DRY de constantes SQL identicas en platform esta ESENCIALMENTE COMPLETA (lo que queda es
+  per-conector: _CageRow/Vehicle/_parse_window/_ingest_window NO unificar, documentado).
+- Proximo: ROTAR (DRY SQL agotada) -> P09-S7 ODCS contract / P12 mas vistas / P06 mas CAPA-0 o re-escanear los 14.

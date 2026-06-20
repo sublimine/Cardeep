@@ -50,3 +50,35 @@ SELECT u.event_ulid, u.vehicle_ulid, u.entity_ulid, 'NEW', NULL, u.new_value::js
   FROM unnest($1::text[], $2::text[], $3::text[], $4::text[])
        AS u(event_ulid, vehicle_ulid, entity_ulid, new_value)
 """
+
+# platform_listing edge upsert (vehicle<->platform), RETURNING (xmax=0) so the caller knows
+# inserted-vs-updated. Dominant across 24 connectors; 3 with a different edge keep their literal.
+BULK_UPSERT_EDGES = """
+INSERT INTO platform_listing (vehicle_ulid, platform_entity_ulid, listing_url,
+        listing_ref, platform_price, status, first_seen, last_seen)
+SELECT u.vehicle_ulid, $5, u.listing_url, u.listing_ref, u.platform_price,
+       'listed', now(), now()
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::numeric[])
+       AS u(vehicle_ulid, listing_url, listing_ref, platform_price)
+ON CONFLICT (vehicle_ulid, platform_entity_ulid)
+  DO UPDATE SET last_seen = now(), status = 'listed',
+                platform_price = EXCLUDED.platform_price,
+                listing_ref = EXCLUDED.listing_ref
+RETURNING (xmax = 0) AS inserted
+"""
+
+# Geo-anchored dealer (compraventa) bulk upsert for the OEM VO portals (source_group
+# oem_vo_portal). Dominant across 13 connectors; connectors with a different source_group/shape
+# keep their own literal.
+BULK_UPSERT_DEALERS = """
+INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
+        province_code, municipality_code, is_tier1, status, kind_source,
+        sells_cars, source_group, role, first_discovered_source, last_seen)
+SELECT u.entity_ulid, u.cdp_code, 'compraventa', u.name, u.name,
+       u.province_code, u.municipality_code, FALSE, 'active', 'platform_label',
+       TRUE, 'oem_vo_portal'::source_group, 'standalone_pos'::entity_role, $7, now()
+  FROM unnest($1::text[], $2::text[], $3::text[], $4::char(2)[], $5::char(5)[],
+              $6::text[]) AS u(entity_ulid, cdp_code, name, province_code,
+                               municipality_code, source_ref)
+ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
+"""

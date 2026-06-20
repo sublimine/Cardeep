@@ -778,18 +778,7 @@ class _CageRow:
 # byte-for-byte the same idempotency the row-by-row path uses. A re-run of an already-harvested
 # window adds 0 rows and 0 events. Dealers carry the 0016 axes (oem_vo_portal/standalone_pos).
 
-_BULK_UPSERT_DEALERS = """
-INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-        province_code, municipality_code, is_tier1, status, kind_source,
-        sells_cars, source_group, role, first_discovered_source, last_seen)
-SELECT u.entity_ulid, u.cdp_code, 'compraventa', u.name, u.name,
-       u.province_code, u.municipality_code, FALSE, 'active', 'platform_label',
-       TRUE, 'oem_vo_portal'::source_group, 'standalone_pos'::entity_role, $7, now()
-  FROM unnest($1::text[], $2::text[], $3::text[], $4::char(2)[], $5::char(5)[],
-              $6::text[]) AS u(entity_ulid, cdp_code, name, province_code,
-                               municipality_code, source_ref)
-ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
-"""
+from pipeline.platform._core.sql import BULK_UPSERT_DEALERS as _BULK_UPSERT_DEALERS
 
 from pipeline.platform._core.sql import BULK_UPSERT_ENTITY_SOURCE as _BULK_UPSERT_DEALER_SOURCES
 
@@ -797,19 +786,7 @@ from pipeline.platform._core.sql import BULK_INSERT_VEHICLES as _BULK_INSERT_VEH
 
 from pipeline.platform._core.sql import BULK_TOUCH_VEHICLES as _BULK_TOUCH_VEHICLES
 
-_BULK_UPSERT_EDGES = """
-INSERT INTO platform_listing (vehicle_ulid, platform_entity_ulid, listing_url,
-        listing_ref, platform_price, status, first_seen, last_seen)
-SELECT u.vehicle_ulid, $5, u.listing_url, u.listing_ref, u.platform_price,
-       'listed', now(), now()
-  FROM unnest($1::text[], $2::text[], $3::text[], $4::numeric[])
-       AS u(vehicle_ulid, listing_url, listing_ref, platform_price)
-ON CONFLICT (vehicle_ulid, platform_entity_ulid)
-  DO UPDATE SET last_seen = now(), status = 'listed',
-                platform_price = EXCLUDED.platform_price,
-                listing_ref = EXCLUDED.listing_ref
-RETURNING (xmax = 0) AS inserted
-"""
+from pipeline.platform._core.sql import BULK_UPSERT_EDGES as _BULK_UPSERT_EDGES
 
 from pipeline.platform._core.sql import BULK_INSERT_EVENTS as _BULK_INSERT_EVENTS
 

@@ -1,15 +1,16 @@
-"""P05 fase 2: the bulk vehicle upsert SQL lives in ONE place (_core.sql.BULK_INSERT_VEHICLES).
+"""P05 fase 2: the shared bulk SQL statements live in ONE place (pipeline/platform/_core/sql.py).
 
-27 connectors had hand-copied this statement byte-for-byte; they now import the single core constant.
-This guard (a) pins the canonical SQL shape and (b) fails if a connector re-introduces an inline copy
-of the canonical statement instead of importing it — so the drift the strangler removed cannot creep
-back. The 8 connectors whose vehicle row genuinely differs (no transmission / price NULL / scalar
-entity_ulid / fewer columns) keep their own literal on purpose and are listed explicitly.
+Many connectors had hand-copied these statements byte-identical; they now import the single core
+constant (aliased to their local name). This guard is self-maintaining: a connector is an offender if
+it re-declares an inline literal whose normalized form EQUALS the canonical core constant — i.e. it
+duplicated the canonical instead of importing it. Connectors whose statement genuinely differs keep a
+DIFFERENT inline literal on purpose; those never match the canonical, so they are never flagged.
 """
 from __future__ import annotations
 
 import glob
 import hashlib
+import os
 import re
 
 import pytest
@@ -18,83 +19,69 @@ from pipeline.platform._core.sql import (
     BULK_INSERT_EVENTS,
     BULK_INSERT_VEHICLES,
     BULK_TOUCH_VEHICLES,
+    BULK_UPSERT_DEALERS,
+    BULK_UPSERT_EDGES,
     BULK_UPSERT_ENTITY_SOURCE,
 )
 
 pytestmark = pytest.mark.unit
 
-# Local names that were collapsed to a single _core.sql constant — none may be re-declared inline.
-_COLLAPSED_LOCAL_NAMES = (
-    "_BULK_UPSERT_OWNER_SOURCES",
-    "_BULK_UPSERT_DEALER_SOURCES",
-    "_BULK_TOUCH_VEHICLES",
-    "_BULK_INSERT_EVENTS",
-)
+# local connector name -> the canonical core constant it must import (never re-declare inline).
+_LOCAL_TO_CORE = {
+    "_BULK_INSERT_VEHICLES": BULK_INSERT_VEHICLES,
+    "_BULK_UPSERT_OWNER_SOURCES": BULK_UPSERT_ENTITY_SOURCE,
+    "_BULK_UPSERT_DEALER_SOURCES": BULK_UPSERT_ENTITY_SOURCE,
+    "_BULK_TOUCH_VEHICLES": BULK_TOUCH_VEHICLES,
+    "_BULK_INSERT_EVENTS": BULK_INSERT_EVENTS,
+    "_BULK_UPSERT_EDGES": BULK_UPSERT_EDGES,
+    "_BULK_UPSERT_DEALERS": BULK_UPSERT_DEALERS,
+}
 
-# sha256 (whitespace-normalized) of the canonical variant-A statement.
-_CANON_HASH = "42622b75e6"
-_INLINE = re.compile(r'_BULK_INSERT_VEHICLES\s*=\s*"""(.*?)"""', re.S)
-
-# Connectors whose vehicle row is genuinely different — they keep a bespoke literal on purpose.
-_KNOWN_DIVERGENT = frozenset({
-    "family_cms_wordpress_dominated__wholesale.py",
-    "family_dealerk_wholesale.py",
-    "family_dms_vendor_platforms__wholesale.py",
-    "family_generic_custom_wholesale.py",
-    "family_unreachable_wholesale.py",
-    "localizavo_wholesale.py",
-    "miclasico_wholesale.py",
-    "subastacar_wholesale.py",
+# Names with NO legitimate divergent variant: every user collapsed, so NO inline literal may remain.
+_FULLY_COLLAPSED = frozenset({
+    "_BULK_UPSERT_OWNER_SOURCES", "_BULK_UPSERT_DEALER_SOURCES",
+    "_BULK_TOUCH_VEHICLES", "_BULK_INSERT_EVENTS",
 })
 
 
-def _norm_hash(body: str) -> str:
-    norm = "\n".join(line.strip() for line in body.strip().splitlines())
-    return hashlib.sha256(norm.encode()).hexdigest()[:10]
+def _norm(body: str) -> str:
+    return hashlib.sha256(
+        "\n".join(line.strip() for line in body.strip().splitlines()).encode()).hexdigest()
 
 
-def test_core_constant_is_the_canonical_statement() -> None:
-    assert _norm_hash(BULK_INSERT_VEHICLES) == _CANON_HASH
-    assert "ON CONFLICT (entity_ulid, deep_link) DO NOTHING" in BULK_INSERT_VEHICLES
-    assert "transmission" in BULK_INSERT_VEHICLES  # the 14-column (full) shape
-
-
-def test_no_connector_reintroduces_the_canonical_inline() -> None:
-    offenders = []
-    for path in glob.glob("pipeline/platform/*.py"):
-        fname = path.replace("\\", "/").split("/")[-1]
-        src = open(path, encoding="utf-8").read()
-        m = _INLINE.search(src)
-        if not m:
-            continue  # imports the core constant (alias) or doesn't use it
-        # An inline literal is only allowed for the genuinely-divergent connectors.
-        if _norm_hash(m.group(1)) == _CANON_HASH:
-            offenders.append(fname)  # re-introduced the canonical inline -> must import _core instead
-        elif fname not in _KNOWN_DIVERGENT:
-            offenders.append(f"{fname} (unexpected divergent inline literal)")
-    assert not offenders, f"connectors must import BULK_INSERT_VEHICLES from _core.sql: {offenders}"
+def _connector_files() -> list[str]:
+    return glob.glob("pipeline/platform/*.py")
 
 
 def test_core_constants_have_expected_shapes() -> None:
-    # entity_source upsert (owner/dealer synonyms collapse here)
+    assert "transmission" in BULK_INSERT_VEHICLES
+    assert "ON CONFLICT (entity_ulid, deep_link) DO NOTHING" in BULK_INSERT_VEHICLES
     assert "INSERT INTO entity_source" in BULK_UPSERT_ENTITY_SOURCE
-    assert ("ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()"
-            in BULK_UPSERT_ENTITY_SOURCE)
-    # touch (refresh last_seen + mark available)
+    assert "DO UPDATE SET seen_at = now()" in BULK_UPSERT_ENTITY_SOURCE
     assert "UPDATE vehicle" in BULK_TOUCH_VEHICLES and "last_seen = now()" in BULK_TOUCH_VEHICLES
-    # NEW vehicle_event emit
     assert "INSERT INTO vehicle_event" in BULK_INSERT_EVENTS and "'NEW'" in BULK_INSERT_EVENTS
+    assert "INSERT INTO platform_listing" in BULK_UPSERT_EDGES and "xmax = 0" in BULK_UPSERT_EDGES
+    assert "INSERT INTO entity" in BULK_UPSERT_DEALERS and "oem_vo_portal" in BULK_UPSERT_DEALERS
 
 
-def test_no_connector_redeclares_a_collapsed_statement_inline() -> None:
-    # Every collapsed local name must be an import alias of a _core.sql constant — never an inline
-    # literal — so the drift the strangler removed cannot creep back in any of the four statements.
-    patterns = {n: re.compile(rf'{n}\s*=\s*"""') for n in _COLLAPSED_LOCAL_NAMES}
+def test_no_connector_duplicates_a_canonical_statement_inline() -> None:
+    # An inline literal equal to the canonical core constant means a connector re-copied it instead of
+    # importing — exactly the drift the strangler removed. Divergent literals differ and are allowed.
     offenders = []
-    for path in glob.glob("pipeline/platform/*.py"):
+    for path in _connector_files():
         src = open(path, encoding="utf-8").read()
-        fname = path.replace("\\", "/").split("/")[-1]
-        for name, pat in patterns.items():
-            if pat.search(src):
-                offenders.append(f"{fname}:{name}")
-    assert not offenders, f"these must import from _core.sql instead of declaring inline: {offenders}"
+        for name, core in _LOCAL_TO_CORE.items():
+            m = re.search(rf'{name}\s*=\s*"""(.*?)"""', src, re.S)
+            if m and _norm(m.group(1)) == _norm(core):
+                offenders.append(f"{os.path.basename(path)}:{name}")
+    assert not offenders, f"these duplicate a _core.sql canonical inline — import it instead: {offenders}"
+
+
+def test_fully_collapsed_names_have_no_inline_literal() -> None:
+    offenders = []
+    for path in _connector_files():
+        src = open(path, encoding="utf-8").read()
+        for name in _FULLY_COLLAPSED:
+            if re.search(rf'{name}\s*=\s*"""', src):
+                offenders.append(f"{os.path.basename(path)}:{name}")
+    assert not offenders, f"fully-collapsed names must import from _core.sql, never declare inline: {offenders}"

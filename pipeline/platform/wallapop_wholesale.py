@@ -613,19 +613,7 @@ from pipeline.platform._core.sql import BULK_INSERT_VEHICLES as _BULK_INSERT_VEH
 
 from pipeline.platform._core.sql import BULK_TOUCH_VEHICLES as _BULK_TOUCH_VEHICLES
 
-_BULK_UPSERT_EDGES = """
-INSERT INTO platform_listing (vehicle_ulid, platform_entity_ulid, listing_url,
-        listing_ref, platform_price, status, first_seen, last_seen)
-SELECT u.vehicle_ulid, $5, u.listing_url, u.listing_ref, u.platform_price,
-       'listed', now(), now()
-  FROM unnest($1::text[], $2::text[], $3::text[], $4::numeric[])
-       AS u(vehicle_ulid, listing_url, listing_ref, platform_price)
-ON CONFLICT (vehicle_ulid, platform_entity_ulid)
-  DO UPDATE SET last_seen = now(), status = 'listed',
-                platform_price = EXCLUDED.platform_price,
-                listing_ref = EXCLUDED.listing_ref
-RETURNING (xmax = 0) AS inserted
-"""
+from pipeline.platform._core.sql import BULK_UPSERT_EDGES as _BULK_UPSERT_EDGES
 
 from pipeline.platform._core.sql import BULK_INSERT_EVENTS as _BULK_INSERT_EVENTS
 
