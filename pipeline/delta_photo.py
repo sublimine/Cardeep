@@ -22,10 +22,6 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import Callable
 
-import numpy as np
-from PIL import Image
-from scipy.fftpack import dct
-
 # pHash geometry: imagehash convention (hash_size=8, highfreq_factor=4 -> resize to 32x32,
 # keep the top-left 8x8 low-frequency block). 64 bits -> 16 hex chars.
 _HASH_SIZE = 8
@@ -37,11 +33,6 @@ _IMG_SIDE = _HASH_SIZE * _HIGHFREQ_FACTOR
 # (PHASH_HAMMING_MAX=10); to be CALIBRATED against real car photos before relied upon (ASSUMED).
 PHASH_HAMMING_MAX = 10
 
-try:  # Pillow >=10 moved resampling constants; keep a backward-compatible alias.
-    _RESAMPLE = Image.Resampling.LANCZOS
-except AttributeError:  # pragma: no cover - old Pillow
-    _RESAMPLE = Image.LANCZOS
-
 
 @dataclass(frozen=True)
 class PhotoHash:
@@ -50,29 +41,35 @@ class PhotoHash:
     content_hash: str   # blake2b hex of the raw bytes (cache key; skip re-hashing identical bytes)
 
 
-def _dct2(values: np.ndarray) -> np.ndarray:
-    """2D type-II orthonormal DCT (separable)."""
-    return dct(dct(values, axis=0, norm="ortho"), axis=1, norm="ortho")
-
-
-def _lowfreq_block(img: "Image.Image") -> np.ndarray:
-    """Grayscale -> resize -> 2D DCT -> top-left 8x8 low-frequency coefficient block."""
-    gray = img.convert("L").resize((_IMG_SIDE, _IMG_SIDE), _RESAMPLE)
-    return _dct2(np.asarray(gray, dtype=np.float64))[:_HASH_SIZE, :_HASH_SIZE]
-
-
-def _bits_to_hex(bits: np.ndarray) -> str:
+def _bits_to_hex(bits) -> str:
     value = 0
     for bit in bits.flatten():
         value = (value << 1) | int(bool(bit))
     return format(value, "016x")
 
 
+def _imaging():
+    """Lazy-load the heavy imaging stack (numpy/PIL/scipy) ONLY when actually hashing an image.
+
+    Keeps importing this module cheap (stdlib only) for the pure helpers (hamming/is_phash/
+    PHASH_HAMMING_MAX) consumed by the delta hot path in pipeline/delta.py."""
+    import numpy as np
+    from PIL import Image
+    from scipy.fftpack import dct
+
+    resample = getattr(Image, "Resampling", Image).LANCZOS
+    return np, Image, dct, resample
+
+
 def hash_image_bytes(data: bytes) -> PhotoHash:
     """Pure, offline: raw image bytes -> PhotoHash. Raises on undecodable bytes."""
+    np, Image, dct, resample = _imaging()
     with Image.open(BytesIO(data)) as img:
         img.load()
-        low = _lowfreq_block(img)
+        gray = img.convert("L").resize((_IMG_SIDE, _IMG_SIDE), resample)
+    arr = np.asarray(gray, dtype=np.float64)
+    coeff = dct(dct(arr, axis=0, norm="ortho"), axis=1, norm="ortho")
+    low = coeff[:_HASH_SIZE, :_HASH_SIZE]
     bits = low > np.median(low)
     ac = low.copy()
     ac[0, 0] = 0.0  # drop DC (overall brightness) so quality measures STRUCTURE, not exposure
@@ -91,6 +88,17 @@ def hamming(phash_a: str, phash_b: str) -> int:
 def same_photo(phash_a: str, phash_b: str, max_distance: int = PHASH_HAMMING_MAX) -> bool:
     """True when two pHashes are the SAME image within the recompression tolerance."""
     return hamming(phash_a, phash_b) <= max_distance
+
+
+def is_phash(value: object) -> bool:
+    """True if value is a well-formed 16-char hex pHash (guards the delta path against junk)."""
+    if not isinstance(value, str) or len(value) != 16:
+        return False
+    try:
+        int(value, 16)
+    except ValueError:
+        return False
+    return True
 
 
 def download_and_hash(

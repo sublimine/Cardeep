@@ -1737,3 +1737,19 @@
   wsva0l48s investiga la ruta de egress €0). S2 (reescribir rama PHOTO de diff_vehicle a Hamming) es paso aparte.
 - Modulo nuevo standalone: 0 regresion (nada lo importa aun).
 - Proximo: P05 unificar _persistence / P09-S4 migration scratch / P08-S2 diff_vehicle pHash.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P08-S2: diff_vehicle PHOTO content-aware por pHash + S1 lazy-import [VERIFICADO]
+- S1 refactor: delta_photo.py hace LAZY los imports pesados (numpy/PIL/scipy van dentro de _imaging(), solo al
+  hashear). Importar el modulo (para hamming/is_phash/PHASH_HAMMING_MAX del hot-path del delta) es ahora stdlib-ligero.
+  Anadido is_phash() (guard: 16-hex valido) para que un phash basura NO crashee diff_vehicle.
+- S2: reescrita la rama PHOTO de diff_vehicle (delta.py): con pHash en AMBOS lados compara por Hamming
+  (>PHASH_HAMMING_MAX=10 => PHOTO_CHANGE) -> caza coche re-fotografiado en MISMA url y NO falso-dispara si el CDN
+  rota la url de una imagen igual. Fallback a comparacion de photo_url string cuando falta phash -> 100% retrocompat
+  con los 26 conectores que aun no pueblan photo_hash (hoy new.photo_hash=None -> rama legacy intacta).
+- TDD: tests/test_delta_photo_branch.py 5/5 (close+url-rotada=>no change; far+misma-url=>change; fallback url;
+  phash malformado=>fallback sin crash; is_phash guard). test_delta_photo.py 6/6 sigue verde tras el refactor.
+- Regresion: test_delta.py + test_coches_net_delta.py 34/34 verde. Import sanity: `import pipeline.delta` NO carga
+  numpy/PIL (lazy ok). VAM: 2 vias (Hamming bits + fallback url) sobre el MISMO objeto foto.
+- GATED (PENDIENTE-OWNER): S3 backfill 1.68M (egress CDN) -> dossier rutas-gratis (workflow wsva0l48s). Para que la
+  rama pHash se ACTIVE en cosecha, los conectores deben poblar new.photo_hash (via download_and_hash) tras egress €0.
+- Proximo: P05 unificar _persistence / P09-S4 migration scratch / P14 gitleaks CI.

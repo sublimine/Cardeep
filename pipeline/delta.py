@@ -64,6 +64,7 @@ from typing import Any
 
 import asyncpg
 
+from pipeline.delta_photo import PHASH_HAMMING_MAX, hamming, is_phash
 from pipeline.ids import ulid
 from pipeline.price_sanity import sanitize_km, sanitize_price
 
@@ -332,10 +333,24 @@ def diff_vehicle(
             "new_value": {"km": int(new_km)},
         })
 
-    # -- PHOTO_CHANGE --
+    # -- PHOTO_CHANGE -- content-aware when perceptual hashes are present (P08-S2).
+    # With a pHash on BOTH sides we compare the 64-bit hash by Hamming distance: a car
+    # RE-PHOTOGRAPHED on the SAME url is now caught, and a CDN that ROTATES the url of an
+    # UNCHANGED image no longer false-fires. Falls back to the legacy photo_url string compare
+    # when either side lacks a (well-formed) phash -> fully backward-compatible with the 26
+    # connectors that do not yet populate photo_hash.
     old_photo = old.get("photo_url") if isinstance(old, dict) else getattr(old, "photo_url", None)
     new_photo = getattr(new, "photo_url", None)
-    if new_photo and old_photo != new_photo:
+    old_phash = old.get("photo_hash") if isinstance(old, dict) else getattr(old, "photo_hash", None)
+    new_phash = getattr(new, "photo_hash", None)
+    if is_phash(old_phash) and is_phash(new_phash):
+        if hamming(old_phash, new_phash) > PHASH_HAMMING_MAX:
+            events.append({
+                "event_type": "PHOTO_CHANGE",
+                "old_value": {"photo": old_photo, "phash": old_phash},
+                "new_value": {"photo": new_photo, "phash": new_phash},
+            })
+    elif new_photo and old_photo != new_photo:
         events.append({
             "event_type": "PHOTO_CHANGE",
             "old_value": {"photo": old_photo},
