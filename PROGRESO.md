@@ -1834,3 +1834,25 @@
 - Persistir los 4 campos de precision de QuorumResult en inquisition_verdict (columnas 0050) desde el prosecutor (wiring de
   1 INSERT; hacer cuando se cablee la generacion real de PrecisionGate via sampler+contrato, que necesita re-fetch = GASTO/red).
 - Proximo: P05 unificar _persistence (offline) / P13 CI seeded snapshot / P12 frontend.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05 (strangler S1): nucleo unico de persistencia + coches_net adopta [VERIFICADO]
+- DRIFT BOMB del audit: 29 copias byte-divergentes de ensure_platform_entity. Creado el nucleo strangler:
+  pipeline/platform/_core/contract.py (PlatformSpec dataclass: cdp_code/trade_name/website/source_key/source_ref/
+  data_surface/surface_detail/website_waf/is_tier1/requires_creds/is_platform_like) + _core/persistence.py
+  (UNA ensure_platform_entity(conn, spec) que reproduce los 3 upserts entity/entity_source/platform_meta; las 2
+  cosas que las copias tenian como LITERAL SQL -is_tier1, data_surface- pasan a bind-params del spec, asi un solo
+  cuerpo sirve a toda plataforma con filas identicas a su copia legacy).
+- coches_net = PRIMER adoptante: COCHES_SPEC + ensure_platform_entity delega en _core (31 lineas -> 4). 28 conectores
+  restantes migran en ciclos siguientes (adopcion mecanica: construir su spec + delegar + test paridad).
+- TDD: tests/test_platform_persistence_core.py 2/2 (DB real, transaccion ROLLED BACK = sin contaminar viva ni efimera):
+  escribe entity(kind=plataforma, trade_name/website/website_waf/is_tier1/first_discovered_source) + entity_source
+  (source_ref) + platform_meta(data_surface/surface_detail method=POST surface_intent=json_api/requires_creds/
+  is_platform_like) == COCHES_SPEC; idempotente (2 upserts -> 1 entidad, mismo ulid). Import sin circular.
+- Regresion: tests -k coches_net 6/6 verde (la delegacion no cambia comportamiento).
+
+## PENDIENTE-OWNER / siguientes ciclos — P05 migracion de los 28 conectores restantes
+- Cada conector wholesale/source con ensure_platform_entity (28 restantes): construir su PlatformSpec + delegar en
+  _core.ensure_platform_entity + test de paridad (mismo patron). 3 tienen firma extendida (revisar caso a caso).
+  Tambien _ingest_window (18 variantes) y _parse_window/_CageRow/_BULK_UPSERT_OWNERS duplicados -> unificar despues de
+  ensure_platform_entity. Es trabajo reversible €0; se hace de a uno con paridad (strangler), no toca DB viva.
+- Proximo: migrar 2-3 conectores mas a _core / P13 CI seeded / P12 frontend / P09-S6.

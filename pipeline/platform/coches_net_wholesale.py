@@ -60,6 +60,10 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
@@ -406,37 +410,30 @@ COCHES_PLATFORM_RECIPE = {
 }
 
 
+# P05: this platform's spec for the unified _core.ensure_platform_entity (replaces the 31-line
+# hand-copy). is_tier1=TRUE (Imperva); data_surface='internal_api' (schema-valid — the 'json_api'
+# intent lives in surface_detail since the platform_meta CHECK rejects that literal).
+COCHES_SPEC = PlatformSpec(
+    cdp_code=coches_platform_cdp_code(),
+    trade_name=COCHES_TRADE_NAME,
+    website=COCHES_WEBSITE,
+    source_key=COCHES_SOURCE_KEY,
+    source_ref=COCHES_DOMAIN,
+    data_surface="internal_api",
+    surface_detail={"endpoint": ENDPOINT, "host": host_of(ENDPOINT), "method": "POST",
+                    "category_id": CATEGORY_CARS, "size": PAGE_SIZE,
+                    "surface_intent": "json_api", "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=COCHES_WAF,
+    is_tier1=True,
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the coches.net platform entity + platform_meta exist.
-    Returns the platform entity_ulid. Mirrors AS24 but is_tier1=TRUE (Imperva) and
-    data_surface='internal_api' (the schema-valid value; 'json_api' intent is kept
-    in surface_detail since the platform_meta CHECK does not allow that literal)."""
-    code = coches_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,$5,TRUE,'active','platform_label',$6, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf""",
-        eulid, code, COCHES_TRADE_NAME, COCHES_WEBSITE, COCHES_WAF, COCHES_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, COCHES_SOURCE_KEY, COCHES_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,FALSE)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail""",
-        eulid, json.dumps({"endpoint": ENDPOINT, "host": host_of(ENDPOINT),
-                           "method": "POST", "category_id": CATEGORY_CARS,
-                           "size": PAGE_SIZE, "surface_intent": "json_api",
-                           "engine": "curl_cffi/chrome131_impersonate"}))
-    return eulid
+    Returns the platform entity_ulid. P05: now a thin adopter of the unified
+    _core.ensure_platform_entity via COCHES_SPEC — behaviour preserved (parity-verified),
+    the 29-way drift killed for this connector."""
+    return await _core_ensure_platform_entity(conn, COCHES_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:
