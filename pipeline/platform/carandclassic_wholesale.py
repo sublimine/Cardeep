@@ -65,6 +65,10 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -382,39 +386,22 @@ CC_PLATFORM_RECIPE = {
 }
 
 
+# P05: source_group/role class (no defense_tier/family). is_tier1=TRUE (Cloudflare).
+CC_SPEC = PlatformSpec(
+    cdp_code=cc_platform_cdp_code(), trade_name=CC_TRADE_NAME, website=CC_WEBSITE,
+    source_key=CC_SOURCE_KEY, source_ref=CC_DOMAIN, data_surface="next_data",
+    surface_detail={"endpoint": SEARCH_URL, "host": host_of(SEARCH_URL), "method": "GET",
+                    "params": SEARCH_PARAMS, "surface_intent": "inertia_json",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=CC_WAF, is_tier1=True, source_group="marketplace_motor", role="platform",
+    conflict_refresh=("is_tier1", "website_waf", "source_group", "role"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the Car & Classic platform entity + platform_meta exist.
-    Returns the platform entity_ulid. is_tier1=TRUE (Cloudflare), source_group=
-    marketplace_motor (a car-specialist marketplace), data_surface='next_data' (the
-    schema-valid literal for an embedded SSR JSON payload)."""
-    code = cc_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,$5,TRUE,'active','platform_label',
-               'marketplace_motor','platform',$6, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               source_group = EXCLUDED.source_group, role = EXCLUDED.role""",
-        eulid, code, CC_TRADE_NAME, CC_WEBSITE, CC_WAF, CC_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, CC_SOURCE_KEY, CC_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like)
-           VALUES ($1,'next_data',$2::jsonb,FALSE,FALSE)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail""",
-        eulid, json.dumps({"endpoint": SEARCH_URL, "host": host_of(SEARCH_URL),
-                           "method": "GET", "params": SEARCH_PARAMS,
-                           "surface_intent": "inertia_json",
-                           "engine": "curl_cffi/chrome131_impersonate"}))
-    return eulid
+    P05: thin adopter of _core.ensure_platform_entity via CC_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, CC_SPEC)
 
 
 def cdp_code_bucket(province_code: str) -> str:

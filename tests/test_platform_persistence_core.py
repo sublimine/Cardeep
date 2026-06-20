@@ -17,7 +17,9 @@ import pytest
 from pipeline.platform._core.persistence import ensure_platform_entity
 from pipeline.platform.autocasion_wholesale import AC_SPEC
 from pipeline.platform.autoscout24_wholesale import AS24_SPEC
+from pipeline.platform.carandclassic_wholesale import CC_SPEC
 from pipeline.platform.coches_com_wholesale import COCHES_COM_SPEC
+from pipeline.platform.dasweltauto_wholesale import DWA_SPEC
 from pipeline.platform.coches_net_wholesale import COCHES_SPEC
 from pipeline.platform.localizavo_wholesale import LV_SPEC
 from pipeline.platform.miclasico_wholesale import MC_SPEC
@@ -32,6 +34,7 @@ from pipeline.platform.oem_seat_cupra_new_stock import SCN_SPEC
 from pipeline.platform.oem_seat_cupra_wholesale import SC_SPEC
 from pipeline.platform.oem_toyota_lexus_wholesale import TL_SPEC
 from pipeline.platform.oem_volvo_jlr_suzuki_wholesale import VJS_SPEC
+from pipeline.platform.renew_wholesale import RENEW_SPEC
 from pipeline.platform.spoticar_wholesale import SPOTICAR_SPEC
 
 DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep")
@@ -42,7 +45,7 @@ DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0
 # distinct legal_name + kind), motorflash (is_platform_like=True aggregator, empty conflict_refresh).
 SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC, COCHES_COM_SPEC, MF_SPEC,
          SPOTICAR_SPEC, AUDI_SPEC, FORD_SPEC, HY_SPEC, KIA_SPEC, TL_SPEC,
-         MB_SPEC, NISSAN_SPEC, VJS_SPEC, SC_SPEC, SCN_SPEC]
+         MB_SPEC, NISSAN_SPEC, VJS_SPEC, SC_SPEC, SCN_SPEC, CC_SPEC, DWA_SPEC, RENEW_SPEC]
 _IDS = [s.source_key for s in SPECS]
 
 

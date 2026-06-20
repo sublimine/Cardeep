@@ -1981,3 +1981,12 @@
   -> leer cada uno; algunos pueden tener forma nueva) + faciliteacoches_racc, group_rentacar_vo, oem_bmw_mini (3 firma
   extendida, param por arg -> stage / diseno spec-por-llamada aparte).
 - Proximo: lote plain restante (leer + migrar los que encajen) / o ROTAR a P12/P06/P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: carandclassic+dasweltauto+renew adoptan _core (21/29) [VERIFICADO]
+- carandclassic (CC_SPEC: source_group/role class, sin defense_tier/family, conflict_refresh=(is_tier1,website_waf,
+  source_group,role)), dasweltauto (DWA_SPEC) + renew (RENEW_SPEC) = OEM legal_name/kind class. Delegan en _core.
+- TDD: SPECS=21; 42/42 paridad verde + 11/11 regresion. P05: 21/29.
+- Restan (8): group_subastas/subastacar/milanuncios/motor_es/wallapop (5 plain -> leer cada uno; wallapop/milanuncios
+  son los grandes Tier-1, leer con cuidado) + faciliteacoches_racc/group_rentacar_vo/oem_bmw_mini (3 firma extendida =
+  spec-por-llamada/stage).
+- Proximo: lote plain restante / o ROTAR a P12/P06/P09-S6.
