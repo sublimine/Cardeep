@@ -2362,3 +2362,16 @@
   pendiente de un dedup-run sobre los nuevos AS24; los 202 dealers nuevos SI son cobertura neta de entidades (no existian).
 - PROXIMO: seguir escalando AS24 en lotes (max_pages 300+) acumulando; tras ~10k coches AS24, correr/consultar dedup
   para reportar NETA honesta; vigilar IP (si 403 baja ritmo).
+
+### 2026-06-21 (loop COBERTURA) — as24 NETA medida = 68% nuevo (veta confirmada con dedup) [VERIFICADO]
+- Lote as24 (201 paginas efectivas, timeout corto a 201, SIN ban): 3.871 dealer listings, +1.974 NEW, TRUSTWORTHY.
+  vehicles_total 1.707.931 -> 1.709.905. +78 dealers nuevos.
+- NETA medida con vehicle_cluster.cluster_size sobre los 40.428 coches via as24: 27.379 cluster_size=1 (68% cobertura
+  NUEVA genuina), 9.108 (22%) duplicados de coches.net/wallapop, 3.941 (10%) sin-cluster (dedup no corrido sobre los
+  recien insertados). => AS24 NO es espejismo de duplicados: 68% neto nuevo. De 278k declarados, ~68% neto -> ~189k
+  coches netos nuevos potenciales €0. Veta de cobertura mas fuerte de la sesion, confirmada con el dedup real.
+- Acumulado sesion cobertura: arco previo +1.064 + as24 (~+3.873 brutos / ~68% netos) + 285 dealers nuevos via AS24.
+- INEFICIENCIA detectada: el connector re-empieza en pag 1 cada corrida (sin --start) -> re-fetchea lo ya hecho;
+  lotes crecientes desperdician. MEJORA €0 pendiente: añadir --start/offset (TDD) para cosecha incremental hacia 278k.
+- PROXIMO: (a) añadir --start al connector (TDD, eficiencia) o (b) seguir lotes crecientes; escalar AS24 hacia ~189k
+  netos; medir neta acumulada por cluster_size; vigilar ban. Eventualmente: dedup-run sobre los 3.941 sin-cluster.
