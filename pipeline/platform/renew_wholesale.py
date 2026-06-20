@@ -506,18 +506,7 @@ SELECT e.entity_ulid, $3, u.source_ref
 ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()
 """
 
-_BULK_INSERT_VEHICLES = """
-INSERT INTO vehicle (vehicle_ulid, entity_ulid, deep_link, title, make, model,
-        year, km, price, fuel, transmission, photo_url, vin_ref, status)
-SELECT u.vehicle_ulid, u.entity_ulid, u.deep_link, u.title, u.make, u.model,
-       u.year, u.km, u.price, u.fuel, u.transmission, u.photo_url, u.vin_ref, 'available'
-  FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[],
-              $7::int[], $8::int[], $9::numeric[], $10::text[], $11::text[], $12::text[],
-              $13::text[])
-       AS u(vehicle_ulid, entity_ulid, deep_link, title, make, model,
-            year, km, price, fuel, transmission, photo_url, vin_ref)
-ON CONFLICT (entity_ulid, deep_link) DO NOTHING
-"""
+from pipeline.platform._core.sql import BULK_INSERT_VEHICLES as _BULK_INSERT_VEHICLES
 
 _BULK_TOUCH_VEHICLES = """
 UPDATE vehicle v SET last_seen = now(), status = 'available'

@@ -2114,3 +2114,24 @@
   pueden normalizar a E.164 con esta autoridad (futuro).
 - % P06: CAPA-0 hard keys (tax-id + telefono) BLINDADOS con 1 autoridad cada uno; cross_source consume telefono validado.
   Proximo: P05 fase 2 _ingest_window / P09-S7 ODCS / P12 mas vistas.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05 fase 2: _BULK_INSERT_VEHICLES -> _core/sql (27 conectores, DRY) [VERIFICADO]
+- GAP P05 fase 2 (gana el codigo): _BULK_INSERT_VEHICLES (upsert masivo de vehicle, 14 cols, unnest de 13 arrays,
+  ON CONFLICT (entity_ulid, deep_link) DO NOTHING) estaba HAND-COPIADO byte-identico en 27 conectores. Medido: 5
+  variantes reales -> 27 identicas (variante A, 1 sola forma RAW) + 8 GENUINAMENTE distintas (5 family_* sin
+  transmission; localizavo price=NULL; miclasico sin km/fuel; subastacar entity_ulid escalar $13).
+- HECHO: nueva pipeline/platform/_core/sql.py con BULK_INSERT_VEHICLES (el canonico, derivado del propio codigo ->
+  paridad por construccion). Los 27 reemplazan su literal por `from pipeline.platform._core.sql import
+  BULK_INSERT_VEHICLES as _BULK_INSERT_VEHICLES` (UN cambio exacto por archivo, preserva el nombre local que usa cada
+  _ingest_window). Las 8 distintas conservan su literal A PROPOSITO (anti-maquillaje; misma logica que group_rentacar
+  en fase 1: no forzar lo que no es identico).
+- VERIFICADO 3+ vias: (1) py_compile 27+_core/sql OK. (2) import-smoke: muestras importan y `_BULK_INSERT_VEHICLES IS
+  core` True -> mismo OBJETO, valor byte-identico al original (behavior-preserving por construccion; binding $1..$13
+  intacto). (3) 0 copias inline variante-A residuales (grep), quedan solo las 8 esperadas. (4) test guard
+  tests/test_bulk_insert_vehicles_parity.py (2, @unit): pin del SQL canonico + falla si un conector reintroduce el
+  literal inline en vez de importar (anti-drift, protegido por CI). (5) subset unit 214 passed (212+2), 0 regresion.
+- Security: SQL identico (constante estatica), sin nueva superficie de inyeccion, sin secretos.
+- % P05 fase 2: 1/4 helpers duplicados colapsado (_BULK_INSERT_VEHICLES 27->1 + guard). Restan (mismo patron, medir
+  variantes reales primero): _CageRow (23 archivos), _parse_window (18), _BULK_UPSERT_OWNER_SOURCES (5),
+  _BULK_UPSERT_OWNERS (4), y el _ingest_window completo (24, el mas divergente -> el ultimo).
+- Proximo: siguiente helper DRY (_BULK_UPSERT_OWNER_SOURCES/_CageRow) / o ROTAR a P09-S7 / P12.
