@@ -1956,3 +1956,11 @@
   uno para confirmar constantes/surface_detail). Restan tambien auction (subastacar/group_subastas/renew) + dasweltauto.
   3 de firma extendida (faciliteacoches/group_rentacar/oem_bmw) = stage.
 - Proximo (ROTAR o seguir lote OEM): mas OEM / P12 / P06 / P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: hyundai+kia+toyota_lexus (OEM) adoptan _core (13/29) [VERIFICADO]
+- 3 OEM VO-portal mas (misma clase legal_name/kind): HY_SPEC (tier1=T), KIA_SPEC (tier1=F, POST), TL_SPEC (tier1=F, POST,
+  multi-brand surface_detail brands=[s.brand for s in _SURFACES]). Delegan en _core. surface_detail exacto por-conector.
+- TDD: SPECS=13; 26/26 paridad verde + 6/6 regresion. P05: 13/29.
+- Restan OEM: mercedes_benz, nissan_mazda_honda, volvo_jlr_suzuki, seat_cupra_wholesale, seat_cupra_new_stock (misma
+  plantilla, leer constantes). + auction (subastacar/group_subastas/renew) + dasweltauto. + 3 firma extendida (stage).
+- Proximo: resto OEM (lote) + auction / o ROTAR a P12/P06/P09-S6.

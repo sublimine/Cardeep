@@ -86,6 +86,10 @@ from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.geocode import ProvinceGeocoder
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -498,44 +502,28 @@ TL_PLATFORM_RECIPE = {
 }
 
 
+# P05: OEM VO portal (legal_name/kind class). is_tier1=FALSE (no tier-1 WAF). Multi-brand surface.
+TL_SPEC = PlatformSpec(
+    cdp_code=tl_platform_cdp_code(), kind=TL_KIND, legal_name=TL_LEGAL_NAME,
+    trade_name=TL_TRADE_NAME, website=TL_WEBSITE, source_key=TL_SOURCE_KEY,
+    source_ref=TL_DOMAIN, data_surface="internal_api",
+    surface_detail={"endpoint": ENDPOINT, "host": host_of(ENDPOINT), "method": "POST",
+                    "page_size": PAGE_SIZE, "denominator": "totalResultCount",
+                    "brands": [s.brand for s in _SURFACES],
+                    "distributor_code": _DISTRIBUTOR_CODE,
+                    "surface_intent": "usc_internal_json_api",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=TL_WAF, is_tier1=False, defense_tier=TL_DEFENSE_TIER,
+    source_group=TL_SOURCE_GROUP, role=TL_ROLE, family=TL_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the toyota_lexus platform entity + platform_meta exist. Returns the
-    platform entity_ulid. kind='oem_vo_portal' (the platform ontology kind), is_tier1=FALSE (no
-    tier-1 WAF), multi-axis 0016 classification set explicitly, data_surface='internal_api'."""
-    code = tl_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,FALSE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, TL_KIND, TL_LEGAL_NAME, TL_TRADE_NAME, TL_WEBSITE,
-        TL_WAF, TL_DEFENSE_TIER, TL_SOURCE_GROUP, TL_ROLE, TL_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, TL_SOURCE_KEY, TL_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"endpoint": ENDPOINT, "host": host_of(ENDPOINT),
-                           "method": "POST", "page_size": PAGE_SIZE,
-                           "denominator": "totalResultCount",
-                           "brands": [s.brand for s in _SURFACES],
-                           "distributor_code": _DISTRIBUTOR_CODE,
-                           "surface_intent": "usc_internal_json_api",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        TL_FAMILY)
-    return eulid
+    """Idempotently ensure the toyota_lexus platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via TL_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, TL_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:
