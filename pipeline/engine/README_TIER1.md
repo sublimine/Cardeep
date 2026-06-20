@@ -35,7 +35,24 @@ fetch_text(url, tier=0)
 | `tier1/browser.py` | Capa de navegador real: nodriver/camoufox, patrón cookie-reuse. |
 | `tier1/__init__.py` | Reexporta `solve_challenge`, `BrowserResult`, `Tier1Error`. |
 
-Tests: `tests/test_fingerprints.py`, `tests/test_ban_detector.py`, `tests/test_fetch_cascade.py`.
+Tests: `tests/test_fingerprints.py`, `tests/test_ban_detector.py`, `tests/test_fetch_cascade.py`,
+`tests/test_source_fallback.py`.
+
+## Cómo se consigue el 200 real de coches.net (DataDome) — coste cero
+
+Se agotaron 4 vías gratuitas, todas verificadas EN VIVO. **La vía #1 GANA** y es el default.
+
+| Vía | Qué | Resultado en vivo |
+|---|---|---|
+| **#1 IP residencial host + HEADFUL** | navegador real **no-headless** sobre la conexión residencial del host, con humanización (scroll+dwell) + clearance-cache | **✅ 200 real**: `coches.net/` 1.25 MB, `coches.net/segunda-mano/` 1.35 MB con inventario (precio/km/€). DataDome detecta headless al instante; headful en IP residencial pasa. |
+| **#2 Pool proxies gratis** (`free_proxies.py`) | harvest proxyscrape/geonode ES + health-check paralelo + descarte de muertos → `CARDEEP_PROXIES` | ⚙️ mecanismo OK (102 candidatos fetcheados), **0 vivos** esta corrida (proxies gratis efímeros). Cableado y re-ejecutable como resiliencia. |
+| **#3 Tor** (SOCKS `socks5h://127.0.0.1:9050`) | transporte de respaldo, rotación de circuito | ❌ demostrablemente ausente (sin binario ni daemon). Soporte SOCKS **ya cableado** (curl_cffi `proxies` + nodriver `--proxy-server`): funciona con `CARDEEP_PROXIES=socks5h://127.0.0.1:9050` si se levanta Tor. |
+| **#4 Route-around de fuente** (`source_fallback.py`) | cierra el inventario del dealer desde su web propia / otro marketplace, dejando coches.net de último | **✅ en vivo**: resolvió un dealer vía autocasion sin tocar coches.net. |
+
+**Clave de la vía #1 (lo que faltaba):** `tier1_headless=False` por defecto + servir el HTML del
+navegador cuando es contenido genuino (DataDome liga la sesión al navegador real; curl_cffi puede no
+reusarla, pero el navegador headful ya tiene el inventario). En una VPS sin display se ejecuta bajo
+**Xvfb** (fase VPS, diferida). Para el verificado local, headful real funciona ya.
 
 ## ⚠️ DECISIÓN DE LICENCIA — nodriver es AGPL-3.0 (del usuario)
 
