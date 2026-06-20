@@ -2213,3 +2213,23 @@
 - % P12: cobertura nacional ahora navegable por segmento (venta + desguace), antes solo venta. Proximo P12 posible:
   llevar el toggle al 3D map (lift state) / vista por-provincia del certificado MSE by_segment.
 - Proximo: ROTAR -> P09-S7 ODCS / P06 mas CAPA-0 / re-escanear 14.
+
+### 2026-06-20 (loop) — INCIDENTE CI ROJO + fix raiz + auditoria 14 puntos [VERIFICADO]
+- INCIDENTE (reportado por owner): ~20 commits con CI en rojo en GitHub. CAUSA RAIZ (gh run view): los 2 jobs
+  Python (unit + bring-up smoke) fallaban en la COLECCION de pytest con `ModuleNotFoundError: No module named 'PIL'`
+  en tests/test_delta_photo.py. `pytest -m unit` colecta TODOS los archivos antes de filtrar por marker, y ese test
+  (6 casos @pytest.mark.unit, P08) importa PIL a nivel modulo + ejecuta scipy (DCT lazy en delta_photo.py). LOCAL
+  pasaba porque yo tenia Pillow/scipy instalados a mano; requirements-dev.txt SOLO declaraba numpy -> Pillow y scipy
+  NUNCA declarados desde que se creo P08. Frontend build y gitleaks SI pasaban; solo los 2 jobs Python.
+- FIX A LA RAIZ: anadidos Pillow>=10,<13 y scipy>=1.13,<2 a requirements-dev.txt (con nota: hot-path foto es GASTO-
+  gated, por eso dev y no runtime por ahora). 
+- VERIFICADO en REPLICA EXACTA de CI (venv limpio, pip install -r requirements.txt -r requirements-dev.txt): antes =
+  1298 collected + 1 error (PIL); despues = 1304 collected, 0 errores; pytest -m unit = 215 passed. Prueba real, no
+  suposicion. LECCION: el gate de cada ciclo debe incluir verificar el CI REMOTO (gh run list), no solo pytest local;
+  y toda dep que un test importe debe estar en requirements (local != CI si no se declara).
+- AUDITORIA 14 PUNTOS (workflow wc0f6e046, 15 agentes, read-only): backlog €0/reversible priorizado persistido en
+  docs/AUDIT_BACKLOG_2026-06-20.md (126 gaps, 71 accionables, top 8 + shelfware + staged). VERIFICACION ADVERSARIAL
+  detecto 2 FALSOS POSITIVOS al leer el codigo (gana el codigo): Rank 1 (DSN hardcoded) dice "11+ archivos" pero son
+  141 (41 patron runtime os.environ.get-default) = L multi-ciclo, no S; Rank 3 (ban verdict ignorado por breaker) NO
+  es bug: fetch.py:352 lanza FetchError ante ban -> caller registra ok=False -> breaker SI reacciona. LECCION: cada
+  item del backlog necesita verificacion adversarial contra codigo antes de ejecutar (los subagentes Explore sobre-afirman).
