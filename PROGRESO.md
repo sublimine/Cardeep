@@ -1541,3 +1541,15 @@
   uniforme) CUMPLIDA para la superficie junk-capable.** Edits de 1-línea del patrón ya en la suite 937-verde; import-verificados.
 - **€0-código GENUINAMENTE COMPLETO:** superficie servida sellada+937-test-verde + sanitación uniforme en connectors + verificación
   exhaustiva (4 pasadas + 12 invariantes + suite completa). Restante = D7-apply (memory-gated D1), reds (spend/harvest/hardware).
+
+### 2026-06-20 (cont.) — P05-S0 SELLADO: crash del harvester Tier-1 de coches.net (arity _ingest_window)
+- **Bug vivo (HEAD 9a9c34c):** coches_net_facet.py:295 llamaba _ingest_window con 7 args posicionales contra
+  la firma de 8 (prov_names en pos.3, anadido al wholesale en 9e36df9 sin actualizar el call-site del facet).
+  scheduler.py:150-151 agenda coches_net_wholesale -> modulo facet => el harvester Tier-1 NACIONAL agendado
+  crasheaba en cada run. Los conteos de coches.net en DB provienen de runs previos a 9e36df9.
+- **Fix:** threading de prov_names (={code:name}, mirror del wholesale:935) por harvest_facet -> _drain_partition
+  -> _ingest_window (4 ediciones, sin None). py_compile OK, import OK (params=8).
+- **TDD/verificacion:** test de regresion de firma AST (tests/test_coches_net_facet_ingest_signature.py):
+  RED antes (7!=8) -> GREEN despues (1 passed). test_coches_net_delta 2 passed (0 regresion).
+- **Estado P05:** S0 cerrado (rama feat/p05-s0-coches-net-ingest-arity). Pendiente PUSH (gate de revision).
+  Proximo paso del blueprint: P09-S1 (cerrar la mentira EXACT_ZERO en verify.py).

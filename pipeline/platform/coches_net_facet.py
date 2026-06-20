@@ -247,7 +247,8 @@ def _national_total(fetcher: FacetFetcher) -> int:
 # ---------------------------------------------------------------------------
 
 
-async def _drain_partition(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid: str,
+async def _drain_partition(conn: asyncpg.Connection, geo: GeoResolver,
+                           prov_names: dict[str, str], platform_ulid: str,
                            fetcher: FacetFetcher, governed_fetch, partition: dict,
                            concurrency: int, seen_ids: set, harvested_cageable: set,
                            stats: dict) -> tuple[bool, str | None, int | None]:
@@ -292,8 +293,8 @@ async def _drain_partition(conn: asyncpg.Connection, geo: GeoResolver, platform_
             window_pages.append((page, items))
 
         if window_pages:
-            await _ingest_window(conn, geo, platform_ulid, window_pages, seen_ids,
-                                 harvested_cageable, stats)
+            await _ingest_window(conn, geo, prov_names, platform_ulid, window_pages,
+                                 seen_ids, harvested_cageable, stats)
             stats["pages_fetched"] += len(window_pages)
 
     clean_finish = fetch_error is None
@@ -341,6 +342,10 @@ async def harvest_facet(provinces: tuple[int, ...] = SPANISH_PROVINCES,
     t0 = time.monotonic()
     try:
         geo = await GeoResolver.load(conn)
+        # code -> human province label for the particular bucket trade_name (mirror of
+        # coches_net_wholesale: loaded once per run; the '00' fallback bucket uses 'ES').
+        prov_names = {r["code"]: r["name"]
+                      for r in await conn.fetch("SELECT code, name FROM geo_province")}
         platform_ulid = await ensure_platform_entity(conn)
         platform_code = coches_platform_cdp_code()
         print(f"[coches_net_facet] platform entity ready: {platform_code} (ulid={platform_ulid})")
@@ -372,7 +377,7 @@ async def harvest_facet(provinces: tuple[int, ...] = SPANISH_PROVINCES,
             frm, to = partition["price_from"], partition["price_to"]
             band_label = "all" if frm is None and to is None else f"{frm}-{to}"
             clean, perr, phttp = await _drain_partition(
-                conn, geo, platform_ulid, fetcher, governed_fetch, partition,
+                conn, geo, prov_names, platform_ulid, fetcher, governed_fetch, partition,
                 concurrency, seen_ids, harvested_cageable, stats)
             if clean:
                 stats["partitions_clean"] += 1
