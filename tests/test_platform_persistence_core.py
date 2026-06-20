@@ -1,18 +1,28 @@
-"""P05: the unified _core.ensure_platform_entity writes the SAME rows the 29 hand-copies did.
+"""P05: the unified _core.ensure_platform_entity writes the SAME rows the hand-copies did.
 
-Real-DB, rolled back (no pollution); runs on the live DB or an ephemeral one. Verifies the first
-strangler adopter (coches_net via COCHES_SPEC) produces the correct entity / entity_source /
-platform_meta rows and is idempotent. A behaviour-preserving characterization test of the refactor.
+Real-DB, rolled back (no pollution); runs on the live DB or an ephemeral one. Spec-driven and
+parametrized over every migrated connector spec, so each adopter is proven behaviour-preserving
+against the FULL variation range (coches_net: is_tier1+waf+conflict-refresh; AS24: minimal,
+is_tier1=False, no waf, empty conflict-refresh). A characterization test of the strangler refactor.
 """
 from __future__ import annotations
 
 import asyncio
 import json
 import os
+from dataclasses import replace
 
 import pytest
 
+from pipeline.platform._core.persistence import ensure_platform_entity
+from pipeline.platform.autoscout24_wholesale import AS24_SPEC
+from pipeline.platform.coches_net_wholesale import COCHES_SPEC
+
 DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep")
+
+# Every connector migrated to the _core. Add each new adopter's spec here as it lands.
+SPECS = [COCHES_SPEC, AS24_SPEC]
+_IDS = [s.source_key for s in SPECS]
 
 
 def _db_available() -> bool:
@@ -38,73 +48,74 @@ class _Rollback(Exception):
 
 
 @pytest.mark.skipif(not DB_AVAILABLE, reason="cardeep-pg not reachable at 127.0.0.1:5433")
+@pytest.mark.parametrize("spec", SPECS, ids=_IDS)
 class TestPlatformPersistenceCore:
-    def test_coches_spec_writes_expected_rows(self) -> None:
-        asyncio.run(self._run())
+    def test_writes_rows_matching_spec(self, spec) -> None:
+        asyncio.run(self._run(spec))
 
-    async def _run(self) -> None:
+    async def _run(self, spec) -> None:
         import asyncpg
-
-        from pipeline.platform._core.persistence import ensure_platform_entity
-        from pipeline.platform.coches_net_wholesale import COCHES_SPEC
-
+        # Force the INSERT path with a fresh test cdp_code so the row reflects the SPEC exactly
+        # (the live platform entity already exists -> the conflict path would show its existing,
+        # non-refreshed values). Rolled back, so the test row never persists.
+        spec = replace(spec, cdp_code=f"CDP-ES-00-P05-{spec.source_key}")
         conn = await asyncpg.connect(DSN)
         try:
             async with conn.transaction():
-                eulid = await ensure_platform_entity(conn, COCHES_SPEC)
+                eulid = await ensure_platform_entity(conn, spec)
                 e = await conn.fetchrow(
                     "SELECT kind, legal_name, trade_name, website, website_waf, is_tier1, "
-                    "first_discovered_source, status FROM entity WHERE cdp_code=$1",
-                    COCHES_SPEC.cdp_code)
+                    "first_discovered_source, status, defense_tier, source_group, role "
+                    "FROM entity WHERE cdp_code=$1", spec.cdp_code)
                 assert e is not None
                 assert e["kind"] == "plataforma"
-                assert e["trade_name"] == COCHES_SPEC.trade_name
-                assert e["legal_name"] == COCHES_SPEC.trade_name
-                assert e["website"] == COCHES_SPEC.website
-                assert e["website_waf"] == COCHES_SPEC.website_waf
-                assert e["is_tier1"] == COCHES_SPEC.is_tier1
-                assert e["first_discovered_source"] == COCHES_SPEC.source_key
+                assert e["trade_name"] == spec.trade_name
+                assert e["legal_name"] == spec.trade_name
+                assert e["website"] == spec.website
+                assert e["website_waf"] == spec.website_waf
+                assert e["is_tier1"] == spec.is_tier1
+                assert e["first_discovered_source"] == spec.source_key
                 assert e["status"] == "active"
+                assert e["defense_tier"] == spec.defense_tier
+                assert e["source_group"] == spec.source_group
+                assert e["role"] == spec.role
 
                 es = await conn.fetchrow(
                     "SELECT source_ref FROM entity_source WHERE entity_ulid=$1 AND source_key=$2",
-                    eulid, COCHES_SPEC.source_key)
-                assert es is not None and es["source_ref"] == COCHES_SPEC.source_ref
+                    eulid, spec.source_key)
+                assert es is not None and es["source_ref"] == spec.source_ref
 
                 pm = await conn.fetchrow(
-                    "SELECT data_surface, surface_detail, requires_creds, is_platform_like "
+                    "SELECT data_surface, surface_detail, requires_creds, is_platform_like, family "
                     "FROM platform_meta WHERE entity_ulid=$1", eulid)
                 assert pm is not None
-                assert pm["data_surface"] == COCHES_SPEC.data_surface
-                assert pm["requires_creds"] == COCHES_SPEC.requires_creds
-                assert pm["is_platform_like"] == COCHES_SPEC.is_platform_like
+                assert pm["data_surface"] == spec.data_surface
+                assert pm["requires_creds"] == spec.requires_creds
+                assert pm["is_platform_like"] == spec.is_platform_like
+                assert pm["family"] == spec.family
                 sd = pm["surface_detail"]
                 sd = json.loads(sd) if isinstance(sd, str) else sd
-                assert sd["method"] == "POST" and sd["surface_intent"] == "json_api"
-                assert sd["endpoint"] == COCHES_SPEC.surface_detail["endpoint"]
+                assert sd == spec.surface_detail
                 raise _Rollback
         except _Rollback:
             pass
         finally:
             await conn.close()
 
-    def test_idempotent_upsert(self) -> None:
-        asyncio.run(self._run_idem())
+    def test_idempotent_upsert(self, spec) -> None:
+        asyncio.run(self._run_idem(spec))
 
-    async def _run_idem(self) -> None:
+    async def _run_idem(self, spec) -> None:
         import asyncpg
-
-        from pipeline.platform._core.persistence import ensure_platform_entity
-        from pipeline.platform.coches_net_wholesale import COCHES_SPEC
-
+        spec = replace(spec, cdp_code=f"CDP-ES-00-P05I-{spec.source_key}")
         conn = await asyncpg.connect(DSN)
         try:
             async with conn.transaction():
-                u1 = await ensure_platform_entity(conn, COCHES_SPEC)
-                u2 = await ensure_platform_entity(conn, COCHES_SPEC)
+                u1 = await ensure_platform_entity(conn, spec)
+                u2 = await ensure_platform_entity(conn, spec)
                 assert u1 == u2  # same entity_ulid -> idempotent
                 n = await conn.fetchval(
-                    "SELECT count(*) FROM entity WHERE cdp_code=$1", COCHES_SPEC.cdp_code)
+                    "SELECT count(*) FROM entity WHERE cdp_code=$1", spec.cdp_code)
                 assert n == 1
                 raise _Rollback
         except _Rollback:

@@ -32,3 +32,13 @@ class PlatformSpec:
     is_tier1: bool = False
     requires_creds: bool = False
     is_platform_like: bool = False
+    # Optional multi-axis classification columns (migrations/0016); set only by the connectors
+    # that use them (e.g. autocasion). Absent -> written NULL == the legacy copy that omitted them.
+    defense_tier: str | None = None
+    source_group: str | None = None
+    role: str | None = None
+    family: str | None = None          # platform_meta.family (only some connectors)
+    # Entity columns to refresh on cdp_code conflict, BESIDES last_seen. Per-connector: it mirrors
+    # the legacy ON CONFLICT DO UPDATE set EXACTLY, so a re-run never wipes a column the legacy left
+    # untouched. Members must be in _core.persistence._ALLOWED_REFRESH (allowlist, no injection).
+    conflict_refresh: tuple[str, ...] = ()

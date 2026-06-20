@@ -39,6 +39,10 @@ from pipeline.engine.fetch import FetchEngine
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.sources.autoscout24 import (
@@ -179,33 +183,27 @@ AS24_PLATFORM_RECIPE = {
 }
 
 
+# P05: this platform's spec for the unified _core.ensure_platform_entity (replaces the hand-copy).
+# is_tier1=FALSE; the legacy ON CONFLICT refreshed nothing but last_seen -> conflict_refresh=().
+AS24_SPEC = PlatformSpec(
+    cdp_code=as24_platform_cdp_code(),
+    trade_name=AS24_TRADE_NAME,
+    website=AS24_WEBSITE,
+    source_key=AS24_SOURCE_KEY,
+    source_ref=AS24_DOMAIN,
+    data_surface="next_data",
+    surface_detail={"endpoint": "/lst", "host": _BASE, "sort": SORT,
+                    "size": PAGE_SIZE, "engine": "curl_cffi/chrome_impersonate"},
+    is_tier1=False,
+    conflict_refresh=(),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the AS24 platform entity + platform_meta exist.
-    Returns the platform entity_ulid."""
-    code = as24_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, is_tier1, status, kind_source,
-               first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,FALSE,'active','platform_label',$5, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()""",
-        eulid, code, AS24_TRADE_NAME, AS24_WEBSITE, AS24_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, AS24_SOURCE_KEY, AS24_DOMAIN)
-    # platform_meta 1:1 extension (data surface + live counter slot).
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like)
-           VALUES ($1,'next_data',$2::jsonb,FALSE,FALSE)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail""",
-        eulid, json.dumps({"endpoint": "/lst", "host": _BASE, "sort": SORT,
-                           "size": PAGE_SIZE, "engine": "curl_cffi/chrome_impersonate"}))
-    return eulid
+    Returns the platform entity_ulid. P05: thin adopter of _core.ensure_platform_entity via
+    AS24_SPEC (behaviour preserved, parity-verified)."""
+    return await _core_ensure_platform_entity(conn, AS24_SPEC)
 
 
 async def upsert_dealer(conn: asyncpg.Connection, geo: GeoResolver, d: DealerRef) -> str | None:

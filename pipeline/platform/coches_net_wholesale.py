@@ -425,6 +425,7 @@ COCHES_SPEC = PlatformSpec(
                     "surface_intent": "json_api", "engine": "curl_cffi/chrome131_impersonate"},
     website_waf=COCHES_WAF,
     is_tier1=True,
+    conflict_refresh=("is_tier1", "website_waf"),  # the legacy copy refreshed these on conflict
 )
 
 

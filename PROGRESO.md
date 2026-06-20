@@ -1856,3 +1856,24 @@
   Tambien _ingest_window (18 variantes) y _parse_window/_CageRow/_BULK_UPSERT_OWNERS duplicados -> unificar despues de
   ensure_platform_entity. Es trabajo reversible €0; se hace de a uno con paridad (strangler), no toca DB viva.
 - Proximo: migrar 2-3 conectores mas a _core / P13 CI seeded / P12 frontend / P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05 (strangler S1b): core superset fiel + AS24 adopta (2/29) [VERIFICADO]
+- HALLAZGO VERIFICADO (corrige el blueprint que asumia "estructuralmente identicas"): las 29 copias DIVERGEN de verdad.
+  AS24: omite website_waf, is_tier1=FALSE, ON CONFLICT solo last_seen. autocasion: +columnas defense_tier/source_group/
+  role (entity, 0016) + family (platform_meta), refresca todas. Migrar a ciegas habria CAMBIADO comportamiento (maquillaje).
+- FIX: _core extendido al SUPERSET FIEL. contract.py +campos opcionales (defense_tier/source_group/role/family) +
+  conflict_refresh: tuple (columnas a refrescar en ON CONFLICT, por-conector = exacto al legacy). persistence.py:
+  INSERT superset (columnas opcionales NULL-cuando-ausente = identico a la copia legacy que las omitia) + ON CONFLICT
+  dinamico desde conflict_refresh validado contra allowlist _ALLOWED_REFRESH (anti-inyeccion) + family refrescada solo
+  si el spec la usa. Asi un conector que no refrescaba una columna NUNCA la pisa en re-run (fiel).
+- coches_net: COCHES_SPEC +conflict_refresh=("is_tier1","website_waf"). AS24: AS24_SPEC (is_tier1=False, conflict_refresh=())
+  + delega. 2/29 migrados.
+- TDD: test_platform_persistence_core.py parametrizado sobre [COCHES_SPEC, AS24_SPEC]; fuerza la rama INSERT con cdp_code
+  de test (rolled back) -> fila == spec EXACTO (entity incl defense_tier/source_group/role; entity_source; platform_meta
+  incl family + surface_detail completo). 4/4 verde + guard allowlist rechaza columna no permitida. Regresion 14/14.
+- OBSERVACION (dato pre-existente, NO bug mio, NO toco prod): la fila viva de AS24 tiene website_waf='none' (STRING, quirk
+  legacy de stringificar None). AS24 no la refresca (fiel); un INSERT fresco escribe NULL correcto. Si el owner quiere
+  limpiar el dato historico, es un UPDATE en prod (gate). Anotado.
+- PENDIENTE: 27 conectores restantes (incl autocasion = variante MAXIMA con extras+family; el core YA lo soporta, falta
+  su spec + paridad). Migracion mecanica de a uno. Tambien _ingest_window (18 variantes) despues.
+- Proximo: migrar autocasion (prueba los extras del superset) + 1-2 mas / P13 / P12.
