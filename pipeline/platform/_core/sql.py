@@ -19,3 +19,14 @@ SELECT u.vehicle_ulid, u.entity_ulid, u.deep_link, u.title, u.make, u.model,
             year, km, price, fuel, transmission, photo_url, vin_ref)
 ON CONFLICT (entity_ulid, deep_link) DO NOTHING
 """
+
+# The per-window owner<->source link upsert (entity_source), copied identically by the
+# connectors that cage owners by cdp_code. Joins each unnested cdp_code to its entity and
+# refreshes seen_at. Connectors without a per-owner source link do not use it.
+BULK_UPSERT_OWNER_SOURCES = """
+INSERT INTO entity_source (entity_ulid, source_key, source_ref)
+SELECT e.entity_ulid, $3, u.source_ref
+  FROM unnest($1::text[], $2::text[]) AS u(cdp_code, source_ref)
+  JOIN entity e ON e.cdp_code = u.cdp_code
+ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()
+"""

@@ -588,13 +588,7 @@ SELECT u.entity_ulid, u.cdp_code, u.kind::entity_kind, u.name, u.name,
 ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
 """
 
-_BULK_UPSERT_OWNER_SOURCES = """
-INSERT INTO entity_source (entity_ulid, source_key, source_ref)
-SELECT e.entity_ulid, $3, u.source_ref
-  FROM unnest($1::text[], $2::text[]) AS u(cdp_code, source_ref)
-  JOIN entity e ON e.cdp_code = u.cdp_code
-ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()
-"""
+from pipeline.platform._core.sql import BULK_UPSERT_OWNER_SOURCES as _BULK_UPSERT_OWNER_SOURCES
 
 from pipeline.platform._core.sql import BULK_INSERT_VEHICLES as _BULK_INSERT_VEHICLES
 

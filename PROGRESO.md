@@ -2135,3 +2135,22 @@
   variantes reales primero): _CageRow (23 archivos), _parse_window (18), _BULK_UPSERT_OWNER_SOURCES (5),
   _BULK_UPSERT_OWNERS (4), y el _ingest_window completo (24, el mas divergente -> el ultimo).
 - Proximo: siguiente helper DRY (_BULK_UPSERT_OWNER_SOURCES/_CageRow) / o ROTAR a P09-S7 / P12.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05 fase 2: _BULK_UPSERT_OWNER_SOURCES -> _core/sql (4) + mapa divergencia [VERIFICADO]
+- MEDIDO (gana el codigo, hash whitespace-normalizado de cada helper): _BULK_UPSERT_OWNER_SOURCES = 4 archivos, 1
+  variante (identica) -> COLAPSABLE; _BULK_UPSERT_OWNERS = 3 archivos, 3 variantes -> NO; _CageRow = 22 archivos, 13
+  variantes (mayor cluster: 8 OEM VO portals identicos) -> solo el cluster OEM colapsable; _parse_window = 17 archivos,
+  17 variantes (per-conector, cada uno parsea una superficie distinta) -> NO TOCAR (correcto que diverjan).
+- HECHO: BULK_UPSERT_OWNER_SOURCES anadido a _core/sql.py (upsert del link owner<->source en entity_source, JOIN por
+  cdp_code, refresh seen_at). Los 4 (coches_net, faciliteacoches_racc, group_vo_chains, wallapop) reemplazan su literal
+  por import-alias (UN cambio exacto/archivo, preserva nombre local). Mismo patron probado que BULK_INSERT_VEHICLES.
+- VERIFICADO: py_compile OK; import-smoke `_BULK_UPSERT_OWNER_SOURCES IS core` True en los 4 (mismo objeto, SQL byte-
+  identico); 0 copias inline residuales; guard test ampliado (4 tests: pin + anti-drift de ambos constantes); subset
+  unit 216 passed (214+2), 0 regresion.
+- Security: SQL identico, sin nueva superficie de inyeccion.
+- % P05 fase 2: 2/N helpers SQL colapsados (BULK_INSERT_VEHICLES 27, BULK_UPSERT_OWNER_SOURCES 4) + guard. PROXIMO
+  target medido y listo: cluster OEM de _CageRow (8 identicos: audi/hyundai/kia/mercedes/nissan/seat_cupra/toyota_lexus/
+  volvo) -> dataclass a _core; CAVEAT: depende del tipo Vehicle (resolver su import en _core sin romper los 8) +
+  artefacto de encoding en el docstring -> merece su propio ciclo cuidadoso. _BULK_UPSERT_OWNERS (3) y _parse_window
+  (17) NO se unifican (genuinamente distintos, documentado). _ingest_window el ultimo.
+- Proximo: cluster OEM _CageRow (dataclass) / o ROTAR a P09-S7 ODCS / P12.

@@ -14,9 +14,11 @@ import re
 
 import pytest
 
-from pipeline.platform._core.sql import BULK_INSERT_VEHICLES
+from pipeline.platform._core.sql import BULK_INSERT_VEHICLES, BULK_UPSERT_OWNER_SOURCES
 
 pytestmark = pytest.mark.unit
+
+_INLINE_OWNER_SRC = re.compile(r'_BULK_UPSERT_OWNER_SOURCES\s*=\s*"""')
 
 # sha256 (whitespace-normalized) of the canonical variant-A statement.
 _CANON_HASH = "42622b75e6"
@@ -60,3 +62,20 @@ def test_no_connector_reintroduces_the_canonical_inline() -> None:
         elif fname not in _KNOWN_DIVERGENT:
             offenders.append(f"{fname} (unexpected divergent inline literal)")
     assert not offenders, f"connectors must import BULK_INSERT_VEHICLES from _core.sql: {offenders}"
+
+
+def test_owner_sources_core_constant_shape() -> None:
+    assert "INSERT INTO entity_source" in BULK_UPSERT_OWNER_SOURCES
+    assert ("ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()"
+            in BULK_UPSERT_OWNER_SOURCES)
+
+
+def test_no_connector_redeclares_owner_sources_inline() -> None:
+    # The 4 users import BULK_UPSERT_OWNER_SOURCES from _core.sql (one identical variant); no connector
+    # may re-declare it inline. (The owner-source link is identical wherever it is used.)
+    offenders = [
+        path.replace("\\", "/").split("/")[-1]
+        for path in glob.glob("pipeline/platform/*.py")
+        if _INLINE_OWNER_SRC.search(open(path, encoding="utf-8").read())
+    ]
+    assert not offenders, f"import BULK_UPSERT_OWNER_SOURCES from _core.sql instead: {offenders}"
