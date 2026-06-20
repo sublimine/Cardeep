@@ -58,6 +58,18 @@ _BAN_MARKERS = (
     "too many requests", "your ip has been", "permanently banned",
 )
 
+# STRONG block phrases that identify an interstitial UNAMBIGUOUSLY, regardless of
+# page size (some block pages ship 100KB+ of inert markup). A real inventory page
+# never contains these, so there is no size gate on them.
+_STRONG_BLOCK_MARKERS = (
+    "pardon our interruption",            # PerimeterX / HUMAN
+    "geo.captcha-delivery.com",           # DataDome captcha
+    "blocked by datadome",
+    "/_incapsula_resource",               # Imperva Incapsula
+    "请开启javascript",                    # generic JS-wall
+    "attention required! | cloudflare",
+)
+
 
 def _has(haystack: str, needles) -> bool:
     return any(n in haystack for n in needles)
@@ -70,6 +82,11 @@ def classify(status: int, body: str | None, headers: dict | None = None) -> Verd
 
     if status in (404, 410):
         return Verdict.NOT_FOUND
+
+    # Strong, size-independent block signatures take precedence over everything:
+    # a "Pardon Our Interruption" (PerimeterX) page is a block even at 100KB / 200.
+    if _has(body_l, _STRONG_BLOCK_MARKERS):
+        return Verdict.CHALLENGE
 
     # Cloudflare explicitly tags mitigated responses in a header regardless of code.
     if hdrs.get("cf-mitigated") == "challenge":

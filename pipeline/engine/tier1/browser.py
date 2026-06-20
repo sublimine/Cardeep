@@ -73,10 +73,15 @@ def solve_challenge(url: str, *, engine: str = "nodriver",
     """
     if engine not in ("nodriver", "camoufox"):
         raise Tier1Error(f"unknown Tier-1 engine {engine!r}")
+    from pipeline.engine.tier1.display import virtual_display
     try:
-        return _run_coro(_solve_async(
-            url, engine=engine, proxy=proxy, timeout=timeout,
-            wait_after_load=wait_after_load, headless=headless))
+        # A headful browser needs a display; on a headless VPS this spins Xvfb so
+        # the WAF sees a genuine headful browser with no monitor. No-op on Windows
+        # and when a DISPLAY already exists.
+        with virtual_display(headful=not headless):
+            return _run_coro(_solve_async(
+                url, engine=engine, proxy=proxy, timeout=timeout,
+                wait_after_load=wait_after_load, headless=headless))
     except Tier1Error:
         raise
     except Exception as e:  # noqa: BLE001 — normalize any engine-level failure
