@@ -28,6 +28,7 @@ from pipeline.platform.localizavo_wholesale import LV_SPEC
 from pipeline.platform.miclasico_wholesale import MC_SPEC
 from pipeline.platform.motorflash_wholesale import MF_SPEC
 from pipeline.platform.oem_audi_wholesale import AUDI_SPEC
+from pipeline.platform.oem_bmw_mini_wholesale import BRANDS as _BMW_BRANDS, _brand_spec as _bmw_brand_spec
 from pipeline.platform.oem_ford_wholesale import FORD_SPEC
 from pipeline.platform.oem_hyundai_wholesale import HY_SPEC
 from pipeline.platform.oem_kia_wholesale import KIA_SPEC
@@ -51,7 +52,9 @@ DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0
 SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC, COCHES_COM_SPEC, MF_SPEC,
          SPOTICAR_SPEC, AUDI_SPEC, FORD_SPEC, HY_SPEC, KIA_SPEC, TL_SPEC,
          MB_SPEC, NISSAN_SPEC, VJS_SPEC, SC_SPEC, SCN_SPEC, CC_SPEC, DWA_SPEC, RENEW_SPEC,
-         AYVENS_SPEC, SUBASTACAR_SPEC, MOTOR_SPEC, MN_SPEC, WP_SPEC]
+         AYVENS_SPEC, SUBASTACAR_SPEC, MOTOR_SPEC, MN_SPEC, WP_SPEC,
+         # extended-signature adopter: build the per-brand spec from a real BrandSpec (BMW).
+         _bmw_brand_spec(next(iter(_BMW_BRANDS.values())))]
 _IDS = [s.source_key for s in SPECS]
 
 

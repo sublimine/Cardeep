@@ -97,6 +97,10 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -556,50 +560,30 @@ def _platform_recipe(brand: BrandSpec) -> dict:
     }
 
 
-async def ensure_platform_entity(conn: asyncpg.Connection, brand: BrandSpec) -> str:
-    """Idempotently ensure the brand platform entity + platform_meta exist. Returns the platform
-    entity_ulid. kind='oem_vo_portal', is_tier1=TRUE (a WAF fronts the public site), multi-axis 0016
-    classification set explicitly, data_surface='html'."""
-    code = platform_cdp_code(brand)
-    eulid = ulid()
+def _brand_spec(brand: BrandSpec) -> PlatformSpec:
+    """Build the per-brand PlatformSpec (BMW/MINI) for the unified _core.ensure_platform_entity.
+    Extended-signature adopter: the spec is constructed per-call from `brand` (legal_name/kind class)."""
     endpoint = (brand.base + "/concesionarios/{prov}/{dealer}"
                 + ("/" if brand.dealer_trailing_slash else "") + "?pagina=N")
-    host = host_of(brand.base + "/")
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,TRUE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, KIND, brand.legal_name, brand.trade_name, brand.domain,
-        WAF, DEFENSE_TIER, SOURCE_GROUP, ROLE, brand.source_key)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, brand.source_key, brand.domain)
-    # data_surface='json_ld': the per-car payload is structured data embedded in the page — BMW PDPs
-    # carry real schema.org JSON-LD <Car> blocks, and the listing cards are a structured hidden-input
-    # projection of the same fields. 'json_ld' is the constraint-valid surface kind closest to this
-    # embedded-structured-data nature (migrations: data_surface ∈ next_data/graphql/json_ld/
-    # internal_api/sitemap/es_facet/app_api); the precise 'server_rendered_listing_cards' intent is
-    # recorded in surface_detail.surface_intent.
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'json_ld',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"endpoint": endpoint, "host": host, "method": "GET",
-                           "page_size": PAGE_SIZE, "denominator": "Σ id_total_resultados",
-                           "surface_intent": "server_rendered_listing_cards",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        FAMILY)
-    return eulid
+    return PlatformSpec(
+        cdp_code=platform_cdp_code(brand), kind=KIND, legal_name=brand.legal_name,
+        trade_name=brand.trade_name, website=brand.domain, source_key=brand.source_key,
+        source_ref=brand.domain, data_surface="json_ld",
+        surface_detail={"endpoint": endpoint, "host": host_of(brand.base + "/"), "method": "GET",
+                        "page_size": PAGE_SIZE, "denominator": "Σ id_total_resultados",
+                        "surface_intent": "server_rendered_listing_cards",
+                        "engine": "curl_cffi/chrome131_impersonate"},
+        website_waf=WAF, is_tier1=True, defense_tier=DEFENSE_TIER, source_group=SOURCE_GROUP,
+        role=ROLE, family=FAMILY,
+        conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                          "legal_name", "kind"),
+    )
+
+
+async def ensure_platform_entity(conn: asyncpg.Connection, brand: BrandSpec) -> str:
+    """Idempotently ensure the brand platform entity + platform_meta exist. Returns the platform
+    entity_ulid. P05: thin adopter of _core.ensure_platform_entity via a per-brand spec."""
+    return await _core_ensure_platform_entity(conn, _brand_spec(brand))
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:

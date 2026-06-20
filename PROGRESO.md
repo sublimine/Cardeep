@@ -2012,3 +2012,20 @@
   derivados del arg y delegar (verificable con un test que pase un arg fake + paridad). No es plain-mecanico; diseno aparte.
 - P05 fase 2 (despues): unificar _ingest_window (18 variantes) + _parse_window/_CageRow/_BULK_UPSERT_OWNERS duplicados.
 - Proximo: las 3 extendidas (spec-por-llamada) / o ROTAR a P12/P06/P09-S6 / _ingest_window.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: oem_bmw_mini adopta _core (spec-por-llamada, 27/29) [VERIFICADO]
+- oem_bmw_mini (firma extendida ensure_platform_entity(conn, brand: BrandSpec)): nuevo _brand_spec(brand) construye el
+  PlatformSpec POR-LLAMADA (clase OEM legal_name/kind, family=bmw_group_vo) y la funcion delega en _core. Patron para
+  conectores parametrizados por arg.
+- TDD: SPECS=27 (anade _brand_spec(BMW) de un brand real); 54/54 paridad verde (rama INSERT) + 3/3 regresion. P05: 27/29.
+- HALLAZGO (gana el codigo): entity.sells_cars default=NULL. faciliteacoches_racc + group_rentacar_vo ponen
+  sells_cars=TRUE explicito -> NO encajan en el superset actual (que omite sells_cars=NULL).
+  * faciliteacoches_racc (conn, m: Member): necesita el superset con sells_cars (opcional). conflict_refresh sin
+    website_waf ('none' literal) + con kind/legal_name. Migrable tras anadir spec.sells_cars al _core. SIGUIENTE.
+  * group_rentacar_vo (conn, geo, m: Member): crea un entity kind='rent_a_car_vo' GEO-ANCLADO (province_code +
+    municipality_code + COALESCE en conflict) = forma FUNDAMENTALMENTE distinta de un "platform entity" (national,
+    province NULL). NO es el mismo patron -> se queda BESPOKE (no forzar al superset = anti-maquillaje). Si se quiere
+    unificar, es un _core de "member/company entity" aparte (stage / decision de diseno).
+- P05: 27/29 platform-entity-shaped migrados; +1 (faciliteacoches con sells_cars) alcanzable; group_rentacar fuera de
+  alcance del superset por diseno. Fase 2 P05: _ingest_window (18 variantes).
+- Proximo: extender _core con sells_cars + migrar faciliteacoches (28/29) / o _ingest_window / o ROTAR.
