@@ -1,0 +1,48 @@
+# Cardeep extraction recipe — autoscout24__grupo-flexicar-sevilla
+# Reusable; re-scrape without raw crude.
+schema_version: 2
+source: autoscout24
+dealer_ref: grupo-flexicar-sevilla
+kind: compraventa
+cdp_code: null
+status: VERIFIED
+reason: VAM TRUSTWORTHY; k=5 slice, zero parse loss
+transport:
+  engine: http
+  base_url: https://www.autoscout24.es
+  impersonate: null
+  timeout_s: 40
+fingerprint:
+  user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
+    like Gecko) Chrome/137.0.0.0 Safari/537.36
+  ja3: null
+pagination:
+  strategy: page_param
+  url_template: /profesionales/{slug}?atype=C&sort=price&desc=1&page={page}
+  page_size: 20
+  declared_path: numberOfResults
+  stop: declared_reached
+parsing:
+  engine: next_data
+  container_path: listings
+  field_map:
+    deep_link: host + listing.url
+    vin_ref: listing.id
+    make: listing.vehicle.make
+    model: listing.vehicle.model
+    year: listing.firstRegistrationDate|tracking.firstRegistration -> YYYY
+    km: listing.vehicle.mileageInKm|tracking.mileage
+    price: listing.prices.public.priceRaw|tracking.price
+    fuel: listing.vehicle.fuelCategory|fuel
+    transmission: listing.vehicle.transmissionType|transmission
+    photo_url: listing.images[0]
+evidence:
+  verified_at: '2026-06-20T01:29:11.872953+00:00'
+  sample_k: 5
+  declared: 7982
+  fetched: 5
+  parsed: 5
+  vam_verdict: TRUSTWORTHY
+  vam_paths:
+    fetched: 5
+    parsed: 5
