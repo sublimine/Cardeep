@@ -1,0 +1,43 @@
+# CARDEEP secret-scan policy (P14). Engine: gitleaks (MIT/OSS) run as the free binary/container --
+# the GitHub Action license only applies to org repos; the binary/image is always free (cero dinero).
+#
+# Doctrine: the gate stays STRICT on every executable surface (pipeline/, services/, scripts/, web/src,
+# root configs) where a real CARDEEP secret would ever live -- the upstream rule set is kept in full, so
+# an AWS key / GCP key / private key / prod DB credential anywhere there still FAILS the build.
+#
+# The allowlisted entries below are, verified one by one (2026-06-20), NOT CARDEEP secrets:
+#   - scan noise: .wf/ workflow scratch (JS object props named `key:`), gitignored scratch/ dumps,
+#     __pycache__ bytecode, node_modules, the npm lockfile.
+#   - docs/ and countries/: runbooks and per-entity scraping recipes that DOCUMENT third-party PUBLIC
+#     keys -- the values that target sites ship in their own public client-side bundles and CARDEEP
+#     records to replay their PUBLIC APIs (public-by-design, not CARDEEP credentials).
+#   - the four in-code third-party public keys (group_subastas ALD gateway, Volvo Codeweavers,
+#     JLR NetDirector, Mercedes dealer-locator) -- each documented in-line as a client-side public key;
+#     allowlisted by their exact value so a NEW/unknown secret on any other line still trips the gate.
+#   - one false positive (group_vo_chains data_surface="internal_api" -> a field value, not a key).
+
+title = "CARDEEP gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Scan noise + non-code doc/recipe surfaces + audited third-party PUBLIC keys (not CARDEEP secrets)"
+regexTarget = "line"
+paths = [
+  '''\.wf/''',
+  '''(^|/)scratch/''',
+  '''(^|/)__pycache__/''',
+  '''\.pyc$''',
+  '''(^|/)node_modules/''',
+  '''web/package-lock\.json$''',
+  '''(^|/)docs/''',
+  '''(^|/)countries/''',
+]
+regexes = [
+  '''3b2cc62fd26c4e29a762db3de181266b''',                 # group_subastas: ALD public gateway subscription key
+  '''n1WG1lPrjpggL45z6p''',                               # oem_volvo: Codeweavers public client ApiKey
+  '''4d598000-5b04-11eb-ab95-ab946a2c7e0d''',             # oem_volvo: JLR NetDirector AVL public client token
+  '''ce7d9916-6a3d-407a-b086-fea4cbae05f6''',             # oem_mercedes: dealer-locator public x-apikey
+  '''data_surface="internal_api", surface_intent="json_api"''',  # group_vo_chains: false positive (field value)
+]

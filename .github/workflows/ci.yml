@@ -103,3 +103,21 @@ jobs:
       - name: Typecheck + production build (tsc -b && vite build)
         working-directory: web
         run: npm run build
+
+  secret-scan:
+    name: Secret scan (gitleaks · OSS, zero-cost)
+    runs-on: ubuntu-latest
+    # No CARDEEP secret may ever land in the tree. gitleaks runs as the FREE OSS container
+    # (the license only applies to the GitHub Action on org repos; the image is always free —
+    # owner mandate: zero cost). .gitleaks.toml keeps the full upstream rule set (a real
+    # AWS/GCP/private-key/prod-credential still fails) and allowlists ONLY audited third-party
+    # PUBLIC keys + scan noise. Verified locally: clean tree -> 0 leaks; a planted real AWS key
+    # -> caught. --no-git scans the checked-out tracked files.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: gitleaks — fail on any new leak
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source=/repo --no-git --config=/repo/.gitleaks.toml \
+            --redact --no-banner --exit-code=1 -v

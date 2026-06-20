@@ -1753,3 +1753,25 @@
 - GATED (PENDIENTE-OWNER): S3 backfill 1.68M (egress CDN) -> dossier rutas-gratis (workflow wsva0l48s). Para que la
   rama pHash se ACTIVE en cosecha, los conectores deben poblar new.photo_hash (via download_and_hash) tras egress €0.
 - Proximo: P05 unificar _persistence / P09-S4 migration scratch / P14 gitleaks CI.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P14: secret-scan gitleaks en CI (€0, sin licencia) + dossier rutas-gratis [VERIFICADO]
+- gitleaks ejecutado sobre el working tree: 18 hallazgos, TODOS verificados uno a uno = cero secretos PROPIOS de
+  CARDEEP. Son (a) claves PUBLICAS de terceros que los sitios objetivo embeben en su frontend y el scraper registra
+  para replicar su API publica (group_subastas ALD, Volvo Codeweavers, JLR NetDirector, Mercedes dealer-locator; cada
+  una con comentario "client-side, no server-side secret"); (b) falsos positivos (props key: en .wf/*.js;
+  data_surface="internal_api" en group_vo_chains); (c) ruido gitignored (scratch/, __pycache__/*.pyc).
+- .gitleaks.toml: useDefault=true (rule set completo -> AWS/GCP/private-key/prod-cred REALES siguen fallando) +
+  allowlist por VALOR DE LINEA (4 claves publicas exactas) + exclusion de ruido/docs/recipes. NO ciega codigo: el gate
+  sigue estricto en pipeline/services/scripts/web/src.
+- CI: nuevo job secret-scan en .github/workflows/ci.yml -> gitleaks via imagen OSS ghcr.io/gitleaks/gitleaks (gratis,
+  sin licencia; la licencia solo aplica a la GitHub Action en repos de org). --exit-code=1 falla el build ante leak.
+- VERIFICADO localmente (anti-maquillaje, autocorregido): (1) scan con config -> "no leaks found" (limpio). (2) primer
+  canario uso la AWS key de EJEMPLO que gitleaks ignora a proposito -> lo detecte como verificacion INVALIDA y rehice
+  con una AWS key realista (AKIA+16) -> "leaks found: 1" = el gate caza secretos REALES. ci.yml YAML + .gitleaks.toml
+  TOML validan.
+- DOSSIER RUTAS-GRATIS (workflow wsva0l48s, 20 agentes, 1.79M tokens) escrito en plans/00-FREE-ROUTES.md (84KB):
+  12 money-gates con ruta EUR0 verificada (6 conocidas + 6 del barrido: vps-hosting, amass-keys, mse-compute, lineage,
+  redis, observability-saas). Claves: antibot -> Patchright (Apache-2.0) retira el footgun nodriver-AGPL (=P03-S3);
+  egress -> nodo 4G DIY / tethering; LLM/GEO/fotos EUR0 limpio. RE-MARCA bug vivo coches_net_facet.py:295 (7 vs 8
+  args) -> VERIFICAR proximo ciclo (mi P05-S0 supuestamente lo arreglo; gana el codigo).
+- Proximo: verificar/cerrar coches_net_facet:295; P03-S3 swap nodriver->Patchright (ruta gratis del dossier); P05.
