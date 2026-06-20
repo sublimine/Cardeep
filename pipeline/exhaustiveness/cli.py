@@ -15,22 +15,26 @@ from pipeline.exhaustiveness import capture, seal
 from pipeline.exhaustiveness.estimators_r import r_status
 
 
-def run(run_id: str, threshold: float, include_mkt: bool) -> int:
+def run(run_id: str, threshold: float, include_mkt: bool,
+        unit: str = "resolved", splink_run_id: str | None = None,
+        r_crosscheck: bool = False) -> int:
     print("=" * 74)
-    print("CARDEEP — EXHAUSTIVENESS FRAMEWORK (sec2 V2) — first real computation")
+    print("CARDEEP — EXHAUSTIVENESS FRAMEWORK (sec2 V2)")
     print("=" * 74)
     print(f"build_run_id : {run_id}")
     print(f"threshold    : {threshold:.2%}")
+    print(f"capture unit : {unit}")
     print(f"R bridge     : {r_status()}")
     print()
 
-    bsum = capture.build(run_id)
+    bsum = capture.build(run_id, unit=unit, splink_run_id=splink_run_id)
     print("CAPTURE MATRIX BUILT (live DB 127.0.0.1:5433):")
     for k, v in bsum.items():
         print(f"  {k:<20} {v}")
     print()
 
-    res = seal.compute(run_id, threshold=threshold, include_mkt=include_mkt)
+    res = seal.compute(run_id, threshold=threshold, include_mkt=include_mkt,
+                       r_crosscheck=r_crosscheck)
     print(f"ORTHOGONAL LISTS (MSE): {res['buckets']}")
     print(
         f"strata={res['n_strata']}  identified={res['n_strata_identified']}  "
@@ -72,9 +76,14 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--run-id", default="first-real-20260620")
     r.add_argument("--threshold", type=float, default=0.95)
     r.add_argument("--include-mkt", action="store_true")
+    r.add_argument("--unit", choices=["resolved", "splink"], default="resolved")
+    r.add_argument("--splink-run-id", default="splink-current")
+    r.add_argument("--r-crosscheck", action="store_true")
     args = ap.parse_args(argv)
     if args.cmd == "run":
-        return run(args.run_id, args.threshold, args.include_mkt)
+        return run(args.run_id, args.threshold, args.include_mkt,
+                   unit=args.unit, splink_run_id=args.splink_run_id,
+                   r_crosscheck=args.r_crosscheck)
     return 1
 
 

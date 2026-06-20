@@ -20,6 +20,7 @@ import psycopg2
 
 from pipeline.exhaustiveness import capture
 from pipeline.exhaustiveness import estimators as est
+from pipeline.exhaustiveness import estimators_r
 
 DSN = capture.DSN
 DEFAULT_THRESHOLD = 0.95
@@ -51,8 +52,17 @@ def compute(
     dsn: str = DSN,
     threshold: float = DEFAULT_THRESHOLD,
     include_mkt: bool = False,
+    r_crosscheck: bool = False,
+    external_census: dict | None = None,
 ) -> dict:
-    """Estimate every stratum, persist to exhaustiveness_estimate, return summary."""
+    """Estimate every stratum, persist to exhaustiveness_estimate, return summary.
+
+    r_crosscheck    : if True and R is available, run Rcapture/LCMCR on each
+                      identified stratum and attach the §2.3 double-verification.
+    external_census : optional {(province_code, segment): N_external} triangulation
+                      seam (e.g. CNAE-451/DIRCE). When a stratum has an external
+                      anchor, it is stored in exhaustiveness_estimate.external_ref.
+    """
     patterns, buckets = capture.read_patterns(
         build_run_id, dsn=dsn, include_mkt=include_mkt
     )
@@ -60,7 +70,12 @@ def compute(
     for (prov, seg), freqs in sorted(
         patterns.items(), key=lambda kv: (kv[0][0] or "", kv[0][1] or "")
     ):
-        seals.append(_seal_one(prov, seg, freqs, threshold))
+        s = _seal_one(prov, seg, freqs, threshold)
+        if r_crosscheck and s.estimate.identified and s.estimate.k_lists >= 3:
+            r_res = estimators_r.run_mse(freqs)
+            cc = estimators_r.crosscheck(s.estimate.n_hat, r_res)
+            s.estimate.diagnostics["r_crosscheck"] = cc
+        seals.append(s)
 
     # national roll-up: only IDENTIFIED strata contribute their N̂; unidentified
     # strata (sparse overlap) contribute their observed floor only, so the
@@ -91,7 +106,8 @@ def compute(
 
     _persist(build_run_id, seals, threshold, buckets,
              national=(n_obs_total, n_hat_sum, nat_ci_low, nat_ci_high,
-                       nat_cov_point, nat_cov_lower), dsn=dsn)
+                       nat_cov_point, nat_cov_lower), dsn=dsn,
+             external_census=external_census)
 
     return {
         "build_run_id": build_run_id,
@@ -125,7 +141,9 @@ def compute(
     }
 
 
-def _persist(build_run_id, seals, threshold, buckets, *, national, dsn):
+def _persist(build_run_id, seals, threshold, buckets, *, national, dsn,
+             external_census=None):
+    external_census = external_census or {}
     conn = psycopg2.connect(dsn)
     try:
         with conn, conn.cursor() as cur:
@@ -137,13 +155,14 @@ def _persist(build_run_id, seals, threshold, buckets, *, national, dsn):
                 e = s.estimate
                 diag = dict(e.diagnostics)
                 diag["buckets"] = list(buckets)
+                ext_ref = external_census.get((s.province_code, s.segment))
                 cur.execute(
                     """
                     INSERT INTO exhaustiveness_estimate
                       (build_run_id, province_code, segment, k_lists, n_obs, n_hat,
                        ci_low, ci_high, coverage_point, coverage_lower, method,
-                       confidence, seal_threshold, sealed, diagnostics)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                       confidence, seal_threshold, sealed, external_ref, diagnostics)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
                     (
                         build_run_id, s.province_code, s.segment, e.k_lists, e.n_obs,
@@ -152,6 +171,7 @@ def _persist(build_run_id, seals, threshold, buckets, *, national, dsn):
                         (e.coverage_point if math.isfinite(e.coverage_point) else 0.0),
                         (e.coverage_lower if math.isfinite(e.coverage_lower) else 0.0),
                         e.method, e.confidence, threshold, s.sealed,
+                        ext_ref,
                         json.dumps(diag),
                     ),
                 )

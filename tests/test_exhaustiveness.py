@@ -147,3 +147,44 @@ def test_coverage_lower_uses_upper_bound():
     )
     assert e.coverage_point == pytest.approx(0.8)
     assert e.coverage_lower == pytest.approx(80 / 125.0)  # conservative
+
+
+# ---------------------------------------------------------------------------
+# R bridge (advanced MSE) — skipped if R is not installed
+# ---------------------------------------------------------------------------
+def test_r_bridge_recovers_known_n():
+    from pipeline.exhaustiveness import estimators_r as R
+
+    if not R.r_available():
+        pytest.skip(f"R not available: {R.r_status()}")
+    freqs = _independent_cells(1000, (0.3, 0.4, 0.5))
+    res = R.run_mse(freqs)
+    assert res is not None and res.get("status") == "ok"
+    assert res["rcapture"]["n_hat"] == pytest.approx(1000, rel=0.05)
+    cc = R.crosscheck(1000.0, res)
+    assert cc["agree"] is True
+
+
+def test_r_crosscheck_flags_divergence():
+    from pipeline.exhaustiveness import estimators_r as R
+
+    fake_r = {"rcapture": {"n_hat": 5000.0, "ci_low": 4000, "ci_high": 6000, "model": "x"}}
+    cc = R.crosscheck(1000.0, fake_r)
+    assert cc["agree"] is False  # 5x divergence => distrust
+
+
+def test_splink_normalisers():
+    from pipeline.exhaustiveness import splink_merge as sm
+
+    assert sm._norm_name("AUTOMOCIÓN del Oeste, S.L.") == "automocion del oeste"
+    assert sm._host("https://www.AutoX.es/stock") == "autox.es"
+    assert sm._digits("+34 911-22-33-44") == "911223344"  # last 9 digits
+
+
+def test_splink_union_find_merges_transitively():
+    from pipeline.exhaustiveness.splink_merge import _UF
+
+    uf = _UF()
+    uf.union("b", "c")
+    uf.union("c", "d")
+    assert uf.find("b") == uf.find("d") == "b"  # lowest id is root

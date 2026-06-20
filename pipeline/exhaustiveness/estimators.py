@@ -298,7 +298,10 @@ def dependence_robust_bound(freqs: dict[tuple[int, ...], int]) -> tuple[float, f
 # A stratum estimate is "identified" only if the overlap pins N̂ down. With very
 # sparse overlap, log-linear / Chapman N̂ explodes (m0 -> huge); such estimates
 # are flagged unidentified and excluded from the certified national roll-up.
-IDENT_CAP = 20.0  # N̂ must be <= IDENT_CAP * n_obs to be trusted
+# N̂ must be <= IDENT_CAP * n_obs to be certifiable. 5.0 => a stratum is only
+# "identified" if its implied coverage floor is >= 20%; below that the overlap
+# does not pin N down and the stratum is reported as uncertified, not sealed.
+IDENT_CAP = 5.0
 
 
 def _mark_identified(e: "Estimate") -> "Estimate":

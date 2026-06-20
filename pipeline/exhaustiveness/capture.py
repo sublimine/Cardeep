@@ -46,12 +46,34 @@ def segment_for(kind: str) -> str:
     return _SEGMENT.get(kind, "otros")
 
 
-def _fetch_raw(conn) -> list[tuple[str, str, str, str]]:
-    """(resolved_ulid, province_code, kind, source_key) for dealer entities.
+def _fetch_raw(conn, *, unit: str = "resolved", splink_run_id: str | None = None):
+    """(capture_unit, province_code, kind, source_key) for dealer entities.
 
-    province/kind taken from the resolved (canonical) entity when available,
-    else from the member entity (COALESCE).
+    unit="resolved" : capture unit = v_dealer_resolved.resolved_ulid (baseline).
+    unit="splink"   : capture unit = discovery_splink_cluster.splink_cluster
+                      (probabilistic merge; tighter overlaps). Entities absent
+                      from the Splink run fall back to their resolved_ulid.
     """
+    if unit == "splink":
+        run = splink_run_id or "splink-current"
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT COALESCE(sc.splink_cluster, dr.resolved_ulid) AS unit_id,
+                       COALESCE(re.province_code, e.province_code)    AS province_code,
+                       COALESCE(re.kind::text, e.kind::text)          AS kind,
+                       es.source_key
+                FROM entity_source es
+                JOIN entity e             ON e.entity_ulid = es.entity_ulid
+                JOIN v_dealer_resolved dr ON dr.entity_ulid = es.entity_ulid
+                LEFT JOIN discovery_splink_cluster sc
+                       ON sc.entity_ulid = es.entity_ulid AND sc.build_run_id = %s
+                LEFT JOIN entity re       ON re.entity_ulid = dr.resolved_ulid
+                WHERE e.kind::text IN %s
+                """,
+                (run, DEALER_KINDS),
+            )
+            return cur.fetchall()
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -70,11 +92,18 @@ def _fetch_raw(conn) -> list[tuple[str, str, str, str]]:
         return cur.fetchall()
 
 
-def build(build_run_id: str, *, dsn: str = DSN, replace: bool = True) -> dict:
+def build(
+    build_run_id: str,
+    *,
+    dsn: str = DSN,
+    replace: bool = True,
+    unit: str = "resolved",
+    splink_run_id: str | None = None,
+) -> dict:
     """Populate discovery_capture for a build_run_id. Returns a summary dict."""
     conn = psycopg2.connect(dsn)
     try:
-        raw = _fetch_raw(conn)
+        raw = _fetch_raw(conn, unit=unit, splink_run_id=splink_run_id)
         # collapse to distinct (resolved_ulid, bucket) with stratum metadata
         seen: dict[tuple[str, str], tuple[str | None, str]] = {}
         for resolved_ulid, province, kind, source_key in raw:
@@ -119,6 +148,7 @@ def build(build_run_id: str, *, dsn: str = DSN, replace: bool = True) -> dict:
             )
         return {
             "build_run_id": build_run_id,
+            "unit": unit,
             "raw_links": len(raw),
             "capture_rows": len(rows),
             "distinct_resolved": len({ru for (ru, _b) in seen}),
