@@ -1964,3 +1964,11 @@
 - Restan OEM: mercedes_benz, nissan_mazda_honda, volvo_jlr_suzuki, seat_cupra_wholesale, seat_cupra_new_stock (misma
   plantilla, leer constantes). + auction (subastacar/group_subastas/renew) + dasweltauto. + 3 firma extendida (stage).
 - Proximo: resto OEM (lote) + auction / o ROTAR a P12/P06/P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: mercedes_benz+nissan+volvo_jlr_suzuki adoptan _core (16/29) [VERIFICADO]
+- 3 OEM mas (clase legal_name/kind): MB_SPEC (is_tier1 param MB_IS_TIER1), NISSAN_SPEC (AppSync GraphQL + token_endpoint),
+  VJS_SPEC (dos APIs internas Volvo+JLR, page_size dict, brands/platforms). Delegan en _core. surface_detail exacto.
+- TDD: SPECS=16; 32/32 paridad verde + 15/15 regresion. P05: 16/29.
+- Restan: oem_seat_cupra_wholesale, oem_seat_cupra_new_stock (leer) + auction (subastacar/group_subastas/renew) +
+  dasweltauto + 3 firma extendida (faciliteacoches/group_rentacar/oem_bmw = stage). Casi todos los OEM hechos.
+- Proximo: seat_cupra* + auction/dasweltauto / o ROTAR a P12/P06/P09-S6.

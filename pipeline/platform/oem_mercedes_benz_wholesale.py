@@ -91,6 +91,10 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -496,42 +500,26 @@ MB_PLATFORM_RECIPE = {
 }
 
 
+# P05: OEM VO portal (legal_name/kind class). is_tier1 is parametrized (MB_IS_TIER1).
+MB_SPEC = PlatformSpec(
+    cdp_code=mercedes_benz_platform_cdp_code(), kind=MB_KIND, legal_name=MB_LEGAL_NAME,
+    trade_name=MB_TRADE_NAME, website=MB_WEBSITE, source_key=MB_SOURCE_KEY,
+    source_ref=MB_DOMAIN, data_surface="internal_api",
+    surface_detail={"endpoint": ENDPOINT, "host": host_of(ENDPOINT), "method": "POST",
+                    "page_size": PAGE_SIZE, "denominator": "data.count",
+                    "surface_intent": "internal_ajax_list_endpoint",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=MB_WAF, is_tier1=MB_IS_TIER1, defense_tier=MB_DEFENSE_TIER,
+    source_group=MB_SOURCE_GROUP, role=MB_ROLE, family=MB_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the mercedes_benz platform entity + platform_meta exist. Returns the
-    platform entity_ulid. kind='oem_vo_portal' (the platform ontology kind), is_tier1=FALSE (no
-    WAF), multi-axis 0016 classification set explicitly, data_surface='internal_api'."""
-    code = mercedes_benz_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,$8,'active','platform_label',
-               $9::defense_tier,$10::source_group,$11::entity_role,$12, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, MB_KIND, MB_LEGAL_NAME, MB_TRADE_NAME, MB_WEBSITE,
-        MB_WAF, MB_IS_TIER1, MB_DEFENSE_TIER, MB_SOURCE_GROUP, MB_ROLE, MB_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, MB_SOURCE_KEY, MB_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"endpoint": ENDPOINT, "host": host_of(ENDPOINT),
-                           "method": "POST", "page_size": PAGE_SIZE,
-                           "denominator": "data.count",
-                           "surface_intent": "internal_ajax_list_endpoint",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        MB_FAMILY)
-    return eulid
+    """Idempotently ensure the mercedes_benz platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via MB_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, MB_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:

@@ -100,6 +100,10 @@ from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.geocode import ProvinceGeocoder
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -712,47 +716,30 @@ VJS_PLATFORM_RECIPE = {
 }
 
 
+# P05: OEM VO portal (legal_name/kind class). is_tier1=TRUE; two internal JSON APIs (Volvo+JLR).
+VJS_SPEC = PlatformSpec(
+    cdp_code=vjs_platform_cdp_code(), kind=VJS_KIND, legal_name=VJS_LEGAL_NAME,
+    trade_name=VJS_TRADE_NAME, website=VJS_WEBSITE, source_key=VJS_SOURCE_KEY,
+    source_ref=VJS_DOMAIN, data_surface="internal_api",
+    surface_detail={"volvo_endpoint": CW_API + CW_SEARCH_PATH, "jlr_endpoint": AVL_API,
+                    "method": "POST",
+                    "page_size": {"volvo": CW_PAGE_SIZE, "jlr": AVL_PAGE_SIZE},
+                    "denominator": "count.TotalResults + getCount",
+                    "brands": [s.brand for s in _SURFACES],
+                    "platforms": sorted({s.platform for s in _SURFACES}),
+                    "surface_intent": "two_internal_json_apis",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=VJS_WAF, is_tier1=True, defense_tier=VJS_DEFENSE_TIER,
+    source_group=VJS_SOURCE_GROUP, role=VJS_ROLE, family=VJS_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the volvo_jlr_suzuki platform entity + platform_meta exist. Returns the
-    platform entity_ulid. kind='oem_vo_portal' (the platform ontology kind), is_tier1=TRUE (tier-1
-    CDN/WAF fronts the public sites), multi-axis 0016 classification set explicitly,
-    data_surface='internal_api'."""
-    code = vjs_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,TRUE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, VJS_KIND, VJS_LEGAL_NAME, VJS_TRADE_NAME, VJS_WEBSITE,
-        VJS_WAF, VJS_DEFENSE_TIER, VJS_SOURCE_GROUP, VJS_ROLE, VJS_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, VJS_SOURCE_KEY, VJS_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"volvo_endpoint": CW_API + CW_SEARCH_PATH,
-                           "jlr_endpoint": AVL_API,
-                           "method": "POST",
-                           "page_size": {"volvo": CW_PAGE_SIZE, "jlr": AVL_PAGE_SIZE},
-                           "denominator": "count.TotalResults + getCount",
-                           "brands": [s.brand for s in _SURFACES],
-                           "platforms": sorted({s.platform for s in _SURFACES}),
-                           "surface_intent": "two_internal_json_apis",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        VJS_FAMILY)
-    return eulid
+    """Idempotently ensure the volvo_jlr_suzuki platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via VJS_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, VJS_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:

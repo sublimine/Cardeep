@@ -26,7 +26,10 @@ from pipeline.platform.oem_audi_wholesale import AUDI_SPEC
 from pipeline.platform.oem_ford_wholesale import FORD_SPEC
 from pipeline.platform.oem_hyundai_wholesale import HY_SPEC
 from pipeline.platform.oem_kia_wholesale import KIA_SPEC
+from pipeline.platform.oem_mercedes_benz_wholesale import MB_SPEC
+from pipeline.platform.oem_nissan_mazda_honda_wholesale import NISSAN_SPEC
 from pipeline.platform.oem_toyota_lexus_wholesale import TL_SPEC
+from pipeline.platform.oem_volvo_jlr_suzuki_wholesale import VJS_SPEC
 from pipeline.platform.spoticar_wholesale import SPOTICAR_SPEC
 
 DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep")
@@ -36,7 +39,8 @@ DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0
 # (source_group/role), localizavo + the OEM VO portals (spoticar/audi/ford/hyundai/kia/toyota_lexus =
 # distinct legal_name + kind), motorflash (is_platform_like=True aggregator, empty conflict_refresh).
 SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC, COCHES_COM_SPEC, MF_SPEC,
-         SPOTICAR_SPEC, AUDI_SPEC, FORD_SPEC, HY_SPEC, KIA_SPEC, TL_SPEC]
+         SPOTICAR_SPEC, AUDI_SPEC, FORD_SPEC, HY_SPEC, KIA_SPEC, TL_SPEC,
+         MB_SPEC, NISSAN_SPEC, VJS_SPEC]
 _IDS = [s.source_key for s in SPECS]
 
 
