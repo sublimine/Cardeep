@@ -1,0 +1,10 @@
+{
+ "es_motor_census": 535,
+ "distinct_entities": 535,
+ "new_census_first": 193,
+ "collapsed": 342,
+ "dup_source_ref": "0",
+ "dup_cdp_global": "0",
+ "vehicles_under_census": 0,
+ "entities_total": 392906
+}
