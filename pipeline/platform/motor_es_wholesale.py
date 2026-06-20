@@ -87,6 +87,10 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
@@ -579,43 +583,29 @@ MOTOR_PLATFORM_RECIPE = {
 }
 
 
+# P05: distinct legal_name + kind hardcoded 'plataforma'; legacy ON CONFLICT refreshed everything
+# EXCEPT kind -> conflict_refresh omits 'kind'. family='motor_es'. is_tier1=TRUE (Cloudflare).
+MOTOR_SPEC = PlatformSpec(
+    cdp_code=motor_platform_cdp_code(), legal_name=MOTOR_LEGAL_NAME, trade_name=MOTOR_TRADE_NAME,
+    website=MOTOR_WEBSITE, source_key=MOTOR_SOURCE_KEY, source_ref=MOTOR_DOMAIN,
+    data_surface="json_ld",
+    surface_detail={"list_endpoint": f"{_BASE}/segunda-mano/{{make}}[/{{model}}]/?pagina=N",
+                    "pdp_endpoint": f"{_BASE}/segunda-mano/anuncio/{{id}}/",
+                    "host": host_of(_BASE), "method": "GET", "cards_per_page": CARDS_PER_PAGE,
+                    "enumeration": "make->model path-facet partition (MECE), ≤50 pages/leaf",
+                    "surface_intent": "ssr_html_facet_partition+json_ld_pdp",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=MOTOR_WAF, is_tier1=True, defense_tier=MOTOR_DEFENSE_TIER,
+    source_group=MOTOR_SOURCE_GROUP, role=MOTOR_ROLE, family="motor_es",
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the motor.es platform entity + platform_meta exist.
-    Returns the platform entity_ulid. is_tier1=TRUE (Cloudflare-fronted), and the multi-axis
-    classification (defense_tier/source_group/role, migrations/0016) is set explicitly."""
-    code = motor_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$4,NULL,$5,$6,TRUE,'active','platform_label',
-               $7::defense_tier,$8::source_group,$9::entity_role,$10, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name""",
-        eulid, code, MOTOR_LEGAL_NAME, MOTOR_TRADE_NAME, MOTOR_WEBSITE, MOTOR_WAF,
-        MOTOR_DEFENSE_TIER, MOTOR_SOURCE_GROUP, MOTOR_ROLE, MOTOR_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, MOTOR_SOURCE_KEY, MOTOR_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'json_ld',$2::jsonb,FALSE,FALSE,'motor_es')
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"list_endpoint": f"{_BASE}/segunda-mano/{{make}}[/{{model}}]/?pagina=N",
-                           "pdp_endpoint": f"{_BASE}/segunda-mano/anuncio/{{id}}/",
-                           "host": host_of(_BASE), "method": "GET",
-                           "cards_per_page": CARDS_PER_PAGE,
-                           "enumeration": "make->model path-facet partition (MECE), ≤50 pages/leaf",
-                           "surface_intent": "ssr_html_facet_partition+json_ld_pdp",
-                           "engine": "curl_cffi/chrome131_impersonate"}))
-    return eulid
+    P05: thin adopter of _core.ensure_platform_entity via MOTOR_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, MOTOR_SPEC)
 
 
 # The bulk statements — ONE round-trip per table per cell (unnest-based multi-row upsert),

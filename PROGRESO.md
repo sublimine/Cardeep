@@ -1990,3 +1990,12 @@
   son los grandes Tier-1, leer con cuidado) + faciliteacoches_racc/group_rentacar_vo/oem_bmw_mini (3 firma extendida =
   spec-por-llamada/stage).
 - Proximo: lote plain restante / o ROTAR a P12/P06/P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: group_subastas+subastacar+motor_es adoptan _core (24/29) [VERIFICADO]
+- AYVENS_SPEC (Ayvens/group_subastas, GraphQL gateway) + SUBASTACAR_SPEC (json_ld) = clase legal_name/kind, conflict_refresh 7.
+  MOTOR_SPEC (motor.es): legal_name separado, kind hardcoded 'plataforma', el legacy refrescaba TODO menos kind ->
+  conflict_refresh=6 (sin kind). family='motor_es'. Los 3 delegan en _core.
+- TDD: SPECS=24; 48/48 paridad verde + 33/33 regresion. P05: 24/29.
+- Restan (5): milanuncios + wallapop (2 plain Tier-1 grandes -> leer con cuidado) + faciliteacoches_racc/
+  group_rentacar_vo/oem_bmw_mini (3 firma extendida ensure_platform_entity(conn, arg) = diseno spec-por-llamada/stage).
+- Proximo: milanuncios + wallapop / o las 3 extendidas (diseno) / o ROTAR a P12/P06/P09-S6.

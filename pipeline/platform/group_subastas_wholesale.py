@@ -115,6 +115,10 @@ from curl_cffi import requests as cffi_requests
 from pipeline.delta import emit_change_deltas, emit_gone_events
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.delta_guard import should_emit_gone
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run, resolve_alerts
 from pipeline.recipe import write_recipe
@@ -545,43 +549,27 @@ AYVENS_PLATFORM_RECIPE = {
 }
 
 
+# P05: OEM/auction VO portal (legal_name/kind class). is_tier1=FALSE; GraphQL gateway.
+AYVENS_SPEC = PlatformSpec(
+    cdp_code=ayvens_platform_cdp_code(), kind=AYVENS_KIND, legal_name=AYVENS_LEGAL_NAME,
+    trade_name=AYVENS_TRADE_NAME, website=AYVENS_WEBSITE, source_key=AYVENS_SOURCE_KEY,
+    source_ref=AYVENS_DOMAIN, data_surface="internal_api",
+    surface_detail={"endpoint": ENDPOINT, "host": host_of(ENDPOINT), "method": "POST",
+                    "country": ES_COUNTRY, "operations": ["LoadLots", "saleEvents"],
+                    "denominator": "LoadLots.aggregates.count",
+                    "surface_intent": "graphql_gateway",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=AYVENS_WAF, is_tier1=False, defense_tier=AYVENS_DEFENSE_TIER,
+    source_group=AYVENS_SOURCE_GROUP, role=AYVENS_ROLE, family=AYVENS_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the Ayvens Carmarket platform entity + platform_meta exist. Returns the
-    platform entity_ulid. kind='plataforma', is_tier1=FALSE (no WAF fronts the gateway), multi-axis
-    0016 classification set explicitly, data_surface='internal_api' (first-party GraphQL gateway JSON)."""
-    code = ayvens_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,FALSE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, AYVENS_KIND, AYVENS_LEGAL_NAME, AYVENS_TRADE_NAME, AYVENS_WEBSITE,
-        AYVENS_WAF, AYVENS_DEFENSE_TIER, AYVENS_SOURCE_GROUP, AYVENS_ROLE, AYVENS_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, AYVENS_SOURCE_KEY, AYVENS_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"endpoint": ENDPOINT, "host": host_of(ENDPOINT),
-                           "method": "POST", "country": ES_COUNTRY,
-                           "operations": ["LoadLots", "saleEvents"],
-                           "denominator": "LoadLots.aggregates.count",
-                           "surface_intent": "graphql_gateway",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        AYVENS_FAMILY)
-    return eulid
+    """Idempotently ensure the Ayvens Carmarket platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via AYVENS_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, AYVENS_SPEC)
 
 
 # cdp_code() takes province_code for BOTH the CDP-code prefix AND the canonical key's province

@@ -102,6 +102,10 @@ from curl_cffi import requests as cffi_requests
 
 from pipeline.engine.governor import governor, host_of
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.delta_guard import should_emit_gone
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run, resolve_alerts
 from pipeline.recipe import write_recipe
@@ -478,41 +482,25 @@ SUBASTACAR_RECIPE = {
 }
 
 
+# P05: auction VO portal (legal_name/kind class). is_tier1=FALSE; data_surface='json_ld'.
+SUBASTACAR_SPEC = PlatformSpec(
+    cdp_code=subastacar_platform_cdp_code(), kind=SC_PLATFORM_KIND, legal_name=SC_LEGAL_NAME,
+    trade_name=SC_TRADE_NAME, website=SC_WEBSITE, source_key=SC_SOURCE_KEY,
+    source_ref=SC_DOMAIN, data_surface="json_ld",
+    surface_detail={"listing": _LISTING_URL, "host": host_of(_LISTING_URL), "method": "GET",
+                    "pagination": "?pagina=N", "denominator": "site '<N> resultados' total",
+                    "surface_intent": "jsonld", "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=SC_WAF, is_tier1=False, defense_tier=SC_DEFENSE_TIER,
+    source_group=SC_SOURCE_GROUP, role=SC_PLATFORM_ROLE, family=SC_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the Subastacar platform entity + platform_meta exist. Returns its entity_ulid.
-    kind='plataforma', is_tier1=FALSE, 0016 axes set explicitly, data_surface='ssr_html'."""
-    code = subastacar_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,FALSE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, SC_PLATFORM_KIND, SC_LEGAL_NAME, SC_TRADE_NAME, SC_WEBSITE,
-        SC_WAF, SC_DEFENSE_TIER, SC_SOURCE_GROUP, SC_PLATFORM_ROLE, SC_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, SC_SOURCE_KEY, SC_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'json_ld',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"listing": _LISTING_URL, "host": host_of(_LISTING_URL),
-                           "method": "GET", "pagination": "?pagina=N",
-                           "denominator": "site '<N> resultados' total",
-                           "surface_intent": "jsonld",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        SC_FAMILY)
-    return eulid
+    """Idempotently ensure the Subastacar platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via SUBASTACAR_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, SUBASTACAR_SPEC)
 
 
 async def ensure_seller_entity(conn: asyncpg.Connection) -> str:
