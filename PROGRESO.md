@@ -1720,3 +1720,20 @@
 - NOTA: lee una vista de dominio P02 (committer concurrente) pero SIN colision de fichero (endpoint en
   services/api/, no en pipeline/exhaustiveness/); si P02 renombra columnas, el test lo caza.
 - Proximo: P08 perceptual photo-hash (libreria libre, offline) / P05 unificar _persistence / P09-S4 migration scratch.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P08-S1: pHash perceptual de foto €0 (sin TensorFlow, sin dep nueva) [VERIFICADO]
+- GAP: photo_hash=0/1.68M (col 0003:18 jamas poblada); diff_vehicle compara photo_url STRING (falla re-foto misma
+  URL; falso-positivo si CDN rota URL de imagen igual). No habia descarga/hashing de imagen en el pipeline.
+- RUTA GRATIS (doctrina cero-dinero): imagededup arrastra TensorFlow (pesado, NO instalado); imagehash muerto (2021).
+  Pero PIL+numpy+scipy SI -> implemento el pHash DCT canonico (identico a imagehash.phash) yo mismo en pipeline/
+  delta_photo.py: €0, sin dependencia nueva, sin bloat. Bytes-cache con hashlib.blake2b (stdlib; BLAKE3-lib no
+  instalada, blake2b es el equivalente libre de la familia BLAKE).
+- API: hash_image_bytes(bytes)->PhotoHash(phash 64bit hex, quality=energia AC, content_hash); hamming(); same_photo()
+  con PHASH_HAMMING_MAX=10; download_and_hash(url, fetch=INYECTADO, cache) -> la descarga (egress CDN) queda inyectable
+  y GATED (jamas abre socket aqui), el nucleo de hashing es puro/offline.
+- TDD: tests/test_delta_photo.py 6/6 verde (misma img->mismo phash determinista; recompresion JPEG q30 Hamming<=10;
+  img distinta Hamming>10; quality separa featureless<rico; cache de bytes no re-hashea; fetch vacio->None).
+- GATED (queda en PENDIENTE-OWNER / dossier rutas-gratis): S3 backfill de 1.68M fotos = egress CDN masivo (el Workflow
+  wsva0l48s investiga la ruta de egress €0). S2 (reescribir rama PHOTO de diff_vehicle a Hamming) es paso aparte.
+- Modulo nuevo standalone: 0 regresion (nada lo importa aun).
+- Proximo: P05 unificar _persistence / P09-S4 migration scratch / P08-S2 diff_vehicle pHash.
