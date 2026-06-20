@@ -1653,3 +1653,20 @@
   SSR sin refs -> FAILED honesto. No-regresion area recipe verde.
 - EXTRACTORS: autoscout24, web_generic, coches_com, coches_net, autocasion. P04 ~6/10 -> ~7/10.
 - Proximo: motor_es (facet + PDP por card) o familias; milanuncios sigue gated (PerimeterX/Tier-1). Drenaje masivo = VPS.
+
+### 2026-06-20 (cont.) — P04: frente recipe-first €0-offline DECLARADO CUBIERTO (5 extractores); resto gated/fragil
+- El loop hands-off cerro 5 extractores recipe-first verificados y pusheados: autoscout24, web_generic, coches_com,
+  coches_net, autocasion (multi-step). Cada uno: muestra k -> VAM -> receta persistida -> borrar; replay desde YAML.
+- Candidatos restantes EVALUADOS y NO tomados (causa declarada, no forzar):
+  * motor_es: SALTADO. Recipe-first offline-fiel exigiria reverse-engineer 5 regex (_CARD_RE/_ID_RE/_GOTO_RE+
+    _decode_goto/_TITLE_RE/_LUGAR_RE) + goto codificado valido + PDP con JSON-LD Car -> fragil/desproporcionado.
+    Mejor: test de integracion LIVE (VPS) o refactor que exponga un parse de tarjeta desacoplado.
+  * milanuncios: GATED (PerimeterX -> Tier-1 + proxy residencial = GASTO).
+  * familias family_*: superficie own-site (schema.org) ya cubierta por web_generic; variantes CMS/DMS no aportan
+    extractor recipe-first distinto sin parse separable adicional.
+  * wallapop: parse acoplado al drain faceted; sample limpio exigiria refactor.
+- VEREDICTO: frente recipe-first €0-offline de plataformas ABIERTAS de alto valor CUBIERTO (5/5). Lo que queda son
+  frentes GATED o de decision del owner: (a) GASTO Tier-1 (milanuncios, AS24 a escala, lente C VAM, validacion LIVE de
+  recetas); (b) P01/P02 descubrimiento+exhaustividad (P02 en curso por proceso concurrente); (c) P11 certificado de
+  cobertura/API; (d) P12 frontend/inteligencia; (e) P13 infra/CI; (f) P07 datos (no-WORM).
+- Loop PAUSADO por agotamiento del frente recipe-first limpio (clausula de honestidad). Decision del proximo frente -> owner.
