@@ -85,6 +85,10 @@ from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.geocode import ProvinceGeocoder
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -525,44 +529,30 @@ SCN_PLATFORM_RECIPE = {
 }
 
 
+# P05: OEM VO portal (legal_name/kind class). is_tier1=FALSE, is_platform_like=TRUE (stock locator).
+SCN_SPEC = PlatformSpec(
+    cdp_code=scn_platform_cdp_code(), kind=SCN_KIND, legal_name=SCN_LEGAL_NAME,
+    trade_name=SCN_TRADE_NAME, website=SCN_WEBSITE, source_key=SCN_SOURCE_KEY,
+    source_ref=SCN_DOMAIN, data_surface="internal_api",
+    surface_detail={"endpoint": _BASE + "/{stockType}/search/car", "host": host_of(_BASE),
+                    "method": "GET", "page_size": PAGE_SIZE,
+                    "denominator": "sum(t_body criteria counts)",
+                    "brands": {s.brand: s.stock_type for s in _SURFACES},
+                    "patterns": {s.brand: s.pattern for s in _SURFACES},
+                    "segment": SCN_SEGMENT,
+                    "surface_intent": "vtp_stock_locator_json_api",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=SCN_WAF, is_tier1=False, is_platform_like=True, defense_tier=SCN_DEFENSE_TIER,
+    source_group=SCN_SOURCE_GROUP, role=SCN_ROLE, family=SCN_FAMILY,
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role",
+                      "legal_name", "kind"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the seat_cupra_new platform entity + platform_meta. kind='plataforma',
-    is_tier1=FALSE, multi-axis 0016 set, data_surface='internal_api'."""
-    code = scn_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7::waf_kind,FALSE,'active','platform_label',
-               $8::defense_tier,$9::source_group,$10::entity_role,$11, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role, legal_name = EXCLUDED.legal_name, kind = EXCLUDED.kind""",
-        eulid, code, SCN_KIND, SCN_LEGAL_NAME, SCN_TRADE_NAME, SCN_WEBSITE,
-        SCN_WAF, SCN_DEFENSE_TIER, SCN_SOURCE_GROUP, SCN_ROLE, SCN_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, SCN_SOURCE_KEY, SCN_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'internal_api',$2::jsonb,FALSE,TRUE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({"endpoint": _BASE + "/{stockType}/search/car",
-                           "host": host_of(_BASE), "method": "GET", "page_size": PAGE_SIZE,
-                           "denominator": "sum(t_body criteria counts)",
-                           "brands": {s.brand: s.stock_type for s in _SURFACES},
-                           "patterns": {s.brand: s.pattern for s in _SURFACES},
-                           "segment": SCN_SEGMENT,
-                           "surface_intent": "vtp_stock_locator_json_api",
-                           "engine": "curl_cffi/chrome131_impersonate"}),
-        SCN_FAMILY)
-    return eulid
+    """Idempotently ensure the seat_cupra_new platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via SCN_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, SCN_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:

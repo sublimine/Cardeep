@@ -1972,3 +1972,12 @@
 - Restan: oem_seat_cupra_wholesale, oem_seat_cupra_new_stock (leer) + auction (subastacar/group_subastas/renew) +
   dasweltauto + 3 firma extendida (faciliteacoches/group_rentacar/oem_bmw = stage). Casi todos los OEM hechos.
 - Proximo: seat_cupra* + auction/dasweltauto / o ROTAR a P12/P06/P09-S6.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: seat_cupra wholesale+new_stock adoptan _core (18/29) [VERIFICADO]
+- SC_SPEC (is_tier1=T) + SCN_SPEC (is_tier1=F, is_platform_like=TRUE, brands/patterns dicts). Clase legal_name/kind.
+  Delegan en _core. Con esto TODOS los OEM VO-portal estan migrados (8 OEM + spoticar).
+- TDD: SPECS=18; 36/36 paridad verde + 4/4 regresion. P05: 18/29.
+- Restan (11): carandclassic, dasweltauto, group_subastas, milanuncios, motor_es, renew, subastacar, wallapop (8 plain
+  -> leer cada uno; algunos pueden tener forma nueva) + faciliteacoches_racc, group_rentacar_vo, oem_bmw_mini (3 firma
+  extendida, param por arg -> stage / diseno spec-por-llamada aparte).
+- Proximo: lote plain restante (leer + migrar los que encajen) / o ROTAR a P12/P06/P09-S6.
