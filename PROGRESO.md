@@ -2197,3 +2197,19 @@
   = ~155 copias eliminadas. La DRY de constantes SQL identicas en platform esta ESENCIALMENTE COMPLETA (lo que queda es
   per-conector: _CageRow/Vehicle/_parse_window/_ingest_window NO unificar, documentado).
 - Proximo: ROTAR (DRY SQL agotada) -> P09-S7 ODCS contract / P12 mas vistas / P06 mas CAPA-0 o re-escanear los 14.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P12: toggle de segmento venta/desguace en cobertura nacional [VERIFICADO]
+- GAP P12 (gana el codigo): el frontend tenia infra de segmentos (useSealMap(segment), loadSealSnapshot(segment),
+  snapshot con venta+desguace 52 prov c/u) pero HARDCODEABA 'venta' en Landing/SpainMap/ProvinceGrid/DealerBrowser ->
+  la cobertura de DESGUACES (censo DGT) nunca se mostraba aunque el dato existe.
+- HECHO (datos reales, sin placeholder): Landing.tsx -> useState<Segment>; control segmentado (2 pills role=tablist/tab,
+  aria-selected, focus-visible) en el panel de cobertura; useSealMap(segment) reactivo; titulo y etiqueta-denominador
+  adaptan al segmento (venta = "dealers servidos · censo registral"; desguace = "desguaces hallados · censo DGT", reflejando
+  que el metodo del seal difiere por segmento). Landing.css: .coverage__seg-tabs/.seg-tab en-sistema (tokens, accent/pill).
+- VERIFICADO (gate P12, 2 vias): `npm run build` (tsc -b + vite build) VERDE + `npm run lint` limpio; dato desguace
+  confirmado presente (snapshot 52 prov) y useSealMap(segment) enruta el param a live (sealMapFromLive) y snapshot
+  (loadSealSnapshot). El 3D map sigue mostrando venta (backdrop geografico) -> alcance acotado al panel, coherente.
+- Gates: €0, reversible. Sin tocar API ni datos.
+- % P12: cobertura nacional ahora navegable por segmento (venta + desguace), antes solo venta. Proximo P12 posible:
+  llevar el toggle al 3D map (lift state) / vista por-provincia del certificado MSE by_segment.
+- Proximo: ROTAR -> P09-S7 ODCS / P06 mas CAPA-0 / re-escanear 14.

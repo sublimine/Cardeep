@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useStats } from '../api/hooks';
 import { useSealMap } from '../three/useSpainData';
@@ -6,6 +6,7 @@ import { VERDICT_COLOR } from '../three/mapColors';
 import { Panel } from '../components/ui/Panel';
 import { Certificate } from '../components/coverage/Certificate';
 import { formatInt } from '../lib/format';
+import type { Segment } from '../lib/seal';
 import type { SealVerdict, Stats } from '../api/types';
 import './Landing.css';
 
@@ -44,13 +45,31 @@ const COVERAGE_SEGMENTS: { verdict: SealVerdict; label: string }[] = [
   { verdict: 'GAP', label: 'Gap' },
 ];
 
+// Coverage is served per market segment. The seal's denominator means different things per segment
+// (venta = DIRCE registral ceiling; desguace = DGT scrapyard census), so the wording adapts.
+const SEGMENT_TABS: { key: Segment; label: string }[] = [
+  { key: 'venta', label: 'Venta' },
+  { key: 'desguace', label: 'Desguace' },
+];
+const SEGMENT_META: Record<Segment, { title: string; den: (num: number, den: number) => string }> = {
+  venta: {
+    title: 'venta',
+    den: (num, den) => `${formatInt(num)} dealers servidos · censo registral ${formatInt(den)}`,
+  },
+  desguace: {
+    title: 'desguace',
+    den: (num, den) => `${formatInt(num)} desguaces hallados · censo DGT ${formatInt(den)}`,
+  },
+};
+
 export function Landing() {
   const { data, isError } = useStats();
   const stats = data ?? FALLBACK;
   const isLive = !!data && !isError;
   const metrics = buildMetrics(stats);
 
-  const seal = useSealMap('venta');
+  const [segment, setSegment] = useState<Segment>('venta');
+  const seal = useSealMap(segment);
   const coverage = useMemo(() => {
     const ps = Object.values(seal);
     const dist: Record<string, number> = { SELLADO: 0, PARCIAL: 0, GAP: 0, NO_DENOM: 0 };
@@ -113,15 +132,30 @@ export function Landing() {
           </div>
         </div>
 
-        <section className="command" aria-label="Cobertura nacional de venta">
+        <section className="command" aria-label="Cobertura nacional por segmento">
           <div className="container command__inner">
             <Panel className="coverage">
               <div className="coverage__head">
-                <span className="coverage__title">Cobertura nacional · venta</span>
+                <span className="coverage__title">Cobertura nacional · {SEGMENT_META[segment].title}</span>
                 <span className={`livetag${isLive ? ' is-live' : ''}`}>
                   <span className="livetag__dot" aria-hidden="true" />
                   {isLive ? 'Datos en vivo' : 'Última instantánea'}
                 </span>
+              </div>
+
+              <div className="coverage__seg-tabs" role="tablist" aria-label="Segmento de mercado">
+                {SEGMENT_TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={segment === t.key}
+                    className={`coverage__seg-tab${segment === t.key ? ' is-active' : ''}`}
+                    onClick={() => setSegment(t.key)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
               {coverage.total > 0 ? (
@@ -132,8 +166,7 @@ export function Landing() {
                       <i>%</i>
                     </span>
                     <span className="coverage__den mono">
-                      {formatInt(coverage.num)} dealers servidos · censo registral{' '}
-                      {formatInt(coverage.den)}
+                      {SEGMENT_META[segment].den(coverage.num, coverage.den)}
                     </span>
                   </div>
 

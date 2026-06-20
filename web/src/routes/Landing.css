@@ -244,6 +244,40 @@
   gap: var(--space-5);
   padding: var(--space-8);
 }
+/* segment switcher (venta / desguace) */
+.coverage__seg-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  align-self: flex-start;
+}
+.coverage__seg-tab {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-4);
+  font: inherit;
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  background: transparent;
+  border-radius: var(--radius-pill);
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.coverage__seg-tab:hover {
+  color: var(--text-1);
+}
+.coverage__seg-tab.is-active {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.coverage__seg-tab:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 2px;
+}
 .coverage__head {
   display: flex;
   align-items: center;
