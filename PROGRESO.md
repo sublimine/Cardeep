@@ -2029,3 +2029,24 @@
 - P05: 27/29 platform-entity-shaped migrados; +1 (faciliteacoches con sells_cars) alcanzable; group_rentacar fuera de
   alcance del superset por diseno. Fase 2 P05: _ingest_window (18 variantes).
 - Proximo: extender _core con sells_cars + migrar faciliteacoches (28/29) / o _ingest_window / o ROTAR.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: faciliteacoches_racc adopta _core (sells_cars, 28/29) [VERIFICADO]
+- _core extendido con un campo opcional mas: PlatformSpec.sells_cars (bool|None=None). El INSERT del superset ahora
+  SIEMPRE incluye la columna entity.sells_cars; con None -> bind NULL == comportamiento byte-identico de los 27 (que la
+  dejaban default NULL). No se anade a _ALLOWED_REFRESH: ningun conector la refresca en ON CONFLICT (faciliteacoches
+  tampoco) -> sin riesgo de inyeccion ni de pisar la columna en re-runs.
+- faciliteacoches_racc_wholesale (firma extendida ensure_platform_entity(conn, m: Member)): nuevo _member_spec(m)
+  construye el PlatformSpec POR-LLAMADA desde el Member runtime (faciliteacoches + RACC = un cuerpo, dos members) y la
+  funcion delega en _core. Espejo EXACTO de la copia legacy: sells_cars=TRUE, website_waf='none', is_tier1=FALSE,
+  defense_tier=t0_open, role=platform, family=m.family; conflict_refresh=(is_tier1,defense_tier,source_group,role,kind,
+  legal_name) SIN website_waf ni sells_cars (las mismas columnas que la copia dejaba intactas).
+- TDD: SPECS=28 (anade _member_spec(build_faciliteacoches())); el test ahora SELECCIONA y asevera entity.sells_cars
+  (==spec.sells_cars) -> verifica la columna nueva de forma fiel, no por ausencia (VAM): True para faciliteacoches,
+  NULL para los 27. 56/56 paridad+idempotencia verde (antes 54) + 138/138 unit (sin regresion global). P05: 28/29.
+- group_rentacar_vo (conn, geo, m: Member) = BESPOKE fuera de alcance del superset: crea entity kind='rent_a_car_vo'
+  GEO-ANCLADO (province_code+municipality_code+COALESCE en conflict), forma distinta de un platform entity national;
+  NO se fuerza (anti-maquillaje). Unificarlo seria un _core de "company/geo entity" aparte (decision de diseno).
+- P05: 28/29 platform-entity-shaped migrados; las 29 copias byte-divergentes reducidas a UN nucleo parametrizado con
+  paridad fila-a-fila probada por conector. Solo queda group_rentacar (bespoke, documentado).
+- Proximo: P05 fase 2 _ingest_window (18 variantes) -> _core/ingest unico / o ROTAR a P12 frontend (/geo/exhaustiveness)
+  / P06 resolver beta / P09-S6 detectores stub (migracion efimera).

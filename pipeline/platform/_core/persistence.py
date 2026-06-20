@@ -26,8 +26,8 @@ _ALLOWED_REFRESH = (
 _ENTITY_INSERT = """
     INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
            province_code, website, website_waf, is_tier1, status, kind_source,
-           defense_tier, source_group, role, first_discovered_source, last_seen)
-    VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,'active','platform_label',$9,$10,$11,$12, now())
+           sells_cars, defense_tier, source_group, role, first_discovered_source, last_seen)
+    VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,$8,'active','platform_label',$9,$10,$11,$12,$13, now())
     ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(){extra}
 """
 
@@ -66,8 +66,8 @@ async def ensure_platform_entity(conn: asyncpg.Connection, spec: PlatformSpec) -
     legal_name = spec.legal_name if spec.legal_name is not None else spec.trade_name
     await conn.execute(
         _entity_sql(spec.conflict_refresh), eulid, spec.cdp_code, spec.kind, legal_name,
-        spec.trade_name, spec.website, spec.website_waf, spec.is_tier1, spec.defense_tier,
-        spec.source_group, spec.role, spec.source_key)
+        spec.trade_name, spec.website, spec.website_waf, spec.is_tier1, spec.sells_cars,
+        spec.defense_tier, spec.source_group, spec.role, spec.source_key)
     eulid = await conn.fetchval(
         "SELECT entity_ulid FROM entity WHERE cdp_code=$1", spec.cdp_code)
     await conn.execute(

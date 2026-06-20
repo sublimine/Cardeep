@@ -34,6 +34,7 @@ class PlatformSpec:
     is_tier1: bool = False
     requires_creds: bool = False
     is_platform_like: bool = False
+    sells_cars: bool | None = None  # entity.sells_cars; None -> NULL (the default the 27 platforms relied on)
     # Optional multi-axis classification columns (migrations/0016); set only by the connectors
     # that use them (e.g. autocasion). Absent -> written NULL == the legacy copy that omitted them.
     defense_tier: str | None = None

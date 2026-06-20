@@ -24,6 +24,8 @@ from pipeline.platform.group_subastas_wholesale import AYVENS_SPEC
 from pipeline.platform.milanuncios_wholesale import MN_SPEC
 from pipeline.platform.motor_es_wholesale import MOTOR_SPEC
 from pipeline.platform.coches_net_wholesale import COCHES_SPEC
+from pipeline.platform.faciliteacoches_racc_wholesale import (
+    build_faciliteacoches, _member_spec as _faci_member_spec)
 from pipeline.platform.localizavo_wholesale import LV_SPEC
 from pipeline.platform.miclasico_wholesale import MC_SPEC
 from pipeline.platform.motorflash_wholesale import MF_SPEC
@@ -54,7 +56,10 @@ SPECS = [COCHES_SPEC, AS24_SPEC, AC_SPEC, MC_SPEC, LV_SPEC, COCHES_COM_SPEC, MF_
          MB_SPEC, NISSAN_SPEC, VJS_SPEC, SC_SPEC, SCN_SPEC, CC_SPEC, DWA_SPEC, RENEW_SPEC,
          AYVENS_SPEC, SUBASTACAR_SPEC, MOTOR_SPEC, MN_SPEC, WP_SPEC,
          # extended-signature adopter: build the per-brand spec from a real BrandSpec (BMW).
-         _bmw_brand_spec(next(iter(_BMW_BRANDS.values())))]
+         _bmw_brand_spec(next(iter(_BMW_BRANDS.values()))),
+         # extended-signature per-call spec from a runtime Member (faciliteacoches): the only
+         # adopter that sets sells_cars=True + website_waf='none', exercising the superset additions.
+         _faci_member_spec(build_faciliteacoches())]
 _IDS = [s.source_key for s in SPECS]
 
 
@@ -98,10 +103,11 @@ class TestPlatformPersistenceCore:
                 eulid = await ensure_platform_entity(conn, spec)
                 e = await conn.fetchrow(
                     "SELECT kind, legal_name, trade_name, website, website_waf, is_tier1, "
-                    "first_discovered_source, status, defense_tier, source_group, role "
+                    "sells_cars, first_discovered_source, status, defense_tier, source_group, role "
                     "FROM entity WHERE cdp_code=$1", spec.cdp_code)
                 assert e is not None
                 assert e["kind"] == spec.kind
+                assert e["sells_cars"] == spec.sells_cars
                 assert e["trade_name"] == spec.trade_name
                 assert e["legal_name"] == (spec.legal_name if spec.legal_name is not None
                                            else spec.trade_name)

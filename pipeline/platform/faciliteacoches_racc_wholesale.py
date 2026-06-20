@@ -71,6 +71,9 @@ from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
 from pipeline.ops.health import auto_repair, is_open, record_run
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity)
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
 from services.api.codes import _base32, cdp_code
@@ -628,40 +631,31 @@ class WebFetcher:
 # ===========================================================================
 
 
+def _member_spec(m: Member) -> PlatformSpec:
+    """Per-call PlatformSpec for an extended-signature connector: the platform identity comes from the
+    runtime Member, not a module constant (faciliteacoches + RACC share one body, two members). Mirrors
+    the legacy entity copy EXACTLY — sells_cars=TRUE (both channels sell cars), website_waf='none',
+    is_tier1=FALSE, defense_tier=t0_open, role=platform; ON CONFLICT refreshes is_tier1/defense_tier/
+    source_group/role/kind/legal_name (NOT website_waf, NOT sells_cars — same columns the copy left)."""
+    return PlatformSpec(
+        cdp_code=platform_cdp_code(m.domain), kind=PLATFORM_KIND, legal_name=m.legal_name,
+        trade_name=m.trade_name, website=m.domain, source_key=m.key, source_ref=m.domain,
+        data_surface=m.data_surface,
+        surface_detail={"endpoint": m.endpoint, "host": m.host, "method": "GET",
+                        "page_size": m.page_size, "surface_intent": m.surface_intent,
+                        "engine": "curl_cffi/chrome131_impersonate"},
+        website_waf="none", is_tier1=False, sells_cars=True, defense_tier="t0_open",
+        source_group=m.source_group, role="platform", family=m.family,
+        conflict_refresh=("is_tier1", "defense_tier", "source_group", "role", "kind", "legal_name"))
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection, m: Member) -> str:
-    """Idempotently ensure the platform's entity + platform_meta exist. Returns the platform ulid.
-    kind=plataforma, role=platform, province NULL (national; '00' in cdp_code), is_tier1=FALSE,
-    defense_tier=t0_open (both channels are unwalled first-party surfaces)."""
-    code = platform_cdp_code(m.domain)
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               sells_cars, defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3::entity_kind,$4,$5,NULL,$6,'none'::waf_kind,FALSE,'active','platform_label',
-               TRUE,'t0_open'::defense_tier,$7::source_group,'platform'::entity_role,$8, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, defense_tier = EXCLUDED.defense_tier,
-               source_group = EXCLUDED.source_group, role = EXCLUDED.role,
-               kind = EXCLUDED.kind, legal_name = EXCLUDED.legal_name""",
-        eulid, code, PLATFORM_KIND, m.legal_name, m.trade_name, m.domain, m.source_group, m.key)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, m.key, m.domain)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,$2,$3::jsonb,FALSE,FALSE,$4)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, m.data_surface,
-        json.dumps({"endpoint": m.endpoint, "host": m.host, "method": "GET",
-                    "page_size": m.page_size, "surface_intent": m.surface_intent,
-                    "engine": "curl_cffi/chrome131_impersonate"}),
-        m.family)
-    return eulid
+    """Idempotently ensure the platform's entity + entity_source + platform_meta exist (returns the
+    platform ulid). kind=plataforma, role=platform, province NULL (national; '00' in cdp_code),
+    is_tier1=FALSE, defense_tier=t0_open (both channels are unwalled first-party surfaces).
+    P05: delegates to the unified _core.ensure_platform_entity via a per-call spec built from the
+    runtime Member — behaviour preserved, parity-verified against the legacy copy."""
+    return await _core_ensure_platform_entity(conn, _member_spec(m))
 
 
 def cdp_code_owner(name: str, province: str | None, muni: str | None, ref: str) -> str:
