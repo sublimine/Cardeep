@@ -2249,3 +2249,16 @@
 - PROXIMO: escalar a fuentes abiertas grandes (oem_volvo_jlr_suzuki ~12k, oem_hyundai ~10k, oem_audi ~8k) un drain
   a la vez paced; walled (coches_net 939k/milanuncios 597k/wallapop 1.66M) requieren camoufox+egress rotado -> cap o
   stage si 4G ausente.
+
+### 2026-06-21 (loop COBERTURA) — A3 cosecha: oem_volvo COMPLETO + REGLA pacing [VERIFICADO]
+- oem_volvo_jlr_suzuki: 1er drain (concurrency 4) corto en pag3 con curl(56) Connection closed abruptly -> PARCIAL
+  200/1255 ok=False. DIAGNOSTICO (re-intento concurrency 1): completo las 3 marcas 1692/1692 (Volvo 1255 + Land
+  Rover 400 + Jaguar 37), ok=True, 0 error. => El curl(56) era THROTTLE POR CONCURRENCIA, no ban de IP ni transitorio.
+- REGLA (gana el codigo): drenar OEMs con concurrency 1 (serial) VENCE el throttle SIN quemar la IP residencial ->
+  NO se necesita egress rotado/4G para fuentes abiertas. Aplicar concurrency 1 a OEM/abiertas por defecto.
+- COBERTURA arco (>=2 vias, DB viva): localizavo +227 (TRUSTWORTHY) + oem_volvo +837 (73 c4 + 764 c1) = +1.064
+  vehiculos nuevos servidos. vehicles_total 1.704.968 -> 1.706.032. harvest_run oem_volvo ok=True rows=1692.
+  (Honesto: parte es refresco/rotacion de inventario vivo; todos son listings servidos frescos y verificados.)
+- PROXIMO: encadenar OEMs abiertas con concurrency 1 (hyundai/audi/toyota_lexus/kia/mercedes/spoticar/motorflash),
+  un drain a la vez paced. Walled grandes (coches_net/milanuncios/wallapop/as24) = camoufox+egress; evaluar con c1
+  y stage si queman IP.
