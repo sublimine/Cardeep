@@ -1610,3 +1610,13 @@
   P09-S1 (ya en main) hace honesto el vam_verdict de la muestra-cero.
 - **Estado P04: 3/10 -> ~4/10** (2a fuente recipe-first viva). Proximo: extractores por familia/plataforma
   (CMS/DMS, marketplaces) con el mismo patron (recipe_template + sample reusando su modulo). Drenaje masivo = VPS.
+
+### 2026-06-20 (cont.) — P04: CochesComExtractor recipe-first (platform-as-entity coches.com)
+- 3er extractor recipe-first: coches.com (SRP __NEXT_DATA__ abierto Tier-0). Reusa
+  coches_com_wholesale.extract_classifieds_any + parse_card_vehicle (NO un 2o scraper): muestra k cards
+  de page-1 -> VAM -> receta persistida; el full drain per-make sigue en el wholesale (VPS).
+- TDD offline (fetch + write_recipe mockeados): RED (no registrado) -> GREEN (3 passed): registro +
+  E2E (3 cards -> VERIFIED, declared/fetched/parsed 3==3==3 TRUSTWORTHY) + Imperva interstitial sin
+  __NEXT_DATA__ -> FAILED honesto. No-regresion area recipe verde.
+- EXTRACTORS: autoscout24, web_generic, coches_com. P04 ~4/10 -> ~5/10.
+- Proximo: mas extractores (motor_es via PDP, familias CMS/DMS, coches_net API JSON). Drenaje masivo = VPS.

@@ -17,6 +17,8 @@ from pipeline.recipe_schema import (
     Recipe,
     Transport,
 )
+from pipeline.engine.fetch import fetch_text
+from pipeline.platform import coches_com_wholesale as ccom
 from pipeline.recipe_extract_web import GenericWebExtractor
 from pipeline.sources import autoscout24 as as24
 
@@ -86,7 +88,70 @@ class AutoScout24Extractor:
         return Sample(declared=declared, fetched=fetched, parsed=parsed, full_dealer=full_dealer)
 
 
+def _ccom_valid(v: "ccom.Vehicle") -> bool:
+    """A coches.com card is sample-valid iff it carries the two identity fields (deep_link +
+    listing_ref) that dedup/delta key on."""
+    return bool(v.listing_ref) and bool(v.deep_link)
+
+
+class CochesComExtractor:
+    """Recipe-first wrapper over :mod:`pipeline.platform.coches_com_wholesale`.
+
+    coches.com's SRP is an OPEN Tier-0 ``__NEXT_DATA__`` surface: page-1 carries
+    ``classifieds.total`` + a 20-card ``classifiedList``. The bounded sample parses k cards
+    with the module's already-verified ``parse_card_vehicle`` (reuse, NOT a 2nd scraper).
+    ``dealer_ref`` is the platform identity (platform-as-entity); the full per-make drain
+    lives in the wholesale module (VPS) — the harness only proves+persists the recipe here."""
+
+    source = "coches_com"
+    _SAMPLE_URL = ccom._SRP_ALL  # page-1 VO SRP: classifieds.total + classifiedList
+
+    def recipe_template(self, dealer_ref: str) -> Recipe:
+        return Recipe(
+            source=self.source, dealer_ref=dealer_ref, kind="plataforma",
+            transport=Transport(engine="curl_cffi", base_url=ccom._SRP_HOST,
+                                 impersonate=ccom._IMPERSONATE, timeout_s=30),
+            fingerprint=Fingerprint(user_agent="engine-managed"),
+            pagination=Pagination(
+                strategy="page_param",
+                url_template=ccom._SRP_ROOT + "/{make_slug}.htm?page={page}",
+                page_size=20,
+                declared_path="props.pageProps.classifieds.total",
+                stop="declared_reached"),
+            parsing=Parsing(
+                engine="next_data",
+                container_path="props.pageProps.classifieds.classifiedList",
+                field_map={
+                    "deep_link": "canonical_deep_link(visibleId)",
+                    "listing_ref": "visibleId",
+                    "make": "make.name",
+                    "model": "model.name",
+                    "year": "registration.year",
+                    "km": "mileage.amount",
+                    "price": "price.amount",
+                    "photo_url": "image|imageList[0].name",
+                }),
+        )
+
+    def sample(self, dealer_ref: str, k: int) -> Sample:
+        """Pull a bounded k-card sample from page-1 of the open SRP (recipe-first: never drain
+        the whole platform just to verify the recipe — that is the VPS job)."""
+        html = fetch_text(self._SAMPLE_URL, tier=0)
+        cl = ccom.extract_classifieds_any(html)
+        if not cl:  # Imperva interstitial / structure drift -> honest empty sample (FAILED)
+            return Sample(declared=None, fetched=0, parsed=[], full_dealer=False)
+        cards = cl.get("classifiedList") or []
+        declared = ccom._to_int(cl.get("total"))
+        sliced = cards[:k]
+        fetched = len(sliced)
+        parsed = [asdict(ccom.parse_card_vehicle(c)) for c in sliced
+                  if _ccom_valid(ccom.parse_card_vehicle(c))]
+        full_dealer = declared is not None and declared <= fetched
+        return Sample(declared=declared, fetched=fetched, parsed=parsed, full_dealer=full_dealer)
+
+
 EXTRACTORS = {
     "autoscout24": AutoScout24Extractor,
     "web_generic": GenericWebExtractor,
+    "coches_com": CochesComExtractor,
 }
