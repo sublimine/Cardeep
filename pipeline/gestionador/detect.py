@@ -917,24 +917,37 @@ async def detect_classifier_drift(conn: asyncpg.Connection) -> list[AnomalyResul
 
 
 # ---------------------------------------------------------------------------
+# Detector registry — single source of truth (consumed by dry_run_all AND run.run_all)
+# ---------------------------------------------------------------------------
+
+# (name, coroutine-fn). Order = execution order. dry_run_all (diagnostic, no writes) runs
+# every entry; run.run_all (live, routes flags) skips STUB_DETECTORS so the cadence never
+# implies coverage a detector cannot yet deliver.
+DETECTORS: list[tuple[str, object]] = [
+    ("count_inflation",      detect_count_inflation),
+    ("silent_cap",           detect_silent_cap),
+    ("field_loss",           detect_field_loss),
+    ("staleness",            detect_staleness),
+    ("fabrication",          detect_fabrication),
+    ("coverage_gap",         detect_coverage_gap),
+    ("price_trap",           detect_price_trap),
+    ("geo_resolution_drift", detect_geo_resolution_drift),
+    ("classifier_drift",     detect_classifier_drift),
+]
+
+# Wired but INERT until their backing tables/harness exist (T08 §5.1): they return []
+# today. run_all() SKIPS these so a live run does not log false "ran, 0 found" coverage.
+STUB_DETECTORS: frozenset[str] = frozenset({"geo_resolution_drift", "classifier_drift"})
+
+
+# ---------------------------------------------------------------------------
 # Dry-run entry point: count anomalies per detector without writing to DB
 # ---------------------------------------------------------------------------
 
 async def dry_run_all(conn: asyncpg.Connection) -> dict[str, int]:
     """Run all detectors, return anomaly counts per detector. No DB writes."""
-    detectors = [
-        ("count_inflation",      detect_count_inflation),
-        ("silent_cap",           detect_silent_cap),
-        ("field_loss",           detect_field_loss),
-        ("staleness",            detect_staleness),
-        ("fabrication",          detect_fabrication),
-        ("coverage_gap",         detect_coverage_gap),
-        ("price_trap",           detect_price_trap),
-        ("geo_resolution_drift", detect_geo_resolution_drift),
-        ("classifier_drift",     detect_classifier_drift),
-    ]
     counts: dict[str, int] = {}
-    for name, fn in detectors:
+    for name, fn in DETECTORS:
         try:
             results = await fn(conn)
             counts[name] = len(results)

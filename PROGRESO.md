@@ -1686,3 +1686,20 @@
   esquema -> se escribira como .sql + test en scratch, NO se aplica a la DB viva (gate IRREVERSIBLE-PROD). S5 cablear
   al quorum. S3 re-coleccion ciega ortogonal = lente C live -> GASTO (gate). El sampler puro queda listo para ambos.
 - Proximo: otro paso reversible €0 (P10 detectores / P11 certificado / P05 unificar _persistence).
+
+### 2026-06-20 (loop TODO A->Z) — P10: gestionador despierta TODOS los detectores (no solo price_trap) [VERIFICADO]
+- HALLAZGO (miswiring de la auditoria): run.py y el scheduler (gestionador_detect_job) solo invocaban
+  detect_price_trap -> 1 de 9 detectores corria; los otros 8 estaban definidos+registrados pero DORMIDOS.
+- FIX: registro unico module-level detect.DETECTORS (9) + detect.STUB_DETECTORS (geo_resolution_drift,
+  classifier_drift -> inertes sin sus tablas T08 §5.1). Nuevo run.run_all(conn): itera el registro, SALTA
+  los stubs, rutea cada detector con actor "gestionador:<name>", agrega resumen y AISLA fallos por-detector
+  (uno que revienta -> flagged=-1 + errors[name], nunca aborta el resto: honra el contrato never-raises).
+  Mismo contrato €0/QUARANTINE-reversible que run_price_trap (reads + gestion_item upserts; nunca NULL/DELETE).
+  CLI (python -m pipeline.gestionador.run) y scheduler ahora usan run_all; run_price_trap se conserva.
+  dry_run_all refactor a usar el registro unico (DRY).
+- TDD: tests/test_gestionador_run_all.py 3/3 verde (corre reales, salta stubs, aisla fallo, guard 9/2).
+- Regresion: tests/test_gestionador.py 58/58 verde; imports de ops.scheduler + gestionador.run OK.
+- NOTA operativa (reversible, declarada): al activar run_all, la cadencia abre gestion_items para las 7 clases
+  reales (no solo price). Todo reversible (cerrar el item re-muestra; nunca NULL/DELETE). Si el scheduler esta
+  parado (cosecha detenida 15-jun) el cambio queda listo e inerte hasta arrancarlo.
+- Proximo: otro paso reversible €0 (P11 certificado / P05 unificar _persistence / P08 reconcile_gone+Dfoto).

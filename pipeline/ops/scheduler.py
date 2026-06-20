@@ -619,14 +619,14 @@ def gestionador_detect_job() -> None:
 
     import asyncpg
 
-    from pipeline.gestionador.run import run_price_trap
+    from pipeline.gestionador.run import run_all
 
-    log.info("=== gestionador_detect (price_trap) START ===")
+    log.info("=== gestionador_detect (all detectors) START ===")
 
     async def _run() -> dict:
         conn = await asyncpg.connect(_ASYNCPG_DSN)
         try:
-            return await run_price_trap(conn)
+            return await run_all(conn)
         finally:
             await conn.close()
 
@@ -635,7 +635,7 @@ def gestionador_detect_job() -> None:
         log.info("gestionador_detect: %s", summary)
     except Exception as exc:  # noqa: BLE001
         log.error("gestionador_detect: unexpected error: %s", exc)
-    log.info("=== gestionador_detect (price_trap) END ===")
+    log.info("=== gestionador_detect (all detectors) END ===")
 
 
 def canonical_key_backfill_job() -> None:

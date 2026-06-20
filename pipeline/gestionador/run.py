@@ -20,6 +20,7 @@ import os
 
 import asyncpg
 
+from pipeline.gestionador import detect
 from pipeline.gestionador.detect import detect_price_trap
 from pipeline.gestionador.route import route_anomalies
 
@@ -64,15 +65,66 @@ async def run_price_trap(conn: asyncpg.Connection) -> dict:
     }
 
 
+async def run_all(conn: asyncpg.Connection) -> dict:
+    """Run EVERY live anomaly detector (V4 gestionador) and route each one's flags.
+
+    Wires the full ``detect.DETECTORS`` registry instead of price_trap alone, skipping
+    ``detect.STUB_DETECTORS`` (inert until their backing tables exist). Same €0/QUARANTINE-
+    reversible contract as run_price_trap: DB reads + gestion_item upserts only, never NULLs
+    or DELETEs. Per-detector isolation — one detector raising is logged and recorded
+    (flagged=-1) but never aborts the rest, honouring the never-raises cadence contract.
+
+    Caller owns the connection (composes inside a job's transaction). Returns a summary:
+    ``{detectors:{name:{flagged,high,low,items}}, skipped:[...], total_flagged, total_items, errors:{}}``.
+    """
+    # Same session tuning as run_price_trap: the cohort percentile scan is the heaviest
+    # detector; bumping work_mem + forcing hash joins keeps it from spilling. Harmless to
+    # the lighter detectors (session scope, this conn only).
+    await conn.execute("SELECT set_config('work_mem', $1, false)", _WORK_MEM)
+    await conn.execute("SELECT set_config('enable_mergejoin', 'off', false)")
+    await conn.execute("SELECT set_config('enable_nestloop', 'off', false)")
+
+    per: dict[str, dict] = {}
+    skipped: list[str] = []
+    errors: dict[str, str] = {}
+    total_flagged = 0
+    total_items = 0
+    for name, fn in detect.DETECTORS:
+        if name in detect.STUB_DETECTORS:
+            skipped.append(name)
+            continue
+        try:
+            anomalies = await fn(conn)
+            item_ids = await route_anomalies(conn, anomalies, actor=f"gestionador:{name}")
+            high = sum(1 for a in anomalies if a.measured.get("side") == "high")
+            low = sum(1 for a in anomalies if a.measured.get("side") == "low")
+            per[name] = {"flagged": len(anomalies), "high": high, "low": low,
+                         "items": len(item_ids)}
+            total_flagged += len(anomalies)
+            total_items += len(item_ids)
+        except Exception as exc:  # noqa: BLE001 — never let one detector abort the cadence
+            errors[name] = str(exc)
+            per[name] = {"flagged": -1, "high": 0, "low": 0, "items": 0}
+            logger.error("gestionador run_all: detector %s failed: %s", name, exc)
+
+    return {
+        "detectors": per,
+        "skipped": skipped,
+        "total_flagged": total_flagged,
+        "total_items": total_items,
+        "errors": errors,
+    }
+
+
 async def main() -> None:
-    """CLI: connect to CARDEEP_DSN, run the price_trap detector, print a JSON summary."""
+    """CLI: connect to CARDEEP_DSN, run ALL live detectors, print a JSON summary."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
     conn = await asyncpg.connect(_DEFAULT_DSN)
     try:
-        summary = await run_price_trap(conn)
+        summary = await run_all(conn)
     finally:
         await conn.close()
     print(json.dumps(summary, indent=2))
