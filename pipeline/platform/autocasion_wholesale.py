@@ -62,6 +62,10 @@ from curl_cffi import requests as cffi_requests
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.price_sanity import sanitize_price
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
@@ -432,43 +436,36 @@ AC_PLATFORM_RECIPE = {
 }
 
 
+# P05: autocasion is the MAXIMAL variant — it sets the multi-axis classification columns
+# (defense_tier/source_group/role, migrations/0016) + platform_meta.family, and its legacy
+# ON CONFLICT refreshed all of them. conflict_refresh lists exactly those entity columns.
+AC_SPEC = PlatformSpec(
+    cdp_code=autocasion_platform_cdp_code(),
+    trade_name=AC_TRADE_NAME,
+    website=AC_WEBSITE,
+    source_key=AC_SOURCE_KEY,
+    source_ref=AC_DOMAIN,
+    data_surface="graphql",
+    surface_detail={
+        "enumerate": SSR_RESULTS, "hydrate": GQL_ENDPOINT,
+        "gql_host": host_of(GQL_ENDPOINT), "ssr_host": host_of(SSR_RESULTS),
+        "surface_intent": "graphql+json_ld", "items_per_page": SSR_ITEMS_PER_PAGE,
+        "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=AC_WAF,
+    is_tier1=True,
+    defense_tier=AC_DEFENSE_TIER,
+    source_group=AC_SOURCE_GROUP,
+    role=AC_ROLE,
+    family="autocasion",
+    conflict_refresh=("is_tier1", "website_waf", "defense_tier", "source_group", "role"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
     """Idempotently ensure the autocasion platform entity + platform_meta exist.
-    Returns the platform entity_ulid. is_tier1=TRUE (Tier-1 brand) but the multi-axis
-    classification is explicit: defense_tier=t1_soft, source_group=marketplace_motor,
-    role=platform (migrations/0016). data_surface='graphql' (schema-valid value)."""
-    code = autocasion_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               defense_tier, source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,$5,TRUE,'active','platform_label',
-               $6,$7,$8,$9, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               is_tier1 = EXCLUDED.is_tier1, website_waf = EXCLUDED.website_waf,
-               defense_tier = EXCLUDED.defense_tier, source_group = EXCLUDED.source_group,
-               role = EXCLUDED.role""",
-        eulid, code, AC_TRADE_NAME, AC_WEBSITE, AC_WAF,
-        AC_DEFENSE_TIER, AC_SOURCE_GROUP, AC_ROLE, AC_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, AC_SOURCE_KEY, AC_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like, family)
-           VALUES ($1,'graphql',$2::jsonb,FALSE,FALSE,$3)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail, family = EXCLUDED.family""",
-        eulid, json.dumps({
-            "enumerate": SSR_RESULTS, "hydrate": GQL_ENDPOINT,
-            "gql_host": host_of(GQL_ENDPOINT), "ssr_host": host_of(SSR_RESULTS),
-            "surface_intent": "graphql+json_ld", "items_per_page": SSR_ITEMS_PER_PAGE,
-            "engine": "curl_cffi/chrome131_impersonate"}),
-        "autocasion")
-    return eulid
+    Returns the platform entity_ulid. P05: thin adopter of _core.ensure_platform_entity via
+    AC_SPEC — the maximal variant (extras + family), behaviour preserved (parity-verified)."""
+    return await _core_ensure_platform_entity(conn, AC_SPEC)
 
 
 def cdp_code_dealer(d: DealerRef, muni: str | None) -> str:

@@ -1877,3 +1877,16 @@
 - PENDIENTE: 27 conectores restantes (incl autocasion = variante MAXIMA con extras+family; el core YA lo soporta, falta
   su spec + paridad). Migracion mecanica de a uno. Tambien _ingest_window (18 variantes) despues.
 - Proximo: migrar autocasion (prueba los extras del superset) + 1-2 mas / P13 / P12.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05 (strangler): autocasion adopta = variante MAXIMA (3/29) [VERIFICADO]
+- autocasion migrado: AC_SPEC con defense_tier=t1_soft + source_group=marketplace_motor + role=platform + family=
+  autocasion + conflict_refresh=(is_tier1,website_waf,defense_tier,source_group,role) (= EXACTO al ON CONFLICT legacy).
+  ensure_platform_entity delega en _core (37 lineas -> 4).
+- Esto PRUEBA el superset del _core en el RANGO COMPLETO de variacion: AS24 (minima: is_tier1=False, sin waf, conflict
+  vacio), coches_net (media: waf + refresh parcial), autocasion (maxima: extras 0016 + family + refresh total).
+- TDD: test_platform_persistence_core.py SPECS=[COCHES,AS24,AC] parametrizado; rama INSERT (cdp_code test, rolled back)
+  -> fila==spec EXACTO incl. defense_tier/source_group/role/family/surface_detail. 6/6 verde. Regresion autocasion 17/17.
+- Avance P05: 3/29 conectores adoptan el nucleo unico. Restan 23 de firma (conn) [mecanicos: leer columnas/ON CONFLICT,
+  spec, delegar, anadir a SPECS] + 3 de firma extendida (faciliteacoches/group_rentacar/oem_bmw, parametrizados por arg
+  -> spec por-llamada, diseno aparte). Luego _ingest_window (18 variantes).
+- Proximo: migrar 2-3 conectores mas (coches_com, group_subastas, localizavo...) / P13 CI seeded / P12 frontend.
