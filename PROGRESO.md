@@ -1902,3 +1902,17 @@
   bring-up-smoke, frontend-build, secret-scan, unit-tests).
 - El run data-dependent (tests integration sobre snapshot sembrado) sigue diferido -> P13 siguiente (seed fixture).
 - Proximo: P13 seeded snapshot para integration / migrar mas conectores P05 / P12 frontend.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P05: miclasico adopta _core (4/29) [VERIFICADO]
+- miclasico migrado: MC_SPEC (data_surface=sitemap, is_tier1=False, website_waf=None, source_group=marketplace_motor,
+  role=platform, defense_tier=None/omitido, family=None, conflict_refresh=(source_group,role) = EXACTO al legacy).
+  ensure_platform_entity delega en _core. Encaja en el superset sin cambios.
+- TDD: test_platform_persistence_core.py SPECS ahora [COCHES,AS24,AC,MC]; 8/8 verde (rama INSERT, fila==spec). Regresion
+  miclasico 2/2.
+- NUEVA DIVERGENCIA HALLADA (gana el codigo): localizavo (y posible clase) NO encaja aun en el superset: tiene
+  legal_name SEPARADO de trade_name (mi unified hardcodea legal_name=trade_name), kind PARAMETRIZADO, y refresca kind +
+  legal_name en ON CONFLICT (mi conflict_refresh allowlist no incluye kind/legal_name). SALTADO (no forzar = anti-maquillaje).
+- PENDIENTE-OWNER / siguiente: extender _core para la clase localizavo (spec.legal_name opcional -> param distinto de
+  trade_name; spec.kind opcional; ampliar allowlist conflict_refresh con kind/legal_name) + migrar localizavo con paridad.
+  Resto de conectores (conn): leer cada uno, los que encajen en el superset se migran directos; los que no, extienden core.
+- Avance P05: 4/29. Proximo (ROTAR): P12 frontend / P09-S6 / o seguir P05 con los que encajen.

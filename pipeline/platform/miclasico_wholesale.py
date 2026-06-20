@@ -57,6 +57,10 @@ from pipeline.delta import emit_change_deltas
 from pipeline.engine.governor import governor, host_of
 from pipeline.geo import GeoResolver
 from pipeline.ids import ulid
+from pipeline.platform._core.contract import PlatformSpec
+from pipeline.platform._core.persistence import (
+    ensure_platform_entity as _core_ensure_platform_entity,
+)
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
@@ -320,37 +324,30 @@ MC_PLATFORM_RECIPE = {
 }
 
 
+# P05: spec for the unified _core.ensure_platform_entity. is_tier1=FALSE, no WAF, no defense_tier;
+# source_group/role set + refreshed on conflict -> conflict_refresh=(source_group, role).
+MC_SPEC = PlatformSpec(
+    cdp_code=mc_platform_cdp_code(),
+    trade_name=MC_TRADE_NAME,
+    website=MC_WEBSITE,
+    source_key=MC_SOURCE_KEY,
+    source_ref=MC_DOMAIN,
+    data_surface="sitemap",
+    surface_detail={"endpoint": LIST_URL, "host": host_of(LIST_URL), "method": "GET",
+                    "pagination": "start=N step 9", "surface_intent": "html_listing_grid+pdp",
+                    "engine": "curl_cffi/chrome131_impersonate"},
+    website_waf=MC_WAF,
+    is_tier1=False,
+    source_group="marketplace_motor",
+    role="platform",
+    conflict_refresh=("source_group", "role"),
+)
+
+
 async def ensure_platform_entity(conn: asyncpg.Connection) -> str:
-    """Idempotently ensure the Miclasico platform entity + platform_meta exist. is_tier1=FALSE
-    (no WAF), source_group=marketplace_motor (a car-specialist classifieds), data_surface=
-    'sitemap' (the schema-valid literal closest to an HTML listing-grid drain)."""
-    code = mc_platform_cdp_code()
-    eulid = ulid()
-    await conn.execute(
-        """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, website, website_waf, is_tier1, status, kind_source,
-               source_group, role, first_discovered_source, last_seen)
-           VALUES ($1,$2,'plataforma',$3,$3,NULL,$4,$5,FALSE,'active','platform_label',
-               'marketplace_motor','platform',$6, now())
-           ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(),
-               source_group = EXCLUDED.source_group, role = EXCLUDED.role""",
-        eulid, code, MC_TRADE_NAME, MC_WEBSITE, MC_WAF, MC_SOURCE_KEY)
-    eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
-    await conn.execute(
-        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,$2,$3) "
-        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at = now()",
-        eulid, MC_SOURCE_KEY, MC_DOMAIN)
-    await conn.execute(
-        """INSERT INTO platform_meta (entity_ulid, data_surface, surface_detail,
-               requires_creds, is_platform_like)
-           VALUES ($1,'sitemap',$2::jsonb,FALSE,FALSE)
-           ON CONFLICT (entity_ulid) DO UPDATE SET data_surface = EXCLUDED.data_surface,
-               surface_detail = EXCLUDED.surface_detail""",
-        eulid, json.dumps({"endpoint": LIST_URL, "host": host_of(LIST_URL),
-                           "method": "GET", "pagination": "start=N step 9",
-                           "surface_intent": "html_listing_grid+pdp",
-                           "engine": "curl_cffi/chrome131_impersonate"}))
-    return eulid
+    """Idempotently ensure the Miclasico platform entity + platform_meta exist.
+    P05: thin adopter of _core.ensure_platform_entity via MC_SPEC (behaviour preserved)."""
+    return await _core_ensure_platform_entity(conn, MC_SPEC)
 
 
 def cdp_code_bucket(province_code: str) -> str:
