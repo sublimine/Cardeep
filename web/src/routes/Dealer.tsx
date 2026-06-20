@@ -10,7 +10,7 @@ import { formatDate, formatInt } from '../lib/format';
 import { eventDetail, eventLabel } from '../lib/events';
 import './dealer.css';
 
-const PAGE_SIZE = 24;
+const PAGE_SIZE = 60;
 
 export function Dealer() {
   const { cdp } = useParams();
