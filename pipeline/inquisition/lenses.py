@@ -50,6 +50,8 @@ import asyncpg
 
 from pipeline.inquisition.models import Skeptic, StateTuple
 from pipeline.inquisition._lens_a import lens_a_requery as _lens_a_impl
+from pipeline.inquisition._lens_b import lens_b_raw_recount as _lens_b_impl
+from pipeline.inquisition._lens_c import lens_c_live_refetch as _lens_c_impl
 from pipeline.inquisition._lens_d import lens_d_cross_source as _lens_d_impl
 
 # ---------------------------------------------------------------------------
@@ -132,46 +134,17 @@ async def lens_a_requery(
 # StateTuple: tool='json_parser', path='lens_b_raw_recount' → D ≥ 2.
 # ---------------------------------------------------------------------------
 
-_RAW_STORE_AVAILABLE: bool = False
-
-
 async def lens_b_raw_recount(
-    conn: asyncpg.Connection,  # API symmetry; unused until store lands
+    conn: asyncpg.Connection,
     claim: ClaimEnvelope,
 ) -> Skeptic:
-    """Recount distinct stable IDs from raw evidence bytes at evidence_uri.
+    """Orthogonal raw recount of the claimed quantity (now ACTIVE).
 
-    €0 ONLY when a raw-evidence store is reachable. Current state: ABSTAIN.
-
-    When harvest lands, replace the flag and implement _parse_evidence():
-        raw = await load_evidence(claim.evidence_uri)
-        stable_ids = _parse_evidence(raw)  # JSON-LD / __NEXT_DATA__ / sitemap
-        return Skeptic(lens='B_raw_recount', verdict=..., measured=len(stable_ids))
-
-    StateTuple: tool='json_parser', path='lens_b_raw_recount' → D ≥ 2.
+    Delegates to _lens_b: count subjects recount distinct entities via the
+    provenance ledger; inventory subjects recount distinct stable ids (deep_link).
+    A path no ingest worker emits → D ≥ 2 vs Lens A. See _lens_b.py.
     """
-    st = claim.producer_state
-    lens_state = _lens_state(st.source, st.cache, "json_parser", "lens_b_raw_recount")
-
-    if not _RAW_STORE_AVAILABLE or not claim.evidence_uri:
-        return Skeptic(
-            lens="B_raw_recount",
-            state=lens_state,
-            verdict="ABSTAIN",
-            measured_value=None,
-            confidence=None,
-            reason="no_raw_evidence_store",
-        )
-
-    # Stub — reached only when _RAW_STORE_AVAILABLE is set to True:
-    return Skeptic(
-        lens="B_raw_recount",
-        state=lens_state,
-        verdict="ABSTAIN",
-        measured_value=None,
-        confidence=None,
-        reason="no_raw_evidence_store",
-    )
+    return await _lens_b_impl(conn, claim)
 
 
 # ---------------------------------------------------------------------------
@@ -186,35 +159,16 @@ async def lens_b_raw_recount(
 # ---------------------------------------------------------------------------
 
 async def lens_c_live_refetch(
-    conn: asyncpg.Connection,  # API symmetry; unused
+    conn: asyncpg.Connection,
     claim: ClaimEnvelope,
 ) -> Skeptic:
-    """STUB — live re-fetch from the source portal. ZERO network calls.
+    """Live re-fetch from the source portal (now ACTIVE via pipeline.engine).
 
-    Returns ABSTAIN(reason='live_refetch_requires_harvest') always.
-
-    Implementation notes for SU-B3:
-    - Use a separate curl_cffi / Camoufox session with a different JA3 fingerprint
-      and a dedicated IP pool to avoid correlated failures with the ingest fleet.
-    - Fetch the canonical listing page; count distinct stable IDs.
-    - StateTuple: source='live_portal', tool='browser', cache='live_T1',
-                  path='lens_c_live_refetch' → D=4 vs any ingest producer.
+    Delegates to _lens_c: re-fetches a fetchable evidence_uri through an egress
+    identity independent of the ingest fleet (D=4) and recounts. ABSTAINs honestly
+    when no fetchable URL / no extractable live count (never a fabricated ASSERT).
     """
-    # Shape the future state for contract clarity (callers can inspect it)
-    lens_state = StateTuple(
-        source="live_portal",
-        tool="browser",
-        cache="live_T1",
-        path="lens_c_live_refetch",
-    )
-    return Skeptic(
-        lens="C_live_refetch",
-        state=lens_state,
-        verdict="ABSTAIN",
-        measured_value=None,
-        confidence=None,
-        reason="live_refetch_requires_harvest",
-    )
+    return await _lens_c_impl(conn, claim)
 
 
 # ---------------------------------------------------------------------------

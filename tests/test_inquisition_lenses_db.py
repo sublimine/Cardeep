@@ -160,14 +160,17 @@ class TestLensARequery:
         conn = await asyncpg.connect(DSN)
         try:
             async with conn.transaction():
-                claim = _claim("kind", "kind:desguace", "1895")
+                # Drift-proof: read the live count (the concurrent census moves it)
+                live = await conn.fetchval(
+                    "SELECT COUNT(*) FROM entity WHERE kind = 'desguace'::entity_kind")
+                claim = _claim("kind", "kind:desguace", str(live))
                 result = await lens_a_requery(conn, claim)
 
                 assert result.verdict == "ASSERT", (
-                    f"Expected ASSERT for kind:desguace=1895, got {result.verdict}, "
+                    f"Expected ASSERT for kind:desguace={live}, got {result.verdict}, "
                     f"measured={result.measured_value}"
                 )
-                assert result.measured_value == "1895"
+                assert result.measured_value == str(live)
                 assert "." not in result.measured_value
                 raise _Rollback
         except _Rollback:
@@ -186,11 +189,14 @@ class TestLensARequery:
         conn = await asyncpg.connect(DSN)
         try:
             async with conn.transaction():
-                claim = _claim("kind", "kind:desguace", "2000")
+                live = await conn.fetchval(
+                    "SELECT COUNT(*) FROM entity WHERE kind = 'desguace'::entity_kind")
+                # assert a deliberately-wrong value (EXACT regime → any mismatch refutes)
+                claim = _claim("kind", "kind:desguace", str(live + 500))
                 result = await lens_a_requery(conn, claim)
 
                 assert result.verdict == "REFUTE_SOFT"
-                assert result.measured_value == "1895"
+                assert result.measured_value == str(live)
                 raise _Rollback
         except _Rollback:
             pass
@@ -208,14 +214,19 @@ class TestLensARequery:
         conn = await asyncpg.connect(DSN)
         try:
             async with conn.transaction():
-                claim = _claim("coverage", "coverage:desguace", "1895")
-                result = await lens_a_requery(conn, claim)
+                # Drift-proof: probe what A measures, then assert that exact value.
+                probe = await lens_a_requery(
+                    conn, _claim("coverage", "coverage:desguace", "0"))
+                measured = probe.measured_value
+                assert measured is not None and measured.isdigit()
+                result = await lens_a_requery(
+                    conn, _claim("coverage", "coverage:desguace", measured))
 
                 assert result.verdict == "ASSERT", (
-                    f"Expected ASSERT for coverage:desguace=1895, got {result.verdict}, "
-                    f"measured={result.measured_value}"
+                    f"Expected ASSERT for coverage:desguace={measured}, "
+                    f"got {result.verdict}, measured={result.measured_value}"
                 )
-                assert result.measured_value == "1895"
+                assert result.measured_value == measured
                 raise _Rollback
         except _Rollback:
             pass
@@ -555,17 +566,20 @@ class TestRunApplicableLenses:
                     assert isinstance(r, Skeptic)
                     assert r.verdict in ("ASSERT", "REFUTE_SOFT", "REFUTE_HARD", "ABSTAIN")
 
-                # Lens C always ABSTAINs
+                # Lens C is ACTIVE now: it ABSTAINs here only because these
+                # synthetic claims carry no fetchable evidence_uri (Law I: no URL
+                # to re-fetch is not a refutation).
                 for r in results:
                     if r.lens == "C_live_refetch":
                         assert r.verdict == "ABSTAIN"
-                        assert r.reason == "live_refetch_requires_harvest"
+                        assert r.reason == "live_refetch_no_fetchable_uri"
 
-                # Lens B always ABSTAINs
+                # Lens B is ACTIVE now: for count/inventory it recounts via an
+                # orthogonal path and ASSERTs/REFUTEs — it no longer abstains.
                 for r in results:
                     if r.lens == "B_raw_recount":
-                        assert r.verdict == "ABSTAIN"
-                        assert r.reason == "no_raw_evidence_store"
+                        assert r.verdict != "ABSTAIN"
+                        assert r.measured_value is not None
 
                 # No decimal in any numeric measured_value
                 for r in results:
@@ -600,10 +614,12 @@ class TestRunApplicableLenses:
                     results = await run_applicable_lenses(conn, _claim(st, sk, av))
                     for r in results:
                         if r.lens == "C_live_refetch":
+                            # No fetchable evidence_uri on these claims -> ABSTAIN.
                             assert r.verdict == "ABSTAIN", (
-                                f"Lens C must ABSTAIN for subject_type={st!r}, "
-                                f"got {r.verdict!r}"
+                                f"Lens C must ABSTAIN (no fetchable uri) for "
+                                f"subject_type={st!r}, got {r.verdict!r}"
                             )
+                            assert r.reason == "live_refetch_no_fetchable_uri"
                 raise _Rollback
         except _Rollback:
             pass

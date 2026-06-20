@@ -205,36 +205,43 @@ class TestBatchHash:
 # D. Lens B — ABSTAIN(no_raw_evidence_store) in current €0 state
 # ---------------------------------------------------------------------------
 
-class TestLensBAbstain:
-    """Lens B must ABSTAIN in the current €0 state (no raw store)."""
+class _FakeConn:
+    """Minimal asyncpg-like conn: fetchrow returns {'n': <queued>}."""
+    def __init__(self, n):
+        self._n = n
 
-    def test_abstains_no_store_no_uri(self) -> None:
+    async def fetchrow(self, *a, **k):
+        return {"n": self._n}
+
+
+class TestLensBActive:
+    """Lens B is ACTIVE: orthogonal recount, asserts/refutes (no longer abstains)."""
+
+    def test_asserts_when_orthogonal_recount_matches(self) -> None:
         from pipeline.inquisition.lenses import lens_b_raw_recount
 
         claim = _claim("count", "province:28", "52668")
-        result = asyncio.run(lens_b_raw_recount(None, claim))  # type: ignore[arg-type]
+        result = asyncio.run(lens_b_raw_recount(_FakeConn(52668), claim))
 
         assert result.lens == "B_raw_recount"
-        assert result.verdict == "ABSTAIN"
-        assert result.reason == "no_raw_evidence_store"
-        assert result.measured_value is None
+        assert result.verdict == "ASSERT"
+        assert result.measured_value == "52668"
 
-    def test_abstains_with_evidence_uri(self) -> None:
-        """Even with an evidence_uri, ABSTAIN if the store flag is off."""
+    def test_refutes_when_recount_diverges(self) -> None:
         from pipeline.inquisition.lenses import lens_b_raw_recount
 
-        claim = _claim("count", "province:28", "52668", evidence_uri="file:///evidence/test.json")
-        result = asyncio.run(lens_b_raw_recount(None, claim))  # type: ignore[arg-type]
+        claim = _claim("count", "province:28", "52668")  # ledger sees far fewer
+        result = asyncio.run(lens_b_raw_recount(_FakeConn(40000), claim))
 
-        assert result.verdict == "ABSTAIN"
-        assert result.reason == "no_raw_evidence_store"
+        assert result.verdict == "REFUTE_SOFT"
+        assert result.reason == "raw_recount_mismatch"
 
     def test_state_d_ge_2(self) -> None:
         """Lens B state provides D ≥ 2 vs any ingest producer."""
         from pipeline.inquisition.lenses import lens_b_raw_recount
 
         claim = _claim("count", "province:28", "52668", tool="curl_cffi", path="ingest")
-        result = asyncio.run(lens_b_raw_recount(None, claim))  # type: ignore[arg-type]
+        result = asyncio.run(lens_b_raw_recount(_FakeConn(52668), claim))
 
         assert indep_distance(result.state, claim.producer_state) >= 2
 
@@ -244,10 +251,10 @@ class TestLensBAbstain:
 # ---------------------------------------------------------------------------
 
 class TestLensCStub:
-    """Lens C is a stub — must never touch the network."""
+    """Lens C is ACTIVE but ABSTAINs (honestly) when there is no fetchable URI."""
 
     def test_abstains_no_network(self) -> None:
-        """Lens C must not use the conn argument at all (passed as None)."""
+        """No fetchable evidence_uri -> ABSTAIN, no network call made."""
         from pipeline.inquisition.lenses import lens_c_live_refetch
 
         claim = _claim("count", "kind:desguace", "1895")
@@ -255,7 +262,7 @@ class TestLensCStub:
 
         assert result.lens == "C_live_refetch"
         assert result.verdict == "ABSTAIN"
-        assert result.reason == "live_refetch_requires_harvest"
+        assert result.reason == "live_refetch_no_fetchable_uri"
         assert result.measured_value is None
 
     def test_state_shape_d4_ready(self) -> None:
