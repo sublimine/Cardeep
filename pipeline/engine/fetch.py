@@ -50,9 +50,11 @@ _BACKOFF_BASE = 2.0          # seconds; grows 2,4,8,16 with full jitter
 _POLITE_MIN = 0.7            # min delay between successful fetches on a session
 _POLITE_MAX = 1.4
 
-# Default Tier-1 engine. nodriver is AGPL-3.0 (see tier1/browser.py LICENSE
-# WARNING). Switch to "camoufox" to avoid AGPL network-copyleft.
-_TIER1_ENGINE = "nodriver"
+# Default Tier-1 engine = camoufox (MPL-2.0, file-level copyleft — safe inside a network
+# service). nodriver/zendriver are AGPL-3.0 (network copyleft): defaulting to them would risk
+# forcing source disclosure once CARDEEP exposes its public API (P03-S3 / P14). nodriver stays
+# available as an EXPLICIT opt-in (tier1_engine="nodriver") under the owner's legal call.
+_TIER1_ENGINE = "camoufox"
 
 
 class FetchError(RuntimeError):

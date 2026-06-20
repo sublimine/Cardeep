@@ -188,7 +188,10 @@ def test_tier1_chain_goes_around_a_failing_engine(monkeypatch):
                              user_agent="UA", final_url=url, engine="camoufox")
 
     monkeypatch.setattr("pipeline.engine.tier1.solve_challenge", fake_solve)
-    eng, _ = _engine_with([_Resp(200, _OK_BODY)])  # camoufox cookie-reuse serves OK
+    # Explicit chain: exercise the go-around MECHANISM independently of the license-permissive
+    # default (now camoufox-only). nodriver fails -> the chain falls through to camoufox.
+    eng, _ = _engine_with([_Resp(200, _OK_BODY)],
+                          tier1_engines=("nodriver", "camoufox"))
     out = eng.fetch_text("https://walled.test/", tier=1)
     assert out == _OK_BODY
     assert calls == ["nodriver", "camoufox"]  # tried nodriver first, went around

@@ -1567,3 +1567,17 @@
   (correr el scheduler -> verificar que el harvest produce delta) = accion EXTERNA/prod -> decision del owner.
 - **Avance blueprint: ~2/100 pasos.** Proximo (reversible, sin gate): Ola-1 P03 engine (AGPL-neutral default
   + cablear record_ban semantico). Gates pendientes del owner: PUSH, rearranque cosecha, P07-WORM.
+### 2026-06-20 (cont.) — P03-S3 SELLADO: default Tier-1 AGPL-neutral (camoufox, no nodriver)
+- **Riesgo:** _TIER1_ENGINE='nodriver' (AGPL-3.0, network copyleft) era el DEFAULT + cadena por
+  defecto (nodriver, camoufox). Exponer la API publica (P11) con nodriver en la ruta por defecto
+  puede forzar publicar el codigo del servicio: riesgo existencial marcado por la revision adversarial.
+- **Fix reversible:** _TIER1_ENGINE='camoufox' (MPL-2.0, file-level, seguro en servicio de red).
+  nodriver NO se elimina: opt-in explicito (tier1_engine='nodriver') bajo decision legal del owner.
+- **TDD/verificacion:** tests/test_engine_license_default.py RED (default AGPL, 2 fail) -> GREEN (3 passed);
+  test_fetch_cascade go-around actualizado a cadena EXPLICITA (prueba el fallback sin depender del
+  default). Suite engine completa 45 passed (0 regresion). py_compile OK.
+- **Estado P03:** S3 cerrado (rama feat/p03-s3-agpl-neutral). Resta: cablear record_ban semantico al
+  breaker (P03-S1/S2), Tier-1 real en cosecha (gated). LICENSE file del repo sigue AUSENTE (P14-S3).
+- **Avance blueprint: ~3/100.** 3 ramas locales verificadas SIN PUSH (gate del owner: push policy).
+  Gates pendientes: push, rearranque cosecha (externo/prod), P07-WORM. Proximo reversible: P03 record_ban
+  O P14-S1 gitleaks + LICENSE.
