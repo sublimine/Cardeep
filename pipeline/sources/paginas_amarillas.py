@@ -38,12 +38,36 @@ SOURCE_KEY = "paginas_amarillas"
 _PAGE_CAP = 60  # hard safety cap per (rubro, province); no ES auto rubro exceeds this
 
 
+def _province_of(rec: dict) -> str | None:
+    """Province from the LISTING'S OWN postcode (authoritative), NOT the crawl slug.
+
+    Two PA province slugs (ceuta, melilla) silently fall back to the NATIONAL result list
+    instead of filtering, so trusting the crawl ``prov_code`` mis-stamps thousands of real
+    businesses (e.g. a Madrid shop) onto Ceuta/Melilla. The listing's postcode is the ground
+    truth: ``postcode[:2]`` is the INE province. Fall back to the crawl code only when the
+    listing carries no usable postcode (then geo resolution still has the locality to try)."""
+    pc = rec.get("postcode")
+    if pc and len(str(pc)) >= 2 and str(pc)[:2].isdigit():
+        cc = str(pc)[:2]
+        if "01" <= cc <= "52":
+            return cc
+    # No usable postcode: fall back to the listing's OWN region name (addressRegion, e.g.
+    # 'Madrid'), which discover._upsert resolves via geo.province_code(name) — still the
+    # listing's ground truth, NOT the crawl slug. Only if even that is absent do we trust the
+    # crawl prov_code (safe for the 50 provinces whose slug actually filters).
+    region = rec.get("region")
+    if region:
+        return region
+    return rec.get("prov_code")
+
+
 def record_to_entity(rec: dict) -> DiscoveredEntity:
     """Map a parsed PA listing to a DiscoveredEntity on the canonical identity.
 
-    province from the INE code stamped during the crawl; municipality from the listing
-    locality; the REAL website (PA's own host already stripped by the crawler) drives the
-    domain-based canonical key. source_ref is the stable PA detail URL when present.
+    province from the listing's OWN postcode (see ``_province_of`` — the crawl slug is NOT
+    trusted because ceuta/melilla fall back to national results); municipality from the
+    listing locality; the REAL website (PA's own host already stripped by the crawler) drives
+    the domain-based canonical key. source_ref is the stable PA detail URL when present.
     """
     return DiscoveredEntity(
         kind=rec.get("kind", "compraventa"),
@@ -51,7 +75,7 @@ def record_to_entity(rec: dict) -> DiscoveredEntity:
         source_ref=rec.get("detail") or f"{rec.get('name')}|{rec.get('locality')}",
         legal_name=rec.get("name"),
         trade_name=rec.get("name"),
-        province_name=rec.get("prov_code"),
+        province_name=_province_of(rec),
         municipality_name=rec.get("locality"),
         address=rec.get("address"),
         postcode=rec.get("postcode"),

@@ -3,7 +3,19 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.sources.paginas_amarillas import SOURCE_KEY, record_to_entity
+from pipeline.sources.paginas_amarillas import SOURCE_KEY, _province_of, record_to_entity
+
+
+@pytest.mark.unit
+def test_province_from_postcode_not_crawl_slug():
+    # ceuta/melilla slugs fall back to NATIONAL results -> a Madrid listing crawled under the
+    # 'ceuta' pass (prov_code='51') must resolve to Madrid (28) from its own postcode, never 51.
+    assert _province_of({"postcode": "28038", "prov_code": "51"}) == "28"
+    # legit Ceuta listing keeps 51
+    assert _province_of({"postcode": "51001", "prov_code": "51"}) == "51"
+    # no usable postcode -> fall back to the crawl code (geo still has the locality to try)
+    assert _province_of({"postcode": None, "prov_code": "08"}) == "08"
+    assert _province_of({"postcode": "00000", "prov_code": "28"}) == "28"
 
 
 @pytest.mark.unit
