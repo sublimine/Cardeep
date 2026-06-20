@@ -82,6 +82,7 @@ class FetchEngine:
                  tier1_engines: tuple[str, ...] | None = None,
                  proxy: str | None = None,
                  use_proxy_pool: bool = True,
+                 auto_proxy_refresh: bool = False,
                  use_clearance_cache: bool = True,
                  tier1_headless: bool = False,
                  rng: random.Random | None = None) -> None:
@@ -93,6 +94,13 @@ class FetchEngine:
         self._tried_profiles: set[str] = {self._profile.key}
         # Egress proxy: explicit > env pool (sticky per engine) > host IP.
         self._use_proxy_pool = use_proxy_pool
+        # Opt-in: refresh the pool from free sources (vía #2) before leasing, so
+        # the chain auto-tries live free proxies when env proxies are absent.
+        if auto_proxy_refresh and use_proxy_pool and proxy is None:
+            try:
+                proxy_mod.auto_refresh_default()
+            except Exception:  # noqa: BLE001 - best-effort, never fatal
+                pass
         self._proxy = proxy or self._lease_proxy()  # PENDING-CREDENTIAL when None
         self._session = self._new_session(self._profile)
         self._polite_min = polite_min

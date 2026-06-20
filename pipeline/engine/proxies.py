@@ -30,6 +30,44 @@ class ProxyPool:
         self._cycle = itertools.cycle(self._proxies) if self._proxies else None
         self._sticky: dict[str, str] = {}
         self._lock = threading.Lock()
+        self._last_refresh: float = 0.0
+
+    def populate(self, urls: list[str], *, now: float | None = None) -> None:
+        """Replace the pool with `urls` (e.g. freshly harvested live proxies)."""
+        import time as _t
+        with self._lock:
+            self._proxies = list(urls)
+            self._cycle = itertools.cycle(self._proxies) if self._proxies else None
+            self._sticky.clear()
+            self._last_refresh = now if now is not None else _t.monotonic()
+
+    def is_stale(self, ttl: float, *, now: float | None = None) -> bool:
+        import time as _t
+        t = now if now is not None else _t.monotonic()
+        return (not self._proxies) or (t - self._last_refresh) >= ttl
+
+    def ensure_fresh(self, *, ttl: float = 600.0, harvester=None,
+                     now: float | None = None) -> int:
+        """Re-harvest live proxies into the pool when empty or older than ttl.
+
+        `harvester()` returns a list of alive proxy URLs (best-effort; injected so
+        the network call is testable and optional). Returns the new pool size. A
+        harvester that yields nothing leaves the pool unchanged (host IP fallback).
+        """
+        if harvester is None or not self.is_stale(ttl, now=now):
+            return len(self._proxies)
+        try:
+            urls = harvester() or []
+        except Exception:  # noqa: BLE001 - harvest is best-effort, never fatal
+            urls = []
+        if urls:
+            self.populate(urls, now=now)
+        else:
+            # mark the attempt so we don't hammer the sources every call
+            import time as _t
+            with self._lock:
+                self._last_refresh = now if now is not None else _t.monotonic()
+        return len(self._proxies)
 
     @property
     def enabled(self) -> bool:
@@ -70,3 +108,21 @@ def reset_default_pool() -> None:
     """Re-read the environment (tests / after setting CARDEEP_PROXIES)."""
     global _default_pool
     _default_pool = None
+
+
+def free_proxy_harvester(max_candidates: int = 60):
+    """Default harvester: live free ES proxies (vía #2). Lazy import (network)."""
+    def _harvest() -> list[str]:
+        from pipeline.engine import free_proxies
+        return free_proxies.refresh_pool_urls(max_candidates=max_candidates)
+    return _harvest
+
+
+def auto_refresh_default(*, ttl: float = 600.0, max_candidates: int = 60) -> int:
+    """Refresh the process pool from free sources if empty/stale. Returns pool size.
+
+    Cost-zero, best-effort: env proxies take precedence; only when the pool is empty
+    or older than ttl do we harvest free proxies. Safe to call before a drain.
+    """
+    return default_pool().ensure_fresh(
+        ttl=ttl, harvester=free_proxy_harvester(max_candidates))
