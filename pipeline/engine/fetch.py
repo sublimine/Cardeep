@@ -83,6 +83,7 @@ class FetchEngine:
                  proxy: str | None = None,
                  use_proxy_pool: bool = True,
                  use_clearance_cache: bool = True,
+                 tier1_headless: bool = False,
                  rng: random.Random | None = None) -> None:
         self._pool = FingerprintPool(rng=rng)
         if impersonate is None:
@@ -111,6 +112,9 @@ class FetchEngine:
         self._tier1_engines = tuple(
             e for e in self._tier1_engines if not (e in seen or seen.add(e)))
         self._use_clearance_cache = use_clearance_cache
+        # Headful by default: DataDome/HUMAN flag headless browsers instantly; a
+        # headful browser on a residential IP passes (verified live on coches.net).
+        self._tier1_headless = tier1_headless
         self._tier1_cookies: dict = {}
         # Public attributes preserved for callers (governor, connectors, tests).
         self.impersonate = self._profile.impersonate
@@ -300,7 +304,8 @@ class FetchEngine:
         last_err: Exception | None = None
         for engine in self._tier1_engines:
             try:
-                result = solve_challenge(url, engine=engine, proxy=self._proxy)
+                result = solve_challenge(url, engine=engine, proxy=self._proxy,
+                                         headless=self._tier1_headless)
             except Tier1Error as e:
                 last_err = e
                 continue  # go around: try the next engine
@@ -312,17 +317,21 @@ class FetchEngine:
 
             served = self._serve_with_cookies(url, headers, result.user_agent)
             if served is not None:
-                return served
+                return served  # cheap curl_cffi cookie-reuse worked (best case)
 
-            # Reuse blocked. If the browser itself reached genuine content under a
-            # mere CHALLENGE (not a hard ban), serve that; else try next engine.
+            # Reuse blocked, but if the BROWSER itself reached genuine content
+            # (headful pass), that IS a successful fetch — serve it. Only a block
+            # page (browser_ok False) is rejected. This is what lets coches.net
+            # (DataDome, binds to browser TLS+behavior) succeed: curl_cffi reuse
+            # may not replay the session, but the headful browser already has it.
             browser_ok = bool(result.html) and \
                 ban_detector.classify(200, result.html) == Verdict.OK
-            if self.last_verdict == Verdict.CHALLENGE and browser_ok:
+            if browser_ok:
+                self.last_tier = 1
                 self.fetch_count += 1
                 return result.html
             last_err = FetchError(
-                f"{engine} solved but reuse blocked "
+                f"{engine} solved but both reuse and browser blocked "
                 f"(status={self.last_status}, verdict="
                 f"{self.last_verdict.value if self.last_verdict else None})")
 

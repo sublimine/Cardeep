@@ -60,8 +60,8 @@ PENDING_CREDENTIAL_PROXY = (
 
 
 def solve_challenge(url: str, *, engine: str = "nodriver",
-                    proxy: str | None = None, timeout: float = 45.0,
-                    wait_after_load: float = 4.0, headless: bool = True) -> BrowserResult:
+                    proxy: str | None = None, timeout: float = 60.0,
+                    wait_after_load: float = 7.0, headless: bool = False) -> BrowserResult:
     """Solve a challenge at `url` with a real browser and return cookies + UA.
 
     Synchronous wrapper over the async engines (the fetch layer is sync). Raises

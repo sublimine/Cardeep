@@ -85,10 +85,14 @@ def classify(status: int, body: str | None, headers: dict | None = None) -> Verd
         return Verdict.BANNED
 
     if status == 200:
-        # A 200 can still be an interstitial. Only flag it when challenge markers
-        # are present AND the page is too small to be real inventory, to avoid
-        # false positives on legit pages that merely mention "ray id" etc.
-        if _has(body_l, _CHALLENGE_MARKERS) and len(body_l) < 30000:
+        # A 200 can still be an interstitial OR a soft block page served with 200.
+        # Flag only when markers are present AND the page is too small to be real
+        # inventory, to avoid false positives on legit pages that merely mention
+        # "ray id" etc. (a real listing page is hundreds of KB).
+        small = len(body_l) < 30000
+        if small and _has(body_l, _BAN_MARKERS) and not _has(body_l, _CHALLENGE_MARKERS):
+            return Verdict.BANNED       # 200 "Access Denied / you have been blocked"
+        if small and _has(body_l, _CHALLENGE_MARKERS):
             return Verdict.CHALLENGE
         if any(h in hdrs for h in _CHALLENGE_HEADERS) and "datadome" in body_l:
             return Verdict.CHALLENGE
