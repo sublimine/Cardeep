@@ -88,6 +88,8 @@ from typing import Any
 import psycopg2
 import psycopg2.extras
 
+from pipeline.identity.phone_es import phone_match_key
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -149,9 +151,6 @@ WEBSITE_SOURCES: frozenset[str] = frozenset({
     "aecs",
     "acevas",
 })
-
-# Minimum phone digits required for matching
-PHONE_MIN_DIGITS: int = 9
 
 # Match probability by signal strength
 PROB_PHONE: float = 0.97
@@ -230,13 +229,15 @@ def _normalize_name(name: str | None) -> str | None:
 
 
 def _normalize_phone(phone: str | None) -> str | None:
-    """Keep last PHONE_MIN_DIGITS digits (handles +34 prefix)."""
-    if phone is None or not isinstance(phone, str) or not phone.strip():
-        return None
-    digits = "".join(c for c in phone if c.isdigit())
-    if len(digits) < PHONE_MIN_DIGITS:
-        return None
-    return digits[-PHONE_MIN_DIGITS:]  # last 9 digits strips country code
+    """Validated Spanish phone match key (P06 CAPA-0): the 9-digit national number iff the input is a
+    real Spanish number, else None. Delegates to pipeline.identity.phone_es (the single authority).
+
+    The old 'last 9 digits of anything' produced fragile keys (extensions, malformed
+    lengths, non-Spanish leading digits) that could false-merge two distinct dealers. The validated
+    key is a STRICT SUBSET of the old one — identical when the number is well-formed, None when the
+    old code would have keyed off garbage — so it removes spurious phone edges without inventing new
+    ones (a genuine Spanish phone is always 9 national digits starting 6/7/8/9, never dropped)."""
+    return phone_match_key(phone)
 
 
 def _normalize_website_host(website: str | None) -> str | None:

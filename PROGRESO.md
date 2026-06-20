@@ -2090,3 +2090,27 @@
   name+muni) requiere plan de re-key + migracion de cdp_codes historicos minteados sobre CIF corrupto. No aplicar en vivo.
 - % P06: CAPA-0 hard-key de tax-id BLINDADO (primitivo puro, testeado). Proximo: P06 phone E.164 (mismo patron stdlib) /
   o resolver beta servido (gated) / P05 fase 2 _ingest_window / P09-S7 ODCS.
+
+### 2026-06-20 (loop TODO A->Z, CERO DINERO) — P06 CAPA-0: normalizador telefono E.164 stdlib + 1 autoridad [VERIFICADO]
+- GAP P06 (gana el codigo): DOS _normalize_phone divergentes en pipeline/identity/ (resolve_entities min-7 TESTEADO;
+  cross_source_dedup min-9 SIN test), ninguno valida la forma espanola -> ambos toman "ultimos 9 digitos de cualquier
+  cosa" -> una extension o longitud malformada da una clave FRAGIL que puede FALSE-MERGE dos dealers distintos. P06
+  CAPA-0 exige hard key validado; phonenumbers AUSENTE = gate install.
+- RUTA GRATIS: el plan de numeracion ES es corto y determinista (nacional = 9 digitos, lead 6/7 movil, 8/9 fijo/especial;
+  sin 0 troncal) -> autoridad UNICA en STDLIB PURO: pipeline/identity/phone_es.py (normalize_es_phone->E.164 "+34...",
+  phone_match_key->9-digit nacional; ambos None si no es ES-valido).
+- TDD RED->GREEN: tests/test_phone_es.py (25, @unit) con vectores del plan oficial (movil/fijo/+34/0034 + invalidos:
+  7-digit, lead 5, lead 3, 10-digit, extension). Cableado cross_source_dedup._normalize_phone -> phone_match_key
+  (mejora ESTRICTA: la clave nueva es subconjunto de la vieja -> identica si bien-formada, None si la vieja keyaba
+  basura -> NO inventa aristas, solo elimina las fragiles; un telefono ES genuino nunca se cae). Eliminada constante
+  muerta PHONE_MIN_DIGITS (anti dead-code). tests/test_cross_source_phone.py (8, @unit) ancla el delegate (antes sin test).
+- VERIFICADO 2+ vias: (1) phone_es 25/25 + cross_source 8/8 + resolve_entities COMPLETO verde (sus 7 de telefono min-7
+  INTACTOS, no toque resolve_entities). (2) subset unit 212 passed (179+33), 0 regresion. (3) delegate en-proceso:
+  valido->clave, malformado/lead-malo->None. (4) correccion-por-construccion (subconjunto estricto). cross_source_dedup
+  es OFFLINE/no-servido/re-ejecutable -> reversible, fuera del denominador servido.
+- ## PENDIENTE-OWNER / consolidacion P06: resolve_entities._normalize_phone (la copia min-7, beta no servida) sigue
+  aparte; migrarla a phone_es romperia su test_7_digit_minimum (politica min-7 lenient = decision aparte). Candidata a
+  consolidar cuando se decida endurecer la beta. Tambien: autocasion_wholesale/family_generic guardan phones crudos ->
+  pueden normalizar a E.164 con esta autoridad (futuro).
+- % P06: CAPA-0 hard keys (tax-id + telefono) BLINDADOS con 1 autoridad cada uno; cross_source consume telefono validado.
+  Proximo: P05 fase 2 _ingest_window / P09-S7 ODCS / P12 mas vistas.
