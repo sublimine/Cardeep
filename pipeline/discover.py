@@ -28,6 +28,7 @@ from pipeline.sources.oem_mercedes import OemMercedesAdapter
 from pipeline.sources.oem_seat import OemSeatAdapter
 from pipeline.sources.osm import OsmAdapter
 from pipeline.sources.associations import AedraAdapter, AcevasAdapter, AecsAdapter
+from pipeline.sources.autocasion_census import AutocasionCensusAdapter
 from pipeline.verify import record_count_verdict
 from services.api.codes import cdp_code
 
@@ -47,6 +48,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     "aedra": AedraAdapter,
     "acevas": AcevasAdapter,
     "aecs": AecsAdapter,
+    "autocasion_census": AutocasionCensusAdapter,
 }
 
 
