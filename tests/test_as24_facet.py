@@ -7,7 +7,7 @@ under the cap. This tests the PURE partition planner + URL builder (no I/O); the
 """
 import pytest
 
-from pipeline.platform.as24_facet import FACET_CAP, _facet_url, plan_price_bands
+from pipeline.platform.as24_facet import FACET_CAP, _facet_url, _parse_bands, plan_price_bands
 
 pytestmark = pytest.mark.unit
 
@@ -47,3 +47,9 @@ def test_plan_subdivides_dense_ranges_until_under_cap():
     assert plan[-1][1] == 100_000
     for (a_from, a_to), (b_from, b_to) in zip(plan, plan[1:]):
         assert a_to == b_from   # no gaps, no overlaps
+
+
+def test_parse_bands_spec():
+    assert _parse_bands("0:2000,2000:4000,200000:") == [(0, 2000), (2000, 4000), (200000, None)]
+    assert _parse_bands("") == []
+    assert _parse_bands("0:2000") == [(0, 2000)]

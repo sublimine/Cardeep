@@ -2422,3 +2422,18 @@
   parse_listing_dealer+vehicle/ingest-cage/_page_range. main(max_bands): computa plan (count_of = fetch numberOfResults
   por banda via _facet_url) -> for cada banda: drena con _facet_url + cursor por pagina + seen_listing_ids GLOBAL
   (dedup cross-banda) -> ingest idempotente. Drain de prueba 2-3 bandas baratas -> medir cobertura que SUPERE el techo 4k.
+
+### 2026-06-21 (loop COBERTURA) — as24_facet BLOQUE 2: drain por banda VALIDADO (rompe el cap) [VERIFICADO]
+- BLOQUE 2 (drain) construido reusando las 11 atomicas de autoscout24_wholesale (parse_listing_dealer/vehicle,
+  upsert_dealer/vehicle, link_platform, emit_new_event, ensure_platform_entity, _next_data/_find/_find_listings) +
+  loop de bandas + seen_listing_ids GLOBAL (dedup cross-banda) + _count_sync para el plan + main CLI [max_bands] [bands].
+- DRAIN DE PRUEBA E2E (2 bandas 0:2000,2000:4000): bands_drained=2, listings_seen=2.713 (=498+2.215 declarados, EXACTO),
+  cars_caged=1.021, NEW=1.005, private_skipped=1.606, +202 dealers nuevos, verdict TRUSTWORTHY, ok=True, SIN ban.
+  vehicles_total 1.709.905 -> 1.710.910 (+1.005, >=2 vias). db_edges AS24 4.141 -> 5.146.
+- PRUEBA DE RUPTURA DEL CAP: banda 2000-4000 sola pagino 111 paginas hasta su ultima real (>200pag-techo que /lst plano
+  imponia a TODO el catalogo). El facet drilling SUPERA el cap -> los 278k son accesibles por bandas.
+- TDD: tests/test_as24_facet.py 5 @unit (plan adaptativo, _facet_url, _parse_bands) verde; 223 unit subset; py_compile OK.
+- COBERTURA: +1.005 brutos + 202 dealers nuevos (solo 2 bandas baratas 0-4000€). Neta (cluster_size) pendiente de
+  dedup-run; +202 dealers = neto de entidades (puntos de venta nuevos). Escalar el plan completo -> ~189k netos.
+- PROXIMO: escalar as24_facet (plan automatico sin bands, o por lotes de bandas) drenando hacia ~189k; medir neta
+  acumulada (cluster_size=1); vigilar ban/IP; commit por hito. as24_facet es la palanca de cobertura grande €0 VALIDADA.
