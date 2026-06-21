@@ -2527,3 +2527,14 @@
 - Re-drenado correcto estable ~8.3k coches/lote de cobertura nueva, sin truncar (todas las bandas pages<200).
 - PROXIMO: seguir rango virgen (cursor pf>=25390; ~32 bandas restantes en 20k+) lotes ~6.5k; luego 8000-20000 (truncado
   antes) y barrido <8000. HITO: cuando PC ocioso, dedup-run (memory-gated) cota->neta exacta.
+
+### 2026-06-21 (loop COBERTURA) — RE-DRENADO virgen 23925-26854 +15.168 (PASADO EL 50%) [VERIFICADO]
+- Lote 23925-25390 = +8.555 NEW (output==DB delta 1.793.676->1.802.231) +73 dealers TRUSTWORTHY; pages 157/159/140 (<200).
+- Lote 25390-26854 = +6.613 NEW (output==DB delta 1.802.231->1.808.844) +48 dealers TRUSTWORTHY; pages 111/139/103 (<200).
+- AS24 bruto 135.740->150.971 (+15.168 estos 2 lotes). Cota neta cluster_size=1 = 36.265 (ESTANCADA: dedup batch NO
+  corre sobre inserts frescos). sin-cluster (pendiente dedup) = 103.042 (SUPERO 100k).
+- HONESTO: bruto 150.971 = ~54.1% del catalogo 279.154; cota neta confirmada 36.265; el grueso del bruto (~103k) esta
+  pendiente de dedup -> la cobertura neta REAL es mucho mayor que la cota pero no medible sin el dedup-run.
+- DEUDA DEDUP creciente (103k): el backlog sin-cluster crece cada lote. HITO necesario: correr cluster_vehicles
+  (memory-gated ~2GB) cuando el PC este ocioso para convertir cota->neta exacta. Por ahora prioridad = cobertura (mandato).
+- PROXIMO: seguir rango virgen (cursor pf>=28319; ~28 bandas restantes en 20k+) lotes ~6.5k; luego 8000-20000 y barrido <8000.
