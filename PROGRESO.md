@@ -2807,3 +2807,14 @@
   ~2.026.546. Dedup full global STAGED (RAM<4GB) para neta exacta combinada.
 - PROXIMO (PIVOT): siguiente frente cobertura NUEVA €0 -> investigar wallapop/milanuncios/R1 desguace/website cleanup; elegir
   mayor rendimiento; mismo metodo.
+
+### 2026-06-21 (loop COBERTURA) — autocasion_facet: fix early-stop OK pero BAJO ROI -> PIVOT [VERIFICADO]
+- Fix early-stop (0407b10) validado (aixam CLEAN). Drain completo post-fix corrio 1200s pero exit 124 (timeout) con solo
+  +371 nuevos absolutos (DB 2.026.663->2.027.034; autocasion 112.022->112.393). Output buffered perdido al SIGTERM.
+- CAUSA del bajo rendimiento (gana el codigo): autocasion hidrata 1 PDP-fetch POR COCHE (rate-limited governed), no JSON
+  gateway batch como coches_net -> lentisimo (~371 coches/1200s). ADEMAS ya ~91% cosechado por wholesale (112k de ~123k
+  declarado). El facet aporta marginal (~11k) a ritmo PDP-lento. ROI bajo vs otros frentes.
+- DECISION: autocasion fix queda aplicado/validado y disponible (para completar lento si se desea); NO se prioriza. PIVOT
+  a frente de ALTO rendimiento. Honesto: autocasion ~91% cubierto por wholesale; no es un hueco grande.
+- PROXIMO: reconocer wallapop_facet (592k bruto, JSON gateway rapido) / milanuncios (398k) / family_* CMS (dealers web
+  propia, nucleo del objetivo) / oem_*/group_* -> elegir mayor cobertura nueva de DEALERS a buen ritmo.
