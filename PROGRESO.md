@@ -3074,3 +3074,4 @@
 - DRENADO 7879 ARRANCA por lotes run_in_background (PYTHONUNBUFFERED, --from-db, conc 8-10, cap 150), event-driven, hasta agotar.
 - DRENADO LOTE 1 (600 dealers, conc 10, cap 150) x2 vias: live=221 (37pct), noise=231, dead=114, walled=34, error=0; 6927 coches cageados, 5813 nuevos. DB acumulado: dp_NEW_events 1339->7152 coches, 274 dealers harvested. Marcador monotono OK (probed=600, candidatos 9900->9300). Drenable real restante ~7200. LOTE 2 (800 dealers) lanzado.
 - DRENADO LOTE 2 (800 dealers, conc 12) x2 vias: live=276, dead=240, noise=258, walled=26; 6034 cageados, 3875 nuevos. Acumulado: dp_NEW_events 11027 coches, 497 dealers harvested, probed=1400. Drenable real 7201->6401 (monotono). LOTE 3 (800) lanzado.
+- DRENADO LOTE 3 (800 dealers) x2 vias: live=254, dead=288, noise=225, walled=33; 5148 cageados, 4251 nuevos. Acumulado: dp_NEW_events 15278 coches, 713 dealers, probed=2200, drenable_real 6401->5601. LOTE 4 (800) lanzado.
