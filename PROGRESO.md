@@ -2461,3 +2461,13 @@
   diferido por RAM (2GB libres) -> ejecutar con cuidado/fresh o cuando el PC este ocioso; mientras, reportar cota
   (cluster_size=1 confirmado = cota inferior de la neta).
 - PROXIMO: seguir bandas 12000-30000 (grueso VO) en lotes de 2; luego 30000+. Acumular hacia ~189k; commit por hito.
+
+### 2026-06-21 (loop COBERTURA) — as24_facet: lote 12000-14000 +7.329 (AS24 sesion +62.7k) [VERIFICADO]
+- Lote 12000-14000 completo LIMPIO (pese a lanzarse con & por error; termino normal con teardown: harvest_run 02:08
+  ok=True rows=7526). vehicles_total 1.732.530 -> 1.739.859 (+7.329). REGLA reforzada: drains con run_in_background=true.
+- BALANCE AS24 sesion: 16.749 -> 79.456 vehicles = +62.707 coches. NETA: cluster_size=1=33.975 (COTA INFERIOR fija);
+  sin-cluster=34.049 (CRECE cada lote porque el dedup batch NO corre sobre los nuevos). La neta real ~ confirmado +
+  mayoria de sin-cluster (historico 58-68% nuevo). Honesto: reportar cota (33.975) + backlog dedup (34k).
+- DEUDA: correr cluster_vehicles (dedup) sobre los ~34k sin-cluster daria neta exacta; memory-gated (2GB) -> diferido,
+  ejecutar con cuidado o stagear. Mientras, cluster_size=1 = cota inferior verificada.
+- PROXIMO: seguir bandas (14000+) lotes de 2 con run_in_background; en un hito, dedup-run para neta exacta.
