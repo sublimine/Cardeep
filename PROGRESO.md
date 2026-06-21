@@ -2569,3 +2569,20 @@
   Tras eso: drenar banda de tope abierto 1000000:(None) para cola >1M, luego HITO DEDUP (cluster_vehicles sobre ~150k
   backlog -> neta exacta), luego 8000-20000 (truncado antes) y barrido <8000.
 - PROXIMO: cerrar 20k+ -> dedup -> 8000-20000.
+
+### 2026-06-21 (loop COBERTURA) — RANGO 20k+ CERRADO + NETA REAL medida por SQL [VERIFICADO]
+- Lote 93750-1.000.000 = +3.155 NEW (output==DB delta 1.852.958->1.856.113) +16 dealers TRUSTWORTHY; pages 66/79/25/7 (<200).
+- Cola >1M (banda tope abierto "1000000:", fuera del plan) = +39 NEW (DB delta 1.856.113->1.856.152) TRUSTWORTHY; pages 2.
+- RANGO VIRGEN 20.000+ (incl. cola >1M) DRENADO COMPLETO. AS24 bruto = 199.266 (~71.4% del catalogo 279.154).
+- HITO DEDUP STAGEADO (gate hardware): cluster_vehicles carga status='available'=1.847.156 -> ~1.9GB dicts + edges +
+  union-find = pico est. 3-5GB > 3.3GB RAM libre, con workers legitimos vivos (:8090, P02). Forzarlo arriesga OOM de
+  procesos legitimos -> NO se fuerza (D1 'sin ahogar el PC' + gate 'no matar workers'). Diferido a ventana de RAM holgada
+  (workers parados) o mejora a dedup SQL-side/streaming. NO destructivo, idempotente -> stage seguro.
+- NETA REAL medida por SQL (sin RAM Python, PG en disco) sobre los 150.122 AS24 sin-cluster:
+  photo_url UNICO global = 117.590 (neto nuevo SEGURO senal A) + 31.086 photo compartido (dup potencial, parte same-entity
+  = tambien neto) + 1.446 sin foto. COTA INFERIOR NETA = 37.146 (cluster_size=1 confirmado) + 117.590 = ~154.736 coches
+  netos verificados [senal A + cluster]. La neta real ~155k-180k (parte de los 31k compartidos es same-entity nuevo).
+  => del bruto 199.266, ~78% es NETO NUEVO real (el re-drenado NO esta inflado; la cota cluster_size=1=37k subestimaba
+  porque el dedup batch no corrio sobre los nuevos). La cifra EXACTA saldra del dedup-run cuando sea seguro.
+- PROXIMO: completar 8000-20000 (truncado antes, cobertura nueva incremental; lote 8300-9032 EN MARCHA) y barrido <8000;
+  luego dedup-run (ventana RAM) para neta exacta; luego AUDIT A3 cobertura AS24 final.
