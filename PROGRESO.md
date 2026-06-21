@@ -3031,3 +3031,15 @@
 - PROXIMO #4b: probe_dealer(conn,fetch,domain) (cascada completa: frontier sitemap || SSR home; por PDP jsonld||microdata||
   ssr; status live/dead/walled/noise) + cage own-site (upsert_dealer source_key dealerprobe_ownsite -adaptar upsert_dealer_by_host-
   + bulk insert vehicle owned-by-dealer + entity_source + record_run + VAM) + main --domains/--from-db. Luego #5 validar vivo, #6 drenar 7.035.
+
+### 2026-06-21 (loop COBERTURA) — BUILD DealerProbe #4b-i: parse_pdp cascada por-PDP TDD GREEN [VERIFICADO]
+- dealerprobe_wholesale.py +async parse_pdp(fetch,url)->dict|None: fetch PDP -> parse_jsonld_vehicles[0] || 
+  parse_microdata_vehicles[0]; url canonica del JSON-LD gana, sino stampa la url fetcheada; None si dead/vendido/sin datos.
+  Pura sobre los parsers del componente 2, fetch INYECTADO (offline-testable).
+- TDD tests/test_dealerprobe_pdp.py: 5 casos (jsonld first, microdata fallback, sin-datos=None, dead=None, jsonld-canonical-url).
+  RED->GREEN. Total DealerProbe 55 tests GREEN.
+- PROXIMO #4b-ii (integracion DB, validar en vivo): probe_dealer(conn,geo,fetch,domain) -> cascada (frontier sitemap ||
+  SSR home/listing) -> por PDP parse_pdp (+specs SSR fallback) -> status live/dead/walled/noise + CAGE own-site
+  (upsert_dealer DP_SOURCE_KEY -adaptar upsert_dealer_by_host- + bulk insert vehicle owned-by-dealer + entity_source + 
+  events + record_run + VAM) + main --domains/--from-db. Reusa family_dealerk (Vehicle/resolve_dealer_for_host/cdp_code/
+  _BULK_INSERT_VEHICLES/_BULK_TOUCH_VEHICLES/_BULK_INSERT_EVENTS) con DP_SOURCE_KEY. Luego VALIDAR vivo ~10 dealers recon.

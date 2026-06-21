@@ -14,7 +14,12 @@ from __future__ import annotations
 import re
 from collections.abc import Awaitable, Callable
 
-from pipeline.platform.dealerprobe import classify_loc, is_vehicle_sitemap
+from pipeline.platform.dealerprobe import (
+    classify_loc,
+    is_vehicle_sitemap,
+    parse_jsonld_vehicles,
+    parse_microdata_vehicles,
+)
 
 DP_SOURCE_KEY = "dealerprobe_ownsite"
 
@@ -74,3 +79,22 @@ async def probe_sitemap_frontier(
                     if len(frontier) >= cap:
                         break
     return frontier
+
+
+async def parse_pdp(
+    fetch: Callable[[str], Awaitable[str | None]],
+    url: str,
+) -> dict | None:
+    """Fetch one per-vehicle detail page and return ONE normalized vehicle by signal quality:
+    JSON-LD Car/Vehicle first, then schema.org microdata. None if dead/sold/no vehicle data.
+    The JSON-LD canonical url wins; otherwise the fetched url is stamped in."""
+    html = await fetch(url)
+    if not html:
+        return None
+    for parser in (parse_jsonld_vehicles, parse_microdata_vehicles):
+        found = parser(html)
+        if found:
+            v = dict(found[0])
+            v["url"] = v.get("url") or url
+            return v
+    return None
