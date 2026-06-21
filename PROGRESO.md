@@ -2762,3 +2762,10 @@
 - coches_net frente acumulado (5 provincias): Madrid 18.031 + Barcelona 6.101 + V/S/M 11.915 = +42.046 nuevo-absoluto.
 - HECHAS: 8,28,29,41,46. EN MARCHA: 3,30,15,11 (Alicante/Murcia/Coruña/Cadiz). RESTANTES tras ese: 43.
 - PROXIMO: seguir 52 provincias en grupos; luego AUDIT A3 coches_net + pivot.
+
+### 2026-06-21 (loop COBERTURA) — coches_net Alicante+Murcia+Coruña+Cadiz +4.531 nuevo-absoluto [VERIFICADO]
+- Grupo 3,30,15,11 = +4.531 nuevos absolutos (DB delta 2.002.142->2.006.673); 4 particiones clean, VAM TRUSTWORTHY.
+  El nuevo-absoluto/provincia baja: provincias restantes solapan mas con AS24 (dealers ya capturados). Esperado.
+- coches_net frente acumulado (9 provincias): +46.577 nuevo-absoluto.
+- HECHAS: 3,8,11,15,28,29,30,41,46. EN MARCHA: 18,35,38,50,33,7 (grupo 6). RESTANTES tras ese: 37.
+- PROXIMO: seguir resto provincias en grupos de ~6; luego AUDIT A3 coches_net + pivot.
