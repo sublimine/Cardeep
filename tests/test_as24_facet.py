@@ -7,7 +7,13 @@ under the cap. This tests the PURE partition planner + URL builder (no I/O); the
 """
 import pytest
 
-from pipeline.platform.as24_facet import FACET_CAP, _facet_url, _parse_bands, plan_price_bands
+from pipeline.platform.as24_facet import (
+    FACET_CAP,
+    _facet_url,
+    _parse_bands,
+    expand_bands,
+    plan_price_bands,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -53,3 +59,35 @@ def test_parse_bands_spec():
     assert _parse_bands("0:2000,2000:4000,200000:") == [(0, 2000), (2000, 4000), (200000, None)]
     assert _parse_bands("") == []
     assert _parse_bands("0:2000") == [(0, 2000)]
+
+
+def test_expand_bands_passes_through_band_already_under_cap():
+    # an explicit band under the cap is kept whole (1 probe, no subdivision)
+    assert expand_bands([(0, 2000)], lambda f, t: 100) == [(0, 2000)]
+
+
+def test_expand_bands_subdivides_a_dense_explicit_band():
+    # a too-wide explicit band (e.g. 18000-19000 with 12,866 cars) MUST be subdivided so it never
+    # truncates at the 200-page cap. density: ~13 cars/EUR -> only narrow sub-bands fall under cap.
+    def count_of(f, t):
+        return (t - f) * 13
+    plan = expand_bands([(18_000, 19_000)], count_of)
+    assert len(plan) > 1                                   # actually subdivided
+    assert plan[0][0] == 18_000 and plan[-1][1] == 19_000  # covers the whole explicit band
+    for (a_f, a_t), (b_f, b_t) in zip(plan, plan[1:]):
+        assert a_t == b_f                                  # contiguous, gap-free
+    for f, t in plan:
+        assert count_of(f, t) <= FACET_CAP or (t - f) <= 100  # under cap (or min-width floor)
+
+
+def test_expand_bands_keeps_open_top_band_as_is():
+    # an open-top band (price_to=None) can't be bisected (open interval) -> kept verbatim
+    assert expand_bands([(200_000, None)], lambda f, t: 999_999) == [(200_000, None)]
+
+
+def test_expand_bands_handles_multiple_mixed_bands():
+    def count_of(f, t):
+        return 100 if (t - f) <= 500 else 10_000
+    plan = expand_bands([(0, 2000), (200_000, None)], count_of)
+    assert plan[0] == (0, 500)          # first dense band subdivided from its low edge
+    assert plan[-1] == (200_000, None)  # open band preserved at the tail

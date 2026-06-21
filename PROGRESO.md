@@ -2484,3 +2484,23 @@
 - La palanca as24_facet sigue limpia y €0 (OPEN curl_cffi, governor pacing). Modo produccion estable, lote tras lote.
 - PROXIMO: seguir bandas 18000+ lotes de 2 con run_in_background (18000-20000 EN MARCHA); luego 20000-25000, 25000-30000,
   30000+. Acumular hacia ~189k; en hito de PC ocioso, dedup-run para convertir cota -> neta exacta.
+
+### 2026-06-21 (loop COBERTURA) — HALLAZGO CAPITAL + FIX RAIZ: las bandas anchas TRUNCABAN [VERIFICADO]
+- Lote 18000-20000 = +7.548 NEW (output==DB delta 1.754.741->1.762.289) +66 dealers TRUSTWORTHY. PERO los logs
+  revelaron pages=200 en AMBAS bandas con distinct_ids=4000 (=FACET_CAP exacto) -> TRUNCAMIENTO. Probe directo
+  (_count_sync) confirma densidad real del rango medio: 18000-19000=12.866, 19000-20000=11.935, 20000-22000=19.700,
+  22000-25000=21.967, 25000-30000=22.063, 30000-40000=19.174 coches. Mis bandas de 1000-2000€ capturaban solo ~4.000
+  cada una -> el grueso de cada banda densa quedaba SIN capturar. CERO MAQUILLAJE: los coches insertados (cota neta
+  34.898) son reales y validos, pero las bandas "cerradas" NO estaban agotadas; la completitud reportada era falsa.
+- CAUSA RAIZ: pasar bandas explicitas anchas que el planner adaptativo no subdividia (solo subdividia con bands=None).
+- FIX RAIZ (TDD GREEN, 12 passed): expand_bands() enruta CADA banda explicita por plan_price_bands recursivo ->
+  se subdivide hasta <cap, JAMAS trunca; banda abierta (None) se mantiene. + cursor skip_bands (argv[3]) pagina el
+  plan de forma reanudable. + plan_window/plan_total_bands en el reporte.
+- PLAN COMPLETO generado (pipeline/platform/_as24_facet_plan.json, 283s de probes): 118 sub-bandas <cap;
+  catalog_total_est = 279.154 coches == censo declarado ~278k (VALIDA el denominador por via independiente).
+  RESIDUAL declarado: 3 bandas de precio-pico (12950/13999/14990 €) con >4000 en <61€ ancho -> truncan ~1.3k (0.47%);
+  requeririan 2a dimension (año/km) -> diferido y documentado, NO maquillado.
+- IMPLICACION: la cosecha AS24 NO estaba ~cerrada; lo capturado (~102k bruto / 34.9k cota neta) es ~37% del catalogo.
+  El re-drenado correcto con bandas <cap recupera el resto. Idempotente: re-tocar bandas ya vistas re-inserta 0 new.
+- PROXIMO: drenar el plan (118 bandas) en lotes de ~3 bandas con skip cursor, EMPEZANDO por el rango medio-alto
+  (18k+, maxima cobertura nueva no capturada), luego completar 0-18k fino. Acumular hacia ~279k bruto.

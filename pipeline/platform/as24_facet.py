@@ -88,6 +88,28 @@ def plan_price_bands(
             + plan_price_bands(count_of, mid, hi, min_width))
 
 
+def expand_bands(
+    bands: list[tuple[int, int | None]],
+    count_of: Callable[[int, int], int],
+    min_width: int = _MIN_BAND_WIDTH,
+) -> list[tuple[int, int | None]]:
+    """Expand explicit (possibly too-wide) bands so EVERY closed band is <= FACET_CAP.
+
+    Root-cause fix: passing a wide band (e.g. 18000-19000 = 12,866 cars) to a flat /lst search
+    truncates silently at the 200-page cap. Routing each closed band through the adaptive planner
+    subdivides the dense ones until they fit, so the catalog is drained completely — never truncated.
+    A band already under the cap passes through unchanged. Open-top bands (price_to=None) are kept
+    verbatim: an open interval can't be bisected; its tail above the last bound is sparse.
+    """
+    out: list[tuple[int, int | None]] = []
+    for pf, pt in bands:
+        if pt is None:
+            out.append((pf, pt))
+        else:
+            out.extend(plan_price_bands(count_of, pf, pt, min_width))
+    return out
+
+
 def _count_sync(price_from: int, price_to: int) -> int:
     """numberOfResults for a band, via a direct (sync) fetch — used ONLY to build the plan (a handful
     of probes, once, off the hot loop). Gentle fixed pacing. On any error, assume dense (=FACET_CAP+1)
@@ -116,7 +138,8 @@ def _parse_bands(spec: str) -> list[tuple[int, int | None]]:
 
 
 async def harvest_facet(max_bands: int | None = None,
-                        bands: list[tuple[int, int | None]] | None = None) -> dict:
+                        bands: list[tuple[int, int | None]] | None = None,
+                        skip_bands: int = 0) -> dict:
     """Drain AS24 by price bands, breaking the /lst cap. Reuses every wholesale primitive; the only
     new logic is the band loop + a GLOBAL seen_listing_ids (cross-band dedup). Idempotent ingest."""
     conn = await asyncpg.connect(DSN)
@@ -146,10 +169,20 @@ async def harvest_facet(max_bands: int | None = None,
         if bands is None:
             print("[as24_facet] planning adaptive price bands (sync probes)...")
             bands = await asyncio.to_thread(plan_price_bands, _count_sync)
+        else:
+            print(f"[as24_facet] expanding {len(bands)} explicit band(s) through adaptive planner "
+                  "(dense bands subdivide so they never truncate at the page cap)...")
+            bands = await asyncio.to_thread(expand_bands, bands, _count_sync)
+        full_plan = len(bands)
+        if skip_bands:
+            bands = bands[skip_bands:]
         if max_bands is not None:
             bands = bands[:max_bands]
         stats["bands_planned"] = len(bands)
-        print(f"[as24_facet] {len(bands)} bands to drain (cap {FACET_CAP}/band).")
+        stats["plan_total_bands"] = full_plan
+        stats["plan_window"] = f"{skip_bands}:{skip_bands + len(bands)} of {full_plan}"
+        print(f"[as24_facet] draining {len(bands)} band(s) [window {stats['plan_window']}] "
+              f"(cap {FACET_CAP}/band).")
 
         dealers_before = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
@@ -260,7 +293,8 @@ def _print_report(stats: dict) -> None:
     print("\n" + "=" * 64)
     print("AS24 FACET HARVEST REPORT")
     print("=" * 64)
-    for k in ("bands_planned", "bands_drained", "pages_fetched", "listings_seen", "dealer_listings",
+    for k in ("plan_total_bands", "plan_window", "bands_planned", "bands_drained", "pages_fetched",
+              "listings_seen", "dealer_listings",
               "private_skipped", "geo_skipped", "dup_ids_collapsed", "cars_caged", "new_cars",
               "edges_created", "new_dealers", "new_events", "harvested_cageable", "db_edges",
               "db_join_vehicles", "verdict", "health_status", "breaker_state"):
@@ -272,7 +306,8 @@ def _print_report(stats: dict) -> None:
 def main() -> None:
     max_bands = int(sys.argv[1]) if len(sys.argv) > 1 else None
     bands = _parse_bands(sys.argv[2]) if len(sys.argv) > 2 else None
-    stats = asyncio.run(harvest_facet(max_bands=max_bands, bands=bands))
+    skip_bands = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+    stats = asyncio.run(harvest_facet(max_bands=max_bands, bands=bands, skip_bands=skip_bands))
     _print_report(stats)
 
 
