@@ -2908,3 +2908,25 @@
 - SEÑAL: cobertura €0 de FUENTES CONOCIDAS ~agotada. Los family (webs propias) requieren DESCUBRIMIENTO de nuevos dominios
   (no re-drenado de conocidos) = otro tipo de trabajo (discovery, no harvest). motorflash pendiente (Traceback).
 - PROXIMO: DEDUP global (si RAM>4GB) para neta exacta combinada -> A3 final + reporte campaña. Si RAM<4GB sigue gated.
+
+### 2026-06-21 (loop COBERTURA) — ★★ DEDUP GLOBAL EJECUTADO: NETA EXACTA del censo [VERIFICADO]
+- cluster_vehicles corrio completo (RAM 5.5GB ventana, sin MemoryError). Loaded 2.155.401 available; edges 384.407
+  (photo 166.088 + firma 183.065 + both 35.254); union-find -> 1.833.647 clusters; 321.754 listings colapsados (duplicados).
+- ★ NETA EXACTA CENSO = 1.833.647 COCHES FISICOS UNICOS (de 2.155.401 listings). cluster_size=1 singletons=1.564.887;
+  clusters multi-listing=268.760 (590.514 listings). Exclusivos por fuente (cluster_size=1): wallapop 565.763 /
+  coches.net 277.886 / milanuncios 208.586 / AS24 196.634.
+- ANTI-FP (honesto): CHECK3 (cobertura exacta una vez) OK; CHECK4 (singletons signal=none) OK; CHECK2 WARN (14 clusters
+  >20 listings); CHECK1 FAIL = 2.382 cross-province merges (≤0.13% neta) -> A INVESTIGAR si Signal-A legitimos (mismo
+  dealer/foto idéntica en 2 prov) o falsos-positivos (2 coches distintos mergeados). NO maquillaje: la neta 1.833.647 lleva
+  este caveat (max sobre-merge ~2.382).
+
+### ★ REPORTE DE CAMPAÑA — sesion COBERTURA 2026-06-21 (hands-off /loop)
+- ARRANQUE: vehicles ~1.718.128 (re-drenado AS24) -> CIERRE: 2.171.883 bruto / 1.833.647 NETA EXACTA (dedup).
+- 4 MARKETPLACES MAYORES drenados: AS24 (fix expand_bands, bruto 309k), coches.net (fix private_caged, 52/52, +66.450),
+  wallapop-PRO (18/18 celdas, +96.333 dealers), milanuncios (52/52, +39.217, 15.445 dealers). + vo_chains +2.487 +
+  OEM ~15 +2.354 + group_subastas +3.875. autocasion evaluado y descartado (bajo-ROI).
+- 3 FIXES DE RAIZ (TDD/validados): expand_bands (AS24 truncaba a 4k/banda), private_caged (coches_net KeyError),
+  autocasion early-stop clamp. Todos commit + CI verde.
+- METODO: cada lote run_in_background, verificado x2 vias (DB-delta + VAM/CI verde), commit agrupado, residuales declarados.
+- COBERTURA €0 de fuentes conocidas ~AGOTADA. PENDIENTE €0 (residual, NO sellar sin agotar): motorflash (bug Traceback),
+  family por-dealer (discovery de NUEVOS dominios, no re-drenado), R1 desguace, oem faltantes (mg/skoda/byd).
