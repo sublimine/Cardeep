@@ -2675,3 +2675,13 @@
 - AS24 bruto 271.335->276.514 (~99.1% de 279.154). cota cluster_size=1=37.149; sin-cluster=227.597.
 - PROXIMO: cerrar 8000-20000 (cursor pf>=16845; queda 16.8k-20k, 1-2 lotes) -> luego barrido <8000;
   luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 16845-17333 +4.811; bruto SUPERA estimado [VERIFICADO]
+- Lote 16845-17333 = +4.811 incremental NEW (output==DB delta 1.933.397->1.938.208) +3 dealers TRUSTWORTHY; pages 82/194/135 (<200).
+- AS24 bruto 276.514->281.325. HITO HONESTO: 281.325 > catalog_total_est 279.154 -> el catalogo es DINAMICO (entran
+  listings nuevos cada dia desde que el plan se genero hace horas). El "% de 279.154" pierde sentido >100%; la cobertura
+  del PLAN esta ~completa salvo 17.3k-20k + barrido <8000 + 3 residuales precio-pico (~1.427). cota cluster_size=1=37.149;
+  sin-cluster=232.408.
+- NOTA: para medir cobertura del catalogo VIVO actual habria que re-contar numberOfResults hoy; el bruto acumulado (todo
+  lo insertado via as24, historico+facet) es cota superior. Lo relevante: el rango de precios completo esta drenado.
+- PROXIMO: cerrar 17.3k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
