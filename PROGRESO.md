@@ -3059,3 +3059,7 @@
 - RAIZ precio: _SSR_PRICE_RE no captaba coma de millares (14,990) ni el € mojibake (�) de paginas latin mal decodificadas -> regex + strip ampliados.
 - TDD: 59 tests GREEN (+@type-array, +asset-exclude, +price-comma-mojibake).
 - Gap C pendiente (medir tras re-validar): palaciocasion inventario en subdominio coches.*; autosantpedor sin links en home (JS).
+
+## 2026-06-21 — Re-validacion + filtro drenabilidad + concurrencia (DealerProbe)
+- RE-VALIDACION 8 dealers post-fixes x2 vias: 6/8 cagean coches reales, 0 crashes (eran 2). 334 coches DP (summary caged = DB dp_NEW_events=334), 215 nuevos. grupobeniautos 0->80 (precio fix), automotordursan/carcitycoches dejan de crashear. 2 noise (palaciocasion subdominio, autosantpedor JS).
+- FILTRO --from-db: poblacion real 9978 compraventa-con-web sin family_/dealerprobe. _drainable_website (TDD 18 casos) descarta red-OEM (kia.com/renault.es/nissan.es/...), marketplaces (clicars/coches.net), SEO placeholders (beedigital), social, malformados -> 7879 drenables (dropped 2099=21

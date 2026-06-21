@@ -18,6 +18,7 @@ import json as _json
 import os
 import re
 from collections.abc import Awaitable, Callable
+from urllib.parse import urlparse
 
 import asyncpg
 from curl_cffi import requests as _cffi
@@ -139,6 +140,41 @@ async def parse_pdp(
 
 
 # --- connector spine: own-site cage + per-dealer cascade + CLI (component 4b-ii) --------------
+
+# Hosts whose "website" is NOT a drainable own-site: OEM brand-networks (the dealer's stock lives
+# on the brand platform, not a generic sitemap), national marketplaces/aggregators (covered by
+# their own connectors), SEO directory placeholders, and social profiles. Conservative on purpose
+# — only CLEAR noise is dropped; unknown domains are kept and let the live status decide.
+_NON_DRAINABLE_HOSTS = frozenset({
+    # OEM brand networks
+    "kia.com", "hyundai.es", "nissan.es", "renault.es", "dacia.es", "citroen.es", "ds.es",
+    "peugeot.es", "opel.es", "bmw.es", "mini.es", "mercedes-benz.es", "audi.es", "volkswagen.es",
+    "skoda.es", "seat", "cupraofficial.es", "ford.es", "toyota.es", "lexus.es", "mazda.es",
+    "honda.es", "fiat.es", "jeep.es", "alfaromeo.es", "suzuki.es", "mitsubishi-motors.es",
+    "volvocars.com", "kia.es", "hyundai.com",
+    # national marketplaces / aggregators (own connectors elsewhere)
+    "coches.net", "milanuncios.com", "wallapop.com", "autoscout24.es", "autoscout24.com",
+    "clicars.com", "ocasionplus.es", "flexicar.es", "cargurus.es", "autocasion.com",
+    # SEO directories / placeholders / social
+    "beedigital.es", "paginasamarillas.es", "axesor.es", "einforma.com", "infoempresa.com",
+    "facebook.com", "m.facebook.com", "instagram.com", "youtube.com", "twitter.com", "x.com",
+    "tiktok.com", "linkedin.com", "wa.me", "whatsapp.com", "t.me", "google.com",
+})
+
+
+def _drainable_website(url: str) -> bool:
+    """True iff `url` is a real own-site worth probing (not OEM-network/marketplace/social/junk).
+
+    Drops malformed URLs (double scheme, no host) and any host that equals or is a subdomain of a
+    known non-drainable host. Unknown domains pass — the live probe status classifies them."""
+    if not url or url.count("://") != 1:
+        return False                                  # e.g. http://www.https://www.x.com
+    host = (urlparse(url).netloc or "").lower().split(":")[0]
+    host = re.sub(r"^www\.", "", host)
+    if not host or "." not in host:
+        return False
+    return not any(host == bad or host.endswith("." + bad) for bad in _NON_DRAINABLE_HOSTS)
+
 
 class _Fetcher:
     """curl_cffi GET; returns body only on HTTP 200 (else None), last_status kept for diagnosis.
@@ -300,50 +336,70 @@ async def probe_dealer(conn, governed_fetch, fetcher, domain: str, cap: int = _D
     return summary
 
 
-async def _amain(domains, from_db, limit, cap):
-    conn = await asyncpg.connect(DSN)
+async def _select_drainable(conn, limit):
+    """Un-harvested compraventa websites, noise-filtered down to drainable own-sites."""
+    rows = await conn.fetch(
+        """SELECT website FROM entity e
+             WHERE kind='compraventa' AND website IS NOT NULL AND website<>''
+               AND NOT EXISTS (SELECT 1 FROM entity_source es
+                               WHERE es.entity_ulid=e.entity_ulid
+                                 AND (es.source_key LIKE 'family_%' OR es.source_key=$1))
+             ORDER BY last_seen DESC""",
+        DP_SOURCE_KEY)
+    cand = [r["website"] for r in rows]
+    drainable = [w for w in cand if _drainable_website(w)]
+    print(f"[dealerprobe] --from-db candidates={len(cand)} drainable={len(drainable)} "
+          f"dropped_noise={len(cand) - len(drainable)}")
+    return drainable[:limit] if limit else drainable
+
+
+async def _amain(domains, from_db, limit, cap, concurrency):
+    pool = await asyncpg.create_pool(DSN, min_size=2, max_size=max(4, concurrency + 2))
     try:
-        if await is_open(conn, DP_SOURCE_KEY):
-            print(f"[dealerprobe] breaker OPEN for {DP_SOURCE_KEY}; skipping (graceful).")
-            return
-        if from_db and not domains:
-            rows = await conn.fetch(
-                """SELECT website FROM entity e
-                     WHERE kind='compraventa' AND website IS NOT NULL AND website<>''
-                       AND NOT EXISTS (SELECT 1 FROM entity_source es
-                                       WHERE es.entity_ulid=e.entity_ulid
-                                         AND (es.source_key LIKE 'family_%' OR es.source_key=$1))
-                     ORDER BY last_seen DESC LIMIT $2""",
-                DP_SOURCE_KEY, limit)
-            domains = [r["website"] for r in rows]
+        async with pool.acquire() as conn:
+            if await is_open(conn, DP_SOURCE_KEY):
+                print(f"[dealerprobe] breaker OPEN for {DP_SOURCE_KEY}; skipping (graceful).")
+                return
+            if from_db and not domains:
+                domains = await _select_drainable(conn, limit)
         domains = domains or []
-        gf, fetcher = _build_fetch()
-        results, total_new, total_caged = [], 0, 0
-        for d in domains:
-            try:
-                s = await probe_dealer(conn, gf, fetcher, d, cap)
-            except Exception as e:  # noqa: BLE001
-                s = {"domain": d, "status": "error", "error": str(e)[:160], "vehicles": 0, "new": 0}
-            results.append(s)
-            total_new += s.get("new", 0)
-            total_caged += s.get("vehicles", 0)
+        sem = asyncio.Semaphore(concurrency)
+
+        async def work(d):
+            async with sem:
+                fetcher = _Fetcher()                  # own session per concurrent worker
+
+                async def gf(u):
+                    return await asyncio.to_thread(fetcher.fetch, u)
+                async with pool.acquire() as conn:
+                    try:
+                        return await probe_dealer(conn, gf, fetcher, d, cap)
+                    except Exception as e:  # noqa: BLE001
+                        return {"domain": d, "status": "error", "error": str(e)[:160],
+                                "vehicles": 0, "new": 0}
+
+        results = await asyncio.gather(*[work(d) for d in domains])
+        total_caged = sum(r.get("vehicles", 0) for r in results)
+        total_new = sum(r.get("new", 0) for r in results)
+        for s in results:
             print(f"[dealerprobe] {str(s.get('domain')):40} {str(s.get('status')):7} "
                   f"signal={s.get('signal')} frontier={s.get('frontier', 0)} "
                   f"caged={s.get('vehicles', 0)} new={s.get('new', 0)}"
                   f"{' ERR=' + s['error'] if s.get('error') else ''}")
         try:
-            await record_run(conn, DP_SOURCE_KEY, ok=True, rows=total_caged, error=None)
+            async with pool.acquire() as conn:
+                await record_run(conn, DP_SOURCE_KEY, ok=True, rows=total_caged, error=None)
         except Exception as e:  # noqa: BLE001
             print(f"[dealerprobe] record_run skipped: {e}")
         print("=" * 64)
-        print(f"  dealers probed : {len(domains)}")
+        print(f"  dealers probed : {len(domains)}  (concurrency={concurrency})")
         print(f"  cars caged     : {total_caged} ({total_new} new)")
         print("  by status      : " + ", ".join(
             f"{st}={sum(1 for r in results if r.get('status') == st)}"
             for st in ("live", "dead", "walled", "noise", "error")))
         print("=" * 64)
     finally:
-        await conn.close()
+        await pool.close()
 
 
 def main() -> None:
@@ -352,8 +408,9 @@ def main() -> None:
     p.add_argument("--from-db", action="store_true", help="probe DB dealers with a website not yet own-site-harvested")
     p.add_argument("--limit", type=int, default=50)
     p.add_argument("--cap", type=int, default=_DEALER_CAP, help="max vehicles per dealer")
+    p.add_argument("--concurrency", type=int, default=8, help="dealers probed in parallel")
     a = p.parse_args()
-    asyncio.run(_amain(a.domains, a.from_db, a.limit, a.cap))
+    asyncio.run(_amain(a.domains, a.from_db, a.limit, a.cap, a.concurrency))
 
 
 if __name__ == "__main__":
