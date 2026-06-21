@@ -346,20 +346,31 @@ async def probe_dealer(conn, governed_fetch, fetcher, domain: str, cap: int = _D
 
 
 async def _select_drainable(conn, limit):
-    """Un-harvested compraventa websites, noise-filtered down to drainable own-sites."""
+    """Un-probed compraventa (entity_ulid, website), noise-filtered to drainable own-sites.
+
+    Excludes any dealer already touched by a family_* harvest OR by ANY dealerprobe pass
+    (dealerprobe_ownsite = harvested, dealerprobe_probed = attempted/empty) so successive batches
+    advance MONOTONICALLY over fresh dealers instead of re-probing the dead/noise pile."""
     rows = await conn.fetch(
-        """SELECT website FROM entity e
+        """SELECT entity_ulid, website FROM entity e
              WHERE kind='compraventa' AND website IS NOT NULL AND website<>''
                AND NOT EXISTS (SELECT 1 FROM entity_source es
                                WHERE es.entity_ulid=e.entity_ulid
-                                 AND (es.source_key LIKE 'family_%' OR es.source_key=$1))
-             ORDER BY last_seen DESC""",
-        DP_SOURCE_KEY)
-    cand = [r["website"] for r in rows]
-    drainable = [w for w in cand if _drainable_website(w)]
+                                 AND (es.source_key LIKE 'family_%' OR es.source_key LIKE 'dealerprobe%'))
+             ORDER BY last_seen DESC""")
+    cand = [(r["entity_ulid"], r["website"]) for r in rows]
+    drainable = [(eid, w) for eid, w in cand if _drainable_website(w)]
     print(f"[dealerprobe] --from-db candidates={len(cand)} drainable={len(drainable)} "
           f"dropped_noise={len(cand) - len(drainable)}")
     return drainable[:limit] if limit else drainable
+
+
+async def _mark_probed(conn, entity_ulid, status):
+    """Stamp 'dealerprobe_probed' (source_ref=status) so this dealer drops out of future batches."""
+    await conn.execute(
+        "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES ($1,'dealerprobe_probed',$2) "
+        "ON CONFLICT (entity_ulid, source_key) DO UPDATE SET seen_at=now(), source_ref=EXCLUDED.source_ref",
+        entity_ulid, str(status))
 
 
 async def _amain(domains, from_db, limit, cap, concurrency):
@@ -370,11 +381,12 @@ async def _amain(domains, from_db, limit, cap, concurrency):
                 print(f"[dealerprobe] breaker OPEN for {DP_SOURCE_KEY}; skipping (graceful).")
                 return
             if from_db and not domains:
-                domains = await _select_drainable(conn, limit)
-        domains = domains or []
+                targets = await _select_drainable(conn, limit)   # [(entity_ulid, website)]
+            else:
+                targets = [(None, d) for d in (domains or [])]   # --domains: no DB marker
         sem = asyncio.Semaphore(concurrency)
 
-        async def work(d):
+        async def work(entity_ulid, d):
             async with sem:
                 fetcher = _Fetcher()                  # own session per concurrent worker
 
@@ -382,12 +394,18 @@ async def _amain(domains, from_db, limit, cap, concurrency):
                     return await asyncio.to_thread(fetcher.fetch, u)
                 async with pool.acquire() as conn:
                     try:
-                        return await probe_dealer(conn, gf, fetcher, d, cap)
+                        s = await probe_dealer(conn, gf, fetcher, d, cap)
                     except Exception as e:  # noqa: BLE001
-                        return {"domain": d, "status": "error", "error": str(e)[:160],
-                                "vehicles": 0, "new": 0}
+                        s = {"domain": d, "status": "error", "error": str(e)[:160],
+                             "vehicles": 0, "new": 0}
+                    if entity_ulid:                   # monotonic marker so batches advance
+                        try:
+                            await _mark_probed(conn, entity_ulid, s.get("status", "error"))
+                        except Exception as e:  # noqa: BLE001
+                            print(f"[dealerprobe] mark_probed skipped {d}: {e}")
+                    return s
 
-        results = await asyncio.gather(*[work(d) for d in domains])
+        results = await asyncio.gather(*[work(eid, d) for eid, d in targets])
         total_caged = sum(r.get("vehicles", 0) for r in results)
         total_new = sum(r.get("new", 0) for r in results)
         for s in results:
@@ -401,7 +419,7 @@ async def _amain(domains, from_db, limit, cap, concurrency):
         except Exception as e:  # noqa: BLE001
             print(f"[dealerprobe] record_run skipped: {e}")
         print("=" * 64)
-        print(f"  dealers probed : {len(domains)}  (concurrency={concurrency})")
+        print(f"  dealers probed : {len(results)}  (concurrency={concurrency})")
         print(f"  cars caged     : {total_caged} ({total_new} new)")
         print("  by status      : " + ", ".join(
             f"{st}={sum(1 for r in results if r.get('status') == st)}"
