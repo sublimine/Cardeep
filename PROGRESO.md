@@ -2615,3 +2615,13 @@
   NETA real cota inferior ~154.736 (SQL) + recuperados incrementales.
 - PROXIMO: seguir 8000-20000 (cursor pf>=12450; cruza precio-pico 12938-12999 residual ~declarado, luego 13k-20k) lotes ~6.5k;
   luego barrido <8000; luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 12450-13426 +10.577 incremental (~85%) [VERIFICADO]
+- Lote 12450-12938 = +6.551 incremental NEW (output==DB delta 1.882.351->1.888.902) +6 dealers TRUSTWORTHY; pages 153/74/149.
+- Lote 12938-13426 = +4.026 incremental NEW (output==DB delta 1.888.902->1.892.928) +1 dealer TRUSTWORTHY; pages 200/27/34/136.
+- RESIDUAL PRECIO-PICO CONFIRMADO: band 12938-12999 (~12.950€) topo pages=200 distinct=4000 de ~4.317 reales -> gap ~317
+  coches no capturables por precio (necesitarian 2a dimension año/km). Es 1 de los 3 residuales declarados (~1.3k total,
+  0.47%). NO es fallo del fix; es el limite teorico documentado. Declarado, NO subdividido (bajo min_width).
+- AS24 bruto 225.465->236.042 (+10.577; ~84.6% de 279.154). cota cluster_size=1=37.146; sin-cluster=187.128.
+- PROXIMO: seguir 8000-20000 (cursor pf>=13426; quedan ~13.5k-20k, incl otros 2 precio-pico 13976/14953) lotes ~6.5k;
+  luego barrido <8000; luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
