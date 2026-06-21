@@ -2995,3 +2995,15 @@
 - Componente REY (sitemap = 80% de los detectables). PROXIMO componente: parser JSON-LD Car/Vehicle + schema microdata
   (reusa _LD_RE) -> SSR cards (reusa parse_html_cards/detect_theme family_cms) -> cascada async + cage/dedup/entity_source +
   governor -> validar en ~10 dealers del recon -> drenar 7.035. Construccion incremental por componente, cada uno GREEN+commit.
+
+### 2026-06-21 (loop COBERTURA) — BUILD DealerProbe #2: parsers JSON-LD + microdata TDD GREEN [VERIFICADO]
+- dealerprobe.py +parse_jsonld_vehicles(html)->list[dict] (schema.org Car/Vehicle/MotorizedVehicle; _iter_ld_objects maneja
+  arrays+@graph; campos make[brand str|{name}]/model/year[productionDate|dateVehicleFirstRegistered]/km[mileageFromOdometer
+  dict|val]/price[offers[0].price]/url/ref[VIN|sku]; descarta AutoDealer y stubs sin señal) + parse_microdata_vehicles(html)
+  (schema.org/Vehicle|Car itemprop, content||texto; heuristica 1-bloque para ficha individual). Helpers puros _to_int/_to_float
+  (separador EU)/_clean/_name_of. Modulo PURO (sin imports async; replica logica de family_framework parse_detail sin acoplar).
+- TDD tests/test_dealerprobe_jsonld.py: 7 casos REALES (Car single alcala534-style, array 2x con fallback dateFirstReg,
+  @graph dealer+vehicle, AutoDealer-only=0, garbage-safe, microdata Audi autosantpedor-style, microdata-absent=0). RED->GREEN.
+- TOTAL DealerProbe tests: 41 GREEN (34 sitemap + 7 jsonld/microdata). Componentes 1-2/N hechos.
+- PROXIMO: #3 SSR cards (reusa parse_html_cards/detect_theme/parse_vehica family_cms); #4 cascada async dealer_probe(domain)
+  + cage/dedup/entity_source/governor/record_run; #5 validar en vivo ~10 dealers recon; #6 drenar 7.035.
