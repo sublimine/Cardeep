@@ -2411,3 +2411,14 @@
 - PROXIMO: construir pipeline/platform/as24_facet.py con TDD (RED test del partition-plan adaptativo + URL builder
   facetada; GREEN); drain de prueba de 2-3 bandas -> medir cobertura nueva (delta + cluster_size=1 + dealers nuevos)
   que SUPERE el techo de 4k de /lst; escalar bandas paced; commit + push + CI verde.
+
+### 2026-06-21 (loop COBERTURA) — as24_facet BLOQUE 1: motor de particionado [VERIFICADO]
+- Construido pipeline/platform/as24_facet.py BLOQUE 1 (motor puro): plan_price_bands (particion adaptativa de
+  [lo,hi) en bandas <= FACET_CAP=4000 por biseccion recursiva de precio; gap-free contiguo) + _facet_url (URL /lst con
+  pricefrom/priceto + sort=price estable + banda-tope abierta). Reusa _BASE/PAGE_SIZE de autoscout24_wholesale.
+- TDD RED->GREEN: tests/test_as24_facet.py (4 @unit: URL lleva price/sort, banda-tope abierta, plan banda-unica <cap,
+  plan subdivide densas contiguo). py_compile OK; subset unit 222 passed (sin regresion).
+- BLOQUE 2 (proximo): el drain por banda. Reusar de autoscout24_wholesale: _next_data/_find/_find_listings/
+  parse_listing_dealer+vehicle/ingest-cage/_page_range. main(max_bands): computa plan (count_of = fetch numberOfResults
+  por banda via _facet_url) -> for cada banda: drena con _facet_url + cursor por pagina + seen_listing_ids GLOBAL
+  (dedup cross-banda) -> ingest idempotente. Drain de prueba 2-3 bandas baratas -> medir cobertura que SUPERE el techo 4k.
