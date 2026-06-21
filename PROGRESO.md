@@ -2869,3 +2869,14 @@
   nuevos-absolutos (+ AS24 re-drenado neta ≥251.425). vehicles_total ~1.718.128 (inicio re-drenado) -> 2.162.584.
 - PROXIMO (PIVOT): frentes DEALERS PUROS -> family_* CMS (concesionarios web propia, 100% dealers, nucleo objetivo, NO
   solapan marketplaces) / oem_* / group_* / motor_es / R1 desguace. Luego DEDUP global (RAM>4GB) para neta exacta.
+
+### 2026-06-21 (loop COBERTURA) — DEDUP global GATED (RAM) + PIVOT a dealers-puros (cola larga) [VERIFICADO]
+- 4 MARKETPLACES MAYORES CERRADOS esta sesion (AS24/coches.net/wallapop-PRO/milanuncios). DEDUP global full para neta exacta
+  combinada: GATED -> RAM libre 1.581 MB; load available=2.153.589 (~2.259 MB dicts) + edges + union-find = pico 4-6GB >>
+  RAM -> NO forzar (petaria/OOM workers). Neta = cota SQL (cluster_size=1 + photo unico). Diferido a ventana RAM holgada.
+- PIVOT a DEALERS PUROS (cola larga, web propia, 100% objetivo): family_*/oem_*/group_* cosechados 12-15 jun (re-drenar=delta).
+  ARRANCADO group_vo_chains_wholesale (4 cadenas VO OPEN €0: flexicar/ocasionplus/clicars/carplus; --pages 200 re-drena
+  inventario actual completo). EN MARCHA blua73omc, baseline vehicles_total=2.162.584.
+- SESION BALANCE: 4 marketplaces +202k nuevos-absolutos (coches_net 66.450 + wallapop-PRO 96.333 + milanuncios 39.217) +
+  AS24 re-drenado neta ≥251.425. 3 fixes raiz (expand_bands, private_caged, autocasion early-stop). vehicles_total ->2.162.584.
+- PROXIMO: medir vo_chains; seguir family/oem/group por frescura; re-intentar dedup cuando RAM>4GB.
