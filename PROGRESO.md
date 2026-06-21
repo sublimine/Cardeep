@@ -2818,3 +2818,12 @@
   a frente de ALTO rendimiento. Honesto: autocasion ~91% cubierto por wholesale; no es un hueco grande.
 - PROXIMO: reconocer wallapop_facet (592k bruto, JSON gateway rapido) / milanuncios (398k) / family_* CMS (dealers web
   propia, nucleo del objetivo) / oem_*/group_* -> elegir mayor cobertura nueva de DEALERS a buen ritmo.
+
+### 2026-06-21 (loop COBERTURA) — ★ wallapop professional ALTO ROI: +59.351 dealers nuevos en 1 lote [VERIFICADO]
+- wallapop_facet --seller-types professional: PLAN 18 celdas precio (prof declarado 348.133). Drenó 11/18 CLEAN a ~8.800
+  cars/min (JSON gateway rapido) antes de timeout 124. DB delta count(vehicle) 2.027.034->2.086.385 = +59.351 NUEVOS
+  ABSOLUTOS de DEALERS (objetivo CARDEEP). wallapop vehicles 592.790->652.141. SIN bug (solo volumen).
+- Celdas drenadas (precio asc): None-16000 (11 celdas). RESTANTES 7 celdas: 16000+ (precios altos, menos densos).
+- Frente wallapop professional = el de mayor ROI hasta ahora (+59k/lote vs coches_net +6-18k/prov). JSON batch, no PDP.
+- PROXIMO: drenar las 7 celdas restantes (16000+); el conector planea desde None -> usar cursor de precio si arg existe,
+  o re-lanzar idempotente. Luego AUDIT A3 + (milanuncios/family CMS). NO drenar private (particulares).
