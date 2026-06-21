@@ -2892,3 +2892,11 @@
   TRUSTWORTHY, sin crash/ban. Concesionarios oficiales (dealers puros, web/stock oficial). Delta modesto (cosechados hace 6-9d).
 - NOTA: oem escriben recipes CDP-ES-00-*.yaml -> revertidos, NO commiteados (solo PROGRESO).
 - PROXIMO: resto cola larga (family_* CMS, group_subastas, group_rentacar_vo, motorflash, motor_es 49k); luego dedup si RAM>4GB.
+
+### 2026-06-21 (loop COBERTURA) — cola larga: CLIs heterogeneos descubiertos +452 [VERIFICADO]
+- Barrido --pages fallo en casi todos (CLI propio por conector): motor_es=--full/--max-cells; group_subastas=--concurrency;
+  family_*=--dealers/--from-db (por-dealer, descubrimiento dominios); group_rentacar_vo SI --pages (+10 TRUSTWORTHY);
+  motorflash=Traceback (bug a investigar). DB delta +452 (2.167.425->2.167.877).
+- RE-LANZADO con CLIs correctos: motor_es --full (49k, mayor volumen restante) + family_* --from-db (webs propias de
+  dealers ya en DB) + group_subastas default. motorflash diferido (bug).
+- PROXIMO: medir; investigar motorflash Traceback (raiz); dedup si RAM>4GB; A3 final cuando cobertura €0 agotada.
