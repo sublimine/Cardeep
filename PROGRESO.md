@@ -2885,3 +2885,10 @@
 - group_vo_chains_wholesale --pages 200: flexicar +992, ocasionplus +1.023, clicars +425, carplus +47 = +2.487 nuevos
   absolutos (DB delta 2.162.584->2.165.071); 4/4 cadenas VAM TRUSTWORTHY. Dealers-puros (cadenas VO web propia, objetivo).
 - Cola larga dealers-puros: delta modesto por conector (cosechados hace 6-9d). PROXIMO: oem_* (oficiales), family_* (CMS).
+
+### 2026-06-21 (loop COBERTURA) — dealers-puros: barrido OEM (~15 oficiales) +2.354 [VERIFICADO]
+- oem_*.py --pages 40 en secuencia: audi +762, mercedes +469, toyota_lexus +632, seat_cupra +177, nissan_mazda_honda +54,
+  ford +40, volvo/hyundai/kia ~0 (ya frescos)... TOTAL DB delta +2.354 nuevos absolutos (2.165.071->2.167.425). Todas VAM
+  TRUSTWORTHY, sin crash/ban. Concesionarios oficiales (dealers puros, web/stock oficial). Delta modesto (cosechados hace 6-9d).
+- NOTA: oem escriben recipes CDP-ES-00-*.yaml -> revertidos, NO commiteados (solo PROGRESO).
+- PROXIMO: resto cola larga (family_* CMS, group_subastas, group_rentacar_vo, motorflash, motor_es 49k); luego dedup si RAM>4GB.
