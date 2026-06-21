@@ -2775,3 +2775,9 @@
 - coches_net frente acumulado (15 provincias): +53.665 nuevo-absoluto.
 - HECHAS: 3,7,8,11,15,18,28,29,30,33,35,38,41,46,50. EN MARCHA: 36,48,47,12,17,43. RESTANTES tras ese: 31.
 - PROXIMO: seguir resto en grupos de ~6; luego AUDIT A3 coches_net + pivot.
+
+### 2026-06-21 (loop COBERTURA) — coches_net grupo Pontevedra/Vizcaya/Valladolid/Castellon/Girona/Tarragona +4.131 [VERIFICADO]
+- Grupo 36,48,47,12,17,43 = +4.131 nuevos absolutos (DB delta 2.013.761->2.017.892); 6 particiones clean, VAM TRUSTWORTHY.
+- coches_net frente acumulado (21 provincias): +57.796 nuevo-absoluto.
+- HECHAS: 3,7,8,11,12,15,17,18,28,29,30,33,35,36,38,41,43,46,47,48,50. EN MARCHA: 6,14,23,21,13,4. RESTANTES tras ese: 25.
+- PROXIMO: seguir resto en grupos de ~6; luego AUDIT A3 coches_net + pivot.
