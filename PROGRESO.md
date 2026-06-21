@@ -2724,3 +2724,17 @@
 - AS24 bruto 307.727->307.731. cota cluster_size=1=37.149; sin-cluster=258.814.
 - ULTIMO lote barrido EN MARCHA (6835-8300, conecta con >=8000) -> al cerrar: RANGO TOTAL 0-∞ DRENADO.
 - PROXIMO: DEDUP (ventana RAM, verificar FreePhysicalMemory>4GB) -> neta exacta; AUDIT A3 cobertura AS24 final + PIVOT.
+
+### 2026-06-21 (loop COBERTURA) — FRENTE AS24 CERRADO: rango total 0-∞ drenado [VERIFICADO] ★ HITO
+- Ultimo lote barrido <8000 (6835-8300) = +1.481 NEW (output==DB delta 1.964.614->1.966.095) +3 dealers TRUSTWORTHY; pages 99/113/167.
+- RANGO TOTAL DE PRECIOS 0-∞ DRENADO COMPLETO (0-8000 verificado + 8000-20000 + 20k+ + cola >1M).
+- COBERTURA AS24 FINAL (sesion 16.749 -> ahora): BRUTO=309.212 | COTA NETA SQL=251.425 (cluster_size=1 37.149 +
+  photo_url unico global 214.276, ~81% del bruto, VERIFICADO senal A sin RAM) | DEALERS=2.786. La neta real entre
+  251.425 y ~290k (parte de 43.841 photo-compartido es same-entity nuevo). Cifra EXACTA -> dedup full cuando RAM holgada.
+- RESIDUAL declarado: precio-pico 12950/13999/14990/18000€ (~1.7-2k, 0.6%) no capturables por precio (limite teorico,
+  necesitan 2a dimension año/km). NO maquillaje: bruto 309.212 vs neta-cota 251.425 vs pendiente-dedup-exacto distinguidos.
+- DEDUP full STAGED: available ~1.96M -> pico 3-5GB > 2.9GB RAM libre + workers vivos -> NO forzar (gate hardware D1).
+- AUDIT A3 actualizado (docs/AUDIT_A-F_STATUS.md): AS24 ✅ 100% bruto dentro de A3 (sigue GATED global: 47 fuentes).
+- FIX RAIZ de la sesion: bandas anchas truncaban a 4.000 (200-pag cap) -> expand_bands() subdivide <cap (TDD 12 tests,
+  commit d4fd0bd). De ~37k cota inicial a 251k neto verificado. Cada lote: verificado x2 vias + CI verde.
+- PROXIMO (PIVOT): siguiente frente cobertura NUEVA €0 -> coches_net facet (~249k declarado) / wallapop / R1 desguace.

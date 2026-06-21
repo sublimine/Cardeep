@@ -31,7 +31,7 @@ diferiste. No es una parada estratégica: es el límite lógico de "€0 + sin h
 |---|---|---|---|---|
 | A1 | Código único (B1/dedup) | ✅ **SELLADO** | — | 391.944 entities = 391.944 cdp distintos (1:1, 0 colisión); dedup verdict 1121 vam_verified; `v_canonical` íntegra |
 | A2 | Denominador P (β→φ→Chao2) | 🟡 GATED | DATA | β sellado (S_obs 38.555); Chao2 REFUTED (capturas disjuntas); ancla CNAE-451 (F8 94,3%). Necesita DIRCE/Overture |
-| A3 | Scrapear TODO (exhaustividad B9) | 🟡 GATED | HARVEST | B9 gate €0 existe; 5/47 fuentes instrumentadas; 42 drains = paced harvest |
+| A3 | Scrapear TODO (exhaustividad B9) | 🟡 GATED (AS24 ✅ 100%) | HARVEST | B9 gate €0 existe; 5/47 fuentes instrumentadas. **AS24 (mayor fuente ES) DRENADO 100% via as24_facet (2026-06-21):** rango total precios 0-∞; bruto 309.212 / cota neta SQL ≥251.425 (cluster_size=1 37.149 + photo_url único 214.276) / 2.786 dealers. Fix-raíz: bandas anchas truncaban a 4k (200-pag cap) → expand_bands subdivide <cap. Residual declarado: ~1.7-2k precio-pico (12950/13999/14990/18000€, <61€ ancho >cap, 0.6%). Dedup full exacto STAGED (RAM 2.9<4GB). Resto fuentes = paced harvest |
 | A4 | Delta uniforme | 🟡 GATED | HARVEST | `delta.py` (diff/reconcile_gone + cap fracción-gone) construido+tested; cablear 43 conectores = harvest |
 | A5 | Receta guardada | 🟡 GATED | DATA | `v_dealer_recipe` 37.813 cubiertos; 23.894 sin inventario = recipe-hunting cosecha |
 | A6 | Geo país/prov/ciudad | 🟡 GATED | DATA | comarca 99,93% ✓, sentinel-drift 0 ✓; muni-gap ~11% (6.777) = sin señal geo, necesita Overture/geocoder |
