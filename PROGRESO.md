@@ -2597,3 +2597,12 @@
 - Margen ajustado en algunas bandas (8788-9032=198pag, 9276-9520=185pag) <200 -> no truncaron; vigilar, subdividir si >=200.
 - PROXIMO: seguir 8000-20000 (cursor pf>=9887; el grueso 10k-20k es muy denso, mucha recuperacion pendiente) lotes ~6.5k;
   luego barrido <8000; luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 9887-11229 +11.283 incremental (~78%) [VERIFICADO]
+- Lote 9887-10497 = +5.088 incremental NEW (output==DB delta 1.862.580->1.867.668) +7 dealers TRUSTWORTHY; pages 51/165/50/49/152.
+- Lote 10497-11229 = +6.195 incremental NEW (output==DB delta 1.867.668->1.873.863) +12 dealers TRUSTWORTHY; pages 77/135/183.
+- AS24 bruto 205.694->216.977 (+11.283; ~77.7% de 279.154). El new_cars repunta en 10k-12k: ahi el truncamiento viejo
+  (bandas 1000€ con 12-18k coches capturando solo 4000) dejo el grueso sin capturar -> el re-drenado fino lo recupera.
+- cota cluster_size=1=37.146 (dedup no corre); sin-cluster=168.063. NETA real cota inferior ~154.736 (SQL) + recuperados.
+- PROXIMO: seguir 8000-20000 (cursor pf>=11962; queda el grueso 12k-20k, el mas truncado) lotes ~6.5k; luego barrido <8000;
+  luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
