@@ -2538,3 +2538,13 @@
 - DEUDA DEDUP creciente (103k): el backlog sin-cluster crece cada lote. HITO necesario: correr cluster_vehicles
   (memory-gated ~2GB) cuando el PC este ocioso para convertir cota->neta exacta. Por ahora prioridad = cobertura (mandato).
 - PROXIMO: seguir rango virgen (cursor pf>=28319; ~28 bandas restantes en 20k+) lotes ~6.5k; luego 8000-20000 y barrido <8000.
+
+### 2026-06-21 (loop COBERTURA) — RE-DRENADO virgen 26854-30273 +13.403 [VERIFICADO]
+- Lote 26854-28319 = +6.685 NEW (output==DB delta 1.808.844->1.815.529) +50 dealers TRUSTWORTHY; pages 151/84/119 (<200).
+- Lote 28319-30273 = +6.718 NEW (output==DB delta 1.815.529->1.822.247) +38 dealers TRUSTWORTHY; pages 183/179 (<200).
+- AS24 bruto 150.971->164.538 (+13.403 estos 2 lotes). Cota neta cluster_size=1 = 36.422 (dedup batch NO corre).
+  sin-cluster (pendiente dedup) = 116.445 y creciendo.
+- HONESTO: bruto 164.538 = ~58.9% del catalogo 279.154; cota neta confirmada 36.422; ~116k del bruto pendiente dedup.
+- DEUDA DEDUP: backlog sin-cluster 116k. HITO: al agotar el rango virgen 20k+, correr cluster_vehicles (memory-gated)
+  para convertir cota->neta exacta. Por ahora prioridad = cobertura (mandato owner).
+- PROXIMO: seguir rango virgen (cursor pf>=33203; ~24 bandas restantes en 20k+) lotes ~6.5k; luego 8000-20000 y barrido <8000.
