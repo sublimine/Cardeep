@@ -2437,3 +2437,15 @@
   dedup-run; +202 dealers = neto de entidades (puntos de venta nuevos). Escalar el plan completo -> ~189k netos.
 - PROXIMO: escalar as24_facet (plan automatico sin bands, o por lotes de bandas) drenando hacia ~189k; medir neta
   acumulada (cluster_size=1); vigilar ban/IP; commit por hito. as24_facet es la palanca de cobertura grande €0 VALIDADA.
+
+### 2026-06-21 (loop COBERTURA) — as24_facet ESCALANDO: AS24 +39k sesion, 58% neto [VERIFICADO]
+- Lote bandas 4000-8000 (4 bandas densas): vehicles_total 1.710.910 -> 1.718.128 (+7.218). El proceso TIMEOUT-corto a
+  20min sin teardown (4 bandas densas no caben; +7.218 persisten por ingesta idempotente-por-transaccion, pero VAM/
+  record_run de ESE lote no corrio -> harvest_run sigue en el run previo rows=1021). APRENDIZAJE: bandas densas ->
+  lotes de 2 bandas/tick para que el teardown cierre limpio.
+- COBERTURA AS24 esta sesion: 16.749 -> 56.013 vehicles = +39.264 (wholesale lotes + facet). NETA (cluster_size):
+  32.566 cluster_size=1 (58% neto nuevo), 12.296 sin-cluster (dedup pendiente sobre recien insertados), resto ~11k dup.
+  + cientos de dealers nuevos por lote. = cobertura NUEVA GRANDE real, la palanca facet funciona y escala.
+- PROXIMO: seguir drenando bandas con as24_facet en LOTES DE 2 (timeout 1200 cabe limpio con teardown): 8000-10000,
+  10000-12000, ... cubriendo el rango medio-alto VO (el grueso); luego 30000+. Acumular hacia ~189k netos; medir neta
+  (cluster_size) por hito. Eventualmente: dedup-run sobre los 12k sin-cluster para neta exacta.
