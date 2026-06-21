@@ -109,6 +109,29 @@ def test_one_broken_pdp_does_not_kill_dealer():
     assert all(v["url"] != locs[3] for v in vehicles)
 
 
+def test_transient_pdp_failure_is_retried_and_recovered():
+    # a PDP that fails (None) the FIRST time but succeeds the SECOND must be recovered — this is the
+    # transient reset/timeout that concurrency causes (conc=1 fetches 100%, conc=6 dropped ~10%).
+    pages, locs = _sitemap_pages(5)
+    flaky = locs[2]
+    seen = {"n": 0}
+
+    async def gf(url):
+        state["last_status"] = 200
+        if url == flaky:
+            seen["n"] += 1
+            if seen["n"] == 1:                       # first hit on the flaky PDP -> transient fail
+                state["last_status"] = None
+                return None
+        return pages.get(url)
+
+    state = {"last_status": None}
+    summary, _, vehicles = _run(probe_dealer(gf, state, "x.es", cap=400, pdp_conc=4, pdp_delay=0))
+    assert summary["status"] == "live"
+    assert len(vehicles) == 5                         # the flaky PDP recovered on retry, none lost
+    assert any(v["url"] == flaky for v in vehicles)
+
+
 def test_afetch_retries_with_verify_false_on_tls_error():
     class _CurlError(Exception):
         pass

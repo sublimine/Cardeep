@@ -53,6 +53,7 @@ _TIMEOUT = 20
 _DEALER_CAP = 400
 _PDP_CONC = 6               # concurrent PDP fetches PER dealer host (<=6 live conns = browser-like)
 _PDP_DELAY = 0.25           # base in-semaphore delay; jittered to break metronomic bot cadence
+_PDP_RETRY_DELAY = 0.6      # backoff before retrying a PDP that failed (transient reset under load)
 _LISTING_PATHS = ("", "/coches-ocasion", "/coches-segunda-mano", "/vehiculos", "/stock", "/ocasion", "/coches")
 
 _LOC_RE = re.compile(r"<loc>\s*(.*?)\s*</loc>", re.I | re.S)
@@ -335,6 +336,10 @@ async def probe_dealer(governed_fetch, state: dict, domain: str, cap: int = _DEA
     async def _one(url):
         async with host_sem:                          # <= pdp_conc live connections per host
             v = await parse_pdp(governed_fetch, url)
+            if v is None:                              # transient reset/timeout under concurrency:
+                if pdp_delay:                          # one retry recovers it (conc=1 proves 100%)
+                    await asyncio.sleep(_PDP_RETRY_DELAY + random.uniform(0, _PDP_RETRY_DELAY))
+                v = await parse_pdp(governed_fetch, url)
             if pdp_delay:
                 await asyncio.sleep(pdp_delay + random.uniform(0, pdp_delay))   # jitter, not metronome
             return v
