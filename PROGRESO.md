@@ -2781,3 +2781,10 @@
 - coches_net frente acumulado (21 provincias): +57.796 nuevo-absoluto.
 - HECHAS: 3,7,8,11,12,15,17,18,28,29,30,33,35,36,38,41,43,46,47,48,50. EN MARCHA: 6,14,23,21,13,4. RESTANTES tras ese: 25.
 - PROXIMO: seguir resto en grupos de ~6; luego AUDIT A3 coches_net + pivot.
+
+### 2026-06-21 (loop COBERTURA) — coches_net grupos Andalucia(6,14,23,21,13,4)+interior(5,9,10,16,19,22) +4.184 [VERIFICADO]
+- Grupo 6,14,23,21,13,4 = +3.404 nuevos absolutos (DB delta 2.017.892->2.021.296); 6 part clean VAM TRUSTWORTHY.
+- Grupo 5,9,10,16,19,22 = +780 nuevos absolutos (DB delta 2.021.296->2.022.076); 6 part clean VAM TRUSTWORTHY (interior, baja densidad).
+- coches_net frente acumulado (33 provincias): +61.980 nuevo-absoluto.
+- HECHAS: 3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,21,22,23,28,29,30,33,35,36,38,41,43,46,47,48,50. EN MARCHA: 1,2,20,24,25,26. RESTANTES tras ese: 13.
+- PROXIMO: seguir resto en grupos de ~6; luego AUDIT A3 coches_net + pivot.
