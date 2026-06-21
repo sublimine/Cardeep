@@ -2749,3 +2749,9 @@
   verifica x2 vias (DB delta nuevo-absoluto + VAM), commit agrupado + CI verde.
 - EN MARCHA: Barcelona (prov 8). PROXIMO: escalar 52 provincias (grandes solas: 8/46/41/29/3/30...; resto en grupos).
   Distinguir SIEMPRE: bruto coches_net vs nuevo-absoluto (delta) vs overlap-AS24 vs pendiente-dedup.
+
+### 2026-06-21 (loop COBERTURA) — coches_net Barcelona +6.101 nuevo-absoluto [VERIFICADO]
+- Barcelona (prov 8) = +6.101 coches nuevos absolutos (DB delta 1.984.126->1.990.227); 7 particiones clean, VAM TRUSTWORTHY;
+  declarado 27.028 -> 6.101 nuevo / resto overlap AS24+cosecha previa.
+- coches_net frente acumulado: Madrid +18.031, Barcelona +6.101 = +24.132 nuevo-absoluto en 2 provincias.
+- EN MARCHA: grupo Valencia(46)+Sevilla(41)+Malaga(29). PROXIMO: resto de las 52 provincias (grandes solas/medianas en grupos).
