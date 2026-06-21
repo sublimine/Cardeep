@@ -2795,3 +2795,15 @@
 - coches_net frente acumulado (45 provincias): +65.675 nuevo-absoluto.
 - HECHAS (45): 1-39 (todas) + 41,43,46,47,48,50. EN MARCHA: ULTIMO grupo 40,42,44,45,49,51,52 (cierra las 52).
 - PROXIMO: medir ultimo grupo -> RESUMEN FINAL coches_net (52 prov) -> AUDIT A3 -> PIVOT siguiente frente (wallapop/milanuncios/R1/website).
+
+### 2026-06-21 (loop COBERTURA) — ★ FRENTE coches_net CERRADO: 52/52 provincias drenadas [VERIFICADO]
+- Ultimo grupo 40,42,44,45,49,51,52 = +775 nuevos absolutos (DB delta 2.025.771->2.026.546); 7 part clean VAM TRUSTWORTHY.
+- COBERTURA coches_net FINAL (52 provincias, fix private_caged 6e3708b): +66.450 COCHES NUEVOS-ABSOLUTOS (cobertura nueva
+  pura, descontado overlap con AS24 via delta global vehicle) | bruto coches_net_wholesale 334.595 | 8.199 dealers.
+- Metodo identico a AS24: provincias en lotes run_in_background, verifica x2 vias (DB delta nuevo-absoluto + VAM TRUSTWORTHY),
+  commit agrupado + CI verde. Todas las particiones clean (0 errored) en todos los lotes.
+- AUDIT A3 actualizado: AS24 + coches.net (2 mayores fuentes ES) ✅ 100% drenadas dentro de A3 (sigue GATED global: 47 fuentes).
+- BALANCE SESION (2 frentes cerrados): AS24 bruto 309.212/neta ≥251.425; coches_net +66.450 nuevo-absoluto. DB vehicles_total
+  ~2.026.546. Dedup full global STAGED (RAM<4GB) para neta exacta combinada.
+- PROXIMO (PIVOT): siguiente frente cobertura NUEVA €0 -> investigar wallapop/milanuncios/R1 desguace/website cleanup; elegir
+  mayor rendimiento; mismo metodo.
