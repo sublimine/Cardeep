@@ -3007,3 +3007,15 @@
 - TOTAL DealerProbe tests: 41 GREEN (34 sitemap + 7 jsonld/microdata). Componentes 1-2/N hechos.
 - PROXIMO: #3 SSR cards (reusa parse_html_cards/detect_theme/parse_vehica family_cms); #4 cascada async dealer_probe(domain)
   + cage/dedup/entity_source/governor/record_run; #5 validar en vivo ~10 dealers recon; #6 drenar 7.035.
+
+### 2026-06-21 (loop COBERTURA) — BUILD DealerProbe #3: SSR-card extractor TDD GREEN [VERIFICADO]
+- dealerprobe.py +extract_vehicle_links(html,base)->[urls per_vehicle] (reusa classify_loc, urljoin, _SKIP_HREF) +
+  parse_ssr_cards(html,base)->[{url,price,km,year,...}] (frontier de enlaces per_vehicle + specs inline de la ventana de
+  tarjeta: _ssr_price "29.990 €"->29990, _ssr_km "90.000 km"->90000, _ssr_year). family_cms.parse_html_cards esta acoplado
+  a CardTheme (no reutilizable generico) -> patron adaptado puro. make/model los da el PDP (jsonld/microdata) en la cascada.
+- TDD tests/test_dealerprobe_ssr.py: 5 casos REALES (listado 2 tarjetas coches-segunda-mano + specs; detalles.php?vehiculo=
+  palaciocasion; ignora category/other; enlaces absolutos cross-host preservados). RED->GREEN.
+- TOTAL DealerProbe: 46 tests GREEN (34 sitemap + 7 jsonld/microdata + 5 ssr). Componentes 1-3/N (las 3 SEÑALES puras listas).
+- PROXIMO: #4 cascada async dealer_probe(domain) (robots->sitemap discovery->is_vehicle_sitemap->classify_loc frontier->
+  fetch PDP->parse_jsonld||microdata||ssr; status live/dead/walled/noise) + cage/dedup/entity_source/governor/record_run +
+  source_key dealerprobe_ownsite; #5 validar en vivo ~10 dealers recon; #6 drenar 7.035.

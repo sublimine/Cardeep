@@ -9,9 +9,10 @@ here are only the deterministic, unit-tested decision functions.
 """
 from __future__ import annotations
 
+import html as _html
 import json
 import re
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 # --- sitemap-name classifier ------------------------------------------------------------------
 # Tokens seen live in real car sitemaps. Chosen to avoid dangerous substrings (e.g. NOT bare
@@ -220,3 +221,69 @@ def parse_microdata_vehicles(html: str) -> list[dict]:
         return []
     return [{"url": url, "ref": None, "title": _clean(name) or make, "make": _clean(make),
              "model": None, "year": year, "km": km, "price": price}]
+
+
+# --- SSR-card extractor (fallback signal) -----------------------------------------------------
+# When neither a car-sitemap nor JSON-LD/microdata is usable, the inventory still server-renders
+# as listing cards: a per-vehicle link + price/km/year inline. Generic = pull every per-vehicle
+# link (classify_loc) and read the specs from that card's HTML window. No per-dealer selectors.
+_HREF_RE = re.compile(r'<a\b[^>]*\bhref=["\']([^"\']+)["\']', re.I)
+_SSR_PRICE_RE = re.compile(r'(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\s*(?:€|eur)', re.I)
+_SSR_KM_RE = re.compile(r'(\d{1,3}(?:[.\s]?\d{3})*)\s*km', re.I)
+_SSR_YEAR_RE = re.compile(r'\b(19[89]\d|20[0-2]\d)\b')
+_SKIP_HREF = ("#", "mailto:", "tel:", "javascript:", "whatsapp:")
+
+
+def _ssr_price(frag: str) -> float | None:
+    m = _SSR_PRICE_RE.search(frag)
+    return _to_float(re.sub(r"[.\s]", "", m.group(1))) if m else None
+
+
+def _ssr_km(frag: str) -> int | None:
+    m = _SSR_KM_RE.search(frag)
+    if not m:
+        return None
+    n = _to_int(re.sub(r"[.\s]", "", m.group(1)))
+    return n if n is not None and 0 <= n <= 5_000_000 else None
+
+
+def _ssr_year(frag: str) -> int | None:
+    m = _SSR_YEAR_RE.search(frag)
+    return int(m.group(1)) if m else None
+
+
+def _per_vehicle_hrefs(html_text: str, base_url: str):
+    """Yield (position, absolute_url) for every <a> whose target classify_loc()s as per_vehicle."""
+    for m in _HREF_RE.finditer(html_text):
+        href = _html.unescape(m.group(1)).strip()
+        if not href or href.lower().startswith(_SKIP_HREF):
+            continue
+        absu = urljoin(base_url, href)
+        if classify_loc(absu) == "per_vehicle":
+            yield m.start(), absu
+
+
+def extract_vehicle_links(html_text: str, base_url: str) -> list[str]:
+    """Every distinct per-vehicle URL linked on a listing page (the PDP frontier)."""
+    out, seen = [], set()
+    for _pos, u in _per_vehicle_hrefs(html_text, base_url):
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+
+def parse_ssr_cards(html_text: str, base_url: str) -> list[dict]:
+    """Per-vehicle links + the price/km/year inline in each card's HTML window. make/model are
+    left to the PDP (JSON-LD/microdata) — here we secure the frontier + cheap inline specs."""
+    hits = list(_per_vehicle_hrefs(html_text, base_url))
+    out, seen = [], set()
+    for i, (pos, u) in enumerate(hits):
+        if u in seen:
+            continue
+        seen.add(u)
+        end = hits[i + 1][0] if i + 1 < len(hits) else min(len(html_text), pos + 800)
+        frag = html_text[pos:end]
+        out.append({"url": u, "ref": None, "title": None, "make": None, "model": None,
+                    "year": _ssr_year(frag), "km": _ssr_km(frag), "price": _ssr_price(frag)})
+    return out
