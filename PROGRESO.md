@@ -2383,3 +2383,17 @@
 - TDD RED->GREEN: tests/test_as24_start_cursor.py (3 @unit: _page_range incremental/default + _lst_url lleva page).
   py_compile OK; subset unit 218 passed (sin regresion). Uso: python -m pipeline.platform.autoscout24_wholesale <max_pages> <start>.
 - PROXIMO: validar E2E (drain incremental start=201) + seguir escalando AS24 incremental hacia ~189k netos.
+
+### 2026-06-21 (loop COBERTURA) — as24: CORRECCION honesta del techo /lst (~4k, no 189k) [VERIFICADO]
+- Cursor --start VALIDADO E2E: drain start=201 -> "page 201: no listings; stopping" (arranco en 201 correctamente).
+- HALLAZGO (gana el codigo, cazo mi propia sobre-afirmacion): AS24 /lst CORTA en ~200 paginas (~4.000 coches). Pagina
+  201 vacia. El declared_full=278.137 es el total del marketplace, pero la ruta /lst paginada NO lo expone (limite
+  anti-scraping). Mi extrapolacion previa "~189k netos €0" estaba MAL (basada en declared, no en lo accesible).
+- REALIDAD: la veta AS24 via /lst = ~4.000 coches, YA cosechados (db total AS24 = 4.141 edges). AGOTADA via /lst. El
+  68% neto sigue valido pero sobre ~4k, no 189k. Cobertura real AS24 esta sesion: ~+3.873 brutos / ~68% netos (~2.6k netos).
+- Acceder a los 278k de AS24 requiere FACET DRILLING (busquedas por marca/modelo/provincia para superar el limite de
+  200 pag/busqueda) = CONSTRUCCION (patron existente: coches_net_facet/coches_net_segments). €0 (curl_cffi) pero es
+  ingenieria, no correr el connector. Alto ROI (~189k netos reales) si se construye.
+- El cursor --start sigue siendo mejora valida (re-drain incremental dentro de 200pag + reutilizable en facet drilling).
+- PROXIMO: evaluar construir AS24 facet drilling siguiendo coches_net_facet (alto ROI, construccion) VS otros frentes
+  €0 (frescura marketplaces / R1 desguace agregador / limpieza website). Decidir por ROI/esfuerzo.
