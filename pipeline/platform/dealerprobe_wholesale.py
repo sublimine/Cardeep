@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import json as _json
 import os
+import random
 import re
 from collections.abc import Awaitable, Callable
 from urllib.parse import urlparse
@@ -50,6 +51,8 @@ DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localho
 _IMPERSONATE = "chrome131"
 _TIMEOUT = 20
 _DEALER_CAP = 400
+_PDP_CONC = 6               # concurrent PDP fetches PER dealer host (<=6 live conns = browser-like)
+_PDP_DELAY = 0.25           # base in-semaphore delay; jittered to break metronomic bot cadence
 _LISTING_PATHS = ("", "/coches-ocasion", "/coches-segunda-mano", "/vehiculos", "/stock", "/ocasion", "/coches")
 
 _LOC_RE = re.compile(r"<loc>\s*(.*?)\s*</loc>", re.I | re.S)
@@ -185,38 +188,28 @@ def _drainable_website(url: str) -> bool:
     return not any(host == bad or host.endswith("." + bad) for bad in _NON_DRAINABLE_HOSTS)
 
 
-class _Fetcher:
-    """curl_cffi GET; returns body only on HTTP 200 (else None), last_status kept for diagnosis.
-    A broken TLS cert is a dealer-side cosmetic defect, not an unreachable site: retry once with
-    verification relaxed so a reachable dealer is not lost. Network/DNS failures -> None."""
-    def __init__(self) -> None:
-        self._s = _cffi.Session(impersonate=_IMPERSONATE)
-        self.last_status: int | None = None
-
-    def fetch(self, url: str) -> str | None:
-        try:
-            r = self._s.get(url, impersonate=_IMPERSONATE, timeout=_TIMEOUT)
-        except Exception as e:  # noqa: BLE001
-            if any(t in type(e).__name__ for t in ("SSL", "Certificate")):
-                try:
-                    r = self._s.get(url, impersonate=_IMPERSONATE, timeout=_TIMEOUT, verify=False)
-                except Exception:
-                    self.last_status = None
-                    return None
-            else:
-                self.last_status = None
+async def _afetch(session, url: str, state: dict) -> str | None:
+    """Async curl_cffi GET; body only on HTTP 200, status recorded in `state` (NO shared mutable
+    attribute across coroutines). One TLS-cert retry with verify=False (a cosmetic dealer-side
+    defect, not an unreachable site). curl_cffi raises CurlError (not a named SSLError), so the
+    retry condition inspects BOTH the exception class name and its message. Network/DNS -> None."""
+    try:
+        r = await session.get(url, timeout=_TIMEOUT)
+    except Exception as e:  # noqa: BLE001
+        name, msg = type(e).__name__, str(e).lower()
+        tls = (("SSL" in name or "Certificate" in name or "Curl" in name)
+               and ("ssl" in msg or "certificate" in msg or "verif" in msg))
+        if tls:
+            try:
+                r = await session.get(url, timeout=_TIMEOUT, verify=False)
+            except Exception:
+                state["last_status"] = None
                 return None
-        self.last_status = r.status_code
-        return r.text if r.status_code == 200 else None
-
-
-def _build_fetch():
-    fetcher = _Fetcher()
-
-    async def gf(url: str):
-        return await asyncio.to_thread(fetcher.fetch, url)
-
-    return gf, fetcher
+        else:
+            state["last_status"] = None
+            return None
+    state["last_status"] = r.status_code
+    return r.text if r.status_code == 200 else None
 
 
 async def _upsert_dealer_dp(conn: asyncpg.Connection, host: str) -> dict:
@@ -300,9 +293,16 @@ async def _ingest_dp(conn: asyncpg.Connection, dealer_ulid: str, vehicles: list[
             stats["new_events"] += len(confirmed)
 
 
-async def probe_dealer(conn, governed_fetch, fetcher, domain: str, cap: int = _DEALER_CAP) -> dict:
+async def probe_dealer(governed_fetch, state: dict, domain: str, cap: int = _DEALER_CAP,
+                       pdp_conc: int = _PDP_CONC, pdp_delay: float = _PDP_DELAY):
     """Cascade one dealer's OWN SITE: sitemap frontier (or SSR home/listing links) -> per-PDP
-    vehicle -> own-site cage. status: live/dead/walled/noise. €0, no JS."""
+    vehicle. Returns (summary, bare_host, vehicles) — NO DB here (the caller cages with a
+    short-held connection). status: live/dead/walled/noise. €0, no JS.
+
+    Discovery is SEQUENTIAL: it decides the status deterministically (via state['last_status'])
+    and freezes the frontier order BEFORE any concurrent PDP can touch state — this kills the
+    last_status race. The PDPs are then fetched CONCURRENTLY, bounded by a per-host semaphore so at
+    most `pdp_conc` live connections hit the host (browser-like, polite)."""
     bare = _bare_host(domain)
     base = f"https://{bare}"
     summary = {"domain": bare, "status": "dead", "vehicles": 0, "new": 0, "frontier": 0, "signal": None}
@@ -323,26 +323,25 @@ async def probe_dealer(conn, governed_fetch, fetcher, domain: str, cap: int = _D
             if len(frontier) >= cap:
                 break
         if not frontier:
-            summary["status"] = ("walled" if fetcher.last_status == 403
+            summary["status"] = ("walled" if state.get("last_status") == 403
                                   else "dead" if not home_seen else "noise")
-            return summary
+            return summary, bare, []
 
-    summary["status"] = "live"
+    summary["status"] = "live"            # frozen BEFORE concurrent PDPs mutate state['last_status']
     summary["frontier"] = len(frontier)
     summary["signal"] = signal
-    vehicles = []
-    for url in frontier[:cap]:
-        v = await parse_pdp(governed_fetch, url)
-        if v:
-            vehicles.append(v)
-        await asyncio.sleep(0.2)                # gentle per-host pacing
-    dealer = await _upsert_dealer_dp(conn, bare)
-    stats = {"cars_ingested": 0, "new_cars": 0, "new_events": 0}
-    await _ingest_dp(conn, dealer["entity_ulid"], vehicles, stats)
-    summary["vehicles"] = stats["cars_ingested"]
-    summary["new"] = stats["new_cars"]
-    summary["dealer_cdp"] = dealer.get("cdp_code")
-    return summary
+    host_sem = asyncio.Semaphore(pdp_conc)
+
+    async def _one(url):
+        async with host_sem:                          # <= pdp_conc live connections per host
+            v = await parse_pdp(governed_fetch, url)
+            if pdp_delay:
+                await asyncio.sleep(pdp_delay + random.uniform(0, pdp_delay))   # jitter, not metronome
+            return v
+
+    results = await asyncio.gather(*[_one(u) for u in frontier[:cap]], return_exceptions=True)
+    vehicles = [v for v in results if isinstance(v, dict)]   # a broken PDP = dropped, never fatal
+    return summary, bare, vehicles
 
 
 async def _select_drainable(conn, limit):
@@ -373,8 +372,10 @@ async def _mark_probed(conn, entity_ulid, status):
         entity_ulid, str(status))
 
 
-async def _amain(domains, from_db, limit, cap, concurrency):
-    pool = await asyncpg.create_pool(DSN, min_size=2, max_size=max(4, concurrency + 2))
+async def _amain(domains, from_db, limit, cap, concurrency, pdp_conc=_PDP_CONC, pdp_delay=_PDP_DELAY):
+    # Write pool is FIXED and decoupled from dealer concurrency: a connection is held only for the
+    # ~<100ms cage, NEVER during the minutes of network I/O, so the live API/:8090 never starves.
+    pool = await asyncpg.create_pool(DSN, min_size=4, max_size=12)
     try:
         async with pool.acquire() as conn:
             if await is_open(conn, DP_SOURCE_KEY):
@@ -385,25 +386,37 @@ async def _amain(domains, from_db, limit, cap, concurrency):
             else:
                 targets = [(None, d) for d in (domains or [])]   # --domains: no DB marker
         sem = asyncio.Semaphore(concurrency)
+        write_sem = asyncio.Semaphore(12)             # == pool max_size; cage never blocks on pool
 
         async def work(entity_ulid, d):
             async with sem:
-                fetcher = _Fetcher()                  # own session per concurrent worker
-
-                async def gf(u):
-                    return await asyncio.to_thread(fetcher.fetch, u)
-                async with pool.acquire() as conn:
-                    try:
-                        s = await probe_dealer(conn, gf, fetcher, d, cap)
-                    except Exception as e:  # noqa: BLE001
-                        s = {"domain": d, "status": "error", "error": str(e)[:160],
-                             "vehicles": 0, "new": 0}
-                    if entity_ulid:                   # monotonic marker so batches advance
-                        try:
-                            await _mark_probed(conn, entity_ulid, s.get("status", "error"))
-                        except Exception as e:  # noqa: BLE001
-                            print(f"[dealerprobe] mark_probed skipped {d}: {e}")
-                    return s
+                state = {"last_status": None}
+                host, vehicles = None, []
+                try:                                  # ONE AsyncSession per dealer; auto-closed
+                    async with _cffi.AsyncSession(
+                            impersonate=_IMPERSONATE, max_clients=pdp_conc, timeout=_TIMEOUT,
+                            allow_redirects=True, headers={"Accept-Language": "es-ES,es;q=0.9"}) as session:
+                        async def gf(u):
+                            return await _afetch(session, u, state)
+                        summary, host, vehicles = await probe_dealer(
+                            gf, state, d, cap, pdp_conc, pdp_delay)
+                except Exception as e:  # noqa: BLE001
+                    summary = {"domain": _bare_host(d), "status": "error", "error": str(e)[:160],
+                               "vehicles": 0, "new": 0}
+                try:                                  # cage + monotonic marker: short-held conn only
+                    async with write_sem, pool.acquire() as conn:
+                        if host and summary.get("status") == "live":
+                            dealer = await _upsert_dealer_dp(conn, host)
+                            stats = {"cars_ingested": 0, "new_cars": 0, "new_events": 0}
+                            await _ingest_dp(conn, dealer["entity_ulid"], vehicles, stats)
+                            summary["vehicles"] = stats["cars_ingested"]
+                            summary["new"] = stats["new_cars"]
+                            summary["dealer_cdp"] = dealer.get("cdp_code")
+                        if entity_ulid:               # always stamp -> --from-db advances monotonic
+                            await _mark_probed(conn, entity_ulid, summary.get("status", "error"))
+                except Exception as e:  # noqa: BLE001
+                    print(f"[dealerprobe] cage/mark skipped {d}: {e}")
+                return summary
 
         results = await asyncio.gather(*[work(eid, d) for eid, d in targets])
         total_caged = sum(r.get("vehicles", 0) for r in results)
@@ -435,9 +448,11 @@ def main() -> None:
     p.add_argument("--from-db", action="store_true", help="probe DB dealers with a website not yet own-site-harvested")
     p.add_argument("--limit", type=int, default=50)
     p.add_argument("--cap", type=int, default=_DEALER_CAP, help="max vehicles per dealer")
-    p.add_argument("--concurrency", type=int, default=8, help="dealers probed in parallel")
+    p.add_argument("--concurrency", type=int, default=16, help="dealers probed in parallel")
+    p.add_argument("--pdp-conc", type=int, default=_PDP_CONC, help="concurrent PDP fetches per host")
+    p.add_argument("--pdp-delay", type=float, default=_PDP_DELAY, help="base in-semaphore PDP delay (s)")
     a = p.parse_args()
-    asyncio.run(_amain(a.domains, a.from_db, a.limit, a.cap, a.concurrency))
+    asyncio.run(_amain(a.domains, a.from_db, a.limit, a.cap, a.concurrency, a.pdp_conc, a.pdp_delay))
 
 
 if __name__ == "__main__":
