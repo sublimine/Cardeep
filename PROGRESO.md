@@ -2952,3 +2952,21 @@
 - ESTADO HONESTO: NO declaro A3 100%/SELLADO (residuales €0 requieren construccion/discovery o estan gated). La cobertura
   de fuentes ABIERTAS conocidas esta completa. Siguiente fase = construir discovery (family/desguace) o mantenimiento
   (re-drenar marketplaces+subastas para delta fresco + dedup periodico) hasta abrir gates (owner: anti-deteccion/discovery).
+
+### 2026-06-21 (loop COBERTURA) — TECHO DRENADO €0 alcanzado; oportunidad WEBS-PROPIAS cuantificada [VERIFICADO]
+- VERIFICADO el camino al 100%: de 66.349 dealers, 10.093 tienen website capturada; de esos solo 110 con inventario web
+  propio drenado (family source) -> 9.983 SIN DRENAR = oportunidad €0 real (inventario directo de cada dealer).
+- PERO drenarlas NO es drain listo, es CONSTRUCCION: family_dealerk --from-db --limit 20 -> 14 non-family (fingerprint
+  DealerK ausente; son OTROS CMS), 6 failed (datos sucios en website: "https:" basura, "reneult.es" typo, "kia.com" web de
+  MARCA OEM no del dealer, 403/DNS). Las 9.983 son CMS variados NO cubiertos por familias existentes (DealerK solo ~110) +
+  website sucia. family_generic_custom --dealers <25 limpias> -> 0 requested (el path targets/seleccion las filtro; CLI
+  --dealers nargs=* pero harvest() linea 1045 las descarto -> DEBUG pendiente).
+- CONCLUSION HONESTA: cobertura €0 con CONECTORES EXISTENTES AGOTADA (4 marketplaces + cadenas + OEM + subastas + las
+  familias web detectables ya drenadas). El 100% restante = FASE DE CONSTRUCCION: (1) debug family_generic --dealers path
+  (0 requested); (2) clasificar las 9.983 webs por CMS (gestionador/detect); (3) nuevos family recipes para CMS no cubiertos
+  (SOTA, multiplicador); (4) limpiar columna website (typos/OEM-brand-sites/basura); (5) discovery de dominios para 56.256
+  dealers SIN website. + GATES: motorflash (anti-deteccion C1), A2 denominador (DATA Overture), R1 desguace (conector nuevo).
+- NO declaro 100%/SELLADO (residuales = construccion + gates, declarados). Esta fase de webs-propias merece reconocimiento/
+  plan dedicado (sistema no fragmentos), no drains apresurados. NETA actual = 1.833.647 coches unicos / 66.349 dealers.
+- PROXIMO: abordar fase webs-propias (debug family_generic path -> drenar las 9.983 limpias con generic/cms) O mantenimiento
+  (delta marketplaces+subastas + dedup periodico) hasta que el owner priorice construccion/gates.
