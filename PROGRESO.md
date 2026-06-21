@@ -2851,3 +2851,10 @@
   kind=particular (separables; la API filtra por kind), NO contaminan compraventa.
 - HECHAS: 28,8. EN MARCHA: grupo 46,41,29,3,30,15,11,18,35,38,50,33 (12 prov). RESTANTES tras ese: 38.
 - PROXIMO: escalar resto provincias en grupos (~36k cars/min, caben muchas); luego AUDIT A3 milanuncios + dedup/pivot.
+
+### 2026-06-21 (loop COBERTURA) — milanuncios grupos 46.../1-17 +18.893 nuevo-absoluto (27/52) [VERIFICADO]
+- Grupo 46,41,29,3,30,15,11,18,35,38,50,33 = +14.711 (DB delta 2.136.932->2.151.643); VAM TRUSTWORTHY +78 dealers.
+- Grupo2 1,2,4,5,6,7,9,10,12,13,14,16,17 = +4.182 (DB delta 2.151.643->2.155.825); VAM TRUSTWORTHY +22 dealers (prov pequeñas).
+- milanuncios frente acumulado: sonda 13.565 + 14.711 + 4.182 = +32.458 nuevo-absoluto (27/52 prov). ~36k cars/min.
+- HECHAS (27): 1-18,28,29,30,33,35,38,41,46,50. EN MARCHA: grupo3 19,20,21,22,23,24,25,26,27,31,32,34,36. RESTANTES tras ese: 12.
+- PROXIMO: cerrar restantes (37,39,40,42,43,44,45,47,48,49,51,52) -> AUDIT A3 milanuncios -> PIVOT family CMS/oem/group + dedup global.
