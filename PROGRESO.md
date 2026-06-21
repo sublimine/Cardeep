@@ -2375,3 +2375,11 @@
   lotes crecientes desperdician. MEJORA €0 pendiente: añadir --start/offset (TDD) para cosecha incremental hacia 278k.
 - PROXIMO: (a) añadir --start al connector (TDD, eficiencia) o (b) seguir lotes crecientes; escalar AS24 hacia ~189k
   netos; medir neta acumulada por cluster_size; vigilar ban. Eventualmente: dedup-run sobre los 3.941 sin-cluster.
+
+### 2026-06-21 (loop COBERTURA) — as24: cursor --start (cosecha incremental, eficiencia €0) [VERIFICADO]
+- Mejora €0 TDD: autoscout24_wholesale ahora acepta start_page (CLI argv[2]) -> harvest itera _page_range(start,
+  max_pages) = [start, start+max_pages) en vez de 1..max_pages. Evita re-fetchear paginas ya cosechadas en cada lote
+  (clave para drenar las ~13.900 paginas / 278k coches sin desperdicio). Back-compat: start default 1.
+- TDD RED->GREEN: tests/test_as24_start_cursor.py (3 @unit: _page_range incremental/default + _lst_url lleva page).
+  py_compile OK; subset unit 218 passed (sin regresion). Uso: python -m pipeline.platform.autoscout24_wholesale <max_pages> <start>.
+- PROXIMO: validar E2E (drain incremental start=201) + seguir escalando AS24 incremental hacia ~189k netos.

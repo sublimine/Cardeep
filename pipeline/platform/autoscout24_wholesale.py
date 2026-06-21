@@ -152,6 +152,13 @@ def _lst_url(page: int) -> str:
     return f"{_BASE}/lst?atype=C&cy=E&sort={SORT}&desc=1&size={PAGE_SIZE}&page={page}"
 
 
+def _page_range(start: int, count: int) -> range:
+    """The pages a drain covers: [start, start+count). start>1 = incremental cursor (skip already-
+    harvested shallow pages); start=1 = back-compat full-from-top. AS24's /lst sort is stable, so a
+    deeper start reaches greenfield pages without re-fetching 1..start-1 each run."""
+    return range(start, start + count)
+
+
 # ---------------------------------------------------------------------------
 # DB layer
 # ---------------------------------------------------------------------------
@@ -300,7 +307,7 @@ async def emit_new_event(conn: asyncpg.Connection, vulid: str, dealer_ulid: str,
 # ---------------------------------------------------------------------------
 
 
-async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
+async def harvest(max_pages: int = DEFAULT_MAX_PAGES, start_page: int = 1) -> dict:
     conn = await asyncpg.connect(DSN)
     engine = FetchEngine()  # one fingerprint + cookie jar for the whole drain
     stats = {
@@ -345,7 +352,7 @@ async def harvest(max_pages: int = DEFAULT_MAX_PAGES) -> dict:
         dealers_before = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
 
-        for page in range(1, max_pages + 1):
+        for page in _page_range(start_page, max_pages):
             url = _lst_url(page)
             try:
                 # Clear last_status first: a network-layer failure (timeout/DNS/TLS — no HTTP response)
@@ -534,7 +541,8 @@ def _force_utf8_stdout() -> None:
 def main() -> None:
     _force_utf8_stdout()
     max_pages = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_MAX_PAGES
-    stats = asyncio.run(harvest(max_pages))
+    start_page = int(sys.argv[2]) if len(sys.argv) > 2 else 1  # argv[2]=start page (incremental cursor)
+    stats = asyncio.run(harvest(max_pages, start_page))
     _print_report(stats)
 
 
