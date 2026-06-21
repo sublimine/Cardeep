@@ -316,7 +316,7 @@ async def harvest_facet(provinces: tuple[int, ...] = SPANISH_PROVINCES,
     fetcher = FacetFetcher(pool_size=concurrency)
     stats = {
         "pages_fetched": 0, "items_seen": 0, "dealer_items": 0,
-        "private_skipped": 0, "geo_skipped": 0, "new_dealers": 0, "cars_caged": 0,
+        "private_skipped": 0, "private_caged": 0, "geo_skipped": 0, "new_dealers": 0, "cars_caged": 0,
         "new_cars": 0, "edges_created": 0, "new_events": 0, "price_drops_captured": 0,
         "declared_full": None, "dup_ids_collapsed": 0, "dealers_distinct": 0,
         "concurrency": concurrency, "partitions": 0, "partitions_clean": 0,
