@@ -162,6 +162,15 @@ _NON_DRAINABLE_HOSTS = frozenset({
 })
 
 
+def _bare_host(domain: str) -> str:
+    """Registrable host from a bare domain OR a full URL. --from-db yields full URLs
+    (http://vicanmotor.com/es/); a naive split('/')[0] would return 'http:'. Strips scheme,
+    www. and any :port, preserving real subdomains (coches.palaciocasion.es)."""
+    raw = domain.strip()
+    host = urlparse(raw).netloc if "://" in raw else raw.split("/")[0]
+    return re.sub(r"^www\.", "", host.lower()).split(":")[0]
+
+
 def _drainable_website(url: str) -> bool:
     """True iff `url` is a real own-site worth probing (not OEM-network/marketplace/social/junk).
 
@@ -294,7 +303,7 @@ async def _ingest_dp(conn: asyncpg.Connection, dealer_ulid: str, vehicles: list[
 async def probe_dealer(conn, governed_fetch, fetcher, domain: str, cap: int = _DEALER_CAP) -> dict:
     """Cascade one dealer's OWN SITE: sitemap frontier (or SSR home/listing links) -> per-PDP
     vehicle -> own-site cage. status: live/dead/walled/noise. €0, no JS."""
-    bare = re.sub(r"^www\.", "", domain.strip().lower()).split("/")[0]
+    bare = _bare_host(domain)
     base = f"https://{bare}"
     summary = {"domain": bare, "status": "dead", "vehicles": 0, "new": 0, "frontier": 0, "signal": None}
 

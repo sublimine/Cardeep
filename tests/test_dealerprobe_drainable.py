@@ -8,9 +8,21 @@ are the exact shapes seen live in the DB sample.
 """
 import pytest
 
-from pipeline.platform.dealerprobe_wholesale import _drainable_website
+from pipeline.platform.dealerprobe_wholesale import _bare_host, _drainable_website
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("http://vicanmotor.com/es/", "vicanmotor.com"),     # --from-db full URL (was 'http:')
+    ("https://www.mgvalladolid.com/es/", "mgvalladolid.com"),
+    ("palaciocasion.es", "palaciocasion.es"),            # bare domain
+    ("www.alcala534.com", "alcala534.com"),
+    ("https://coches.palaciocasion.es/", "coches.palaciocasion.es"),  # real subdomain kept
+    ("http://x.es:8080/path", "x.es"),                   # port stripped
+])
+def test_bare_host(raw, expected):
+    assert _bare_host(raw) == expected
 
 
 @pytest.mark.parametrize("url", [
