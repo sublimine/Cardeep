@@ -2548,3 +2548,13 @@
 - DEUDA DEDUP: backlog sin-cluster 116k. HITO: al agotar el rango virgen 20k+, correr cluster_vehicles (memory-gated)
   para convertir cota->neta exacta. Por ahora prioridad = cobertura (mandato owner).
 - PROXIMO: seguir rango virgen (cursor pf>=33203; ~24 bandas restantes en 20k+) lotes ~6.5k; luego 8000-20000 y barrido <8000.
+
+### 2026-06-21 (loop COBERTURA) — RE-DRENADO virgen 30273-37109 +13.735 (~64%) [VERIFICADO]
+- Lote 30273-33203 = +7.215 NEW (output==DB delta 1.822.247->1.829.462) +53 dealers TRUSTWORTHY; pages 133/138/113 (<200).
+- Lote 33203-37109 = +6.520 NEW (output==DB delta 1.829.462->1.835.982) +35 dealers TRUSTWORTHY; pages 195/160 (<200;
+  banda 33203-35156 rozo 195 pero no topo, distinct 3885<cap; margen ajustado -> si futura banda da pages>=200 subdividir).
+- AS24 bruto 164.538->178.470 (+13.735 estos 2 lotes). Cota neta cluster_size=1 = 36.612 (dedup batch NO corre).
+  sin-cluster (pendiente dedup) = 130.182 y creciendo.
+- HONESTO: bruto 178.470 = ~63.9% del catalogo 279.154; cota neta confirmada 36.612; ~130k del bruto pendiente dedup.
+- Las bandas se ensanchan al subir el precio (densidad cae): el plan se adapta, lotes ahora cubren mas rango €/lote.
+- PROXIMO: seguir rango virgen (cursor pf>=46875; ~18 bandas restantes en 20k+) lotes ~6.5k; luego 8000-20000 y barrido <8000.
