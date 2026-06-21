@@ -2717,3 +2717,10 @@
 - AS24 bruto 300.894->307.727. cota cluster_size=1=37.149; sin-cluster=258.810.
 - INICIADO BARRIDO VERIFICACION <8000 (0-8000, ~completo del wholesale viejo -> espera ~0-poco new; confirma/recupera).
 - PROXIMO: cerrar <8000 -> DEDUP (ventana RAM) neta exacta -> AUDIT A3 (bruto ~308k / neta / residuales precio-pico) + pivot.
+
+### 2026-06-21 (loop COBERTURA) — BARRIDO VERIFICACION <8000 (0-6835) +4; rango bajo confirmado completo [VERIFICADO]
+- Barrido 0-6835 = +4 NEW (output==DB delta 1.964.610->1.964.614) TRUSTWORTHY; pages 114/163/135 (<200); new por banda 0/2/4.
+  => CONFIRMA que el rango <6835 YA estaba completo (wholesale+facet previos; densidad <cap, sin truncar). Verificacion limpia.
+- AS24 bruto 307.727->307.731. cota cluster_size=1=37.149; sin-cluster=258.814.
+- ULTIMO lote barrido EN MARCHA (6835-8300, conecta con >=8000) -> al cerrar: RANGO TOTAL 0-∞ DRENADO.
+- PROXIMO: DEDUP (ventana RAM, verificar FreePhysicalMemory>4GB) -> neta exacta; AUDIT A3 cobertura AS24 final + PIVOT.
