@@ -2970,3 +2970,18 @@
   plan dedicado (sistema no fragmentos), no drains apresurados. NETA actual = 1.833.647 coches unicos / 66.349 dealers.
 - PROXIMO: abordar fase webs-propias (debug family_generic path -> drenar las 9.983 limpias con generic/cms) O mantenimiento
   (delta marketplaces+subastas + dedup periodico) hasta que el owner priorice construccion/gates.
+
+### 2026-06-21 (loop COBERTURA) — WORKFLOW recon webs-propias: datos + diseno DealerProbe [VERIFICADO]
+- Workflow wf_3fb0d564 (90 webs sondeadas EN VIVO, 11 agentes, 970k tokens). 1er run (wf_cf50da6c) dio vacio por pasar webs
+  via args -> corregido a const hardcoded (leccion: Workflow datos=const, no args). 2o run OK.
+- DATOS (verificados por conteo propio, x2 vias): 45/90 dealers reales (50%), 35/90 con inventario auto-extraible €0 sin JS
+  (78% de los dealers), 29 con sitemap-de-coches (SEÑAL REY 80%), solo 4 JSON-LD Vehicle. Ruido 33% (peluquerias/opticas/
+  taxis/facebook/coches.net/corporativos/OEM-subdominios). dead 11, walled 7. CMS dealers: custom 16, dealerk 12, wp 11, woo 4.
+- ESTIMACION: ~3.500 dealers reales en las 7.035; ~2.736 auto-drenables €0; ~2.200 por sitemap (camino barato); ~130k COCHES
+  NUEVOS (rango 110-165k) = cobertura nueva GRANDE del objetivo (dealers con web propia, no en marketplaces).
+- VEREDICTO: cleanup-first-then-build. Diseno DealerProbe persistido en docs/DEALERPROBE_DESIGN.md: cascada €0 sin JS sin
+  REGISTRY -> (1) sitemap discovery (robots->sitemap_index, regex nombres vehica_car/stock_listing/auto_usate/coches/product/
+  vehicles), (2) JSON-LD Car/Vehicle, (3) schema microdata, (4) SSR cards / Next RSC self.__next_f. family_generic_custom
+  muere por REGISTRY hardcoded -> innecesario (80% del inventario cuelga de 4-5 señales auto-describibles).
+- PROXIMO: CONSTRUIR DealerProbe (SOTA gh search extractores sitemap/JSON-LD primero; TDD; reusa cage/dedup/entity_source/
+  governor; NO tocar exhaustiveness). Empezar por sitemap-classifier (señal rey). Luego drenar ~2.736 webs por lotes/Workflow.
