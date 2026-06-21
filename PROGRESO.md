@@ -2900,3 +2900,11 @@
 - RE-LANZADO con CLIs correctos: motor_es --full (49k, mayor volumen restante) + family_* --from-db (webs propias de
   dealers ya en DB) + group_subastas default. motorflash diferido (bug).
 - PROXIMO: medir; investigar motorflash Traceback (raiz); dedup si RAM>4GB; A3 final cuando cobertura €0 agotada.
+
+### 2026-06-21 (loop COBERTURA) — cola larga CLIs correctos +4.006; cobertura €0 conocida ~AGOTADA [VERIFICADO]
+- group_subastas (BCA/Autorola) = +3.875 TODO nuevo TRUSTWORTHY (subastas rotan rapido, re-drenar periodico). motor_es
+  --full = poco delta (49k ya cosechado). family_* --from-db = 0 nuevo UNVERIFIED (dealers-web ya cosechados; cero-por-
+  ausencia NO certifica). family_builder/generic: CLI sin --from-db (otro arg). DB delta total +4.006 (2.167.877->2.171.883).
+- SEÑAL: cobertura €0 de FUENTES CONOCIDAS ~agotada. Los family (webs propias) requieren DESCUBRIMIENTO de nuevos dominios
+  (no re-drenado de conocidos) = otro tipo de trabajo (discovery, no harvest). motorflash pendiente (Traceback).
+- PROXIMO: DEDUP global (si RAM>4GB) para neta exacta combinada -> A3 final + reporte campaña. Si RAM<4GB sigue gated.
