@@ -2669,3 +2669,9 @@
 - AS24 bruto 266.360->271.335 (~97.2% de 279.154). cota cluster_size=1=37.149; sin-cluster=222.418.
 - PROXIMO: cerrar 8000-20000 (cursor pf>=16357; queda 16.4k-20k) lotes ~6.5k; luego barrido <8000;
   luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 16357-16845 +5.179 incremental (~99%) [VERIFICADO]
+- Lote 16357-16845 = +5.179 incremental NEW (output==DB delta 1.928.218->1.933.397) +2 dealers TRUSTWORTHY; pages 60/162/114 (<200).
+- AS24 bruto 271.335->276.514 (~99.1% de 279.154). cota cluster_size=1=37.149; sin-cluster=227.597.
+- PROXIMO: cerrar 8000-20000 (cursor pf>=16845; queda 16.8k-20k, 1-2 lotes) -> luego barrido <8000;
+  luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
