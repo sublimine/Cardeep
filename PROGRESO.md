@@ -2586,3 +2586,14 @@
   porque el dedup batch no corrio sobre los nuevos). La cifra EXACTA saldra del dedup-run cuando sea seguro.
 - PROXIMO: completar 8000-20000 (truncado antes, cobertura nueva incremental; lote 8300-9032 EN MARCHA) y barrido <8000;
   luego dedup-run (ventana RAM) para neta exacta; luego AUDIT A3 cobertura AS24 final.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 8000-9887 (rango truncado antes) +6.428 incremental [VERIFICADO]
+- Lote 8300-9032 = +3.950 incremental NEW (output==DB delta 1.856.152->1.860.102) +14 dealers TRUSTWORTHY; pages 167/198.
+- Lote 9032-9887 = +2.478 incremental NEW (output==DB delta 1.860.102->1.862.580) +2 dealers TRUSTWORTHY; pages 45/185/49/46;
+  band 9032-9276 dio new=0 (ya completa del truncamiento previo) -> recuperacion correcta solo de lo que faltaba.
+- En 8000-20000 el new_cars < caged (mucho ya capturado por el truncamiento viejo en las partes bajas de cada banda);
+  cobertura nueva = el new_cars real (lo que faltaba). AS24 bruto 199.266->205.694 (~73.7% de 279.154).
+- cota cluster_size=1=37.146 (dedup no corre); sin-cluster=156.780. NETA real cota inferior ~154.736 (SQL previa) + estos.
+- Margen ajustado en algunas bandas (8788-9032=198pag, 9276-9520=185pag) <200 -> no truncaron; vigilar, subdividir si >=200.
+- PROXIMO: seguir 8000-20000 (cursor pf>=9887; el grueso 10k-20k es muy denso, mucha recuperacion pendiente) lotes ~6.5k;
+  luego barrido <8000; luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
