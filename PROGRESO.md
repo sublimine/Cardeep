@@ -2685,3 +2685,8 @@
 - NOTA: para medir cobertura del catalogo VIVO actual habria que re-contar numberOfResults hoy; el bruto acumulado (todo
   lo insertado via as24, historico+facet) es cota superior. Lo relevante: el rango de precios completo esta drenado.
 - PROXIMO: cerrar 17.3k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 17333-17822 +5.728 incremental [VERIFICADO]
+- Lote 17333-17822 = +5.728 incremental NEW (output==DB delta 1.938.208->1.943.936) +3 dealers TRUSTWORTHY; pages 48/160/136 (<200).
+- AS24 bruto 281.325->287.053. cota cluster_size=1=37.149; sin-cluster=238.136 (crece; dedup pendiente para neta exacta).
+- PROXIMO: cerrar 17.8k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) -> AUDIT A3 + pivot.
