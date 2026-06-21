@@ -2788,3 +2788,10 @@
 - coches_net frente acumulado (33 provincias): +61.980 nuevo-absoluto.
 - HECHAS: 3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,21,22,23,28,29,30,33,35,36,38,41,43,46,47,48,50. EN MARCHA: 1,2,20,24,25,26. RESTANTES tras ese: 13.
 - PROXIMO: seguir resto en grupos de ~6; luego AUDIT A3 coches_net + pivot.
+
+### 2026-06-21 (loop COBERTURA) — coches_net grupos 1,2,20,24,25,26 + 27,31,32,34,37,39 +3.695 [VERIFICADO]
+- Grupo 1,2,20,24,25,26 = +1.536 nuevos absolutos (DB delta 2.022.076->2.023.612); 6 part clean VAM TRUSTWORTHY.
+- Grupo 27,31,32,34,37,39 = +2.159 nuevos absolutos (DB delta 2.023.612->2.025.771); 6 part clean VAM TRUSTWORTHY.
+- coches_net frente acumulado (45 provincias): +65.675 nuevo-absoluto.
+- HECHAS (45): 1-39 (todas) + 41,43,46,47,48,50. EN MARCHA: ULTIMO grupo 40,42,44,45,49,51,52 (cierra las 52).
+- PROXIMO: medir ultimo grupo -> RESUMEN FINAL coches_net (52 prov) -> AUDIT A3 -> PIVOT siguiente frente (wallapop/milanuncios/R1/website).
