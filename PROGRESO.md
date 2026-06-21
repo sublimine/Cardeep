@@ -2985,3 +2985,13 @@
   muere por REGISTRY hardcoded -> innecesario (80% del inventario cuelga de 4-5 señales auto-describibles).
 - PROXIMO: CONSTRUIR DealerProbe (SOTA gh search extractores sitemap/JSON-LD primero; TDD; reusa cage/dedup/entity_source/
   governor; NO tocar exhaustiveness). Empezar por sitemap-classifier (señal rey). Luego drenar ~2.736 webs por lotes/Workflow.
+
+### 2026-06-21 (loop COBERTURA) — BUILD DealerProbe #1: sitemap classifier TDD GREEN [VERIFICADO]
+- Nuevo modulo pipeline/platform/dealerprobe.py (classifiers PUROS, sin REGISTRY): is_vehicle_sitemap(name) + classify_loc(url).
+  TDD: tests/test_dealerprobe_sitemap.py (34 casos de patrones REALES del recon) RED->GREEN, 34 passed.
+- is_vehicle_sitemap: detecta sitemaps de coches por token (vehica/stock_listing/usate/nuove/vehicul/vehicles/coches/product/
+  inventario/catalogo/precios/buy), rechaza index y page/post/category. classify_loc -> per_vehicle|category|other (uuid,
+  query vehiculo=, id/año en last seg, path profundo >=4 segs, slug make-model; excluye blog-slugs via prefijo-de-segmento).
+- Componente REY (sitemap = 80% de los detectables). PROXIMO componente: parser JSON-LD Car/Vehicle + schema microdata
+  (reusa _LD_RE) -> SSR cards (reusa parse_html_cards/detect_theme family_cms) -> cascada async + cage/dedup/entity_source +
+  governor -> validar en ~10 dealers del recon -> drenar 7.035. Construccion incremental por componente, cada uno GREEN+commit.
