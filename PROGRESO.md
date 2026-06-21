@@ -2938,3 +2938,17 @@
 - RESIDUALES €0 restantes: (a) family por-dealer = discovery NUEVOS dominios (no re-drenado); (b) R1 desguace; (c) CHECK1
   dedup 2.382 cross-province (calidad, investigar Signal-A vs FP); (d) oem faltantes. motorflash GATED (C1).
 - PROXIMO: reconocer/abrir R1 desguace (frente €0 sin gate) o investigar CHECK1; mantener marketplaces frescos (delta) + dedup periodico.
+
+### 2026-06-21 (loop COBERTURA) — CHECK1 dedup RESUELTO (falso FAIL) + FIN FASE COBERTURA €0 [VERIFICADO]
+- CHECK1 (2.382 cross-province) INVESTIGADO: TODOS por Signal A photo_url (2.358 photo + 24 both, 0 por firma sola).
+  Signal A = foto byte-identica (URL CDN unica) = MISMO coche fisico -> cruza provincia LEGITIMAMENTE (mismo dealer/coche
+  en 2 prov, o re-listado). Solo Signal B (firma) tiene prohibido cruzar prov, y 0 lo hicieron. => NO hay sobre-merge;
+  la NETA 1.833.647 es CORRECTA. CHECK1 es demasiado estricto (no exime Signal A cross-province) -> item menor: refinar
+  el check para FAIL solo en cross-province-por-firma (no cobertura, no urge; documentado).
+- ★ FIN DE FASE COBERTURA €0 (fuentes con conector abierto): AGOTADA. Drenados y verificados: 4 marketplaces mayores
+  (AS24/coches.net/wallapop-PRO/milanuncios) + vo_chains + OEM + subastas. Dedup global -> NETA EXACTA 1.833.647 coches
+  fisicos unicos. Residuales €0 NO son mas drenado: motorflash GATED (wall 403, C1 anti-deteccion); family por-dealer =
+  DISCOVERY nuevos dominios (construccion); R1 desguace = SIN conector (construccion); oem faltantes (mg/skoda/byd menores).
+- ESTADO HONESTO: NO declaro A3 100%/SELLADO (residuales €0 requieren construccion/discovery o estan gated). La cobertura
+  de fuentes ABIERTAS conocidas esta completa. Siguiente fase = construir discovery (family/desguace) o mantenimiento
+  (re-drenar marketplaces+subastas para delta fresco + dedup periodico) hasta abrir gates (owner: anti-deteccion/discovery).
