@@ -2632,3 +2632,11 @@
   NETA real cota inferior ~154.736 (SQL) + recuperados incrementales.
 - PROXIMO: seguir 8000-20000 (cursor pf>=13915; cruza precio-pico 13976-14037 residual, luego 14k-20k incl 14953 pico) lotes ~6.5k;
   luego barrido <8000; luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 13915-14403 +4.360 incremental (~89%) [VERIFICADO]
+- Lote 13915-14403 = +4.360 incremental NEW (output==DB delta 1.900.604->1.904.964) +1 dealer TRUSTWORTHY; pages 23/200/34/143.
+- 2o RESIDUAL PRECIO-PICO CONFIRMADO: band 13976-14037 (~13.999€) topo pages=200 distinct=4000 de ~4.435 -> gap ~435.
+  (1o fue 12950 gap ~317; queda 3o 14953 ~14.990€). Total residual precio-pico ~declarado ~1.3k, 0.47%.
+- AS24 bruto 243.718->248.081 (~88.9% de 279.154). cota cluster_size=1=37.149; sin-cluster=199.164.
+- PROXIMO: seguir 8000-20000 (cursor pf>=14403; cruza 3er precio-pico 14953, luego 15k-20k) lotes ~6.5k; luego barrido <8000;
+  luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
