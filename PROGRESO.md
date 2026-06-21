@@ -2690,3 +2690,11 @@
 - Lote 17333-17822 = +5.728 incremental NEW (output==DB delta 1.938.208->1.943.936) +3 dealers TRUSTWORTHY; pages 48/160/136 (<200).
 - AS24 bruto 281.325->287.053. cota cluster_size=1=37.149; sin-cluster=238.136 (crece; dedup pendiente para neta exacta).
 - PROXIMO: cerrar 17.8k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) -> AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 17822-18310 +5.046; 4o precio-pico emergente [VERIFICADO]
+- Lote 17822-18310 = +5.046 incremental NEW (output==DB delta 1.943.936->1.948.982) +3 dealers TRUSTWORTHY; pages 76/200/5/97.
+- 4o RESIDUAL PRECIO-PICO (EMERGENTE): band 17944-18005 (~17.999/18.000€, ancho 61€<min_width) topo pages=200 -> supero el
+  cap por crecimiento del catalogo vivo (no estaba >cap al generar el plan). No subdividible util por precio (mismo limite
+  teorico que los otros 3). Residual adicional declarado ~varios cientos. Total residuales precio-pico ahora 4 (~1.7-2k est).
+- AS24 bruto 287.053->292.099. cota cluster_size=1=37.149; sin-cluster=243.182.
+- PROXIMO: cerrar 18.3k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
