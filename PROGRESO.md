@@ -2606,3 +2606,12 @@
 - cota cluster_size=1=37.146 (dedup no corre); sin-cluster=168.063. NETA real cota inferior ~154.736 (SQL) + recuperados.
 - PROXIMO: seguir 8000-20000 (cursor pf>=11962; queda el grueso 12k-20k, el mas truncado) lotes ~6.5k; luego barrido <8000;
   luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 11229-12450 +8.488 incremental (~81%) [VERIFICADO]
+- Lote 11229-11962 = +5.102 incremental NEW (output==DB delta 1.873.863->1.878.965) +6 dealers TRUSTWORTHY; pages 105/168/144.
+- Lote 11962-12450 = +3.386 incremental NEW (output==DB delta 1.878.965->1.882.351) +3 dealers TRUSTWORTHY; pages 199/42/114;
+  band 11962-12084 rozo 199pag (distinct 3963<cap, NO topo) -> zona cercana al precio-pico 12950 (residual conocido).
+- AS24 bruto 216.977->225.465 (+8.488; ~80.8% de 279.154). cota cluster_size=1=37.146; sin-cluster=176.551.
+  NETA real cota inferior ~154.736 (SQL) + recuperados incrementales.
+- PROXIMO: seguir 8000-20000 (cursor pf>=12450; cruza precio-pico 12938-12999 residual ~declarado, luego 13k-20k) lotes ~6.5k;
+  luego barrido <8000; luego dedup (ventana RAM) neta exacta; luego AUDIT A3 + pivot.
