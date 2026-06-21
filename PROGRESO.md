@@ -2827,3 +2827,17 @@
 - Frente wallapop professional = el de mayor ROI hasta ahora (+59k/lote vs coches_net +6-18k/prov). JSON batch, no PDP.
 - PROXIMO: drenar las 7 celdas restantes (16000+); el conector planea desde None -> usar cursor de precio si arg existe,
   o re-lanzar idempotente. Luego AUDIT A3 + (milanuncios/family CMS). NO drenar private (particulares).
+
+### 2026-06-21 (loop COBERTURA) — ★ FRENTE wallapop PROFESSIONAL CERRADO: +96.333 dealers nuevos [VERIFICADO/honesto]
+- wallapop_facet --seller-types professional COMPLETO: 18/18 celdas precio CLEAN (0 errored). Lote1 +59.351 (11 celdas,
+  timeout) + lote2 18/18 (re-fetch 11 idempotente + 7 nuevas 16000+, +36.982 este run). TOTAL sobre baseline original
+  2.027.034 -> 2.123.367 = +96.333 COCHES NUEVOS-ABSOLUTOS de DEALERS (objetivo CARDEEP). wallapop vehicles 592.790->689.123.
+- JSON gateway RAPIDO (~10.600 cars/min al final), no PDP. Solo professional (saltado private 305k particulares). ALTO ROI:
+  el mejor frente de la sesion (+96k dealers).
+- HONESTO - VAM UNVERIFIED (no TRUSTWORTHY): db_edges=689.123 == db_join_vehicles=689.123 (integridad edge<->vehicle OK)
+  PERO db_distinct_refs=667.435 -> discrepancia 21.688 (3.1%) refs no-distintos en platform_listing wallapop ACUMULADO.
+  Es deuda de integridad historica de la plataforma (probable wholesale previo con refs colisionando), NO de este drain
+  (18/18 celdas limpias). Cobertura nueva verificada por DB-delta (via independiente). DEUDA a investigar: origen de los
+  21.688 edges con ref no-distinto en wallapop. NO se declara el frente "TRUSTWORTHY" hasta resolver eso.
+- AUDIT A3 actualizado (3 fuentes mayores drenadas). PROXIMO: investigar deuda refs wallapop (opcional) o PIVOTA
+  milanuncios/family CMS/oem; DEDUP global cuando RAM>4GB para neta exacta.
