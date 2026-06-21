@@ -2738,3 +2738,14 @@
 - FIX RAIZ de la sesion: bandas anchas truncaban a 4.000 (200-pag cap) -> expand_bands() subdivide <cap (TDD 12 tests,
   commit d4fd0bd). De ~37k cota inicial a 251k neto verificado. Cada lote: verificado x2 vias + CI verde.
 - PROXIMO (PIVOT): siguiente frente cobertura NUEVA €0 -> coches_net facet (~249k declarado) / wallapop / R1 desguace.
+
+### 2026-06-21 (loop COBERTURA) — PIVOT a coches_net_facet: fix validado + Madrid +18.031 nuevo-absoluto [VERIFICADO]
+- FIX private_caged (6e3708b) VALIDADO en vivo: Madrid (prov 28) post-fix corrio SIN KeyError, 7 particiones (7 clean/0
+  errored), VAM TRUSTWORTHY, dup_ids_collapsed 1042. El conector facet coches_net quedo operativo.
+- COBERTURA NUEVA Madrid: DB delta count(vehicle) 1.966.095->1.984.126 = +18.031 coches NUEVOS ABSOLUTOS (no estaban en
+  NINGUNA fuente; el delta global descuenta automaticamente overlap con AS24/cosecha previa). Madrid declarado ~57.136 ->
+  ~18k nuevo / resto overlap. coches_net_wholesale vehicles 292.175.
+- Frente coches_net MUY productivo (+18k de 1 provincia). Metodo identico a AS24: provincias en lotes run_in_background,
+  verifica x2 vias (DB delta nuevo-absoluto + VAM), commit agrupado + CI verde.
+- EN MARCHA: Barcelona (prov 8). PROXIMO: escalar 52 provincias (grandes solas: 8/46/41/29/3/30...; resto en grupos).
+  Distinguir SIEMPRE: bruto coches_net vs nuevo-absoluto (delta) vs overlap-AS24 vs pendiente-dedup.
