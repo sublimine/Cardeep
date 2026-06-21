@@ -3051,3 +3051,11 @@
 - probe_dealer: cascada frontier sitemap || SSR home/listing -> por PDP parse_pdp -> cage; status live/dead/walled/noise; pacing 0.2s/PDP.
 - main(): --domains / --from-db (dealers con website sin family_/dealerprobe) / --limit / --cap. record_run(DP_SOURCE_KEY) firma verificada.
 - Pieza pura unit-testeable (56 GREEN); cage validado EN VIVO. PROXIMO: validar vivo ~8 dealers recon (x2 vias) -> drenar 7.035.
+
+## 2026-06-21 — Validacion vivo 4b-ii + 3 fixes de raiz (DealerProbe)
+- VALIDACION VIVO 8 dealers recon: cage FUNCIONA -> 119 coches nuevos (crestanevada +60, autodeniamotors +56, alcala534 +3), verificado x2 vias (summary new + DB entity_source dealerprobe_ownsite).
+- RAIZ A (crash unhashable): _vehicle_from_ld probaba `@type` (puede ser lista JSON-LD) contra un set -> normalizado a lista. Crasheaba automotordursan/carcitycoches.
+- RAIZ assets: classify_loc marcaba imagenes .webp con path car-named como per_vehicle (palaciocasion 4 falsos) -> _ASSET_EXT_RE reject.
+- RAIZ precio: _SSR_PRICE_RE no captaba coma de millares (14,990) ni el € mojibake (�) de paginas latin mal decodificadas -> regex + strip ampliados.
+- TDD: 59 tests GREEN (+@type-array, +asset-exclude, +price-comma-mojibake).
+- Gap C pendiente (medir tras re-validar): palaciocasion inventario en subdominio coches.*; autosantpedor sin links en home (JS).

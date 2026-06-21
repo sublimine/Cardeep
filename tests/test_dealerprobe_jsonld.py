@@ -11,6 +11,24 @@ from pipeline.platform.dealerprobe import parse_jsonld_vehicles, parse_microdata
 pytestmark = pytest.mark.unit
 
 
+# JSON-LD @type is allowed to be an ARRAY (["Vehicle","Product"]); a set-membership test on the
+# raw value crashed with `unhashable type: 'list'` in vivo (automotordursan, carcitycoches).
+TYPE_ARRAY = """
+<script type="application/ld+json">
+{"@type":["Vehicle","Product"],"name":"Renault Clio","brand":"Renault","model":"Clio",
+ "productionDate":"2020","offers":{"price":"12990","priceCurrency":"EUR"},
+ "url":"https://automotordursan.com/coches/renault-clio-555"}
+</script>
+"""
+
+
+def test_jsonld_type_as_array_does_not_crash():
+    out = parse_jsonld_vehicles(TYPE_ARRAY)            # must NOT raise unhashable type: 'list'
+    assert len(out) == 1
+    assert out[0]["make"] == "Renault" and out[0]["price"] == 12990.0
+    assert out[0]["url"] == "https://automotordursan.com/coches/renault-clio-555"
+
+
 # --- JSON-LD ----------------------------------------------------------------------------------
 CAR_SINGLE = """
 <html><head>

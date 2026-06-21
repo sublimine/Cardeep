@@ -67,6 +67,23 @@ def test_parse_ssr_cards_no_links_is_empty():
                            "https://x.es/") == []
 
 
+def test_extract_vehicle_links_excludes_assets():
+    # a car-named IMAGE path (palaciocasion home) must NOT be mistaken for a per-vehicle link
+    html = """<a href="/wp-content/uploads/2023/11/coches-de-ocasion-asturias-4-1024x682.webp">img</a>
+              <a href="/coches-segunda-mano/bmw/x5/2019-90000-17769">real car</a>"""
+    links = extract_vehicle_links(html, "https://palaciocasion.es/")
+    assert links == ["https://palaciocasion.es/coches-segunda-mano/bmw/x5/2019-90000-17769"]
+
+
+def test_parse_ssr_cards_price_comma_thousands_and_mojibake():
+    # grupobeniautos: comma thousands + '€' decoded to the mojibake replacement char '�'
+    html = ('<a href="/listado/fiat-500-pop-555">Fiat 500</a><div class="precio">14,990�</div>'
+            '<a href="/listado/citroen-c3-556">Citroen C3</a><b>9.990 &euro;</b>')
+    cards = parse_ssr_cards(html, "https://grupobeniautos.com/")
+    assert cards[0]["price"] == 14990.0          # comma thousands + mojibake currency
+    assert cards[1]["price"] == 9990.0           # dot thousands + &euro; entity
+
+
 def test_parse_ssr_cards_absolute_links_preserved():
     html = '<a href="https://other.es/coches-segunda-mano/kia/ceed/2021-30000-555">Kia</a> 17.000 €'
     cards = parse_ssr_cards(html, "https://x.es/")

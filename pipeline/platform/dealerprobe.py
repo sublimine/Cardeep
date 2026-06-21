@@ -52,10 +52,19 @@ _UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 _DETAIL_QUERY_RE = re.compile(r"(?:vehiculo|vehicle|coche|anuncio|id|ref)=")
 
 
+_ASSET_EXT_RE = re.compile(
+    r"\.(?:jpg|jpeg|png|gif|webp|svg|bmp|ico|avif|css|js|mjs|pdf|xml|json|txt|"
+    r"woff2?|ttf|eot|mp4|webm|mp3|zip|rss)(?:$|\?)")
+
+
 def classify_loc(url: str) -> str:
     """Classify a sitemap <loc> / link as 'per_vehicle' | 'category' | 'other'."""
     p = urlparse(url.lower())
     path = p.path.rstrip("/")
+    # 0. static assets (images/css/js/docs) are never inventory — a car-named image path
+    # (/wp-content/.../coches-de-ocasion-4.webp) must not pollute the frontier.
+    if _ASSET_EXT_RE.search(path):
+        return "other"
     segs = [s for s in path.split("/") if s]
 
     # 1. query-encoded detail page (legacy detalles.php?vehiculo=...) — strongest signal.
@@ -156,7 +165,11 @@ def _name_of(v):
 
 
 def _vehicle_from_ld(obj: dict) -> dict | None:
-    if not isinstance(obj, dict) or obj.get("@type") not in _VEHICLE_LD_TYPES:
+    if not isinstance(obj, dict):
+        return None
+    types = obj.get("@type")                        # JSON-LD @type may be a str OR a list
+    types = types if isinstance(types, list) else [types]
+    if not any(t in _VEHICLE_LD_TYPES for t in types):
         return None
     # require a real vehicle signal, not a bare typed stub
     if not any(obj.get(k) for k in ("offers", "mileageFromOdometer", "productionDate",
@@ -228,7 +241,11 @@ def parse_microdata_vehicles(html: str) -> list[dict]:
 # as listing cards: a per-vehicle link + price/km/year inline. Generic = pull every per-vehicle
 # link (classify_loc) and read the specs from that card's HTML window. No per-dealer selectors.
 _HREF_RE = re.compile(r'<a\b[^>]*\bhref=["\']([^"\']+)["\']', re.I)
-_SSR_PRICE_RE = re.compile(r'(\d{1,3}(?:[.\s]\d{3})+|\d{4,6})\s*(?:€|eur)', re.I)
+# Currency marker tolerates the mojibake replacement char (�): latin-encoded pages served
+# without a correct charset decode '€' to '�', and HTML entities (&euro; / &#8364;). Thousands
+# separator may be '.', ' ' or ',' (grupobeniautos shows 14,990€).
+_SSR_PRICE_RE = re.compile(
+    r'(\d{1,3}(?:[.\s,]\d{3})+|\d{4,6})\s*(?:€|eur|�|&euro;|&#8364;)', re.I)
 _SSR_KM_RE = re.compile(r'(\d{1,3}(?:[.\s]?\d{3})*)\s*km', re.I)
 _SSR_YEAR_RE = re.compile(r'\b(19[89]\d|20[0-2]\d)\b')
 _SKIP_HREF = ("#", "mailto:", "tel:", "javascript:", "whatsapp:")
@@ -236,7 +253,7 @@ _SKIP_HREF = ("#", "mailto:", "tel:", "javascript:", "whatsapp:")
 
 def _ssr_price(frag: str) -> float | None:
     m = _SSR_PRICE_RE.search(frag)
-    return _to_float(re.sub(r"[.\s]", "", m.group(1))) if m else None
+    return _to_float(re.sub(r"[.\s,]", "", m.group(1))) if m else None  # strip thousands seps
 
 
 def _ssr_km(frag: str) -> int | None:
