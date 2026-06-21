@@ -2517,3 +2517,13 @@
   HONESTO: bruto 118.608 = ~42% del catalogo 279.154; cota neta confirmada 35.823; resto del bruto pendiente de dedup.
 - PROXIMO: seguir rango virgen (cursor pf>=22704; ~36 bandas, ~85k coches restantes en 20k+) lotes ~6.5k; luego
   completar 8000-20000 (truncado antes) y barrido <8000. HITO: cuando PC ocioso, dedup-run (memory-gated) cota->neta exacta.
+
+### 2026-06-21 (loop COBERTURA) — RE-DRENADO virgen 21728-23925 +16.697 [VERIFICADO]
+- Lote 21728-22704 = +8.349 NEW (output==DB delta 1.776.979->1.785.328) +75 dealers TRUSTWORTHY; pages 102/140/67/138 (<200).
+- Lote 22704-23925 = +8.348 NEW (output==DB delta 1.785.328->1.793.676) +75 dealers TRUSTWORTHY; pages 89/174/177 (<200).
+- AS24 bruto 118.608->135.740 (+16.697 estos 2 lotes; coincide delta global vehicle). Cota neta cluster_size=1 = 36.202
+  (dedup batch NO corre sobre inserts frescos). sin-cluster (pendiente dedup) = 87.874 y creciendo.
+- HONESTO: bruto 135.740 = ~48.6% del catalogo 279.154; cota neta confirmada 36.202; resto del bruto pendiente de dedup.
+- Re-drenado correcto estable ~8.3k coches/lote de cobertura nueva, sin truncar (todas las bandas pages<200).
+- PROXIMO: seguir rango virgen (cursor pf>=25390; ~32 bandas restantes en 20k+) lotes ~6.5k; luego 8000-20000 (truncado
+  antes) y barrido <8000. HITO: cuando PC ocioso, dedup-run (memory-gated) cota->neta exacta.
