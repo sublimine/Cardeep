@@ -2397,3 +2397,17 @@
 - El cursor --start sigue siendo mejora valida (re-drain incremental dentro de 200pag + reutilizable en facet drilling).
 - PROXIMO: evaluar construir AS24 facet drilling siguiendo coches_net_facet (alto ROI, construccion) VS otros frentes
   €0 (frescura marketplaces / R1 desguace agregador / limpieza website). Decidir por ROI/esfuerzo.
+
+### 2026-06-21 (loop COBERTURA) — as24 FACET: viabilidad CONFIRMADA (bandas de precio) [VERIFICADO]
+- Verificado €0 (curl_cffi + _find numberOfResults) que AS24 /lst HONRA pricefrom/priceto + sort=price: nacional
+  278.154; banda 0-2000€=498; 2000-4000€=2.215; 4000-6000€=4.018 (justo en cap, subdividir); madrid zip28 r50=66.800.
+- CONCLUSION: AS24 facet drilling por BANDAS DE PRECIO es VIABLE -> particiona los 278k en trozos <cap (~4k=200pag);
+  con bandas adaptativas (subdividir las >~3500) se cubre el catalogo completo -> ~189k netos (68%) accesibles €0.
+  Desbloquea la veta AS24 completa que /lst plano NO exponia.
+- DISENO as24_facet (patron coches_net_facet): sort=price (paginacion estable) + bandas de precio adaptativas
+  (subdividir banda si numberOfResults>~3500) + reusar parser/ingest de autoscout24_wholesale + cursor --start por
+  banda + seen_listing_ids GLOBAL (dedup cross-banda) + delta/VAM heredados. Provincia (zip+radio) tambien filtra
+  pero el radio km no mapea limpio a provincia administrativa -> bandas de precio es el eje limpio.
+- PROXIMO: construir pipeline/platform/as24_facet.py con TDD (RED test del partition-plan adaptativo + URL builder
+  facetada; GREEN); drain de prueba de 2-3 bandas -> medir cobertura nueva (delta + cluster_size=1 + dealers nuevos)
+  que SUPERE el techo de 4k de /lst; escalar bandas paced; commit + push + CI verde.
