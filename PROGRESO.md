@@ -2504,3 +2504,16 @@
   El re-drenado correcto con bandas <cap recupera el resto. Idempotente: re-tocar bandas ya vistas re-inserta 0 new.
 - PROXIMO: drenar el plan (118 bandas) en lotes de ~3 bandas con skip cursor, EMPEZANDO por el rango medio-alto
   (18k+, maxima cobertura nueva no capturada), luego completar 0-18k fino. Acumular hacia ~279k bruto.
+
+### 2026-06-21 (loop COBERTURA) — RE-DRENADO correcto: rango VIRGEN 20000-21728 +14.690 [VERIFICADO]
+- Tras el FIX RAIZ (d4fd0bd), re-drenado del catalogo real 279.154 por el plan de 118 bandas <cap, empezando por el
+  rango VIRGEN 20000+ (nunca capturado = 100% cobertura nueva). Lotes ~6.5k coches, bandas explicitas <cap.
+- Lote 20019-20873 = +6.455 NEW (output==DB delta 1.762.289->1.768.744) +62 dealers TRUSTWORTHY; pages 39/184/59/53 (<200, no trunca).
+- Lote 20873-21728 = +8.235 NEW (output==DB delta 1.768.744->1.776.979) +110 dealers TRUSTWORTHY; pages 164/140/129 (<200).
+- FIX VERIFICADO en produccion: ninguna banda topo 200pag -> el truncamiento esta resuelto. Plan AUDITADO fiable
+  (plan_n==reprobe==real_caged, ratio 0.97-0.99; la diff son private/geo skipped) -> sin huecos ocultos.
+- AS24 bruto 109.408->118.608 (delta global vehicle = +14.690 estos 2 lotes). Cota neta cluster_size=1 = 35.823
+  (sube poco: dedup batch NO corre sobre inserts frescos). sin-cluster (pendiente dedup) = 71.177 y creciendo.
+  HONESTO: bruto 118.608 = ~42% del catalogo 279.154; cota neta confirmada 35.823; resto del bruto pendiente de dedup.
+- PROXIMO: seguir rango virgen (cursor pf>=22704; ~36 bandas, ~85k coches restantes en 20k+) lotes ~6.5k; luego
+  completar 8000-20000 (truncado antes) y barrido <8000. HITO: cuando PC ocioso, dedup-run (memory-gated) cota->neta exacta.
