@@ -2449,3 +2449,15 @@
 - PROXIMO: seguir drenando bandas con as24_facet en LOTES DE 2 (timeout 1200 cabe limpio con teardown): 8000-10000,
   10000-12000, ... cubriendo el rango medio-alto VO (el grueso); luego 30000+. Acumular hacia ~189k netos; medir neta
   (cluster_size) por hito. Eventualmente: dedup-run sobre los 12k sin-cluster para neta exacta.
+
+### 2026-06-21 (loop COBERTURA) — as24_facet produccion: lotes 8000-12000 limpios (+14.4k) [VERIFICADO]
+- Lotes de 2 bandas/tick (timeout 1200 cabe con teardown): 8000-10000 = +7.038 NEW TRUSTWORTHY; 10000-12000 = +7.364
+  NEW +71 dealers TRUSTWORTHY. vehicles_total 1.718.128 -> 1.732.530 (+14.402 estos 2 lotes; bandas <cap, no toparon 200pag).
+- BALANCE AS24 esta sesion: 16.749 -> 71.589 vehicles = +54.840 coches. NETA (cluster_size): 33.440 cluster_size=1
+  (neto nuevo confirmado), 26.720 sin-cluster (dedup batch NO corrido sobre recien insertados — es memory-heavy ~2GB,
+  no forzado; mayoria probablemente nuevos pero no contados aun), resto dup. + cientos de dealers nuevos.
+- La palanca as24_facet ESCALA limpio €0 (OPEN curl_cffi, governor pacing, sin ban). Modo produccion estable.
+- PENDIENTE (memory-gated suave): un dedup-run (cluster_vehicles) sobre los ~27k sin-cluster daria la neta EXACTA;
+  diferido por RAM (2GB libres) -> ejecutar con cuidado/fresh o cuando el PC este ocioso; mientras, reportar cota
+  (cluster_size=1 confirmado = cota inferior de la neta).
+- PROXIMO: seguir bandas 12000-30000 (grueso VO) en lotes de 2; luego 30000+. Acumular hacia ~189k; commit por hito.
