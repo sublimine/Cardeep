@@ -2880,3 +2880,8 @@
 - SESION BALANCE: 4 marketplaces +202k nuevos-absolutos (coches_net 66.450 + wallapop-PRO 96.333 + milanuncios 39.217) +
   AS24 re-drenado neta ≥251.425. 3 fixes raiz (expand_bands, private_caged, autocasion early-stop). vehicles_total ->2.162.584.
 - PROXIMO: medir vo_chains; seguir family/oem/group por frescura; re-intentar dedup cuando RAM>4GB.
+
+### 2026-06-21 (loop COBERTURA) — dealers-puros: group_vo_chains +2.487 [VERIFICADO]
+- group_vo_chains_wholesale --pages 200: flexicar +992, ocasionplus +1.023, clicars +425, carplus +47 = +2.487 nuevos
+  absolutos (DB delta 2.162.584->2.165.071); 4/4 cadenas VAM TRUSTWORTHY. Dealers-puros (cadenas VO web propia, objetivo).
+- Cola larga dealers-puros: delta modesto por conector (cosechados hace 6-9d). PROXIMO: oem_* (oficiales), family_* (CMS).
