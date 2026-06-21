@@ -2703,3 +2703,10 @@
 - Lote 18310-18920 = +5.309 incremental NEW (output==DB delta 1.948.982->1.954.291) +6 dealers TRUSTWORTHY; pages 183/98/81 (<200).
 - AS24 bruto 292.099->297.408. cota cluster_size=1=37.149; sin-cluster=248.491.
 - PROXIMO: cerrar 18.9k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 18920-19531 +3.486; bruto >300k [VERIFICADO]
+- Lote 18920-19531 = +3.486 incremental NEW (output==DB delta 1.954.291->1.957.777) +1 dealer TRUSTWORTHY; pages 165/53/166 (<200).
+- AS24 bruto 297.408->300.894 (supera 300k; catalogo dinamico). cota cluster_size=1=37.149; sin-cluster=251.977.
+- LOTE FINAL 8000-20000 EN MARCHA (19531-20019, conecta con rango 20k+ ya drenado en 20019) -> al cerrarlo, RANGO COMPLETO
+  de precios 0-∞ drenado salvo barrido verificacion <8000.
+- PROXIMO: cerrar 19.5k-20k -> barrido <8000 (verificacion, ~0-poco new) -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
