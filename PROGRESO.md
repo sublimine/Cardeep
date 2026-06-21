@@ -2471,3 +2471,16 @@
 - DEUDA: correr cluster_vehicles (dedup) sobre los ~34k sin-cluster daria neta exacta; memory-gated (2GB) -> diferido,
   ejecutar con cuidado o stagear. Mientras, cluster_size=1 = cota inferior verificada.
 - PROXIMO: seguir bandas (14000+) lotes de 2 con run_in_background; en un hito, dedup-run para neta exacta.
+
+### 2026-06-21 (loop COBERTURA) — as24_facet: lotes 14000-18000 +14.882 (AS24 sesion +78.3k) [VERIFICADO]
+- Lote 14000-16000 = +7.379 NEW TRUSTWORTHY; lote 16000-18000 = +7.503 NEW (new_cars output) +61 dealers TRUSTWORTHY.
+  vehicles_total 1.739.859 -> 1.747.238 -> 1.754.741 (+14.882 estos 2 lotes; bandas <cap, ninguna topo 200pag, sin ban).
+  Verificado x2 vias: output new_cars (7.503) == DB delta exacto (1.754.741-1.747.238). harvest_run as24_facet TRUSTWORTHY.
+- BALANCE AS24 sesion: 16.749 -> 95.036 vehicles = +78.287 coches. NETA (cluster_size): cluster_size=1 = 34.623
+  (COTA INFERIOR verificada de la neta); sin-cluster = 48.931 (CRECE: el dedup batch NO corre sobre recien insertados).
+  La neta real ~ cota + mayoria del backlog (historico 58-68% nuevo). Honesto: cota 34.623 + backlog-dedup 48.931.
+- DEUDA dedup CRECIENTE: sin-cluster supero 40k -> un cluster_vehicles (dedup) daria neta exacta; memory-gated (2GB,
+  drain activo) -> diferido a hito de PC ocioso (sin drain), ejecutar con cuidado/fresh. cluster_size=1 = cota verificada.
+- La palanca as24_facet sigue limpia y €0 (OPEN curl_cffi, governor pacing). Modo produccion estable, lote tras lote.
+- PROXIMO: seguir bandas 18000+ lotes de 2 con run_in_background (18000-20000 EN MARCHA); luego 20000-25000, 25000-30000,
+  30000+. Acumular hacia ~189k; en hito de PC ocioso, dedup-run para convertir cota -> neta exacta.
