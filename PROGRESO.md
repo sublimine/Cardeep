@@ -2755,3 +2755,10 @@
   declarado 27.028 -> 6.101 nuevo / resto overlap AS24+cosecha previa.
 - coches_net frente acumulado: Madrid +18.031, Barcelona +6.101 = +24.132 nuevo-absoluto en 2 provincias.
 - EN MARCHA: grupo Valencia(46)+Sevilla(41)+Malaga(29). PROXIMO: resto de las 52 provincias (grandes solas/medianas en grupos).
+
+### 2026-06-21 (loop COBERTURA) — coches_net Valencia+Sevilla+Malaga +11.915 nuevo-absoluto [VERIFICADO]
+- Grupo 46,41,29 = +11.915 coches nuevos absolutos (DB delta 1.990.227->2.002.142); 9 particiones clean, VAM TRUSTWORTHY.
+  SUPERADOS 2.000.000 vehicles totales en DB.
+- coches_net frente acumulado (5 provincias): Madrid 18.031 + Barcelona 6.101 + V/S/M 11.915 = +42.046 nuevo-absoluto.
+- HECHAS: 8,28,29,41,46. EN MARCHA: 3,30,15,11 (Alicante/Murcia/Coruña/Cadiz). RESTANTES tras ese: 43.
+- PROXIMO: seguir 52 provincias en grupos; luego AUDIT A3 coches_net + pivot.
