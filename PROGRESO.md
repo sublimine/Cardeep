@@ -2698,3 +2698,8 @@
   teorico que los otros 3). Residual adicional declarado ~varios cientos. Total residuales precio-pico ahora 4 (~1.7-2k est).
 - AS24 bruto 287.053->292.099. cota cluster_size=1=37.149; sin-cluster=243.182.
 - PROXIMO: cerrar 18.3k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — RECUPERACION 18310-18920 +5.309 incremental [VERIFICADO]
+- Lote 18310-18920 = +5.309 incremental NEW (output==DB delta 1.948.982->1.954.291) +6 dealers TRUSTWORTHY; pages 183/98/81 (<200).
+- AS24 bruto 292.099->297.408. cota cluster_size=1=37.149; sin-cluster=248.491.
+- PROXIMO: cerrar 18.9k-20k (1-2 lotes) -> barrido <8000 -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
