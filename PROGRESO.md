@@ -2769,3 +2769,9 @@
 - coches_net frente acumulado (9 provincias): +46.577 nuevo-absoluto.
 - HECHAS: 3,8,11,15,28,29,30,41,46. EN MARCHA: 18,35,38,50,33,7 (grupo 6). RESTANTES tras ese: 37.
 - PROXIMO: seguir resto provincias en grupos de ~6; luego AUDIT A3 coches_net + pivot.
+
+### 2026-06-21 (loop COBERTURA) — coches_net grupo Granada/LasPalmas/Tenerife/Zaragoza/Asturias/Baleares +7.088 [VERIFICADO]
+- Grupo 18,35,38,50,33,7 = +7.088 nuevos absolutos (DB delta 2.006.673->2.013.761); 6 particiones clean, VAM TRUSTWORTHY.
+- coches_net frente acumulado (15 provincias): +53.665 nuevo-absoluto.
+- HECHAS: 3,7,8,11,15,18,28,29,30,33,35,38,41,46,50. EN MARCHA: 36,48,47,12,17,43. RESTANTES tras ese: 31.
+- PROXIMO: seguir resto en grupos de ~6; luego AUDIT A3 coches_net + pivot.
