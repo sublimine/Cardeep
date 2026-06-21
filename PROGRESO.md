@@ -3043,3 +3043,11 @@
   (upsert_dealer DP_SOURCE_KEY -adaptar upsert_dealer_by_host- + bulk insert vehicle owned-by-dealer + entity_source + 
   events + record_run + VAM) + main --domains/--from-db. Reusa family_dealerk (Vehicle/resolve_dealer_for_host/cdp_code/
   _BULK_INSERT_VEHICLES/_BULK_TOUCH_VEHICLES/_BULK_INSERT_EVENTS) con DP_SOURCE_KEY. Luego VALIDAR vivo ~10 dealers recon.
+
+## 2026-06-21 — Componente 4b-ii: cage own-site + probe_dealer + CLI (DealerProbe)
+- parse_pdp ampliado: cascada JSON-LD->microdata->SSR inline specs (recon: JSON-LD solo ~11%, el 89% es precio/km/anio en HTML plano). +1 test (56 GREEN).
+- _upsert_dealer_dp: reusa resolve_dealer_for_host (entidad existente por website) + stamp entity_source DP_SOURCE_KEY; o acuna compraventa domain-keyed (cdp_code prov=00). 
+- _ingest_dp: cage idempotente (entity_ulid, deep_link) reusando BULK SQL canonicas (_core.sql); vin_ref=NULL (listing_ref no es VIN, cero maquillaje); evento NEW con payload source=dealerprobe_ownsite.
+- probe_dealer: cascada frontier sitemap || SSR home/listing -> por PDP parse_pdp -> cage; status live/dead/walled/noise; pacing 0.2s/PDP.
+- main(): --domains / --from-db (dealers con website sin family_/dealerprobe) / --limit / --cap. record_run(DP_SOURCE_KEY) firma verificada.
+- Pieza pura unit-testeable (56 GREEN); cage validado EN VIVO. PROXIMO: validar vivo ~8 dealers recon (x2 vias) -> drenar 7.035.

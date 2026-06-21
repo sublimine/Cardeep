@@ -54,6 +54,15 @@ def test_parse_pdp_dead_fetch_is_none():
     assert _run(parse_pdp(lambda u: _async(None), "https://dead.es/c/1")) is None
 
 
+def test_parse_pdp_ssr_inline_fallback():
+    # no JSON-LD, no microdata, but the PDP shows price/km/year in plain HTML (the ~89% case)
+    html = "<html><h1>BMW Serie 1</h1><div class='precio'>18.900 €</div><span>75.000 km</span><span>2017</span></html>"
+    v = _run(parse_pdp(lambda u: _async(html), "https://x.es/coches/bmw-serie1-77"))
+    assert v is not None
+    assert v["price"] == 18900.0 and v["km"] == 75000 and v["year"] == 2017
+    assert v["url"] == "https://x.es/coches/bmw-serie1-77"
+
+
 def test_parse_pdp_keeps_jsonld_url_when_present():
     html = """<script type="application/ld+json">{"@type":"Car","name":"Seat","model":"Leon",
         "offers":{"price":"15000"},"url":"https://x.es/canonical/seat-leon-9"}</script>"""
