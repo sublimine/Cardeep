@@ -2841,3 +2841,13 @@
   21.688 edges con ref no-distinto en wallapop. NO se declara el frente "TRUSTWORTHY" hasta resolver eso.
 - AUDIT A3 actualizado (3 fuentes mayores drenadas). PROXIMO: investigar deuda refs wallapop (opcional) o PIVOTA
   milanuncios/family CMS/oem; DEDUP global cuando RAM>4GB para neta exacta.
+
+### 2026-06-21 (loop COBERTURA) — milanuncios SONDA (Madrid+Barcelona): VALE como frente de DEALERS [VERIFICADO]
+- Sonda --provinces 28,8 = +13.565 nuevos absolutos (DB delta 2.123.367->2.136.932); 24 celdas (province+price) VAM TRUSTWORTHY.
+  JSON gateway RAPIDISIMO ~36.000 cars/min (mas rapido que wallapop 10.6k / coches_net). dealers +67 entities, particular +2.116.
+- DECISION (objetivo=puntos de venta): milanuncios ES RICO EN DEALERS -> en DB compraventa=280.877 vs particular=129.944
+  (~68% dealers) + concesionario_oficial 797. La sonda ~64% del volumen caged es dealer (private_caged 24.560 de 67.342).
+  NO es frente de particulares; es frente FUERTE de dealers. -> ESCALAR las 52 provincias. Particulares quedan etiquetados
+  kind=particular (separables; la API filtra por kind), NO contaminan compraventa.
+- HECHAS: 28,8. EN MARCHA: grupo 46,41,29,3,30,15,11,18,35,38,50,33 (12 prov). RESTANTES tras ese: 38.
+- PROXIMO: escalar resto provincias en grupos (~36k cars/min, caben muchas); luego AUDIT A3 milanuncios + dedup/pivot.
