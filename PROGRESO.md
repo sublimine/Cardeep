@@ -3019,3 +3019,15 @@
 - PROXIMO: #4 cascada async dealer_probe(domain) (robots->sitemap discovery->is_vehicle_sitemap->classify_loc frontier->
   fetch PDP->parse_jsonld||microdata||ssr; status live/dead/walled/noise) + cage/dedup/entity_source/governor/record_run +
   source_key dealerprobe_ownsite; #5 validar en vivo ~10 dealers recon; #6 drenar 7.035.
+
+### 2026-06-21 (loop COBERTURA) — BUILD DealerProbe #4a: sitemap frontier async TDD GREEN [VERIFICADO]
+- Nuevo modulo pipeline/platform/dealerprobe_wholesale.py (conector; importa classifiers puros de dealerprobe.py).
+  async probe_sitemap_frontier(fetch, domain, cap=500): fetch INYECTADO (governor-wrapped en prod, fake en test);
+  robots.txt Sitemap: -> sino /sitemap.xml fallbacks; expande <sitemapindex> siguiendo SOLO children car (is_vehicle_sitemap)
+  + nested index; de cada <urlset> guarda <loc> per_vehicle (classify_loc); order-preserving, dedup, cap + ceiling 60 sitemaps.
+  DP_SOURCE_KEY='dealerprobe_ownsite'. Testeable OFFLINE (fetch fake).
+- TDD tests/test_dealerprobe_frontier.py (asyncio.run, mock fetch): robots->index->vehica_car (page-sitemap descartado,
+  nunca fetcheado)->frontier; fallback sin robots; cap respetado; dead=[]. RED->GREEN. Total DealerProbe 50 tests GREEN.
+- PROXIMO #4b: probe_dealer(conn,fetch,domain) (cascada completa: frontier sitemap || SSR home; por PDP jsonld||microdata||
+  ssr; status live/dead/walled/noise) + cage own-site (upsert_dealer source_key dealerprobe_ownsite -adaptar upsert_dealer_by_host-
+  + bulk insert vehicle owned-by-dealer + entity_source + record_run + VAM) + main --domains/--from-db. Luego #5 validar vivo, #6 drenar 7.035.
