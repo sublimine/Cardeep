@@ -2710,3 +2710,10 @@
 - LOTE FINAL 8000-20000 EN MARCHA (19531-20019, conecta con rango 20k+ ya drenado en 20019) -> al cerrarlo, RANGO COMPLETO
   de precios 0-∞ drenado salvo barrido verificacion <8000.
 - PROXIMO: cerrar 19.5k-20k -> barrido <8000 (verificacion, ~0-poco new) -> dedup (ventana RAM) neta exacta -> AUDIT A3 + pivot.
+
+### 2026-06-21 (loop COBERTURA) — 8000-20000 COMPLETO +6.833; rango precios >=8000 cerrado [VERIFICADO]
+- Lote final 19531-20019 = +6.833 incremental NEW (output==DB delta 1.957.777->1.964.610) TRUSTWORTHY; pages 71/62/53/177 (<200).
+  Conecta con rango 20k+ en 20019 -> RANGO DE PRECIOS >=8000 DRENADO COMPLETO (8000-20000 + 20k+ + cola >1M).
+- AS24 bruto 300.894->307.727. cota cluster_size=1=37.149; sin-cluster=258.810.
+- INICIADO BARRIDO VERIFICACION <8000 (0-8000, ~completo del wholesale viejo -> espera ~0-poco new; confirma/recupera).
+- PROXIMO: cerrar <8000 -> DEDUP (ventana RAM) neta exacta -> AUDIT A3 (bruto ~308k / neta / residuales precio-pico) + pivot.
