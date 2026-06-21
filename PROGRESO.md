@@ -2858,3 +2858,14 @@
 - milanuncios frente acumulado: sonda 13.565 + 14.711 + 4.182 = +32.458 nuevo-absoluto (27/52 prov). ~36k cars/min.
 - HECHAS (27): 1-18,28,29,30,33,35,38,41,46,50. EN MARCHA: grupo3 19,20,21,22,23,24,25,26,27,31,32,34,36. RESTANTES tras ese: 12.
 - PROXIMO: cerrar restantes (37,39,40,42,43,44,45,47,48,49,51,52) -> AUDIT A3 milanuncios -> PIVOT family CMS/oem/group + dedup global.
+
+### 2026-06-21 (loop COBERTURA) — ★ FRENTE milanuncios CERRADO: 52/52 prov, +39.217 nuevo-absoluto [VERIFICADO]
+- Grupo3 19,20,21,22,23,24,25,26,27,31,32,34,36 = +3.725; ultimo grupo 37,39,40,42,43,44,45,47,48,49,51,52 = +3.034. Ambos VAM TRUSTWORTHY.
+- milanuncios 52/52 COMPLETO. COBERTURA SESION = +39.217 nuevos-absolutos. DB por kind: compraventa(DEALERS) 295.017 +
+  particular 141.339 + concesionario_oficial 913 + garaje 51 + importador 38. DEALERS distinct (cdp compraventa) = 15.445.
+  ~68% del inventario milanuncios es DEALER (objetivo cumplido); VAM TRUSTWORTHY en todos los lotes; JSON ~36k cars/min.
+- AUDIT A3 actualizado: 4 marketplaces mayores drenados (AS24, coches.net, wallapop-PRO, milanuncios).
+- BALANCE SESION (cobertura nueva marketplaces): coches_net +66.450 + wallapop-PRO +96.333 + milanuncios +39.217 = +202.000
+  nuevos-absolutos (+ AS24 re-drenado neta ≥251.425). vehicles_total ~1.718.128 (inicio re-drenado) -> 2.162.584.
+- PROXIMO (PIVOT): frentes DEALERS PUROS -> family_* CMS (concesionarios web propia, 100% dealers, nucleo objetivo, NO
+  solapan marketplaces) / oem_* / group_* / motor_es / R1 desguace. Luego DEDUP global (RAM>4GB) para neta exacta.
