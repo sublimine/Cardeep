@@ -363,6 +363,12 @@ async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid
         async with sem:
             return await hydrate_ref(geo, governed_fetch, pdp_url, ad_id, stats)
 
+    # Early-stop guards: autocasion CLAMPS page beyond the real last page — it re-serves the
+    # last page's items forever instead of returning empty. So "0 refs" alone never fires for
+    # small makes; the slice would page to max_pages (600) burning the whole timeout. Stop when
+    # the page repeats its id-set (clamp detected) or N consecutive pages add nothing fresh.
+    prev_ids: set[str] | None = None
+    barren_pages = 0
     for page in range(1, max(1, max_pages) + 1):
         # Step 1 — enumerate ad ids from this slice's SSR results page.
         try:
@@ -379,6 +385,11 @@ async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid
         if not refs:
             break  # clean end of this slice (0 refs / "no hemos encontrado").
 
+        cur_ids = {ad_id for _, ad_id in refs}
+        if prev_ids is not None and cur_ids == prev_ids:
+            break  # autocasion clamped: identical page repeated -> slice fully drained.
+        prev_ids = cur_ids
+
         # Pre-dedup against the GLOBAL seen set BEFORE hydrating: a ref already seen on an
         # earlier page/slice/segment is accounted (dup_ids_collapsed) and never re-fetched.
         fresh: list[tuple[str, str]] = []
@@ -386,6 +397,12 @@ async def _drain_slice(conn: asyncpg.Connection, geo: GeoResolver, platform_ulid
             stats["refs_seen"] += 1
             if _dedup_ref(ad_id, seen_ids, stats):
                 fresh.append((pdp_url, ad_id))
+
+        # A page that adds nothing new (all globally seen) past the real end means the slice is
+        # exhausted; tolerate a couple (cross-segment overlap) then stop honestly.
+        barren_pages = barren_pages + 1 if not fresh else 0
+        if barren_pages >= 3:
+            break
 
         if fresh:
             # PHASE A — concurrent network hydrate (governed; buckets are the real ceiling).
