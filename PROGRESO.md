@@ -2930,3 +2930,11 @@
 - METODO: cada lote run_in_background, verificado x2 vias (DB-delta + VAM/CI verde), commit agrupado, residuales declarados.
 - COBERTURA €0 de fuentes conocidas ~AGOTADA. PENDIENTE €0 (residual, NO sellar sin agotar): motorflash (bug Traceback),
   family por-dealer (discovery de NUEVOS dominios, no re-drenado), R1 desguace, oem faltantes (mg/skoda/byd).
+
+### 2026-06-21 (loop COBERTURA) — residuales €0: motorflash WALLED (gate C1) [VERIFICADO]
+- motorflash NO es bug de codigo: sitemap HTTP 403 challenge (fingerprint chrome146, Tier-1 escalation off) = sitio WALLED.
+  El conector aborta limpio (proof slice 0, VAM TRUSTWORTHY sobre 3.871 existentes). Superar wall = Tier-1 escalation
+  (camoufox/proxy) = gate ANTI-DETECCION (C1, GATED/staged). NO insistir (evitar ban). STAGED.
+- RESIDUALES €0 restantes: (a) family por-dealer = discovery NUEVOS dominios (no re-drenado); (b) R1 desguace; (c) CHECK1
+  dedup 2.382 cross-province (calidad, investigar Signal-A vs FP); (d) oem faltantes. motorflash GATED (C1).
+- PROXIMO: reconocer/abrir R1 desguace (frente €0 sin gate) o investigar CHECK1; mantener marketplaces frescos (delta) + dedup periodico.
