@@ -87,14 +87,18 @@ RESOLVER_VERSION = "1.1.0"
 SOURCE_CLUSTER_RUN = "dealer-identity-det-v1"
 ANTI_HUB_K = 3  # exclude deep_links shared by >= K distinct canonicals
 
-# Sealed expected counts (as of 2026-06-15 measurement).
-# If the rebuild yields different numbers, the underlying data changed — fail loudly.
-EXPECTED_DEDUPED_COUNT = 40016      # distinct dealers AMONG the B1 canonicals after merges
-                                    # (matches v_dealer_resolved / /health; the old 39874 was a
-                                    #  miscount: n_in - n_merged wrongly subtracted 141 non-VAM nodes)
-EXPECTED_N_SUPER_CANONICALS = 2236  # graph components with >= 2 members
-EXPECTED_TOTAL_MEMBERS = 4621       # all nodes in any merge group (incl non-VAM)
-EXPECTED_N_MERGED = 2385            # absorbed nodes in the graph (incl 141 non-VAM)
+# Sealed expected counts (re-blessed 2026-06-23 after the Overture fold + the kind='particular'
+# exclusion fix). VERIFIED SANE: 0 particular members in any deep-link component (the prior 49-
+# provincial-"Particulares coches.net" 113k-car mega-cluster is gone); the largest components are
+# legitimate single-dealer B1-splits (LOUZAO A CORUÑA=22, DIMÓVIL=17). The rise vs the 2026-06-15
+# baseline (2236->3586) is genuine census growth (Overture +18k real dealers -> more cross-listings).
+# NOTE: these are census-growth-sensitive — a continuously-growing census will drift them and print a
+# non-fatal DIVERGENCE warning prompting re-verification; the real over-merge protection is the
+# kind<>'particular' exclusion in the deep-link query above, not these exact counts.
+EXPECTED_DEDUPED_COUNT = 54489      # distinct dealers AMONG the B1 canonicals after merges
+EXPECTED_N_SUPER_CANONICALS = 3586  # graph components with >= 2 members (all single-dealer splits)
+EXPECTED_TOTAL_MEMBERS = 7628       # all nodes in any merge group (incl non-VAM)
+EXPECTED_N_MERGED = 4042            # absorbed nodes in the graph (incl non-VAM)
 
 
 # ---------------------------------------------------------------------------
@@ -177,6 +181,14 @@ async def build(conn: asyncpg.Connection) -> None:
         LEFT JOIN v_canonical vc ON vc.entity_ulid = v.entity_ulid
         WHERE v.deep_link IS NOT NULL
           AND v.deep_link <> ''
+          -- EXCLUDE kind='particular': private-seller aggregates (e.g. the 52 provincial
+          -- "Particulares coches.net <Province>") are NOT real dealers and are deduped
+          -- separately by build_particular_dedup (canonical_key). They enter here only via
+          -- COALESCE-to-self (they are excluded from B1/v_canonical), and a relisted private
+          -- car shared across two provincial aggregates would chain them into a spurious
+          -- mega-cluster (113k-car over-merge). The deep-link layer is for REAL dealers that
+          -- share identical listings (proving a B1 split of one physical dealer).
+          AND e.kind <> 'particular'
         """
     )
     print(f"  Vehicle rows with deep_link: {len(rows)}")
