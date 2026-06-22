@@ -55,6 +55,7 @@ _PDP_CONC = 6               # concurrent PDP fetches PER dealer host (<=6 live c
 _PDP_DELAY = 0.25           # base in-semaphore delay; jittered to break metronomic bot cadence
 _PDP_RETRY_DELAY = 0.6      # backoff before retrying a PDP that failed (transient reset under load)
 _LISTING_PATHS = ("", "/coches-ocasion", "/coches-segunda-mano", "/vehiculos", "/stock", "/ocasion", "/coches")
+_INVENTORY_SUBDOMAINS = ("coches", "vo", "vn", "stock", "ocasion", "vehiculos", "usados", "seminuevos")
 
 _LOC_RE = re.compile(r"<loc>\s*(.*?)\s*</loc>", re.I | re.S)
 _ROBOTS_SITEMAP_RE = re.compile(r"(?im)^\s*sitemap:\s*(\S+)")
@@ -323,10 +324,20 @@ async def probe_dealer(governed_fetch, state: dict, domain: str, cap: int = _DEA
                     frontier.append(l)
             if len(frontier) >= cap:
                 break
-        if not frontier:
-            summary["status"] = ("walled" if state.get("last_status") == 403
-                                  else "dead" if not home_seen else "noise")
-            return summary, bare, []
+    base_403 = state.get("last_status") == 403         # capture walled signal before subdomain probes
+    if not frontier:
+        # inventory often lives on a sibling subdomain (coches.<dealer>, vo.<dealer>, ...): the
+        # palaciocasion case. Probe each via its own sitemap; cage still attaches to the bare dealer
+        # entity (the deep_link URLs carry the subdomain), so no duplicate entity is minted.
+        for pre in _INVENTORY_SUBDOMAINS:
+            subfr = await probe_sitemap_frontier(governed_fetch, f"{pre}.{bare}", cap)
+            if subfr:
+                frontier = subfr
+                signal = f"sub:{pre}"
+                break
+    if not frontier:
+        summary["status"] = "walled" if base_403 else ("dead" if not home_seen else "noise")
+        return summary, bare, []
 
     summary["status"] = "live"            # frozen BEFORE concurrent PDPs mutate state['last_status']
     summary["frontier"] = len(frontier)
@@ -369,6 +380,25 @@ async def _select_drainable(conn, limit):
     return drainable[:limit] if limit else drainable
 
 
+async def _select_redo(conn, statuses, limit):
+    """Re-probe dealers previously marked dealerprobe_probed with a recoverable status (noise/dead),
+    e.g. after a discovery improvement (subdomain probing). They keep their probed marker; one that
+    now goes live additionally gets dealerprobe_ownsite + its source_ref refreshed to 'live'."""
+    rows = await conn.fetch(
+        """SELECT e.entity_ulid, e.website FROM entity e
+             JOIN entity_source es ON es.entity_ulid=e.entity_ulid
+                  AND es.source_key='dealerprobe_probed' AND es.source_ref = ANY($1::text[])
+            WHERE e.website IS NOT NULL AND e.website<>''
+              AND NOT EXISTS (SELECT 1 FROM entity_source o
+                              WHERE o.entity_ulid=e.entity_ulid AND o.source_key='dealerprobe_ownsite')
+            ORDER BY e.last_seen DESC""",
+        statuses)
+    cand = [(r["entity_ulid"], r["website"]) for r in rows]
+    drainable = [(eid, w) for eid, w in cand if _drainable_website(w)]
+    print(f"[dealerprobe] --redo-status {statuses} candidates={len(cand)} drainable={len(drainable)}")
+    return drainable[:limit] if limit else drainable
+
+
 async def _mark_probed(conn, entity_ulid, status):
     """Stamp 'dealerprobe_probed' (source_ref=status) so this dealer drops out of future batches."""
     await conn.execute(
@@ -377,7 +407,8 @@ async def _mark_probed(conn, entity_ulid, status):
         entity_ulid, str(status))
 
 
-async def _amain(domains, from_db, limit, cap, concurrency, pdp_conc=_PDP_CONC, pdp_delay=_PDP_DELAY):
+async def _amain(domains, from_db, limit, cap, concurrency, pdp_conc=_PDP_CONC, pdp_delay=_PDP_DELAY,
+                 redo_status=None):
     # Write pool is FIXED and decoupled from dealer concurrency: a connection is held only for the
     # ~<100ms cage, NEVER during the minutes of network I/O, so the live API/:8090 never starves.
     pool = await asyncpg.create_pool(DSN, min_size=4, max_size=12)
@@ -386,7 +417,9 @@ async def _amain(domains, from_db, limit, cap, concurrency, pdp_conc=_PDP_CONC, 
             if await is_open(conn, DP_SOURCE_KEY):
                 print(f"[dealerprobe] breaker OPEN for {DP_SOURCE_KEY}; skipping (graceful).")
                 return
-            if from_db and not domains:
+            if redo_status and not domains:
+                targets = await _select_redo(conn, redo_status, limit)   # re-probe noise/dead
+            elif from_db and not domains:
                 targets = await _select_drainable(conn, limit)   # [(entity_ulid, website)]
             else:
                 targets = [(None, d) for d in (domains or [])]   # --domains: no DB marker
@@ -456,8 +489,11 @@ def main() -> None:
     p.add_argument("--concurrency", type=int, default=16, help="dealers probed in parallel")
     p.add_argument("--pdp-conc", type=int, default=_PDP_CONC, help="concurrent PDP fetches per host")
     p.add_argument("--pdp-delay", type=float, default=_PDP_DELAY, help="base in-semaphore PDP delay (s)")
+    p.add_argument("--redo-status", default=None,
+                   help="re-probe dealerprobe_probed dealers with these statuses (comma list: noise,dead)")
     a = p.parse_args()
-    asyncio.run(_amain(a.domains, a.from_db, a.limit, a.cap, a.concurrency, a.pdp_conc, a.pdp_delay))
+    redo = [s.strip() for s in a.redo_status.split(",")] if a.redo_status else None
+    asyncio.run(_amain(a.domains, a.from_db, a.limit, a.cap, a.concurrency, a.pdp_conc, a.pdp_delay, redo))
 
 
 if __name__ == "__main__":

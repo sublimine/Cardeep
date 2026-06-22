@@ -132,6 +132,24 @@ def test_transient_pdp_failure_is_retried_and_recovered():
     assert any(v["url"] == flaky for v in vehicles)
 
 
+def test_subdomain_inventory_discovery():
+    # palaciocasion case: base host has NO sitemap/listing, but inventory lives on coches.<dealer>.
+    # probe_dealer must discover it via the subdomain and still cage under the BARE dealer host.
+    locs = [f"https://coches.x.es/coches/seat-leon-2019-{90000+i}-{100+i}" for i in range(3)]
+    pages = {
+        "https://coches.x.es/robots.txt": "Sitemap: https://coches.x.es/sitemap.xml\n",
+        "https://coches.x.es/sitemap.xml": "<urlset>" + "".join(
+            f"<url><loc>{u}</loc></url>" for u in locs) + "</urlset>",
+    }
+    for i, u in enumerate(locs):
+        pages[u] = _pdp(20000 + i, u)
+    gf, state = _make_gf(pages)                          # base x.es + listing paths return None
+    summary, host, vehicles = _run(probe_dealer(gf, state, "x.es", cap=400, pdp_conc=4, pdp_delay=0))
+    assert summary["status"] == "live" and summary["signal"] == "sub:coches"
+    assert host == "x.es"                                 # cage attaches to the bare dealer, not the sub
+    assert [v["url"] for v in vehicles] == locs
+
+
 def test_afetch_retries_with_verify_false_on_tls_error():
     class _CurlError(Exception):
         pass
