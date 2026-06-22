@@ -141,7 +141,7 @@ async def _drain_all(fetch, max_pages: int | None = None) -> list[dict]:
 
 async def _upsert_spoticar_dealer(conn, geo_id: str, name: str | None, city: str | None) -> str:
     """One entity per Spoticar point-of-sale (stable cdp_code keyed by geo_id). source_key=SP."""
-    code = cdp_code(province_code="00", domain=f"spoticar.es/{geo_id}")
+    code = cdp_code(province_code="00", domain=f"{geo_id}.spoticar.es")   # bare synthetic host, unique/dealer
     tn = (name or f"spoticar-{geo_id}").strip()
     await conn.execute(
         """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name, website,
