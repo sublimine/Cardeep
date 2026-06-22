@@ -3266,3 +3266,23 @@
 - GATE PENDIENTE-OWNER: dork_municipal necesita CARDEEP_SEARXNG_URL (SearXNG self-host EUR0) para auto-correr.
 - PROXIMO: siguiente proyecto reversible (conector OEM-red del residual DEALERPROBE, o densificar listas MSE
   ortogonales ahora que overture sumó 9.399); vigilar el primer tick limpio del daemon (collapse_invisible).
+
+## 2026-06-22 — VIGILANCIA-ACTIVA #3: inventario overture + plan re-cluster/MSE (el bucle se auto-alimenta)
+- AMBOS schedulers vivos (harvest 1128354372 + discovery 1128354373). Primer tick del discovery daemon
+  aun no (arranco ~21:00, interval +60min ~22:00); verificar prox iteracion.
+- INVENTARIO de las entidades overture (verificado, no asumido): kind = compraventa 18.313 +
+  concesionario 86 = **18.399 EN scope de venta** (garaje 2.210 + desguace 268 = fuera); **13.369 net-new
+  (solo overture)** + 7.513 overlap (sube el `m` del MSE); 20.882 province-resueltas; **15.442 con web**.
+- AUTO-FEED CONFIRMADO: dealerprobe drainable backlog **3.969 -> 10.362** (overture metio ~6.400 dealers
+  con web a la cola del drain de vig#1, cadencia 24h). El bucle discovery->own-site-harvest funciona
+  hands-off. vig#1 paga mas de lo previsto.
+- CORRECCION de memoria (gana el codigo): cluster_dealers carga ~79k entidades = LIGERO; el "4-6GB RAM"
+  era cluster_VEHICLES (1.9M). El re-cluster de dealers NO necesita parar workers.
+- FK preciso: canonical_dedup_run.source_cluster_run -> entity_cluster_run(cluster_run_id) SIN cascade
+  (0027:48-49) bloquea el re-run; canonical_dedup.run_id -> canonical_dedup_run ON DELETE CASCADE.
+- PLAN escrito (plans/P-recluster-overture-mse.md, cold-start ejecutable): pasos FK-safe (borrar
+  canonical_dedup_run del run B1 -> re-cluster -> build_canonical_dedup -> verificar -> re-evaluar MSE),
+  anti-FP (sobre-merge overture), snapshot+rollback, aceptacion (Ferrari 0 + sello honesto). Datos servidos
+  -> ejecucion cuidadosa en iteracion fresca, NO apresurada en contexto profundo (battle-order).
+- PROXIMO: verificar primer tick discovery; EJECUTAR el plan re-cluster/MSE (alto leverage: +13.369 net-new
+  ventas + 7.513 overlap pueden mover censo servido y sello).
