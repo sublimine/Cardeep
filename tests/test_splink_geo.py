@@ -86,19 +86,15 @@ def test_settings_include_geo_blocking_rule():
 
 
 @pytest.mark.unit
-def test_geo_is_blocking_only_not_distance_comparison():
-    """Geo is a BLOCKING key only (candidate generation); the MATCH decision stays
-    on name/municipality/phone/website. A distance-only comparison over-merged
-    distinct neighbouring dealers and net-hurt the seal (14->3), so it is removed:
-    geocell-near records merge ONLY when the NAME also agrees (same dealer)."""
+def test_settings_include_geo_distance_comparison():
     if not splink_merge.splink_available():
         pytest.skip("splink not installed")
     settings = splink_merge._build_settings()
     dicts = [c.create_comparison_dict("duckdb") for c in settings.comparisons]
     descs = [d.get("comparison_description") for d in dicts]
     outputs = [d.get("output_column_name") for d in dicts]
-    # No distance-alone comparison (it over-merged neighbours)...
-    assert "DistanceInKMAtThresholds" not in descs, descs
-    assert "lat_lon" not in outputs, outputs
-    # ...the name signal decides geo-blocked candidates.
+    # haversine distance comparison on lat/lon is present (the geo signal)...
+    assert "DistanceInKMAtThresholds" in descs, descs
+    assert "lat_lon" in outputs, outputs
+    # ...without dropping the name signal (geo is additive).
     assert any(o == "name" for o in outputs), outputs
