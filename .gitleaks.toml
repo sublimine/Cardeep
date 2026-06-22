@@ -39,5 +39,6 @@ regexes = [
   '''n1WG1lPrjpggL45z6p''',                               # oem_volvo: Codeweavers public client ApiKey
   '''4d598000-5b04-11eb-ab95-ab946a2c7e0d''',             # oem_volvo: JLR NetDirector AVL public client token
   '''ce7d9916-6a3d-407a-b086-fea4cbae05f6''',             # oem_mercedes: dealer-locator public x-apikey
+  '''7f665f5b3cb8fe8e83293052367c575f666078b87570d5557f02f248ec98''',  # bmw_used: STOLO public stock-locator x-api-key (BMW client-side bundle, not a CARDEEP secret)
   '''data_surface="internal_api", surface_intent="json_api"''',  # group_vo_chains: false positive (field value)
 ]

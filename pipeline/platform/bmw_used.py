@@ -121,17 +121,26 @@ async def _drain_all(post, max_pages: int | None = None) -> list[dict]:
         pages = min(pages, max_pages)
     vehicles = parse_bmw_page(j)
     print(f"[bmw] totalCount={total} pages={pages}")
+    consecutive_empty = 0
     for p in range(1, pages):
-        b = await post(p * _PAGE)
-        if not b:
+        page_v = []
+        for attempt in range(2):                     # CDN throws transient 503/empty -> retry once
+            b = await post(p * _PAGE)
+            if b:
+                try:
+                    page_v = parse_bmw_page(_json.loads(b))
+                except Exception:  # noqa: BLE001
+                    page_v = []
+            if page_v:
+                break
+            await asyncio.sleep(0.6)
+        if not page_v:
+            consecutive_empty += 1
+            if consecutive_empty >= 4:               # real cap (not a transient) -> stop
+                print(f"[bmw] {consecutive_empty} consecutive empty pages at startIndex={p * _PAGE}; stop")
+                break
             continue
-        try:
-            page_v = parse_bmw_page(_json.loads(b))
-        except Exception:  # noqa: BLE001
-            page_v = []
-        if not page_v:                               # flat-paging cap reached -> stop
-            print(f"[bmw] empty page at startIndex={p * _PAGE}; stopping (flat cap)")
-            break
+        consecutive_empty = 0
         vehicles.extend(page_v)
         await asyncio.sleep(_PAGE_DELAY)
     return vehicles
