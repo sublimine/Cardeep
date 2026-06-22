@@ -3246,3 +3246,23 @@
   0051). Aditivo/backward-compat; NO lo apliqué (no co-opto trabajo ajeno en mi incremento); awaits el
   proximo migrate-up window. 0051 es idempotente + order-independent -> aplicarlo luego es no-op.
 - PROXIMO: confirmar suite completa 0 failed; luego PROYECTO discovery-daemon o PENDIENTE-OWNER as24 gate.
+
+## 2026-06-22 — VIGILANCIA-ACTIVA #2: DISCOVERY-DAEMON ON (overture +9.399; dork gateado a la raiz)
+- Verifique el path discovery (borme_cnae --once OK: escribe+geo+VAM TRUSTWORTHY). --tick drenó+verificó
+  los 5 vectores DUE caidos:
+  - overture ok rows=9.399 -> +9.399 entidades nuevas (419.623->429.024, +2.2% huella digital de un golpe;
+    entity_source overture=20.882). HALLAZGO MAYOR del dia: Overture Maps (GeoParquet S3 publico, DuckDB
+    bbox pushdown, EUR0) es una capa ortogonal masiva para el censo + el MSE.
+  - borme_cnae ok rows=0 (idempotente); graph_recursive ok rows=1. Ninguno crasheó.
+  - dork_municipal: ROOT CAUSE detectado = sin SEARXNG cae a DuckDuckGo y SIN CARDEEP_DORK_LIMIT barre los
+    8.132 municipios x5 plantillas (~40k requests DDG) = ban-risk + horas bloqueando el tick. NO aísla con
+    gracia. Maté el runaway (proceso one-shot mio, NO el harvest/motor_es).
+- FIX RAIZ (TDD RED->GREEN, CI verde, commit): DiscoveryJob.requires_env + _gated(); el daemon SKIPea dork
+  (gated, NO failed) sin CARDEEP_SEARXNG_URL; un --once explicito lo respeta (intent operador, acotable con
+  DORK_LIMIT). 3 tests gate; --dry-run muestra [GATE] GATED:needs CARDEEP_SEARXNG_URL.
+- HECHO: discovery daemon ARRANCADO (python -m pipeline.discover_schedule --serve, run_in_background
+  bs2yr5tpr). AMBOS advisory locks vivos x2 vias: harvest 1128354372=1 + discovery 1128354373=1.
+  Discovery CONTINUO ON: tick 60min, corre collapse/borme/overture/graph en cadencia; dork GATEado.
+- GATE PENDIENTE-OWNER: dork_municipal necesita CARDEEP_SEARXNG_URL (SearXNG self-host EUR0) para auto-correr.
+- PROXIMO: siguiente proyecto reversible (conector OEM-red del residual DEALERPROBE, o densificar listas MSE
+  ortogonales ahora que overture sumó 9.399); vigilar el primer tick limpio del daemon (collapse_invisible).
