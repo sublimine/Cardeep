@@ -220,8 +220,13 @@ class TestHealthSealedCounts:
         # The unique count must be less than raw
         assert isinstance(unique_available, int)
         assert unique_available > 0
-        # The raw available is ~1.69M; canonical must be below 1.69M
-        assert unique_available < 1_700_000, "vehicles_unique_available looks too high"
+        # Canonical (deduped) available must be strictly below the LIVE raw available
+        # count (alias rows removed). Use the live count, never a frozen constant —
+        # the census grows continuously.
+        raw_available = _fetchval("SELECT count(*) FROM vehicle WHERE status='available'")
+        assert unique_available < raw_available, (
+            f"vehicles_unique_available={unique_available} must be < raw available={raw_available}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -763,9 +768,16 @@ class TestVDealerResolved:
             f"health dealers={api_dealers} must equal DB count={db_dealers} "
             "(v_dealer_resolved filtered by non-particular)"
         )
-        assert api_dealers < B1_CANONICAL_COUNT, (
-            f"health dealers={api_dealers} must be < B1 canonical count={B1_CANONICAL_COUNT} "
-            "(proves particulares are excluded from the sealed count)"
+        # Proves particulares are excluded: the non-particular dealer count must be
+        # strictly below the FULL resolved-entity count (which INCLUDES particulares).
+        # (B1_CANONICAL_COUNT was a frozen snapshot; the census grows continuously, so
+        # compare against the live all-resolved count instead.)
+        all_resolved = _fetchval(
+            "SELECT count(DISTINCT resolved_cdp_code) FROM v_dealer_resolved"
+        )
+        assert api_dealers < all_resolved, (
+            f"non-particular dealers={api_dealers} must be < all resolved entities="
+            f"{all_resolved} (proves particulares are excluded)"
         )
 
     # ------------------------------------------------------------------
