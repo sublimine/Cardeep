@@ -3195,3 +3195,12 @@
 - CI VERDE (commits fixtures + rounding success). Ferrari suite: 5/6 fallos resueltos a raiz+commit (rounding PG half-up x2, dgt_cat->1292 censo, health unique<raw dinamico + dealers_equals_db<all-resolved, registry unmapped subset KNOWN, axesor fixtures). NINGUN test debilitado.
 - 6º test_health_dealers_sealed_count: raiz = v_canonical (vista de dealer-identity-det-v1, 42.259) STALE vs dealers actuales (58.160); el assert dealers<b1 asume v_dealer_resolved<=B1 pero B1 quedo subset por crecimiento organico de la DB (PRE-EXISTENTE, no regresion mia). Re-cluster dealers FALLO por FK: canonical_dedup_run (capa super-canonica 0027) referencia dealer-identity-det-v1 -> no se puede borrar/re-clusterizar sin manejar esa capa. PROYECTO: re-run dealer-identity pipeline completo (B1 + super-canonico) FK-safe en ventana RAM; tambien mejora resolucion->sello. NO maquillar el test entretanto.
 - GEOCODING PA DONE: 916 compraventa con lat/lon (geo-match 68% vs 6% name). PROXIMO: geo-matching (lists.py PA->DIR ortogonal + splink_merge.py geo-proximidad + re-Splink + re-seal --unit splink) -> sellar compraventa. scheduler reactivado (lock=1; vigilar, relanzar run_in_background si muere).
+
+## 2026-06-22 — GEO-MATCHING probado a fondo y REVERTIDO (net-negativo, honesto)
+- Hipotesis geo (68% PA<->overture <150m) probada en 2 versiones via Splink:
+  - geo-distance comparison (agresivo): +12525 merges PERO sello 14->3 (sobre-mergea dealers VECINOS distintos a <500m).
+  - geo-block-only (correcto): +7286 merges (+111 vs no-geo) -> sello SIGUE 3, no 14. Causa: NO el splink sino anadir paginas_amarillas como lista ortogonal 'DIR' (10k, overlap pobre) DILUYE el MSE (mas n_obs, CIs anchas) -> 14->3 en ambas.
+  - VERDICTO: el 68% de proximidad estaba INFLADO por dealers vecinos distintos, no mismo-dealer cross-lista (esos ya los cazaba el bloqueo nombre+municipio). geo-matching NO acota compraventa.
+- REVERTIDO entero (git revert 3e41868 + 821b6f1): lists.py sin DIR, splink_merge sin geocell, test_splink_geo borrado. Restaurado el sello canonico probado=14. NO maquillar: experimento fallido documentado en historia+PROGRESO, fuera del codigo activo.
+- ANTI-MAQUILLAJE: re-corrido seal canonico (unit=resolved) para que el run SERVIDO (v_exhaustiveness_seal toma el newest) sea 14, NO el 3 de los experimentos seal-geo/seal-geo2.
+- SELLO TECHO €0 DEFINITIVO (8+ angulos): 14/210 sellados + gap-con-causa + registral 2.9x DIRCE. compraventa MSE-no-identificable €0 (no existe 2a lista grande que solape sin diluir/sobre-mergear). DONE MISSION-compliant.
