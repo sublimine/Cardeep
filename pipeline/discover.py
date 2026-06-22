@@ -35,6 +35,7 @@ from pipeline.sources.flexicar_census import FlexicarCensusAdapter
 from pipeline.sources.overture import OvertureAdapter
 from pipeline.sources.dork_municipal import DorkMunicipalAdapter
 from pipeline.sources.borme_cnae import BormeCnaeAdapter
+from pipeline.sources.axesor_cnae import AxesorCnaeAdapter
 from pipeline.sources.graph_recursive import GraphRecursiveAdapter
 from pipeline.sources.paginas_amarillas import PaginasAmarillasAdapter
 from pipeline.sources.autoscout24_census import AutoScout24CensusAdapter
@@ -65,6 +66,7 @@ ADAPTERS: dict[str, type[SourceAdapter]] = {
     "overture": OvertureAdapter,
     "dork_municipal": DorkMunicipalAdapter,
     "borme_cnae": BormeCnaeAdapter,
+    "axesor_cnae": AxesorCnaeAdapter,
     "graph_recursive": GraphRecursiveAdapter,
     "paginas_amarillas": PaginasAmarillasAdapter,
     "autoscout24_census": AutoScout24CensusAdapter,
