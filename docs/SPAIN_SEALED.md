@@ -1,7 +1,15 @@
 # CARDEEP — B6.4: SPAIN SEALED — Documento Definitivo
 
-> Autor: agente data-engineer B6.4
-> Fecha: 2026-06-14
+> **Titular [VERIFICADO DB 2026-06-22, run `seal-splink-20260622`]:** sello estadistico MSE/CI
+> = **14 / 210 estratos** a 95% (compraventa 0/52 · concesionario 10/53 · desguace 3/52 · otros
+> 1/52); ningun lever €0 lo mueve (limite de *identificabilidad* en compraventa, no de cobertura).
+> DONE honesto del owner = **sellado-O-gap-con-causa**, con cross-check registral 2,9× DIRCE. Dedup
+> neto de vehiculos SERVIDO (`v_canonical_vehicle`: 1.939.474 unicos de 2.262.673, run
+> `vehicle-identity-det-v1` `vam_verified=TRUE`). Detalle del porque y mapa de fallos en
+> [`ARCHITECTURE/ERROR-ORIGIN-MAP.md`](ARCHITECTURE/ERROR-ORIGIN-MAP.md) §"seal not moving".
+>
+> Autor: agente data-engineer B6.4 · Reconciliacion MSE: Director (Opus)
+> Fecha original: 2026-06-14 · Titular y addendum §0-bis reconciliados: 2026-06-22
 > DB: `cardeep-pg` localhost:5433, db `cardeep`
 > **SOLO SELECT — sin mutacion de DB, sin commit**
 >
@@ -27,13 +35,15 @@ Existen **dos criterios** de sellado y NO son intercambiables:
    "sellados con gap confesado"**. Esto NO afirma 95% de cobertura — el propio doc lo
    dice ("'Sellado' no significa cobertura 100%").
 
-2. **Sellado estadistico MSE/CI** (la definicion de MISSION.md §27-33 / MASTER_PLAN_V2
-   §2.6 — el criterio DONE vinculante): un estrato (provincia×segmento) esta sellado si
-   el **limite inferior del IC 95% de la cobertura** (captura-recaptura, n_obs/ci_high)
-   **>= 0.95**. Medido en `exhaustiveness_estimate` (run `iter2-resolved`, 209 estratos):
-   **SOLO 14/209 estratos sellados a 95%**. Cobertura_point media por segmento:
-   concesionario 0.70 (10 sellados) · desguace 0.39 (3) · otros 0.47 (1) ·
-   **compraventa 0.105 (0 sellados)**.
+2. **Sellado estadistico MSE/CI** (la definicion de MISSION.md / MASTER_PLAN_V2 — el criterio
+   DONE vinculante): un estrato (provincia×segmento) esta sellado si el **limite inferior del IC
+   95% de la cobertura** (captura-recaptura, `coverage_lower = n_obs/ci_high`) **>= 0.95**. Medido
+   en `exhaustiveness_estimate` [VERIFICADO DB 2026-06-22, ultimo run `seal-splink-20260622`,
+   210 estratos]: **SOLO 14/210 estratos sellados a 95%**. Por segmento (n / sellados /
+   coverage_point medio): concesionario 53/**10**/0.710 · desguace 52/**3**/0.400 ·
+   otros 52/**1**/0.472 · **compraventa 52/0/0.134** · (1 fila sin segmento: 0/0.728).
+   El re-run con dedup integrado (`seal-splink`) NO movio el conteo respecto a `iter2-resolved`
+   (14): el dedup mejora los conteos honestos, no el overlap-m que acotaria compraventa.
 
 **Por que compraventa sale 10% en MSE (matiz, no sub-cobertura):** la DB tiene **66.505
 entidades compraventa** vs **~23.085 locales venta CNAE-451 (DIRCE 2024)** — descubrimos
@@ -41,13 +51,17 @@ MAS que el techo registral. El MSE no puede ACOTAR la poblacion porque las lista
 ortogonales de descubrimiento apenas se solapan (overlap m bajo) → ci_high enorme →
 coverage_lower≈0. Es un limite de *identificabilidad estadistica*, no de cobertura real.
 
-**Palancas para subir 14/209 (campaña de datos, gated):**
-- Dedup neto servido (sube overlap m) — **GATED por RAM** (union-find full-DB ~4-6 GB;
-  solo ~2.5 GB libres con los 9 workers vivos) → requiere ventana con workers parados.
-- Densificar listas ortogonales por provincia (DORK/REG/DGT/ASSOC) para que >=2 solapen.
-- Triangulacion contra techo registral DIRCE-451 (pendiente extracto venta-especifico;
-  la fuente actual `denominador_cnae45_provincia_2024.csv` es CNAE-45 TOTAL, no venta —
-  NO se fabrica anchor venta desde ella).
+**Palancas para subir 14/210 (campaña de datos, gated):**
+- ✅ **Dedup neto de vehiculos SERVIDO** (2026-06-22, run `vehicle-identity-det-v1`,
+  `vam_verified=TRUE`, 1.939.474 unicos de 2.262.673): el RAM-gate se cerro corriendo el
+  union-find sobre el slice `status='available'` con guards de foto/firma — pero **NO movio el
+  sello**: el solape entre las listas ORTOGONALES de descubrimiento (no entre listings de venta)
+  sigue siendo el cuello, y eso lo sube la densificacion de listas, no el dedup de inventario.
+- Densificar listas ortogonales por provincia (DORK/REG/DGT/ASSOC) para que >=2 solapen — el
+  unico lever que mueve compraventa; el 2º-orthogonal-list quedo exhausto en 7 angulos sin €.
+- Triangulacion contra techo registral DIRCE-451 (anclada via
+  `countries/ES/census/dirce_cnae451.csv`; cross-check registral 2,9× DIRCE confesado).
+- Re-correr el MSE con el dedup integrado NO basta (`seal-splink-20260622` = 14, igual que antes).
 
 **Celdas >100%** (p.ej. Lugo §3 fila, Salamanca 127.7%): artefacto de denominador
 talleres-sobreestimado y/o leakage de dedup — a investigar, NO cobertura real >100%.

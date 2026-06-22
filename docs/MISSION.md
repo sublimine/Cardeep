@@ -86,7 +86,11 @@ la que lo generó.
   migración cuando se necesiten). PostGIS NO disponible → bbox+Haversine / `cube`+`earthdistance`.
 - Hardware: AMD Ryzen 5 5500U, 16GB, **sin GPU CUDA**. vLLM no viable local. Ollama corre nativo
   (`qwen3:4b`, `qwen3:8b`, `qwen2.5:3b`) a ~10 t/s — válido para slice ambiguo, NO para masivo.
-- Migraciones aplicadas: 0001-0007, 0009, 0013, 0016-0019 (huecos intencionales). Próxima = 0020.
+- Migraciones aplicadas [VERIFICADO `schema_migrations` 2026-06-22]: 0001-0007, 0009, 0013,
+  0016-0049 (huecos intencionales: 0008, 0010-0012, 0014-0015). **0050 existe como fichero
+  (`migrations/0050_precision_gate.sql`, commit `65f3168`) pero NO está aplicada** — sus columnas
+  (`inquisition_verdict.precision_n/sample_seed/ci_upper/p0_contract`) no están en la DB viva;
+  aplicarla es la próxima acción de schema. Próxima migración nueva = 0051.
 - **Hallazgo de FK [VERIFICADO]:** `entity.cdp_code` tiene solo UNIQUE INDEX (no constraint) →
   **una FK a `cdp_code` falla**. FK por `entity.entity_ulid` (PK) y resuelve `cdp_code` por JOIN.
   `verification_verdict.id` SÍ es PK bigint → FK válida.

@@ -96,6 +96,7 @@ verification and tooling.
 | **06** | [Resilience & Ops](06-RESILIENCE-OPS.md) | operation | the watchdog, exact-origin alerting, recipe-drift detection, circuit breakers, auto-repair ladder, graceful degradation | *"a source fails → alert → self-repair → never falls"* |
 | **07** | [Coverage Strategy](07-COVERAGE-STRATEGY.md) | operation | the A-to-Z roadmap to 100%: 7 segments, denominator-by-capture-recapture, numerator-wholesale-first, ROI order R0–R8, per-province seal gates | *the executable order the whole machine runs in* |
 | **08** | [Repo Organization](08-REPO-ORGANIZATION.md) | machine | the on-disk tree, the absolute Tier-1/long-tail separation, config-as-registry, the geo-hierarchical per-entity bundle, the flat→geo migration | *where every artifact lives and why nothing collides* |
+| **13** | [API & Delta](13-API-AND-DELTA.md) | machine | the **as-built** served surface verified live: the 7-table served data model + 3 publish-gate views, the `vehicle_event` delta engine (alta/baja/Δprice/Δkm/Δphoto + full history), all **18 GET routes**, envelope/auth/RL/cache, gaps & doc-drift, the per-country replication map | *what the API actually serves today — the read layer over 03* |
 
 **Deep sub-pillars** (under `verification/` and `tooling/`) take individual concerns to
 maximum rigor and explicitly extend pillar 05 and the cost doctrine:
