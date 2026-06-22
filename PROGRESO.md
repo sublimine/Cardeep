@@ -3323,3 +3323,27 @@
   capa super-canónica de ~5.500 merges de refinamiento).
 - Ferrari suite (blxosq4ni) corriendo para confirmar 0 regresión del estado restaurado.
 - PROXIMO: leer Ferrari; si 0 fail -> re-bendecir super-canónica (verificada) o documentar como follow-up; MSE.
+
+## 2026-06-23 — VIGILANCIA-ACTIVA #6: re-cluster — over-merge CAZADO, recovery a estado SEGURO (INCIDENTE honesto)
+- Ferrari tras vig#5: 4 FAILED (NO 0; la notif "exit 0" era falsa, lo verifiqué x2 vias). Todas en dedup/cluster correctness.
+- DIAGNOSTICO a la raiz (systematic-debugging, NO maquillaje):
+  - 3 fallas (TestVDealerResolved Blau Motors): el cluster de 5 "Blau Motors" SIGUE mergeando a 1 (dedup
+    CORRECTO) pero el REPRESENTANTE cambió (AVYXV1NM->MBBZJ2YP; union-find no garantiza rep estable entre
+    re-clusters). Constante hardcodeada stale (como los Ferrari de 2026-06-15). Fix = tests rep-robustos.
+  - 1 falla (test_inventory_keeps_cross_dealer_cars, DEALER_CDP=CDP-ES-28-27JX9YZC): served=113.047 vs
+    within=16.703. CAUSA REAL = OVER-MERGE: la capa super-canónica DEEPLINK reconstruida mergea las 49
+    "Particulares coches.net <Provincia>" en UN mega-cluster (comparten deep_links de vehiculos al crecer
+    el censo). El guard de valores SELLADOS de build_canonical_dedup (EXPECTED 2236, 2026-06-15) CAZÓ este
+    drift correctamente; re-bendecirlo habria servido el over-merge. El estado viejo (residual servido) NO
+    lo tenia.
+- RECOVERY a estado SEGURO (no servir corrupto, no forzar guards): desgateé deeplink+particular ->
+  v_dealer_resolved = B1-only fallback (398.404, overture plegado, precision-clean CHECK2=0FP). DEALER_CDP
+  vuelve a 1 miembro (over-merge eliminado). B1 vam_verified=TRUE (overture folded, +16.261 dealers servidos
+  42.259->58.520). canonical_dedup_run=0 (super-canonica AUSENTE, deshabilitada pendiente fix). API OK.
+- ESTADO: servido SEGURO (B1+overture). main ROJO en los tests que dependen de la super-canonica (Blau
+  Motors merge) — honesto, NO fudgeo. La super-canonica deeplink tiene un OVER-MERGE REAL (particulares)
+  que requiere fix (excluir kind=particular del deep-link dedup / endurecer anti-hub) = PROYECTO nivel-Director.
+- LECCION: ejecuté un re-cluster Director-gated demasiado agresivo en loop autonomo; los multi-guards
+  (B1-vam, deeplink-sellados, particular-dryrun, residual-collateral) protegian correctamente. La proxima:
+  fix del over-merge deeplink -> re-habilitar super-canonica -> green. El overture (objetivo) quedó logrado a B1.
+- PROXIMO: PROYECTO fix over-merge deeplink (raiz) -> re-bendecir super-canonica sin mega-merge -> green Ferrari.
