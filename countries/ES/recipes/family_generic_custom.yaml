@@ -5,11 +5,18 @@ source: family_generic_custom
 family: Generic / custom (bespoke own-site) dealer family
 scope: long-tail dealer OWN-SITE inventory, bespoke/custom (no shared platform)
 engine: curl_cffi+chrome131_impersonate+html(GET, server-rendered)
-access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser, no creds). Server-rendered HTML — no JS execution needed.
+access: OPEN public dealer websites (Chrome TLS fingerprint; no proxy, no browser,
+  no creds). Server-rendered HTML — no JS execution needed.
 data_surface: dealer_site_html
-fingerprint: NONE shared — this is the generic/custom family: each dealer is a bespoke site with no detectable platform signal, so membership is by curated registry, not by a single fingerprint. Micro-family 'pymecar' (img.pymecar.com car-card markup) shares ONE parser.
-ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace edge)
-multiplier: architectural: ONE connector spine (cage/governor/health/VAM/delta) drives N per-dealer recipes; within it the 'pymecar' parser already serves multiple dealers (carhay.com + autopai.es).
+fingerprint: 'NONE shared — this is the generic/custom family: each dealer is a bespoke
+  site with no detectable platform signal, so membership is by curated registry, not
+  by a single fingerprint. Micro-family ''pymecar'' (img.pymecar.com car-card markup)
+  shares ONE parser.'
+ownership: vehicle.entity_ulid = the DEALER itself (own-site stock; no marketplace
+  edge)
+multiplier: 'architectural: ONE connector spine (cage/governor/health/VAM/delta) drives
+  N per-dealer recipes; within it the ''pymecar'' parser already serves multiple dealers
+  (carhay.com + autopai.es).'
 members:
   autofesa.com:
     listing_path: /coches-segunda-mano
@@ -67,7 +74,8 @@ members:
     notes: WordPress car-item cards; WP /page/N/ pagination; prose titles
   gupicarauto.es:
     listing_path: /index.php/es/stock-automoviles
-    pagination: /index.php/es/stock-automoviles?start={off} (step 20) until no new cards
+    pagination: /index.php/es/stock-automoviles?start={off} (step 20) until no new
+      cards
     parser: parse_gupicar
     subfamily: custom
     notes: Joomla com_rdautos cards; Joomla ?start=N offset pagination

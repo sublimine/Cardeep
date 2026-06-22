@@ -856,6 +856,31 @@ async def harvest_one_dealer(conn: asyncpg.Connection, geo: GeoResolver,
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
+def window_was_observed(stats: dict) -> bool:
+    """True iff this run positively OBSERVED its candidate window.
+
+    A run observed the window when at least one candidate host returned HTML and
+    got a real family-membership determination — i.e. it was counted as a member,
+    a confirmed non-WordPress/non-member site, or a WordPress member that exposed
+    no known inventory surface. Those three counters only increment AFTER a
+    successful home fetch, so their sum > 0 proves we actually saw the window and
+    any emptiness is MEASURED, not assumed.
+
+    When every requested dealer hard-failed to fetch (total outage) or no
+    candidates were requested at all, nothing was observed: the emptiness is
+    unmeasured and must NOT certify as a confirmed-empty (TRUSTWORTHY-0) result.
+
+    This mirrors family_dealerk_wholesale.window_was_observed — the two long-tail
+    family connectors share one spine and one verdict/health classification, so a
+    scheduler --from-db window that legitimately contains no harvestable member is
+    a CONFIRMED-empty observation, not a false failure.
+    """
+    observed = (stats.get("dealers_member", 0)
+                + stats.get("dealers_skipped_non_family", 0)
+                + stats.get("dealers_empty", 0))
+    return observed > 0
+
+
 async def candidate_hosts_from_db(conn: asyncpg.Connection, limit: int) -> list[str]:
     """Pull dealer website hosts from the DB as harvest candidates (own-domain only).
     We do NOT pre-fingerprint here — harvest_one_dealer confirms WordPress + an
@@ -956,13 +981,25 @@ async def harvest(dealers: list[str] | None, from_db: bool, limit: int,
                 family_dealer_ulids,
                 [p[1] for p in stats["harvested_pairs"]]) or 0
         harvested_n = len(stats["harvested_pairs"])
+        # A run that positively fingerprinted at least one candidate host MEASURED
+        # its window by observation. Without this flag a confirmed-empty window
+        # (all paths 0) falls to UNVERIFIED under verify.py's EXACT_ZERO rule and
+        # run_ok reads it as a false FAIL — the bug that drove consecutive_fails to
+        # 3 and marked the source DOWN on the scheduled --from-db runs whose
+        # candidate windows (last_seen DESC) happened to contain no harvestable
+        # family member (non-WordPress sites + WordPress themes outside the
+        # override table). A real total outage (every dealer hard-failed) is NOT
+        # observed, so it stays UNVERIFIED and fails honestly. Mirrors the
+        # already-merged family_dealerk_wholesale fix.
+        observed = window_was_observed(stats)
         verdict = await record_count_verdict(
             conn, subject_type="family_slice", subject_key=FAMILY_KEY,
             claim="distinct (dealer, deep_link) harvested == family vehicles persisted in DB",
             paths={"db_family_vehicles": db_family_vehicles,
                    "harvested_pairs": harvested_n,
                    "cars_ingested_distinct": harvested_n},
-            tolerance=0.0)
+            tolerance=0.0,
+            measured_by_observation=observed)
         stats["verdict"] = verdict
         stats["db_family_vehicles"] = db_family_vehicles
         stats["harvested_pairs_n"] = harvested_n

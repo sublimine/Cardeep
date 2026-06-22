@@ -86,9 +86,17 @@ PLATFORM_PROVINCE_SENTINEL = "00"
 DEFAULT_MAX_DEALERS = 12
 DEFAULT_PAGES_PER_DEALER = 2  # 20 PDP/page -> ~40 listings/dealer cap
 
-# Motorflash listing/dealer URL grammar (verified live 2026-06-13).
+# Motorflash listing/dealer URL grammar.
+# 2026-06-22: the concesionarios sitemap no longer emits the `coches-segunda-mano`
+# segment — each dealer is now listed under per-stock-type segments instead
+# (`coches-km0`, `coches-nuevos`, `coches-seminuevos`), all carrying the SAME dealer
+# slug + native id. We match the segment token generically (`coches-<type>`) and
+# de-dup by id in parse_dealer_index, so one DealerRef per dealer regardless of how
+# many segment rows it has. The dealer STOCK page we then fetch is still built with
+# `coches-segunda-mano` in _dealer_url() — that page is unchanged and serves the rich
+# used-car stock (20 PDP/page, Car JSON-LD); only the sitemap's index grammar moved.
 _RE_DEALER_URL = re.compile(
-    r"/concesionario/([a-z0-9\-]+)/coches-segunda-mano/(\d+)/")
+    r"/concesionario/([a-z0-9\-]+)/coches-[a-z0-9\-]+/(\d+)/")
 # Full PDP path WITH slug — the slug is load-bearing (slugless form 404s), so we
 # capture the whole path and the id together, never reconstruct the URL from the id.
 _RE_PDP_PATH = re.compile(
@@ -411,7 +419,16 @@ def _abs(path: str) -> str:
 async def harvest(max_dealers: int = DEFAULT_MAX_DEALERS,
                   pages_per_dealer: int = DEFAULT_PAGES_PER_DEALER) -> dict:
     conn = await asyncpg.connect(DSN)
-    engine = FetchEngine()
+    # 2026-06-22: Motorflash moved behind a TransparentEdge ("tedge") JS bot-check
+    # ("Voight-Kampff Browser Test" / "Checking Your Browser") that serves HTTP 403
+    # to plain Tier-0 curl_cffi on every URL (sitemap, dealer pages, PDPs) — the
+    # site was OPEN/t0 until 2026-06-13. The challenge is a JS proof-of-work that
+    # mints a `TEDGEUA`/`TEDGEUAS` clearance cookie; ban_detector already classifies
+    # it CHALLENGE (matches "checking your browser"). Enable Tier-1 escalation so the
+    # real-browser layer solves it ONCE, caches the clearance, and Tier-0 reuses the
+    # cookie for the rest of the drain (the standard cookie-reuse seam). Local headful
+    # browser (camoufox/nodriver) — €0, no paid proxy/service.
+    engine = FetchEngine(allow_tier1_escalation=True)
     stats = {
         "dealers_fetched": 0, "dealer_pages": 0, "pdps_fetched": 0,
         "listings_seen": 0, "no_car_ld": 0, "dealers_distinct": set(),

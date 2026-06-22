@@ -982,12 +982,22 @@ async def harvest(dealers: list[str] | None, from_db: bool, use_seeds: bool,
                 "SELECT entity_ulid FROM entity_source WHERE source_key = $1", FAMILY_KEY)]
         db_family_vehicles = 0
         if family_dealer_ulids and stats["harvested_pairs"]:
+            # Read back the EXACT (entity_ulid, deep_link) pairs harvested this run.
+            # The vehicle table's identity is (entity_ulid, deep_link), NOT deep_link
+            # alone: the same detail URL can legitimately exist under more than one
+            # family dealer (e.g. a host re-minted under a fallback domain-keyed entity
+            # as well as matched to a pre-existing dealer). A deep_link-only readback
+            # across ALL family dealers therefore OVER-counts (db > harvested), firing a
+            # false REFUTED verdict that pinned source_health to 'down' even though the
+            # extractor produced rows. Matching the pairs makes the quorum like-with-like.
+            pair_ulids = [p[0] for p in stats["harvested_pairs"]]
+            pair_links = [p[1] for p in stats["harvested_pairs"]]
             db_family_vehicles = await conn.fetchval(
-                """SELECT count(*) FROM vehicle
-                    WHERE entity_ulid = ANY($1::text[])
-                      AND deep_link = ANY($2::text[])""",
-                family_dealer_ulids,
-                [p[1] for p in stats["harvested_pairs"]]) or 0
+                """SELECT count(*) FROM vehicle v
+                     JOIN unnest($1::text[], $2::text[]) AS p(entity_ulid, deep_link)
+                       ON v.entity_ulid = p.entity_ulid
+                      AND v.deep_link = p.deep_link""",
+                pair_ulids, pair_links) or 0
         harvested_n = len(stats["harvested_pairs"])
         verdict = await record_count_verdict(
             conn, subject_type="family_slice", subject_key=FAMILY_KEY,

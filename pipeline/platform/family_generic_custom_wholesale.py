@@ -1062,21 +1062,30 @@ async def harvest(dealers: list[str] | None, run_all: bool, max_pages: int) -> d
         recipe_path = write_recipe(FAMILY_KEY, _build_family_recipe())
         print(f"[{FAMILY_KEY}] family recipe written: {recipe_path}")
 
-        # VAM count quorum (like-with-like) for this family slice:
-        #   harvested_pairs    = distinct (dealer, deep_link) pulled this run (harvest truth)
-        #   db_family_vehicles = vehicles in DB owned by the dealers this source attests,
-        #                        scoped to the deep_links pulled this run (DB read truth)
+        # VAM count quorum (like-with-like) for this family slice. The DB path MUST
+        # measure the SAME population the harvest path measures: distinct (dealer,
+        # deep_link) PAIRS pulled this run. The previous query counted vehicles by
+        # `deep_link ∈ harvested_links` across EVERY entity the family ever attested
+        # (entity_source) — a cross-product that DOUBLE-COUNTS any deep_link owned by
+        # more than one entity. That happens whenever a host resolved to >1 entity
+        # (e.g. autofesa.com -> 'Autofesa' + 'Autofesa Aravaca'; csvmotor.com ->
+        # 'CSV Motor' + 'CSV MOTOR MURCIA'): the DB path inflated to 372 vs 325
+        # harvested -> permanent VAM REFUTED on a fully-successful harvest (false
+        # CRITICAL, breaker degraded). Counting the EXACT (entity_ulid, deep_link)
+        # pairs restores like-with-like, so the count matches when the harvest landed.
         family_dealer_ulids = [
             r["entity_ulid"] for r in await conn.fetch(
                 "SELECT entity_ulid FROM entity_source WHERE source_key = $1", FAMILY_KEY)]
         db_family_vehicles = 0
-        if family_dealer_ulids and stats["harvested_pairs"]:
+        if stats["harvested_pairs"]:
+            pair_eulids = [p[0] for p in stats["harvested_pairs"]]
+            pair_links = [p[1] for p in stats["harvested_pairs"]]
             db_family_vehicles = await conn.fetchval(
-                """SELECT count(*) FROM vehicle
-                    WHERE entity_ulid = ANY($1::text[])
-                      AND deep_link = ANY($2::text[])""",
-                family_dealer_ulids,
-                [p[1] for p in stats["harvested_pairs"]]) or 0
+                """SELECT count(*) FROM vehicle v
+                     JOIN unnest($1::text[], $2::text[]) AS p(entity_ulid, deep_link)
+                       ON v.entity_ulid = p.entity_ulid
+                      AND v.deep_link  = p.deep_link""",
+                pair_eulids, pair_links) or 0
         harvested_n = len(stats["harvested_pairs"])
         verdict = await record_count_verdict(
             conn, subject_type="family_slice", subject_key=FAMILY_KEY,
