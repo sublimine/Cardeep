@@ -3093,3 +3093,8 @@
 - (A') RE-DRENADO 17 dealers >600 con cap 2000 (inline hosts; el previo fue no-op por arg vacio): 16 live, caged 16771, +7955 coches NUEVOS. DB dp_NEW_events 57629->65584. 3 mega-dealers truncan aun en 2000 (crestanevada/motosarribas/bamburenting >2000). Acumulado: 65584 coches DP / 2303 dealers.
 - (A'') residual: 3 mega-dealers >=1995 -> cap 5000.
 - (A'') cap5000 3 mega-dealers x2 vias: +7953 coches (bamburenting 4990, crestanevada 3959 entero, motosarribas 4999). dp_NEW_events 65584->73537. 1-2 outliers (motos/renting) siguen >5000: rendimiento decreciente + posible no-coche, NO se persiguen (documentado). HARVEST €0 AGOTADO: 73537 coches bruto / 2303 dealers del frente webs-propias.
+
+## 2026-06-22 — FRENTE WEBS-PROPIAS cerrado + EXTENSION a mas kinds
+- COBERTURA FINAL compraventa x2 vias: 73537 coches DP bruto / 2303 dealers; 7801 probados (live 36.1pct, dead 2419, noise 2256, walled 308). vehicles_total(todas fuentes)=2245420.
+- DEDUP (neta): STAGED PENDIENTE-OWNER. cluster_vehicles.py es union-find full-DB en memoria (~4-6GB pico, sin scope) sobre 2.24M listings; RAM disp 1.5-5.5GB + 9 workers vivos -> riesgo OOM/tumbar :8090. Correr con workers parados: python -m pipeline.identity.cluster_vehicles (idempotente).
+- RE-ESCANEO otros frentes €0: garaje 952 drenables + concesionario_oficial 98 own-site (no red-OEM) + cadena 0. EXTENSION: _DRAINABLE_KINDS=(compraventa,concesionario_oficial,garaje,cadena); _resolve_any_dealer (kind-agnostico, evita duplicar entidad); _select_drainable kind::text=ANY. 91 tests GREEN.

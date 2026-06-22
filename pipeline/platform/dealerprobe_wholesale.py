@@ -42,7 +42,6 @@ from pipeline.platform.dealerprobe import (
     parse_microdata_vehicles,
     parse_ssr_cards,
 )
-from pipeline.platform.family_dealerk_wholesale import resolve_dealer_for_host
 from services.api.codes import cdp_code
 
 DP_SOURCE_KEY = "dealerprobe_ownsite"
@@ -56,6 +55,9 @@ _PDP_DELAY = 0.25           # base in-semaphore delay; jittered to break metrono
 _PDP_RETRY_DELAY = 0.6      # backoff before retrying a PDP that failed (transient reset under load)
 _LISTING_PATHS = ("", "/coches-ocasion", "/coches-segunda-mano", "/vehiculos", "/stock", "/ocasion", "/coches")
 _INVENTORY_SUBDOMAINS = ("coches", "vo", "vn", "stock", "ocasion", "vehiculos", "usados", "seminuevos")
+# Entity kinds whose OWN website can carry used-car inventory: compraventa + official dealers with
+# their own site (not OEM-network) + chains + garages that also sell used cars.
+_DRAINABLE_KINDS = ("compraventa", "concesionario_oficial", "garaje", "cadena")
 
 _LOC_RE = re.compile(r"<loc>\s*(.*?)\s*</loc>", re.I | re.S)
 _ROBOTS_SITEMAP_RE = re.compile(r"(?im)^\s*sitemap:\s*(\S+)")
@@ -214,10 +216,27 @@ async def _afetch(session, url: str, state: dict) -> str | None:
     return r.text if r.status_code == 200 else None
 
 
+async def _resolve_any_dealer(conn: asyncpg.Connection, host: str) -> dict | None:
+    """Find the EXISTING dealer entity whose website matches this host, across every drainable kind
+    (compraventa/concesionario_oficial/garaje/cadena) so a garage/official own-site harvest attaches
+    to its real entity instead of minting a duplicate compraventa."""
+    bare = re.sub(r"^www\.", "", host.lower())
+    row = await conn.fetchrow(
+        """SELECT entity_ulid, cdp_code, trade_name, province_code, municipality_code, website
+             FROM entity
+            WHERE kind::text = ANY($2::text[])
+              AND website IS NOT NULL AND website <> ''
+              AND lower(regexp_replace(regexp_replace(website,'^https?://',''),'^www\\.','')) LIKE $1
+            ORDER BY last_seen DESC
+            LIMIT 1""",
+        f"{bare}%", list(_DRAINABLE_KINDS))
+    return dict(row) if row else None
+
+
 async def _upsert_dealer_dp(conn: asyncpg.Connection, host: str) -> dict:
     """Own-site dealer entity for `host`: reuse the existing DB entity (matched by website) and
     stamp dealerprobe provenance, else mint a domain-keyed compraventa. source_key=DP_SOURCE_KEY."""
-    existing = await resolve_dealer_for_host(conn, host)
+    existing = await _resolve_any_dealer(conn, host)
     if existing:
         await conn.execute("UPDATE entity SET last_seen=now() WHERE entity_ulid=$1", existing["entity_ulid"])
         await conn.execute(
@@ -368,11 +387,12 @@ async def _select_drainable(conn, limit):
     advance MONOTONICALLY over fresh dealers instead of re-probing the dead/noise pile."""
     rows = await conn.fetch(
         """SELECT entity_ulid, website FROM entity e
-             WHERE kind='compraventa' AND website IS NOT NULL AND website<>''
+             WHERE kind::text = ANY($1::text[]) AND website IS NOT NULL AND website<>''
                AND NOT EXISTS (SELECT 1 FROM entity_source es
                                WHERE es.entity_ulid=e.entity_ulid
                                  AND (es.source_key LIKE 'family_%' OR es.source_key LIKE 'dealerprobe%'))
-             ORDER BY last_seen DESC""")
+             ORDER BY last_seen DESC""",
+        list(_DRAINABLE_KINDS))
     cand = [(r["entity_ulid"], r["website"]) for r in rows]
     drainable = [(eid, w) for eid, w in cand if _drainable_website(w)]
     print(f"[dealerprobe] --from-db candidates={len(cand)} drainable={len(drainable)} "
