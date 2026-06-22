@@ -3090,3 +3090,5 @@
 - (B) RE-DRENADA NOISE (2284) con enhancement subdominio lanzada (--redo-status noise --limit 1200).
 - (B) RE-DRENADA NOISE (1200) con subdominio x2 vias: solo 6 live (0.5pct), 1 via subdominio (oterollaneza sub:ocasion, 0 coches), +150 coches. CONCLUSION HONESTA: los ~2256 noise son mayormente JS-rendered/plataformas-3os/sin-inventario, NO recuperables por vias €0 own-site. PARO B (rinde ~0.5pct). Residual documentado, no maquillado. dp_NEW_events=57629, dealers=2303.
 - (A') residual alto rendimiento: dealers truncados aun en cap 600 (>600 listings) -> re-drenar cap 2000.
+- (A') RE-DRENADO 17 dealers >600 con cap 2000 (inline hosts; el previo fue no-op por arg vacio): 16 live, caged 16771, +7955 coches NUEVOS. DB dp_NEW_events 57629->65584. 3 mega-dealers truncan aun en 2000 (crestanevada/motosarribas/bamburenting >2000). Acumulado: 65584 coches DP / 2303 dealers.
+- (A'') residual: 3 mega-dealers >=1995 -> cap 5000.
