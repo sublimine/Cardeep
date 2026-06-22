@@ -196,9 +196,13 @@ def _build_settings():
             cl.ExactMatch("municipality_code"),
             cl.ExactMatch("phone").configure(term_frequency_adjustments=True),
             cl.ExactMatch("website_host").configure(term_frequency_adjustments=True),
-            # haversine distance: rewards true geo-coincidence so two dealers
-            # at the same coordinates with different names still collapse.
-            cl.DistanceInKMAtThresholds("lat", "lon", [0.1, 0.5]),
+            # NOTE: geocell is a BLOCKING key only (generates candidate pairs of
+            # nearby records). The MATCH decision stays on name/municipality/phone/
+            # website — so a PA record and an OSM/Overture record at the same spot
+            # merge ONLY when the NAME also agrees (same dealer), while two DISTINCT
+            # neighbouring dealers <150 m apart do NOT merge. A distance-only
+            # comparison (DistanceInKMAtThresholds) over-merged neighbours and
+            # NET-HURT the seal (14->3 sealed); removed deliberately.
         ],
         retain_intermediate_calculation_columns=False,
     )
