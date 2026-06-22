@@ -3347,3 +3347,24 @@
   (B1-vam, deeplink-sellados, particular-dryrun, residual-collateral) protegian correctamente. La proxima:
   fix del over-merge deeplink -> re-habilitar super-canonica -> green. El overture (objetivo) quedó logrado a B1.
 - PROXIMO: PROYECTO fix over-merge deeplink (raiz) -> re-bendecir super-canonica sin mega-merge -> green Ferrari.
+
+## 2026-06-23 — VIGILANCIA-ACTIVA #7: over-merge deeplink FIXED a la raiz (catastrofico resuelto)
+- ROOT FIX commiteado: build_canonical_dedup excluye kind=particular del deep-link dedup. Las 52
+  "Particulares coches.net <Provincia>" entraban via COALESCE-to-self y un coche privado relistado las
+  encadenaba en mega-cluster de 113k. Verificado: 0 particular en componentes deep-link; mayores ahora
+  son B1-splits de UN dealer real (LOUZAO=22, DIMOVIL=17); DEALER_CDP 113047->17256 (mega eliminado).
+- Re-bendecidos EXPECTED_* (verificados sanos). NOTA: son sensibles al crecimiento del censo (driftan ±N
+  cada run -> warning no-fatal); el guard REAL del over-merge es la exclusion kind<>particular.
+- Servido ACTUAL = deeplink-fixed gateado (B1+overture+merges de dealers reales, SIN mega-merge,
+  precision-clean, Blau Motors 5->1, DEALER_CDP sano=1). SEGURO y correcto.
+- main ROJO: 3/4 tests (1 ya pasa). Restantes: (a) 2 TestVDealerResolved Blau Motors = rep stale
+  (AVYXV1NM->MBBZJ2YP; dedup correcto 5->1) -> fix = tests rep-robustos (dinamicos). (b)
+  test_inventory_keeps_cross_dealer_cars (DEALER_CDP) = available_inventory(API)=17256 vs
+  within_cluster(recompute)=16703 (553 dupes internos cross-platform de 27JX9YZC; el re-cluster cambio su
+  cluster de mega a singleton, exponiendo que available_inventory NO aplica within-cluster dedup para un
+  dealer con dupes internos) -> investigar API/eleccion de DEALER_CDP.
+- PENDIENTE (no bloquea serving, documentado): particular dedup mega-mergea las particulares por
+  canonical_key (no afecta dealer-count, pero NO gatear o DEALER_CDP balloon); residual collateral (1 merge
+  ambiguo); sealed-values census-brittle (convertir a guard estructural). Cadena super-canonica completa =
+  reconciliacion nivel-Director pendiente.
+- PROXIMO: fix 2 Blau tests rep-robustos + root-cause DEALER_CDP available_inventory + suite Ferrari completa -> green.
