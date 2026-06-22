@@ -24,24 +24,44 @@ pero NO en `v_dealer_resolved` (requieren cluster_dealers) → no cuentan en cen
 - Super-canónico regenerado por `scripts/build_canonical_dedup.py` (→ canonical_dedup_run/canonical_dedup).
 - `v_dealer_resolved` / `v_canonical` = vistas derivadas (refrescan solas).
 
-## Pasos FK-safe (ejecución, cada uno verificado antes del siguiente)
-0. **Snapshot rollback** (anotar): `SELECT count(DISTINCT resolved_cdp_code) FROM v_dealer_resolved`;
-   sello servido actual (`/geo/seal` o v_exhaustiveness_seal); `SELECT count(*) FROM entity_cluster
-   WHERE cluster_run_id='dealer-identity-det-v1'`.
-1. **Liberar el FK** (1 txn, reversible): `DELETE FROM canonical_dedup_run WHERE
-   source_cluster_run='dealer-identity-det-v1';` (cascade borra canonical_dedup hijos). Verificar 0 filas.
-2. **Re-cluster B1:** `python -m pipeline.identity.cluster_dealers` → leer VERIFICATION REPORT.
-   ANTI-FP: la tasa de merge no debe dispararse (overture POIs con nombres genéricos podrían sobre-mergear
-   distintos dealers en una misma muni). Comparar n_merged/n_clusters vs snapshot; si el merge-rate sube
-   anómalo → STOP, investigar el blocking (raíz, no forzar).
-3. **Re-build super-canónico:** `python -m scripts.build_canonical_dedup` (regenera canonical_dedup_run
-   referenciando el run fresco). Verificar la fila nueva.
-4. **Verificar resolved:** `SELECT count(DISTINCT resolved_cdp_code) FROM v_dealer_resolved` — debe SUBIR
-   sensatamente (no colapsar). API `/health` coherente.
-5. **Re-evaluar MSE:** `python -m pipeline.exhaustiveness.cli run --run-id <new> --threshold 0.95
-   --unit resolved` (+ `--unit splink --splink-run-id <...>`). Comparar sello servido: pudo MOVERSE
-   (overture sube `m`). Reportar el número honesto (suba o no, con causa).
-6. **Auditoría:** suite Ferrari completa 0 failed; API sirve cifras coherentes; PROGRESO+memoria.
+## ⚠ HALLAZGO CRÍTICO (2026-06-23, snapshot en vivo — corrige el plan original)
+El FK que bloquea el re-cluster lo cumplen **LAS 3** filas de canonical_dedup_run, TODAS con
+`source_cluster_run='dealer-identity-det-v1'`: `canonical-dedup-deeplink-v1`, `particular-canonkey-v1`,
+y **`residual-namemuni-v1`** (la SERVIDA: v_dealer_resolved usa `latest_run = canonical_dedup_run WHERE
+vam_verified=true ORDER BY run_id DESC LIMIT 1` → residual-namemuni-v1). Por tanto re-clusterizar exige
+borrar las 3 y REGENERAR las 3 (no solo deep-link). Generadores (verificado): build_canonical_dedup.py →
+deeplink; build_particular_dedup.py(+gate_particular_dedup.py) → particular-canonkey; build_residual_
+namemuni_dedup.py(--commit) → residual-namemuni. Gate vam_verified=TRUE/FALSE = gate_particular_dedup.py
+(REVERSIBLE). Entre borrado y re-gate, v_dealer_resolved cae al fallback B1 (COALESCE a b1_cdp) — sirve,
+sin la capa super-canónica, temporalmente.
+
+## Pasos (ejecución en iteración fresca, cada uno verificado antes del siguiente)
+0. **Snapshot rollback** (anotar): resolved_cdp_code distinct en v_dealer_resolved (baseline 2026-06-23 =
+   408.663); B1 entity_cluster_run (n_in=61.551, out=42.259, merged=19.292); las 3 canonical_dedup_run
+   (run_id, vam_verified, n_super_canonicals); sello servido.
+1. **Liberar el FK** (reversible): `DELETE FROM canonical_dedup_run WHERE source_cluster_run=
+   'dealer-identity-det-v1';` (cascade borra canonical_dedup hijos de las 3). Verificar 0 filas.
+2. **Re-cluster B1:** `python -m pipeline.identity.cluster_dealers` (input ~91.319 no-particular) → LEER
+   VERIFICATION REPORT. ANTI-FP: merge-rate no debe dispararse (overture/collapse con nombres genéricos +
+   sin muni → riesgo sobre-merge por phone/host; entidades sin muni quedan singletons = bajo riesgo).
+   Si merge-rate anómalo → STOP, raíz (no forzar).
+3. **Regenerar LAS 3 super-canónicas** (en orden; cada una verifica su fila):
+   a. `python -m scripts.build_canonical_dedup`            (→ canonical-dedup-deeplink-v1)
+   b. `python -m scripts.build_particular_dedup`           (→ particular-canonkey-v1)
+   c. `python -m scripts.build_residual_namemuni_dedup --commit`  (→ residual-namemuni-v1, la servida)
+4. **Gate la servida vam_verified=TRUE** si el builder no lo dejó (verificar; gate_particular_dedup.py
+   apply para el run servido). Confirmar v_dealer_resolved.latest_run resuelve a residual-namemuni-v1.
+5. **Verificar resolved:** resolved_cdp_code distinct debe SUBIR sensatamente (no colapsar) vs 408.663.
+   API `/health` coherente. Anti-FP de cifras servidas.
+6. **Re-evaluar MSE:** `python -m pipeline.exhaustiveness.cli run --run-id <new> --threshold 0.95
+   --unit resolved` (+ `--unit splink --splink-run-id <...>`). Sello servido pudo MOVERSE (overture sube
+   `m`). Reportar honesto (suba o no, con causa). NO maquillar.
+7. **Auditoría:** suite Ferrari completa 0 failed; API coherente; PROGRESO+memoria+doc.
+
+## Rollback ampliado
+Cada builder + el gate son reversibles (re-ejecutables / `gate ... --revert` → vam_verified=FALSE).
+cluster_dealers determinista (mismo RUN_ID). Si algo falla a mitad: el fallback B1 de v_dealer_resolved
+mantiene servicio; re-ejecutar la cadena 2→4 restaura. Snapshot paso 0 = baseline de comparación.
 
 ## Riesgos y mitigación
 - **Sobre-merge** (overture genérico) → VERIFICATION REPORT anti-FP (paso 2); si anómalo, STOP+raíz.

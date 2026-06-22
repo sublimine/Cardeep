@@ -3286,3 +3286,22 @@
   -> ejecucion cuidadosa en iteracion fresca, NO apresurada en contexto profundo (battle-order).
 - PROXIMO: verificar primer tick discovery; EJECUTAR el plan re-cluster/MSE (alto leverage: +13.369 net-new
   ventas + 7.513 overlap pueden mover censo servido y sello).
+
+## 2026-06-23 — VIGILANCIA-ACTIVA #4: daemon tick verificado en PROD + TRAP del re-cluster cazado
+- Primer tick del discovery daemon FIRÓ limpio (~22:00): `dork_municipal GATED (missing CARDEEP_SEARXNG_URL,
+  skipped)` ✓ el fix de vig#2 funciona en producción; `collapse_invisible` corrió (new=2.094, VAM REFUTED).
+  Ambos locks vivos. censo 431.119 entidades.
+- collapse_invisible: las 2.094 entidades nuevas son dealers REALES (Nissan Nigorra Baleares, Oliva Motor
+  Girona, Concessionari Hyundai Motorprim... con phone+provincia, 0% muni); VAM REFUTED = no declara count
+  (naturaleza del vector de resolución), NO polución. NOTA tracked: (a) semántica VAM de collapse_invisible
+  (REFUTED persistente ensucia el ledger de verdicts) y (b) 0% muni-resolution (gap geo de los phone-clusters).
+- TRAP del re-cluster CAZADO antes de romper PROD: el FK lo cumplen LAS 3 filas canonical_dedup_run (todas
+  source_cluster_run='dealer-identity-det-v1'), incl. **residual-namemuni-v1 que SIRVE v_dealer_resolved**
+  (latest vam_verified ORDER BY run_id DESC). El plan v1 ("re-run build_canonical_dedup", 1 script) habría
+  borrado la servida sin regenerarla = API rota. Inventarié el path completo: 3 builders
+  (build_canonical_dedup / build_particular_dedup+gate / build_residual_namemuni_dedup --commit) + gate
+  vam_verified reversible (gate_particular_dedup.py). Plan CORREGIDO a 8 pasos seguros.
+- NO ejecuté la mutación (8 pasos sobre datos SERVIDOS, contexto profundo, madrugada): defiero a iteración
+  fresca con el plan completo. Overture sigue safe en entity (no se pierde). NO es idleo: tick verificado en
+  prod + trap evitado + path seguro completado = progreso real.
+- PROXIMO: EJECUTAR plans/P-recluster-overture-mse.md (8 pasos) en iteración fresca, plena atención + verificación.
