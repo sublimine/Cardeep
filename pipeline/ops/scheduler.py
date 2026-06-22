@@ -257,6 +257,19 @@ def _build_registry() -> dict[str, SourceEntry]:
         SourceEntry("subastacar_wholesale",
                     "pipeline.platform.subastacar_wholesale", []),
 
+        # ── Own-site €0 drain (host-distributed, ban-free) ──────────────────
+        # dealerprobe_ownsite: the generic own-site harvester. --from-db selects the next un-probed
+        # *drainable* batch (the connector's _drainable_website filter excludes OEM-red/marketplace/
+        # social hosts) and stamps a monotonic 'dealerprobe_probed' marker, so successive DUE ticks
+        # drain the dealers-with-website backlog idempotently and idle near zero once drained (only
+        # newly-DISCOVERED dealers reappear). Bare no-args probes NOTHING (empty targets) — --from-db
+        # is mandatory; --limit bounds the per-tick batch well within the 4h subprocess wall. Ban-free:
+        # probes are spread across thousands of distinct dealer hosts, not one host (no AS24 scar).
+        # (Audit deferred-harvest gap: was KNOWN_UNMAPPED; now wired so the own-site drain is hands-off.)
+        SourceEntry("dealerprobe_ownsite",
+                    "pipeline.platform.dealerprobe_wholesale",
+                    ["--from-db", "--limit", "500"]),
+
         # ── Families (720h) ───────────────────────────────────────────────
         SourceEntry("family_builder_wholesale",
                     "pipeline.platform.family_builder_wix_ueni_google_sites_basekit__wholesale",

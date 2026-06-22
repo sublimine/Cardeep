@@ -246,6 +246,20 @@ class TestGapReport:
         assert "autocasion_wholesale" in mapped
         assert "some_future_source_not_in_registry" in unmapped
 
+    def test_dealerprobe_ownsite_mapped_for_continuous_drain(self) -> None:
+        """dealerprobe_ownsite is the €0 own-site harvester. It MUST be scheduler-mapped so the
+        backlog of dealers-with-website-not-yet-probed drains continuously and hands-off: each
+        DUE tick runs `--from-db`, which selects the next un-probed *drainable* batch (the
+        _drainable_website filter excludes OEM-red/marketplace/social) and stamps a monotonic
+        'dealerprobe_probed' marker so probed dealers drop out of future batches. Regression guard
+        for the deferred-harvest gap (was KNOWN_UNMAPPED → now wired). NOTE: no-args probes nothing
+        (empty targets), so the registry entry MUST pass --from-db, never bare."""
+        assert "dealerprobe_ownsite" in REGISTRY, "dealerprobe_ownsite must be scheduler-mapped"
+        entry = REGISTRY["dealerprobe_ownsite"]
+        assert entry.module == "pipeline.platform.dealerprobe_wholesale"
+        assert "--from-db" in entry.extra_args, "must drive the monotonic DB drain, not bare no-args"
+        assert "--limit" in entry.extra_args, "must bound the per-tick batch"
+
 
 # ---------------------------------------------------------------------------
 # Live DB integration test (skipped if DB is unreachable)
@@ -304,13 +318,18 @@ class TestDueSourcesLiveDB:
             conn.close()
 
         mapped, unmapped = _gap_report(all_keys)
-        # Sources INTENTIONALLY not scheduler-driven: run-once seeds (overture,
-        # dork_municipal, graph_recursive, collapse_invisible) and discovery/deferred
-        # writers (dealerprobe_ownsite, as24_facet, borme_cnae). Any OTHER unmapped key
-        # is a real registry gap and must fail. (dealerprobe_ownsite/as24_facet/borme_cnae
-        # are candidates for a future scheduler mapping — tracked, not silently hidden.)
+        # Sources INTENTIONALLY not in the HARVEST registry. Two distinct reasons:
+        #   (a) DISCOVERY vectors with their OWN producer (pipeline/discover_schedule.py, a
+        #       separate scheduler + advisory lock by design): borme_cnae, collapse_invisible,
+        #       overture, graph_recursive, dork_municipal. These must NEVER be in the harvest
+        #       REGISTRY — they are scheduled by the discovery daemon, not the harvest heartbeat.
+        #   (b) as24_facet: a real AS24 harvester, but auto-scheduling it touches the AS24 ban
+        #       scar (the host that already cost 138 dealers); kept operator-run → owner gate.
+        # dealerprobe_ownsite was here too but is now WIRED into REGISTRY (own-site drain, ban-free,
+        # host-distributed) — see test_dealerprobe_ownsite_mapped_for_continuous_drain. Any OTHER
+        # unmapped key is a real registry gap and must fail.
         KNOWN_UNMAPPED = {
-            "as24_facet", "borme_cnae", "collapse_invisible", "dealerprobe_ownsite",
+            "as24_facet", "borme_cnae", "collapse_invisible",
             "dork_municipal", "graph_recursive", "overture",
         }
         unexpected = sorted(set(unmapped) - KNOWN_UNMAPPED)
