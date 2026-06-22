@@ -13,6 +13,47 @@
 
 ---
 
+## 0-bis. RECONCILIACION CON EL SELLO ESTADISTICO MSE (addendum 2026-06-22)
+
+> Añadido por Director (Opus) tras auditoria atom-level. NO altera el analisis B6.4 de
+> abajo; lo CONTEXTUALIZA para evitar ambiguedad entre dos definiciones distintas de
+> "sellado". Cero maquillaje: ambos numeros son reales y se reportan lado a lado.
+
+Existen **dos criterios** de sellado y NO son intercambiables:
+
+1. **Sellado registral / "MEDIDO+gap confesado"** (la definicion de §0, abajo): un par
+   esta "sellado" si su numerador esta servido, su denominador esta MEDIDO o ESTIMADO
+   con sesgo confesado, y el gap esta documentado. Bajo este criterio: **156/156 pares
+   "sellados con gap confesado"**. Esto NO afirma 95% de cobertura — el propio doc lo
+   dice ("'Sellado' no significa cobertura 100%").
+
+2. **Sellado estadistico MSE/CI** (la definicion de MISSION.md §27-33 / MASTER_PLAN_V2
+   §2.6 — el criterio DONE vinculante): un estrato (provincia×segmento) esta sellado si
+   el **limite inferior del IC 95% de la cobertura** (captura-recaptura, n_obs/ci_high)
+   **>= 0.95**. Medido en `exhaustiveness_estimate` (run `iter2-resolved`, 209 estratos):
+   **SOLO 14/209 estratos sellados a 95%**. Cobertura_point media por segmento:
+   concesionario 0.70 (10 sellados) · desguace 0.39 (3) · otros 0.47 (1) ·
+   **compraventa 0.105 (0 sellados)**.
+
+**Por que compraventa sale 10% en MSE (matiz, no sub-cobertura):** la DB tiene **66.505
+entidades compraventa** vs **~23.085 locales venta CNAE-451 (DIRCE 2024)** — descubrimos
+MAS que el techo registral. El MSE no puede ACOTAR la poblacion porque las listas
+ortogonales de descubrimiento apenas se solapan (overlap m bajo) → ci_high enorme →
+coverage_lower≈0. Es un limite de *identificabilidad estadistica*, no de cobertura real.
+
+**Palancas para subir 14/209 (campaña de datos, gated):**
+- Dedup neto servido (sube overlap m) — **GATED por RAM** (union-find full-DB ~4-6 GB;
+  solo ~2.5 GB libres con los 9 workers vivos) → requiere ventana con workers parados.
+- Densificar listas ortogonales por provincia (DORK/REG/DGT/ASSOC) para que >=2 solapen.
+- Triangulacion contra techo registral DIRCE-451 (pendiente extracto venta-especifico;
+  la fuente actual `denominador_cnae45_provincia_2024.csv` es CNAE-45 TOTAL, no venta —
+  NO se fabrica anchor venta desde ella).
+
+**Celdas >100%** (p.ej. Lugo §3 fila, Salamanca 127.7%): artefacto de denominador
+talleres-sobreestimado y/o leakage de dedup — a investigar, NO cobertura real >100%.
+
+---
+
 ## 0. DEFINICION DE SELLO
 
 Un par (provincia × segmento) esta **SELLADO** cuando tiene:
