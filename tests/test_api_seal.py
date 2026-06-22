@@ -46,10 +46,16 @@ class TestGeoSeal:
         assert desg["distribution"].get("SELLADO", 0) == 52
 
     def test_every_province_has_valid_verdict_and_consistent_coverage(self, client):
+        # Mirror PostgreSQL ROUND() (half-away-from-zero); Python round() is banker's
+        # and diverges by 0.1 on .5 boundaries (e.g. 100*53/16 = 331.25 -> 331.3 vs 331.2).
+        from decimal import Decimal, ROUND_HALF_UP
         segs = client.get("/geo/seal").json()["data"]["segments"]
         for seg in segs.values():
             for p in seg["provinces"]:
                 assert p["verdict"] in _VALID
                 if p["denominator"]:
-                    expected = round(100.0 * p["numerator"] / p["denominator"], 1)
+                    expected = float(
+                        Decimal(100.0 * p["numerator"] / float(p["denominator"])).quantize(
+                            Decimal("0.1"), rounding=ROUND_HALF_UP)
+                    )
                     assert abs(p["coverage_pct"] - expected) < 0.05

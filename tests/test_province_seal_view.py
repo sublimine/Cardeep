@@ -95,11 +95,19 @@ class TestProvinceSealView:
                 assert cov < 100, f"{r['province_code']}: desguace {v} but cov={cov}"
 
     def test_coverage_pct_is_num_over_den(self) -> None:
+        # The view rounds with PostgreSQL ROUND() (half-away-from-zero); Python's
+        # round() is banker's (half-to-even). They diverge by 0.1 exactly on .5
+        # boundaries (e.g. 100*53/16 = 331.25 -> PG 331.3 vs Python 331.2). Mirror
+        # PG's rounding so the recompute matches the view's semantics exactly.
+        from decimal import Decimal, ROUND_HALF_UP
         for r in _rows():
             den = r["denominator"]
             if not den:
                 continue
-            expected = round(100.0 * r["numerator"] / den, 1)
+            expected = float(
+                Decimal(100.0 * r["numerator"] / float(den)).quantize(
+                    Decimal("0.1"), rounding=ROUND_HALF_UP)
+            )
             assert abs(float(r["coverage_pct"]) - expected) < 0.05, (
                 f"{r['segment']}/{r['province_code']}: coverage_pct {r['coverage_pct']} != {expected}")
 
