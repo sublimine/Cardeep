@@ -57,6 +57,7 @@ class DiscoveryJob:
     cadence_hours: int
     orthogonal: bool                 # is this an MSE list (lists.py) or a dependent/resolution vector
     env: dict[str, str] = field(default_factory=dict)  # recipe-first sampling defaults (env-overridable)
+    requires_env: tuple[str, ...] = ()  # scheduler GATES auto-run if any of these env vars is absent
 
 
 # The 5 discovery vectors V2–V6. env values are conservative recipe-first defaults so a local
@@ -75,7 +76,11 @@ DISCOVERY_REGISTRY: dict[str, DiscoveryJob] = {
         env={"CARDEEP_GRAPH_LIMIT": os.environ.get("CARDEEP_GRAPH_LIMIT", "200")}),
     "dork_municipal": DiscoveryJob(
         "dork_municipal", "dork_municipal", cadence_hours=2160, orthogonal=True,
-        env={k: os.environ[k] for k in ("CARDEEP_SEARXNG_URL",) if k in os.environ}),
+        env={k: os.environ[k] for k in ("CARDEEP_SEARXNG_URL",) if k in os.environ},
+        # GATE: the adapter's DuckDuckGo fallback is fine for a bounded manual `--once` run
+        # (CARDEEP_DORK_LIMIT), but an unbounded national scheduled sweep hammers DDG and risks a
+        # ban. The scheduler will not AUTO-run dork without a quota-free SearXNG endpoint.
+        requires_env=("CARDEEP_SEARXNG_URL",)),
 }
 
 
@@ -110,6 +115,19 @@ async def _due(conn: asyncpg.Connection) -> list[str]:
             due.append((overdue_h, r["source_key"]))
     due.sort(reverse=True)  # most overdue first
     return [k for _o, k in due]
+
+
+def _gated(job: DiscoveryJob) -> str | None:
+    """Return the first required env var that is ABSENT (gating the vector from AUTO-run), or None.
+
+    Why: dork_municipal requires SearXNG. Its DuckDuckGo HTML fallback produces results for a bounded
+    manual `--once` run, but an unbounded national scheduled sweep (8.132 municipalities x 5 templates
+    ~= 40k requests) hammers DDG and risks a ban — so the daemon refuses to auto-run it without a
+    quota-free SearXNG endpoint. An explicit `--once <vector>` overrides the gate (operator intent)."""
+    for var in job.requires_env:
+        if not os.environ.get(var):
+            return var
+    return None
 
 
 async def _record(conn: asyncpg.Connection, source_key: str, *, ok: bool, rows: int | None,
@@ -173,6 +191,12 @@ async def _tick(only: str | None = None) -> dict:
         ran: dict[str, dict] = {}
         for key in keys:
             job = DISCOVERY_REGISTRY[key]
+            # AUTO-run gate (an explicit --once VECTOR bypasses it: operator intent).
+            gate = None if only else _gated(job)
+            if gate:
+                print(f"[discovery] GATED {key}: missing {gate} — skipped (not run, not failed)")
+                ran[key] = {"gated": gate}
+                continue
             rc, new = _run_vector(job)
             await _record(conn, key, ok=(rc == 0), rows=new, cadence_hours=job.cadence_hours,
                           error=None if rc == 0 else f"exit {rc}")
@@ -193,10 +217,11 @@ async def _dry_run() -> None:
         print(f"  {datetime.now(timezone.utc).isoformat()}")
         print("=" * 72)
         for job in sorted(DISCOVERY_REGISTRY.values(), key=lambda j: j.cadence_hours):
-            mark = "DUE" if job.source_key in due else "   "
+            gate = _gated(job)
+            mark = "GATE" if gate else ("DUE" if job.source_key in due else "   ")
             ortho = "orthogonal" if job.orthogonal else "non-ortho "
             print(f"  [{mark}] {job.source_key:20s} cadence={job.cadence_hours:>5}h  {ortho}  "
-                  f"env={list(job.env)}")
+                  f"env={list(job.env)}" + (f"  GATED:needs {gate}" if gate else ""))
         print(f"\n  {len(due)} vector(s) DUE now.")
     finally:
         await conn.close()

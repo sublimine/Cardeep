@@ -34,3 +34,31 @@ def test_orthogonality_matches_taxonomy():
         bucket = lists.bucket_for(job.source_key)
         is_mse = bucket in lists.ORTHOGONAL_LISTS
         assert job.orthogonal == is_mse, f"{job.source_key}: flag {job.orthogonal} vs taxonomy {is_mse}"
+
+
+@pytest.mark.unit
+def test_dork_municipal_gated_without_searxng(monkeypatch):
+    """The scheduler must NOT auto-run dork_municipal without a SearXNG endpoint: its DuckDuckGo
+    fallback at national-unbounded scale (8.132 municipalities x 5 templates) hammers DDG and risks
+    a ban. _gated returns the missing env var so _tick skips it (gated, not failed)."""
+    from pipeline.discover_schedule import _gated
+    monkeypatch.delenv("CARDEEP_SEARXNG_URL", raising=False)
+    assert _gated(DISCOVERY_REGISTRY["dork_municipal"]) == "CARDEEP_SEARXNG_URL"
+
+
+@pytest.mark.unit
+def test_dork_municipal_ungated_with_searxng(monkeypatch):
+    """With a SearXNG endpoint (quota-free meta-search), dork is no longer gated."""
+    from pipeline.discover_schedule import _gated
+    monkeypatch.setenv("CARDEEP_SEARXNG_URL", "http://127.0.0.1:8888")
+    assert _gated(DISCOVERY_REGISTRY["dork_municipal"]) is None
+
+
+@pytest.mark.unit
+def test_other_vectors_run_unconditionally(monkeypatch):
+    """Only dork is env-gated; overture/graph/borme/collapse have no required env (run on cadence)."""
+    from pipeline.discover_schedule import _gated
+    monkeypatch.delenv("CARDEEP_SEARXNG_URL", raising=False)
+    for k in ("borme_cnae", "collapse_invisible", "overture", "graph_recursive"):
+        assert DISCOVERY_REGISTRY[k].requires_env == ()
+        assert _gated(DISCOVERY_REGISTRY[k]) is None
