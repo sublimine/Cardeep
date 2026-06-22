@@ -3219,3 +3219,30 @@
   - SELLO a su TECHO €0 HONESTO: served 5/210 actual (volatil, baja al crecer; geo-matching probado+REVERTIDO net-negativo, 8+ angulos) + gap-con-causa + cross-check registral 2.9x DIRCE. CERO numeros inflados.
 - FOLLOW-UPS trackeados (proyectos, no urgentes, honestos): re-cluster dealers FK-safe (mantenimiento B1-stale), 5 replication blockers EU (migracion country_code reversible + paths + cdp_code param), mapear 3 deferred-harvest (dealerprobe_ownsite/as24_facet/borme_cnae) al scheduler, BMW particion residual (~2815), sello volatil con crecimiento (densificar listas ortogonales que solapen = inexistente €0).
 - Owner mandate cumplido: REPLICABLE (guia+core/ES) + FERRARI (1438/0) + documentado ATOMO + receta-por-dealer + API-delta. Modo VIGILANCIA.
+
+## 2026-06-22 — VIGILANCIA-ACTIVA #1: PROYECTO A (deferred-harvest) resuelto con INVENTARIO-PRIMERO
+- INVENTARIO al atomo del scheduler (pipeline/ops/scheduler.py REGISTRY + source_health + entry-points)
+  ANTES de tocar -> corrigio el premise: de las 3 "deferred-harvest", solo 1 era mapeable al harvest.
+  - borme_cnae + collapse_invisible + overture + graph_recursive + dork_municipal = vectores de
+    DESCUBRIMIENTO con su PROPIO productor (pipeline/discover_schedule.py, advisory lock 0x43415244+1).
+    Excluirlos del harvest REGISTRY es POR DISENO (cabecera del fichero). KNOWN_UNMAPPED correcto para ellos.
+  - HALLAZGO: el discovery-daemon NO esta corriendo (solo 1 advisory lock vivo = harvest;
+    collapse/overture/graph/dork last_ok=NULL nunca corrieron; borme last_ok 06-20 vencido @24h). =
+    PROYECTO separado (arrancar discover_schedule --serve tras verificacion por-vector: overture descarga
+    mensual, dork necesita CARDEEP_SEARXNG_URL).
+  - as24_facet = harvester AS24 real PERO auto-agendarlo toca la cicatriz-ban AS24 (138 dealers perdidos)
+    -> PENDIENTE-OWNER (gate de riesgo real), NO unilateral.
+  - dealerprobe_ownsite = own-site EUR0, ban-free (host-distribuido), corrio hoy 05:02, escribe su
+    record_run a su propia key -> el unico limpio para el harvest REGISTRY.
+- HECHO (TDD RED->GREEN, 2 commits, CI verde): mapeado dealerprobe_ownsite al harvest REGISTRY con
+  --from-db --limit 500 (drena backlog de hasta 3.969 dealers-con-web-no-probados; _drainable_website
+  excluye OEM-red/marketplace/social; marca monotona dealerprobe_probed; no-args=no-op por eso --from-db
+  obligatorio). Test de regresion test_dealerprobe_ownsite_mapped_for_continuous_drain + quitado de
+  KNOWN_UNMAPPED (con comentario del por-que de cada exclusion). Mapped 49->50, gap 7->6.
+- HECHO: migracion 0051_dealerprobe_cadence (guardada+idempotente) + UPDATE vivo reversible: cadencia
+  168h->24h (drena en ~8 dias no ~8 semanas; ban-safe host-distribuido). last_ok 05:02 -> vence manana,
+  rampa suave. unit-gate CI 341 passed; suite completa local corriendo (verificacion x2 vias).
+- HALLAZGO COLATERAL honesto: 0050_precision_gate PENDIENTE en schema_migrations (DB en 0049, disco en
+  0051). Aditivo/backward-compat; NO lo apliqué (no co-opto trabajo ajeno en mi incremento); awaits el
+  proximo migrate-up window. 0051 es idempotente + order-independent -> aplicarlo luego es no-op.
+- PROXIMO: confirmar suite completa 0 failed; luego PROYECTO discovery-daemon o PENDIENTE-OWNER as24 gate.
