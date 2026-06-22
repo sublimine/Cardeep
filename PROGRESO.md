@@ -3092,3 +3092,4 @@
 - (A') residual alto rendimiento: dealers truncados aun en cap 600 (>600 listings) -> re-drenar cap 2000.
 - (A') RE-DRENADO 17 dealers >600 con cap 2000 (inline hosts; el previo fue no-op por arg vacio): 16 live, caged 16771, +7955 coches NUEVOS. DB dp_NEW_events 57629->65584. 3 mega-dealers truncan aun en 2000 (crestanevada/motosarribas/bamburenting >2000). Acumulado: 65584 coches DP / 2303 dealers.
 - (A'') residual: 3 mega-dealers >=1995 -> cap 5000.
+- (A'') cap5000 3 mega-dealers x2 vias: +7953 coches (bamburenting 4990, crestanevada 3959 entero, motosarribas 4999). dp_NEW_events 65584->73537. 1-2 outliers (motos/renting) siguen >5000: rendimiento decreciente + posible no-coche, NO se persiguen (documentado). HARVEST €0 AGOTADO: 73537 coches bruto / 2303 dealers del frente webs-propias.
