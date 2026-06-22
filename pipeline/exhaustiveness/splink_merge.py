@@ -78,25 +78,6 @@ def _digits(phone: str | None) -> str | None:
     return d[-9:] if len(d) >= 9 else None
 
 
-# Geo-cell rounding: 3 decimal degrees ~ 111 m of latitude (and <=111 m of
-# longitude across mainland Spain). Two dealers in the same cell are <~150 m
-# apart, the proven Páginas-Amarillas<->Overture match radius, so block_on the
-# cell to generate the cross-source candidate pairs the name/phone/site blocks
-# miss (PA and Overture carry different names for the same physical site).
-_GEOCELL_DECIMALS = 3
-
-
-def _geocell(lat: float | None, lon: float | None) -> str | None:
-    """Round (lat, lon) to a coarse string cell key for geo blocking.
-
-    Returns None when either coordinate is missing, so ungeocoded dealers never
-    share a (None) block. Mirrors the prefix/host helpers: pure, no I/O.
-    """
-    if lat is None or lon is None:
-        return None
-    return f"{round(float(lat), _GEOCELL_DECIMALS)},{round(float(lon), _GEOCELL_DECIMALS)}"
-
-
 def _load_dealers(conn):
     import pandas as pd
 
@@ -116,8 +97,6 @@ def _load_dealers(conn):
     recs = []
     for ulid, name, prov, muni, phone, website, lat, lon in rows:
         nm = _norm_name(name)
-        flat = float(lat) if lat is not None else None
-        flon = float(lon) if lon is not None else None
         recs.append(
             {
                 "unique_id": ulid,
@@ -130,11 +109,8 @@ def _load_dealers(conn):
                 "municipality_code": muni,
                 "phone": _digits(phone),
                 "website_host": _host(website),
-                "lat": flat,
-                "lon": flon,
-                # rounded geo cell: blocking key that generates ~<150 m candidate
-                # pairs across sources with different names (PA <-> Overture).
-                "geocell": _geocell(flat, flon),
+                "lat": float(lat) if lat is not None else None,
+                "lon": float(lon) if lon is not None else None,
             }
         )
     return pd.DataFrame.from_records(recs)
@@ -168,55 +144,36 @@ class _UF:
             self.p[hi] = lo
 
 
-def _build_settings():
-    """Build the Splink SettingsCreator (no DB, no Linker) so it is unit-testable.
-
-    Lazily imports splink (mirrors run()'s lazy import) so importing this module
-    never requires splink; callers must guard with splink_available() first.
-    """
-    from splink import SettingsCreator, block_on
-    import splink.comparison_library as cl
-
-    return SettingsCreator(
-        link_type="dedupe_only",
-        blocking_rules_to_generate_predictions=[
-            # block on muni + name PREFIX (not full name) so JaroWinkler can
-            # score fuzzy full-name pairs inside the block.
-            block_on("municipality_code", "name_prefix"),
-            block_on("phone"),
-            block_on("website_host"),
-            # geo cell (~<150 m): generates cross-source candidate pairs for
-            # the SAME physical dealer carrying different names (Páginas
-            # Amarillas <-> Overture/OSM). ADDITIVE to the name/phone/site
-            # blocks, not a replacement.
-            block_on("geocell"),
-        ],
-        comparisons=[
-            cl.JaroWinklerAtThresholds("name", [0.92, 0.82]),
-            cl.ExactMatch("municipality_code"),
-            cl.ExactMatch("phone").configure(term_frequency_adjustments=True),
-            cl.ExactMatch("website_host").configure(term_frequency_adjustments=True),
-            # haversine distance: rewards true geo-coincidence so two dealers
-            # at the same coordinates with different names still collapse.
-            cl.DistanceInKMAtThresholds("lat", "lon", [0.1, 0.5]),
-        ],
-        retain_intermediate_calculation_columns=False,
-    )
-
-
 def run(build_run_id: str, *, dsn: str = DSN, match_threshold: float = 0.9) -> dict:
     """Run Splink dedupe over dealer entities and persist clusters. Returns summary."""
     if not splink_available():
         return {"status": "splink_unavailable"}
 
-    from splink import DuckDBAPI, Linker, block_on
+    from splink import DuckDBAPI, Linker, SettingsCreator, block_on
+    import splink.comparison_library as cl
 
     conn = psycopg2.connect(dsn)
     try:
         df = _load_dealers(conn)
         n_in = len(df)
 
-        settings = _build_settings()
+        settings = SettingsCreator(
+            link_type="dedupe_only",
+            blocking_rules_to_generate_predictions=[
+                # block on muni + name PREFIX (not full name) so JaroWinkler can
+                # score fuzzy full-name pairs inside the block.
+                block_on("municipality_code", "name_prefix"),
+                block_on("phone"),
+                block_on("website_host"),
+            ],
+            comparisons=[
+                cl.JaroWinklerAtThresholds("name", [0.92, 0.82]),
+                cl.ExactMatch("municipality_code"),
+                cl.ExactMatch("phone").configure(term_frequency_adjustments=True),
+                cl.ExactMatch("website_host").configure(term_frequency_adjustments=True),
+            ],
+            retain_intermediate_calculation_columns=False,
+        )
         db_api = DuckDBAPI()
         linker = Linker(df, settings, db_api)
 

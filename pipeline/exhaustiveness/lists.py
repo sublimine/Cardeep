@@ -42,17 +42,11 @@ _EXACT: dict[str, str] = {
     "borme_cnae": "REG",
     "graph_recursive": "GRAPH",
     "collapse_invisible": "COLLAPSE",
-    # Commercial phone/business directory (Páginas Amarillas). Captured via the
-    # phone-directory listing process, independent of crowdsourced geo (GEO) or
-    # any marketplace feed -> genuinely orthogonal. PA addresses are geocoded and
-    # collapsed into the GEO physical-dealer unit via Splink geo-proximity, but
-    # the *capture mechanism* (directory enrolment) stays its own MSE list.
-    "paginas_amarillas": "DIR",
 }
 
 # Orthogonal lists used by the MSE. MKT/GRAPH/COLLAPSE are intentionally excluded
 # (digital-marketplace bias, graph-dependence, and resolution respectively).
-ORTHOGONAL_LISTS: tuple[str, ...] = ("GEO", "CENSUS", "DGT", "ASSOC", "OEM", "DORK", "REG", "DIR")
+ORTHOGONAL_LISTS: tuple[str, ...] = ("GEO", "CENSUS", "DGT", "ASSOC", "OEM", "DORK", "REG")
 
 LIST_METADATA: dict[str, tuple[str, str]] = {
     "GEO": ("physical_presence", "Physical-presence catalogues (OSM, Overture, geo sweep)"),
@@ -62,7 +56,6 @@ LIST_METADATA: dict[str, tuple[str, str]] = {
     "OEM": ("oem_network", "Manufacturer official VO networks"),
     "DORK": ("search_own_domain", "Municipal dorking — dealer-owned domains via search (V3)"),
     "REG": ("mercantile_registry", "BORME mercantile-registry automotive incorporations (V4)"),
-    "DIR": ("commercial_directory", "Commercial phone/business directory (Páginas Amarillas), geo-matched to GEO"),
     "GRAPH": ("graph_dependent", "Recursive corporate-graph crawl (V5, dependent — non-orthogonal)"),
     "COLLAPSE": ("resolution", "Invisible-vendor collapse (V6, resolution — not an MSE list)"),
     "MKT": ("digital_marketplace", "Digital classified marketplaces (non-orthogonal)"),
