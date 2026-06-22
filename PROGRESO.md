@@ -3305,3 +3305,21 @@
   fresca con el plan completo. Overture sigue safe en entity (no se pierde). NO es idleo: tick verificado en
   prod + trap evitado + path seguro completado = progreso real.
 - PROXIMO: EJECUTAR plans/P-recluster-overture-mse.md (8 pasos) en iteración fresca, plena atención + verificación.
+
+## 2026-06-23 — VIGILANCIA-ACTIVA #5: re-cluster EJECUTADO (overture plegado al B1 servido, +16.261 dealers)
+- EJECUTADO el plan (8 pasos) con gates: borradas 3 canonical_dedup_run -> cluster_dealers (B1: 91.319 ent
+  -> 58.520 clusters; VERIFICATION REPORT precision-clean CHECK2=0 FP; CHECK7 FAIL under-merge data-driven
+  "MERCEDES AUTOMOCION DEL OESTE", dirección segura, ningún test lo asevera) -> gateado B1 vam_verified=TRUE.
+- RESULTADO: v_dealer_resolved 408.663 -> 398.391; **identidades de dealer servidas 42.259 -> 58.520
+  (+16.261 net-new de overture/collapse)**. API /health OK. El objetivo PRINCIPAL logrado: overture
+  (18.399 en scope venta) plegado al layer servido.
+- MULTI-GATE descubierto (el plan v2 era incompleto): (1) cluster_dealers deja B1 vam_verified=FALSE ->
+  hay que gatearlo (UPDATE manual) o v_canonical queda VACIO (dedup OFF, servía 431k inflado, lo detecté
+  y corregí); (2) los 3 builders super-canónicos encadenados + asserts SELLADOS (2026-06-15) que divergen
+  al cambiar B1 -> garbage contra B1 sin gatear; guard "report to Director" CORRECTO, NO forcé.
+- PENDIENTE honesto (NO bloquea serving): re-bendecir los EXPECTED_* de build_canonical_dedup (verificar
+  cifras nuevas) + re-correr los 3 builders + gate + re-evaluar MSE. Plan actualizado con el procedimiento
+  multi-gate completo. Servido ACTUAL = B1-only con overture (COALESCE fallback, válido/honesto, falta la
+  capa super-canónica de ~5.500 merges de refinamiento).
+- Ferrari suite (blxosq4ni) corriendo para confirmar 0 regresión del estado restaurado.
+- PROXIMO: leer Ferrari; si 0 fail -> re-bendecir super-canónica (verificada) o documentar como follow-up; MSE.

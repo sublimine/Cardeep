@@ -77,3 +77,31 @@ mantiene servicio; re-ejecutar la cadena 2→4 restaura. Snapshot paso 0 = basel
 ## Rollback
 - Paso 1 reversible re-corriendo build_canonical_dedup tras un cluster_dealers. cluster_dealers es
   idempotente/determinista (mismo RUN_ID): re-correr restaura. Vistas derivadas. Snapshot paso 0 = baseline.
+
+## EJECUCIÓN 2026-06-23 — RESULTADO + LEARNINGS (multi-gate descubierto)
+HECHO: borradas las 3 canonical_dedup_run -> cluster_dealers (B1 nuevo: 91.319 ent -> 58.520 clusters,
+VERIFICATION REPORT precision-clean CHECK2=0 FP; CHECK7 FAIL = under-merge data-driven de variantes
+"MERCEDES AUTOMOCION DEL OESTE", dirección segura, sin test que lo asevere) -> gateado B1 vam_verified=TRUE
+(UPDATE entity_cluster_run) -> v_dealer_resolved RESTAURADO+MEJORADO = 398.391 (overture plegado;
+**58.520 identidades de dealer servidas vs 42.259 = +16.261 net-new**). API /health OK.
+
+LEARNINGS (el plan v2 aún era incompleto; multi-gate real):
+1. cluster_dealers escribe B1 (entity_cluster_run) con **vam_verified=FALSE**; hay que GATEARLO con
+   `UPDATE entity_cluster_run SET vam_verified=TRUE WHERE cluster_run_id='dealer-identity-det-v1'`
+   (no hay script dedicado; manual, reversible). v_canonical lee el ULTIMO entity_cluster_run
+   vam_verified=TRUE por run_at DESC -> sin gatear, v_canonical=VACIO -> dedup OFF (servía 431k inflado).
+2. Los 3 builders super-canónicos están ENCADENADOS (deeplink -> particular -> residual) y deeplink
+   tiene **asserts de valores SELLADOS** (build_canonical_dedup.py:90-95, EXPECTED_*=2026-06-15) que
+   divergen al cambiar la población B1 (42.259->58.520). Correr contra B1 sin gatear da GARBAGE
+   (deduped_count=0). El guard "DO NOT force - report to Director" es CORRECTO.
+3. overture POIs NO tienen vehículos -> NO añaden deep_links -> el deep-link super-canónico NO debería
+   crecer; lo que cambia es la población B1 (deduped_count/total_members). Re-bendecir = verificar las
+   cifras nuevas + actualizar EXPECTED_* en build_canonical_dedup (y revisar particular/residual).
+
+PENDIENTE (capa super-canónica, ~5.500 merges de refinamiento, NO bloquea serving):
+A. Re-correr build_canonical_dedup contra B1 GATEADO -> ver cifras sanas.
+B. Verificar y RE-BENDECIR EXPECTED_DEDUPED_COUNT/TOTAL_MEMBERS/N_SUPER_CANONICALS/N_MERGED (cambian por
+   población B1 mayor; super_canonicals deep-link ~igual). Code change + commit.
+C. build_particular_dedup -> build_residual_namemuni_dedup --commit -> gate served run.
+D. Re-evaluar MSE con el resolved final.
+Estado servido ACTUAL = B1-only con overture (válido, COALESCE fallback, honesto), super-canónica ausente.
