@@ -3466,3 +3466,16 @@
 - Mandato 10 fases: HECHAS 0,7,3,8 (selladas) + 4 (codigo+activada) = 6/10. La CORONA (replicacion) probada.
   PENDIENTE: Fase 6 (API/delta polish) / 5 (recipe-harness) / 2 (ops) / 3b (particulares) / 9 (auditoria final).
 - PROXIMO: verificar motor_es escribe last_ok (proximo tick) + encadenar Fase 6.
+
+## 2026-06-23 — FASE 6 SELLADA (1533/0) + FASE 4 CONFIRMADA viva (motor_es resucitado)
+- Ferrari 1533 passed / 0 failed. Fase 6 (subastacar silent-GONE fix + 24 orphans backfilled->0 +
+  over-coverage REFUTED desbloqueado; 3 partials genuinos siguen REFUTED) sellada.
+- FASE 4 PROBADA viva: motor_es_wholesale CORRIENDO via cursor (log: cells vo:bmw/serie-* caged_total=2336;
+  subproceso --max-cells 40 --limit 12000 --cursor). El silencio de 176h (timeout 4h del --full) ROTO; el
+  cursor avanza por slices acotados. last_ok escribira al cerrar el slice. dealerprobe --limit 2000 activo.
+- Mandato 10 fases: ENTREGADAS+VERIFICADAS 0,7,3,8,4,6 = 7/10 (CORONA replicacion probada; producto E2E +
+  replicable + biblia DELIVERED). RESTANTES: Fase 2 (ops-hardening additive), Fase 3b (particulares MSE),
+  Fase 9 (auditoria adversarial final). FASE 5 recipe-harness (41 conectores LIVE): DECISION CEO = refinar
+  incrementalmente (alto riesgo de romper harvest vivo / recompensa moderada; el patron ya esta en la biblia
+  GUIDE-NEW-SOURCE-ADAPTER) -> tracked, NO refactor masivo a ciegas.
+- PROXIMO: Fase 2 ops -> Fase 9 auditoria final (re-medir vivo + re-evaluar MSE + cierre).
