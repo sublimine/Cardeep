@@ -5,13 +5,23 @@ entity through a different source never mints a second code.
 
 Canonical key priority: particular(platform:sellerId) > domain > CIF >
 normalized(name|municipality_code).
-Format: CDP-ES-{province2}-{8 x Crockford-base32 of sha256(key)}.
+Format: CDP-{country2}-{province2}-{8 x Crockford-base32 of sha256(key)}.
+
+Country-parametrization: every public coder accepts an optional ``country_code``
+defaulting to :data:`DEFAULT_COUNTRY` (``"ES"``), so every existing call site and
+every ES output is byte-identical. ``country_code`` ONLY enters the human-facing
+prefix via :func:`mint_code`; it is deliberately kept OUT of :func:`canonical_key`'s
+returned pre-image (the immutable dedup key), so threading it cannot re-key any
+existing entity.
 """
 from __future__ import annotations
 
 import hashlib
 import re
 import unicodedata
+
+# The sole default tenant. Threaded through every coder so ES output never changes.
+DEFAULT_COUNTRY = "ES"
 
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"  # no I, L, O, U
 
@@ -31,11 +41,28 @@ def _base32(digest: bytes, length: int = 8) -> str:
     return "".join(reversed(out))
 
 
+def mint_code(*, province_code: str, digest: bytes,
+              country_code: str = DEFAULT_COUNTRY) -> str:
+    """Assemble the final ``cdp_code`` from its parts — the ONE home of the prefix literal.
+
+    Every coder (this module plus the ~30 ``pipeline/platform`` mints) routes through here,
+    so ``CDP-{country}-`` exists in exactly one place. With ``country_code`` defaulting to
+    ``"ES"`` and ``_base32(digest)`` unchanged, the output is byte-identical to the historical
+    ``f"CDP-ES-{province_code}-{_base32(digest)}"`` — verified by the golden tests.
+    """
+    return f"CDP-{country_code}-{province_code}-{_base32(digest)}"
+
+
 def canonical_key(*, domain: str | None = None, cif: str | None = None,
                   name: str | None = None, municipality_code: str | None = None,
                   province_code: str | None = None, address: str | None = None,
                   particular_platform: str | None = None,
-                  particular_seller_id: str | None = None) -> str:
+                  particular_seller_id: str | None = None,
+                  country_code: str = DEFAULT_COUNTRY) -> str:
+    # ``country_code`` is accepted for signature symmetry with the other coders, but is
+    # DELIBERATELY NOT used here: this function returns the immutable dedup pre-image, and
+    # mixing the country into it would change every sha256 hash and re-key all entities.
+    # The country lives only in the human-facing prefix minted by mint_code().
     # A private individual seller. Identity is the platform's OWN stable seller id where
     # the source exposes one (milanuncios authorId, wallapop user_id) -> one entity per
     # real human, so a particular with N cars is a single multi-car seller. Where the
@@ -73,7 +100,8 @@ def canonical_key(*, domain: str | None = None, cif: str | None = None,
 def cdp_pair(*, province_code: str, domain: str | None = None, cif: str | None = None,
              name: str | None = None, municipality_code: str | None = None,
              address: str | None = None, particular_platform: str | None = None,
-             particular_seller_id: str | None = None) -> tuple[str, str]:
+             particular_seller_id: str | None = None,
+             country_code: str = DEFAULT_COUNTRY) -> tuple[str, str]:
     """Return ``(canonical_key, cdp_code)`` — the dedup pre-image key AND its hashed code.
 
     cdp_code() delegates here so callers that must persist ``entity.canonical_key`` (the audit
@@ -84,16 +112,19 @@ def cdp_pair(*, province_code: str, domain: str | None = None, cif: str | None =
     key = canonical_key(domain=domain, cif=cif, name=name, municipality_code=municipality_code,
                         province_code=province_code, address=address,
                         particular_platform=particular_platform,
-                        particular_seller_id=particular_seller_id)
+                        particular_seller_id=particular_seller_id,
+                        country_code=country_code)
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return key, f"CDP-ES-{province_code}-{_base32(digest)}"
+    return key, mint_code(province_code=province_code, digest=digest, country_code=country_code)
 
 
 def cdp_code(*, province_code: str, domain: str | None = None, cif: str | None = None,
              name: str | None = None, municipality_code: str | None = None,
              address: str | None = None, particular_platform: str | None = None,
-             particular_seller_id: str | None = None) -> str:
+             particular_seller_id: str | None = None,
+             country_code: str = DEFAULT_COUNTRY) -> str:
     return cdp_pair(province_code=province_code, domain=domain, cif=cif, name=name,
                     municipality_code=municipality_code, address=address,
                     particular_platform=particular_platform,
-                    particular_seller_id=particular_seller_id)[1]
+                    particular_seller_id=particular_seller_id,
+                    country_code=country_code)[1]

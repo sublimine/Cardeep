@@ -7,8 +7,9 @@ secondarily, DGT authorised-centre counts.
 
 This module is the wired seam: drop a CSV with columns
     province_code,segment,n_external
-under countries/ES/census/ and it is loaded into the {(province,segment): N}
-dict that seal.compute(external_census=...) consumes, and compared against N̂.
+under countries/<country>/census/ (countries/ES/census/ by default) and it is loaded
+into the {(province,segment): N} dict that seal.compute(external_census=...) consumes,
+and compared against N̂.
 
 No census figures are fabricated here. Until the real DIRCE/DGT extract is placed,
 ``load_external_census`` returns {} and triangulation is reported as
@@ -20,18 +21,33 @@ from __future__ import annotations
 import csv
 import pathlib
 
-CENSUS_DIR = pathlib.Path(__file__).resolve().parents[2] / "countries" / "ES" / "census"
-DEFAULT_CSV = CENSUS_DIR / "dirce_cnae451.csv"
+from pipeline.paths import DEFAULT_COUNTRY, census_dir
+
+# Census CSV filename is country-agnostic; only the directory differs per country.
+CENSUS_CSV_NAME = "dirce_cnae451.csv"
+
+# Module-level ES constants retained for back-compat: status() and any importer that
+# references CENSUS_DIR/DEFAULT_CSV keep resolving to countries/ES/census exactly as
+# before. census_dir() with no arg == parents[2]/countries/ES/census (byte-identical).
+CENSUS_DIR = census_dir()
+DEFAULT_CSV = CENSUS_DIR / CENSUS_CSV_NAME
 
 
-def load_external_census(path: pathlib.Path | None = None) -> dict[tuple[str | None, str | None], float]:
+def load_external_census(
+    path: pathlib.Path | None = None,
+    country_code: str = DEFAULT_COUNTRY,
+) -> dict[tuple[str | None, str | None], float]:
     """Load {(province_code, segment): n_external} from a census CSV.
 
     Expected header: province_code,segment,n_external. A row with empty
     province_code or segment encodes a national / all-segment anchor (None key).
     Returns {} if the file is absent (seam wired, data pending).
+
+    ``country_code`` selects the per-country census dir when ``path`` is None; it
+    defaults to ES so the resolved CSV is identical to the historical DEFAULT_CSV.
+    An explicit ``path`` always wins (back-compat with existing callers).
     """
-    p = path or DEFAULT_CSV
+    p = path or (census_dir(country_code) / CENSUS_CSV_NAME)
     if not p.exists():
         return {}
     out: dict[tuple[str | None, str | None], float] = {}

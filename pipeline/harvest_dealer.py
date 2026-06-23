@@ -18,6 +18,7 @@ import asyncpg
 
 from pipeline.geo import GeoResolver
 from pipeline.ingest import ingest_dealer
+from pipeline.paths import data_root
 from pipeline.recipe import write_recipe
 from pipeline.sources.autoscout24 import harvest_dealer as scrape_dealer
 
@@ -53,8 +54,11 @@ async def run(slug: str) -> None:
                              severity="warning", message=f"as24: no dealer parsed for {slug!r}")
             print("no dealer parsed; abort"); return
 
-        # raw dump (ephemeral, gitignored)
-        raw_dir = ROOT / "data" / "ES" / slug / "raw"
+        # raw dump (ephemeral, gitignored). Country is passed explicitly (ES default):
+        # at this point the cdp_code is not yet known (ingest runs below), and this
+        # orchestrator is the ES AutoScout24 path. data_root('ES') == data/ES, identical
+        # to the old literal; ROOT is threaded so the resolution honors this module's ROOT.
+        raw_dir = data_root("ES", root=ROOT) / slug / "raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
         (raw_dir / "harvest.json").write_text(
             json.dumps([v.__dict__ for v in harvest.vehicles], ensure_ascii=False, indent=1),

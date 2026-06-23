@@ -2,7 +2,8 @@
 
 The recipe is the asset that lets Cardeep re-scrape without the raw crude. For
 structured sources (AS24 __NEXT_DATA__) the recipe records the source engine,
-the field map, and the version. Stored as YAML under countries/ES/.
+the field map, and the version. Stored as YAML under countries/<country>/recipes/
+(the country is derived from the cdp_code; defaults to ES).
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ import logging
 from pathlib import Path
 
 import yaml
+
+from pipeline.paths import country_of_cdp, recipes_flat_dir
 
 ROOT = Path(__file__).resolve().parent.parent
 log = logging.getLogger(__name__)
@@ -38,7 +41,10 @@ AS24_RECIPE = {
 
 
 def write_recipe(cdp_code: str, recipe: dict | None = None) -> Path:
-    """Persist recipe.yaml for a dealer under countries/ES/recipes/<cdp_code>.yaml.
+    """Persist recipe.yaml for a dealer under countries/<country>/recipes/<cdp_code>.yaml.
+
+    The country is parsed from the cdp_code (CDP-XX-...); every ES code resolves to
+    countries/ES/recipes/, identical to the historical location.
 
     Serialized with the YAML library (NOT a hand-rolled dumper): the old _yaml_dump emitted bare
     `key: value` with no quoting, so any value containing ': ' (e.g. a facet enumeration like
@@ -55,7 +61,12 @@ def write_recipe(cdp_code: str, recipe: dict | None = None) -> Path:
         raise ValueError(
             f"write_recipe({cdp_code}): recipe must be a non-empty dict, got {type(recipe).__name__}")
 
-    out_dir = ROOT / "countries" / "ES" / "recipes"
+    # Country is derived from the cdp_code (CDP-XX-...) so each recipe lands under its
+    # own country tree with no extra argument. For every ES code (all of them today)
+    # country_of_cdp returns 'ES' -> countries/ES/recipes, identical to the old literal.
+    # ROOT is threaded through so test_recipe.py's monkeypatch.setattr(recipe,'ROOT',...)
+    # seam keeps working.
+    out_dir = recipes_flat_dir(country_of_cdp(cdp_code), root=ROOT)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{cdp_code}.yaml"
     header = f"# Cardeep extraction recipe — {cdp_code}\n# Reusable; re-scrape without raw crude.\n"
