@@ -30,7 +30,6 @@ tests/test_dedup_integrity.py
 tests/test_dedup_invariants.py
 tests/test_km_enrichment.py
 tests/test_province_seal_view.py
-tests/test_servable_status_filter.py
 tests/test_inquisition_lenses_db.py
 
 # (2) Network / external-engine / display dependent (real fetch cascade / fingerprints / engine
