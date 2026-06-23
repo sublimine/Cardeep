@@ -3389,3 +3389,20 @@
 - LECCION (memoria): el re-cluster era Director-gated; ejecutarlo agresivo en loop autonomo destapo el
   over-merge. Recuperado a la raiz; overture (+16k dealers) logrado. NO repetir mutaciones de datos servidos
   sin plan completo verificado.
+
+## 2026-06-23 — VIGILANCIA #9: AUDITORÍA E2E ORQUESTADA + plan maestro + FASE 0 lanzada (mandato replicación)
+- Owner (hands-off, ultracode): producto ENTERO E2E + biblia A→Z replicable a otros países al 100%; orquestar
+  con workflows hasta el final; decidir como CEO sin preguntar (explicando lógica); no rendirse/asumir/superficial.
+- Workflow AUDITORÍA E2E (w1kocil4d, 9 agentes/721k tokens, evidencia real): veredicto honesto = producto E2E
+  vivo para ES (API+delta excelente) con 4 frentes abiertos (replicación rota en código; cosecha 13%; identidad
+  parcial 339.8k particulares; CI solo --collect-only). Plan maestro 10 fases + 9 workflows en
+  plans/MASTER-PLAN-E2E-REPLICATION.md.
+- DECISIÓN CEO (sin preguntar, lógica): arrancar por FASE 0 (desbloquear replicación en código) = fundamento del
+  objetivo primario + #1 CRITICAL + backward-compat (cero regresión ES). Secuenciar entre fases que tocan
+  datos/esquema servidos; paralelizar dentro de cada fase. Migración la aplico+verifico yo (lección re-cluster).
+- Reconciliación super-canónica: decidida = cadena completa (helper ya alineado; particulares→1 correcto, no
+  afecta dealer-count). Se integra en la Fase 3 (identidad).
+- FASE 0 lanzada (workflow w97w3xv18): design→implement (codes.py/paths/migración 0052_country/golden)→review
+  adversarial. Al volver: integro + aplico migración additive + golden + Ferrari verde + cero regresión ES.
+- PROXIMO: integrar/verificar Fase 0 -> encadenar CI-seeded-snapshot, identity-r-stratum, harvest-drain,
+  recipe-harness, ops-hardening, bible-executable, piloto-país, auditoría-adversarial-final.
