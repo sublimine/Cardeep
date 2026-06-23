@@ -3515,3 +3515,23 @@
   supervisado — NUNCA & prohibido en este entorno).
 - PROXIMO: VIGILANCIA (salud 2 schedulers + CI + cosecha last_seen avanza; avanzar 5/3b/G1/CI-seeded
   incrementalmente via workflow si procede).
+
+## 2026-06-23 — FASE 1 (CI = prueba E2E real) AVANZADA en vigilancia: db-tests job (686 tests en CI)
+- Contexto: el audit FASE 9 marco FASE 1 como over-claim trackeado (CI solo corria unit 465 + collect;
+  ~1112 tests DB-backed nunca se EJECUTABAN en CI). Avanzado en vigilancia (no-idle) a la raiz.
+- INVENTARIO EMPIRICO (no adivinando): levante un Postgres ephemeral aislado (docker :5434, NO toca el
+  censo vivo :5433), migre desde cero (48/48, 0 drift), y corri los no-unit contra DB-vacia-migrada.
+  Hallazgo: de ~1006 no-unit/no-red, 878 PASAN en DB vacia (siembran sus datos) = fixture-self-sufficient.
+- IMPLEMENTADO additive: tests/ci_local_only.txt (manifiesto de ficheros local-only, categorizado) +
+  job CI `db-tests` (postgres:16 ephemeral + migrate up + pytest -m "not unit" --ignore=<manifiesto>).
+- LECCION (verificacion x2): el repro LOCAL fue poco fiable (la 5433-viva se filtra: tests que hardcodean
+  5433 golpean datos vivos y pasan en falso). El primer push expuso 15 ficheros (55 tests) que pasaban
+  local pero fallaban en CI-vacia (census/served-data + geo-seed FK + R-bridge glm + display). CI fue el
+  clasificador FIEL; los 15 -> manifiesto con causa. Segundo push: los 5 jobs CI VERDES, db-tests corre
+  686 tests DB-backed self-seeding (+465 unit = ~1151 ejecutados en CI vs 465 antes).
+- Commits: 36adb7d (job+manifiesto) + c09c94c (manifiesto completo desde el run CI empirico). CI success.
+- FASE 1 estado: AVANZADA sustancialmente (CI ya no es solo unit). RESTA incremental (recuperar excluidos):
+  sembrar geo backbone en CI (recupera geo-*), instalar R (recupera test_exhaustiveness), xvfb
+  (test_virtual_display), y un seeded-snapshot del censo para los census-dependent. Tracked con causa.
+- PROXIMO: VIGILANCIA continua; siguiente incremento FASE 1 = geo-seed en el job db-tests (recupera ~15
+  tests geo) cuando proceda.
