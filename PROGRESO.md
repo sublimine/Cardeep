@@ -3594,3 +3594,32 @@
   OLA 1 batch B (dedup_invariants served-run + servable-mechanical), batch C (seal/exhaustiveness/
   denominator), OLA 2 (pagination/canonical/ratelimit, cdp_codes exactos); local-only floor honesto.
 - PROXIMO: VIGILANCIA; continuar batch B/C/OLA2 incremental (mecanismo probado), siempre verificar via CI.
+
+## 2026-06-23 — AUDITORIA DE INTEGRIDAD DEL FRONTEND (owner detecto gap) + 4 fixes a la raiz
+- DISPARO: el owner vio el portal mostrando 1.704.968 coches vs /stats vivo 1.841.679. Workflow auditoria
+  wyp2ucequ (12 agentes, cada campo contra recomputo DB): 15 campos LIMPIOS (la API es fiel a la DB),
+  8 defectos (presentacion + 3 bugs backend + 1 perf + 1 deploy-stale). Reporte en tasks/wyp2ucequ.output.
+- LECCION CRITICA confirmada: el repro local NO es fiable (tests/superficies hardcodean :5433 = BD viva se
+  filtra); ni un agente sintetizador (cayo en el mismo leak y afirmo algo falso). Verificar SIEMPRE contra
+  evidencia directa (curl + recomputo DB), nunca asumir.
+- FIX #1 (aeb8bce) FABRICACIONES erradicadas: Landing.tsx FALLBACK hardcodeado (1_704_968/61_729/events=0)
+  ELIMINADO -> '—' honesto mientras carga (nunca numero falso); web/public/geo/seal-snapshot.json BORRADO
+  (snapshot stale, 6 verdicts invertidos) + loadSealSnapshot dead-code fuera -> mapa honesto en fallo API;
+  desguace % cap 100 (era 215,6% absurdo). npm build verde.
+- FIX #2 (a49c0a0) GUARDRAIL tests/test_web_no_fabricated_data.py (@unit, CI cada push): falla si reaparece
+  snapshot fabricado / objeto tipado-API hardcodeado / literal _-grande en web/src. Verificado x2 (caza el
+  bug reinyectado). -> "que no vuelva a pasar".
+- FIX #3 (c708881) EVENTS jsonb: vehicle_event.old_value/new_value devuelto como STRING (asyncpg sin codec)
+  -> detalle PRICE/KM_CHANGE nunca renderizaba. Triple: main.py codec jsonb en pool init (decodifica a dict,
+  verificado {'price':36090.0}); events.ts coerce objeto|string|number (renderiza YA con API actual via HMR);
+  types.ts EventValue. test_api_auth+canonical 21 passed.
+- FIX #4 (7279687) PERF /stats 83.6s -> 0.03s: migracion 0055 product_stats (1 fila, exacto, additive) +
+  services/api/stats.py compute_counts (fuente unica) + scripts/refresh_product_stats.py + ops.py lee cache
+  (fallback live) + scheduler job refresco 30min. Aplicada+poblada en vivo (54587/1841679/...); TestClient
+  /stats=0.03s source=precomputed computed_at expuesto. CI 5/5 verde.
+- PENDIENTE (no data-integrity): #7 paginacion pagina-fantasma (has_more=len==size sin COUNT real; cosmetico,
+  ~7 handlers, fix N+1) = tracked; #8 /geo/exhaustiveness 404 = el uvicorn :8090 corre BUILD VIEJO (la ruta
+  existe en codigo) -> REINICIAR API. SpainMap 'venta' hardcode = default aceptable.
+- ACCION OWNER (1 paso manual): reiniciar uvicorn :8090 (+ harvest scheduler) -> activa /geo/exhaustiveness,
+  el codec de events, y el /stats rapido (yo no puedo: proceso persistente, NUNCA & / run_in_background).
+- PROXIMO: reportar; (opcional) cerrar #7 paginacion; vigilancia.
