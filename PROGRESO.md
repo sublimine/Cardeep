@@ -3455,3 +3455,14 @@
 - Mandato 10 fases: SELLADAS 0,7,3,8 + 4-código. Ferrari bb7lffn39 sella 0053. PENDIENTE: activar Fase 4
   (reinicio scheduler ventana limpia) + Fases 5 (recipe-harness) / 2 (ops) / 6 (API-delta polish) / 3b
   (particulares R-stratum) / 9 (auditoría adversarial final).
+
+## 2026-06-23 — FASE 8 SELLADA (Ferrari 1521/0) + FASE 4 ACTIVADA
+- Ferrari completo 1521 passed / 0 failed / 2 skipped / 1 xfailed. Las 2 fallas previas eran brittleness
+  live-vs-snapshot (de-flakeadas con evidencia: richest gross>50; /stats dealer ±200 cache-tolerant) NO bugs.
+- FASE 4 ACTIVADA via reinicio deliberado del harvest scheduler (mate scheduler 10828 + wallapop 27080 en
+  vuelo -> relancé; lock 1128354372 re-adquirido; discovery daemon 32568 intacto). Config Fase 4 LIVE:
+  motor_es DUE con argv --segment all --max-cells 40 --limit 12000 --cursor (root-fix del silencio 176h,
+  correra via cursor el proximo tick); dealerprobe --limit 2000. wallapop re-cosecha idempotente proximo ciclo.
+- Mandato 10 fases: HECHAS 0,7,3,8 (selladas) + 4 (codigo+activada) = 6/10. La CORONA (replicacion) probada.
+  PENDIENTE: Fase 6 (API/delta polish) / 5 (recipe-harness) / 2 (ops) / 3b (particulares) / 9 (auditoria final).
+- PROXIMO: verificar motor_es escribe last_ok (proximo tick) + encadenar Fase 6.
