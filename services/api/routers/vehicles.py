@@ -11,7 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
-from services.api.deps import err, ok, require_api_key
+from services.api.deps import err, ok, page_slice, require_api_key
 from services.api.ratelimit import RATE_DEFAULT, limiter
 
 router = APIRouter()
@@ -53,16 +53,17 @@ async def vehicle_history(
              LIMIT $2 OFFSET $3
             """,
             vehicle_ulid,
-            size,
+            size + 1,
             offset,
         )
+        rows, has_more = page_slice(rows, size)
         items = [{**dict(r), "observed_at": str(r["observed_at"])} for r in rows]
         return ok(
             items,
             page=page,
             size=size,
             returned=len(items),
-            has_more=len(items) == size,
+            has_more=has_more,
             vehicle_ulid=vehicle_ulid,
         )
 

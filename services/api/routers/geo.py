@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.cache import cache_set, try_cache_get
-from services.api.deps import err, ok, require_api_key
+from services.api.deps import err, ok, page_slice, require_api_key
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 
 router = APIRouter()
@@ -274,15 +274,16 @@ async def entities_by_province(
             LIMIT $2 OFFSET $3
             """,
             province_code,
-            size,
+            size + 1,
             offset,
         )
+        rows, has_more = page_slice(rows, size)
         response = ok(
             [dict(r) for r in rows],
             page=page,
             size=size,
             returned=len(rows),
-            has_more=len(rows) == size,
+            has_more=has_more,
             province=province_code,
         )
     return cache_set(request, response)
@@ -328,15 +329,16 @@ async def entities_by_municipality(
             """,
             province_code,
             muni_code,
-            size,
+            size + 1,
             offset,
         )
+        rows, has_more = page_slice(rows, size)
         response = ok(
             [dict(r) for r in rows],
             page=page,
             size=size,
             returned=len(rows),
-            has_more=len(rows) == size,
+            has_more=has_more,
             province=province_code,
             municipality=muni_code,
         )

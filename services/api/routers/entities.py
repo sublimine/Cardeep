@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.cache import cache_set, try_cache_get
-from services.api.deps import err, ok, require_api_key, resolve_cluster
+from services.api.deps import err, ok, page_slice, require_api_key, resolve_cluster
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 
 router = APIRouter()
@@ -141,9 +141,10 @@ async def get_inventory(
             LIMIT $2 OFFSET $3
             """,
             cluster.member_ulids,
-            size,
+            size + 1,
             offset,
         )
+        rows, has_more = page_slice(rows, size)
         items = [
             {
                 **dict(r),
@@ -158,7 +159,7 @@ async def get_inventory(
             page=page,
             size=size,
             returned=len(items),
-            has_more=len(items) == size,
+            has_more=has_more,
         )
         return cache_set(request, response)
 
@@ -212,7 +213,7 @@ async def get_delta(
                 """,
                 cluster.member_ulids,
                 since_dt,
-                size,
+                size + 1,
                 offset,
             )
         else:
@@ -225,14 +226,15 @@ async def get_delta(
                  LIMIT $2 OFFSET $3
                 """,
                 cluster.member_ulids,
-                size,
+                size + 1,
                 offset,
             )
+        rows, has_more = page_slice(rows, size)
         items = [{**dict(r), "observed_at": str(r["observed_at"])} for r in rows]
         return ok(
             items,
             page=page,
             size=size,
             returned=len(items),
-            has_more=len(items) == size,
+            has_more=has_more,
         )

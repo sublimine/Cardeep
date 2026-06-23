@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.cache import cache_set, try_cache_get
-from services.api.deps import err, ok, require_api_key
+from services.api.deps import err, ok, page_slice, require_api_key
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, RATE_HEALTH, limiter
 from services.api.stats import STAT_KEYS, compute_counts
 
@@ -135,9 +135,10 @@ async def list_alerts(
                created_at DESC
              LIMIT $1 OFFSET $2
             """,
-            size,
+            size + 1,
             offset,
         )
+        rows, has_more = page_slice(rows, size)
         items = [
             {
                 **dict(r),
@@ -150,7 +151,7 @@ async def list_alerts(
             page=page,
             size=size,
             returned=len(items),
-            has_more=len(items) == size,
+            has_more=has_more,
         )
 
 

@@ -57,6 +57,17 @@ def err(message: str, status: int = 404) -> JSONResponse:
     return JSONResponse({"ok": False, "data": None, "error": message, "meta": None}, status_code=status)
 
 
+def page_slice(rows: list[Any], size: int) -> tuple[list[Any], bool]:
+    """Honest pagination from an over-fetch: given rows read with ``LIMIT size + 1``, return
+    ``(rows[:size], has_more)``.
+
+    ``has_more`` is True iff a (size+1)-th row existed, so the LAST real page reports has_more=False
+    even when the total is an exact multiple of ``size``. The previous ``len(rows) == size`` test
+    produced a phantom empty "next page" in that exact-multiple case (frontend audit #7).
+    """
+    return rows[:size], len(rows) > size
+
+
 # ---------------------------------------------------------------------------
 # Cluster resolution helper (CAMPAIGN B1.5)
 # ---------------------------------------------------------------------------

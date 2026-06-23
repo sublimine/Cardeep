@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.cache import cache_set, try_cache_get
-from services.api.deps import err, ok, require_api_key
+from services.api.deps import err, ok, page_slice, require_api_key
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 
 router = APIRouter()
@@ -63,8 +63,9 @@ async def platform_inventory(
                   AND v.status = 'available'
                 ORDER BY pl.first_seen DESC, pl.vehicle_ulid
                 LIMIT $2 OFFSET $3""",
-            prow["entity_ulid"], size, offset,
+            prow["entity_ulid"], size + 1, offset,
         )
+        rows, has_more = page_slice(rows, size)
         items = []
         for r in rows:
             d = dict(r)
@@ -78,7 +79,7 @@ async def platform_inventory(
             page=page,
             size=size,
             returned=len(items),
-            has_more=len(items) == size,
+            has_more=has_more,
             platform=prow["trade_name"],
             cdp_code=cdp_code,
         )
