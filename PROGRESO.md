@@ -3479,3 +3479,39 @@
   incrementalmente (alto riesgo de romper harvest vivo / recompensa moderada; el patron ya esta en la biblia
   GUIDE-NEW-SOURCE-ADAPTER) -> tracked, NO refactor masivo a ciegas.
 - PROXIMO: Fase 2 ops -> Fase 9 auditoria final (re-medir vivo + re-evaluar MSE + cierre).
+
+## 2026-06-23 — FASE 2 SELLADA + FASE 9 AUDITORIA FINAL + MANDATO CERRADO (8/10, 92%)
+- FASE 2 ops-hardening (37dd107, pusheada, CI success): config_guard prod-gate fail-closed
+  (assert_safe_dsn + require_api_key_or_fail; no-op dev/test byte-identico); migracion 0054
+  scheduler_lease (additive IF NOT EXISTS, reversible) aplicada; lock_heartbeat cableado en AMBOS
+  schedulers (claim del lease + job heartbeat 2min + stale-retry SEGURO: pg_try_advisory_lock es el
+  mutex atomico, cero riesgo AS24); require_prod_secrets en ambos; deploy-bible DEPLOY-DURABLE-DAEMONS
+  + units systemd. Verificado: prod-gate x5 (503/401/pass + DSN RuntimeError/pass), dev byte-identico
+  (test_api_auth 8/0), Ferrari 1576/0.
+- FASE 9 auditoria adversarial multi-perspectiva (workflow w06pkt7nx; 5 agentes, 4 lentes read-only:
+  factual / senior=code-reviewer / security=security-reviewer / consistencia+replicacion). VEREDICTO:
+  CLOSED_WITH_MINOR, zero_regressions=True, 92%. La auditoria REPRODUJO independientemente Ferrari
+  1576/0 + todos los conteos + el sello HONESTO (no forzado: seal.compute usa coverage_lower con ci_high
+  conservador, IDENT_CAP degrada strata explosivos, separa CERTIFIED de UNCERTIFIED). 14 findings TODOS
+  MEDIUM/LOW, 0 HIGH/CRITICAL, 0 regresiones.
+- HARDENING FASE 9 (24a7220, additive/dev-safe, a la raiz, no maquillaje): main.py lifespan fail-fast
+  API-key en prod; record_heartbeat started_at CASE solo-takeover; acquire_with_stale_retry extraido
+  (DRY ambos schedulers) +5 tests; redact password en --dry-run; dead-code; fixes honestidad docs
+  (DEPLOY localhost, SPAIN_SEALED addendum 12/210 unit=resolved, deps.py comentario). Ferrari 1581/0.
+- CONTEOS VIVOS FINALES (2026-06-23): entity 433.211 (no-particular 91.441: compraventa 76.105, garaje
+  10.021, concesionario_oficial 2.300, subasta 177, plataforma 18, oem_vo_portal 14, importador 11,
+  rent_a_car_vo 6, cadena 4; desguace 2.785 fuera-scope); vehicle 2.338.109 -> servable 2.218.030;
+  vehicle_event 2.683.111 (NEW 2.34M / PRICE 145.921 / GONE 124.248 / PHOTO 62.140 / KM 11.696);
+  served dealers 395.504; v_canonical 91.319; cosecha VIVA (365k vistos hoy; motor_es resucitado via
+  cursor). Sello MSE resolved (fase9-audit-20260623): 12/210 sealed, N_hat=15.560 IC95%[13.509-17.611],
+  cobertura certificada 42,69% (lower 37,72%) — techo €0 HONESTO, no forzado.
+- MANDATO CERRADO: producto E2E + replicable (corona DE probada+revertida) + biblia A->Z = DELIVERED.
+  8/10 fases entregadas+verificadas (0,2,3,4,6,7,8,9). TRACKED con causa declarada (NO blockers, NO
+  maquillaje): FASE 5 (41 conectores RecipeHarness, incremental — patron en biblia GUIDE-NEW-SOURCE-
+  ADAPTER); FASE 3b (particulares MSE — no son puntos de venta); FASE 1 (CI corre unit+collect+frontend+
+  secret-scan, los 1581 tests se verifican LOCAL pre-push; seeded-snapshot job = follow-up real);
+  G1 6o-blocker replicacion (complete.py _CDP_CODE_RE/_PROVINCE_RE ES-hardcoded, xfail(strict)-tracked,
+  ensanchar a ^CDP-([A-Z]{2})- en onboarding pais #2); activacion del lease (requiere restart scheduler
+  supervisado — NUNCA & prohibido en este entorno).
+- PROXIMO: VIGILANCIA (salud 2 schedulers + CI + cosecha last_seen avanza; avanzar 5/3b/G1/CI-seeded
+  incrementalmente via workflow si procede).
