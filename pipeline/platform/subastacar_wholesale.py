@@ -106,6 +106,7 @@ from pipeline.platform._core.contract import PlatformSpec
 from pipeline.platform._core.persistence import (
     ensure_platform_entity as _core_ensure_platform_entity,
 )
+from pipeline.delta import emit_gone_events
 from pipeline.delta_guard import should_emit_gone
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run, resolve_alerts
 from pipeline.recipe import write_recipe
@@ -667,6 +668,10 @@ async def _reconcile_aged_out(conn: asyncpg.Connection, platform_ulid: str,
         await conn.execute(
             "UPDATE vehicle SET status='gone', last_seen=now() "
             "WHERE vehicle_ulid = ANY($1::text[])", aged)
+        # Emit the GONE delta event for each retired vehicle (matches the sibling auction
+        # connector localizavo_wholesale.py:695). The prior flip-without-emit left silent bajas
+        # (24 GONE-less orphans, FASE 6) and broke the delta history for retired subastacar stock.
+        stats["gone_events"] = stats.get("gone_events", 0) + await emit_gone_events(conn, aged)
     stats["retired_listings"] += len(aged)
     stats["retired_vehicles"] += len(aged)
 
