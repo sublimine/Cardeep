@@ -145,11 +145,16 @@ export interface VehicleListItem {
   last_seen: string;
 }
 
+// vehicle_event old_value/new_value payload: a small jsonb object ({price}/{km}/{photo}/{title}). The
+// API serializes it as an object once the jsonb codec is active, or transitionally as a JSON string;
+// lib/events.ts coerces both. Typed (not `unknown`) so the compiler guides field access.
+export type EventValue = { price?: number; km?: number; photo?: string; title?: string } | string | null;
+
 // GET /entities/{cdp}/delta -> DeltaEvent[]
 export interface DeltaEvent {
   event_type: 'NEW' | 'GONE' | 'PRICE_CHANGE' | 'KM_CHANGE' | 'PHOTO_CHANGE' | string;
-  old_value: unknown;
-  new_value: unknown;
+  old_value: EventValue;
+  new_value: EventValue;
   observed_at: string;
   entity_ulid: string;
 }
@@ -178,8 +183,8 @@ export interface VehicleDetail {
 // GET /vehicles/{ulid}/history -> VehicleHistoryEvent[] (oldest first)
 export interface VehicleHistoryEvent {
   event_type: string;
-  old_value: unknown;
-  new_value: unknown;
+  old_value: EventValue;
+  new_value: EventValue;
   observed_at: string;
 }
 

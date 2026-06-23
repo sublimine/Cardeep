@@ -57,6 +57,7 @@ SU-D2: Security hardening
 """
 from __future__ import annotations
 
+import json
 import os
 from contextlib import asynccontextmanager
 
@@ -85,6 +86,17 @@ from services.api.routers import entities, geo, ops, platforms, vehicles
 from pipeline.config_guard import require_prod_secrets
 
 
+async def _init_connection(conn: asyncpg.Connection) -> None:
+    """Decode jsonb/json columns to Python objects (asyncpg returns them as raw STRINGS by default).
+
+    Without this, vehicle_event.old_value/new_value (jsonb like {"price": 40000.0}) reach the API as a
+    JSON-encoded string, so the frontend's PRICE_CHANGE/KM_CHANGE detail never renders. The codec makes
+    every jsonb/json column serialize as a proper JSON object in the {ok,data,error,meta} envelope.
+    """
+    await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
+    await conn.set_type_codec("json", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Fail fast in prod on a dev-default DSN or a missing API key, so a misconfigured server never
@@ -92,7 +104,7 @@ async def lifespan(app: FastAPI):
     # startup guard; the per-request require_api_key dependency stays the second line of defence).
     # No-op in dev/test.
     require_prod_secrets((DSN, "CARDEEP_DSN"), require_api_key=True)
-    app.state.pool = await asyncpg.create_pool(DSN, min_size=1, max_size=8)
+    app.state.pool = await asyncpg.create_pool(DSN, min_size=1, max_size=8, init=_init_connection)
     try:
         yield
     finally:
