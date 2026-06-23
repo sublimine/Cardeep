@@ -847,6 +847,26 @@ def _check_silence() -> None:
 # Live scheduler
 # ---------------------------------------------------------------------------
 
+# Cadence for the product_stats cache refresh that backs a fast /stats (env-overridable).
+PRODUCT_STATS_REFRESH_MIN: int = int(os.environ.get("CARDEEP_STATS_REFRESH_MIN", "30"))
+
+
+def _refresh_product_stats_job() -> None:
+    """Picklable cadence job: refresh the product_stats cache (fast /stats). Best-effort — a failed
+    refresh must never kill the scheduler; the API falls back to a live compute until the next success.
+    Runs off the request path so the heavy COUNT(DISTINCT)/JOIN never blocks a /stats caller again.
+    """
+    import asyncio
+
+    try:
+        from scripts.refresh_product_stats import refresh
+
+        counts = asyncio.run(refresh(_ASYNCPG_DSN))
+        log.info("product_stats refreshed: %s", counts)
+    except Exception as exc:  # best-effort — never propagate into the scheduler
+        log.warning("product_stats refresh failed: %s", exc)
+
+
 def _lease_heartbeat_job(lock_key: int, holder: str) -> None:
     """Picklable heartbeat job: bump the observable scheduler_lease for ``lock_key``.
 
@@ -1020,6 +1040,21 @@ def _start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=120,
+    )
+
+    # Refresh the product_stats cache off-request so GET /stats is a single-row read, not a ~83s
+    # 5x COUNT(DISTINCT)/JOIN over millions. Best-effort + additive; the API falls back to live compute
+    # until the first refresh lands. Activates on the next scheduler restart.
+    scheduler.add_job(
+        _refresh_product_stats_job,
+        trigger="interval",
+        minutes=PRODUCT_STATS_REFRESH_MIN,
+        id="product_stats_refresh",
+        name="cardeep product_stats cache refresh (fast /stats)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=300,
     )
 
     log.info(

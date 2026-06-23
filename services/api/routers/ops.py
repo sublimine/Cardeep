@@ -7,12 +7,14 @@ SU-D2 additions:
 """
 from __future__ import annotations
 
+import asyncpg
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, require_api_key
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, RATE_HEALTH, limiter
+from services.api.stats import STAT_KEYS, compute_counts
 
 router = APIRouter()
 
@@ -72,29 +74,25 @@ async def stats(
         return cached
 
     async with request.app.state.pool.acquire() as c:
-        counts = {
-            "dealers": await c.fetchval(
-                """
-                SELECT count(DISTINCT vdr.resolved_cdp_code)
-                  FROM v_dealer_resolved vdr
-                  JOIN entity e ON e.entity_ulid = vdr.entity_ulid
-                 WHERE e.kind <> 'particular'
-                """
-            ),
-            "vehicles_unique_available": await c.fetchval(
-                """
-                SELECT count(*)
-                  FROM v_canonical_vehicle vc
-                  JOIN servable_vehicle v ON v.vehicle_ulid = vc.vehicle_ulid
-                 WHERE vc.vehicle_ulid = vc.canonical_vehicle_ulid
-                   AND v.status = 'available'
-                """
-            ),
-            "events": await c.fetchval("SELECT count(*) FROM vehicle_event"),
-            "provinces": await c.fetchval("SELECT count(*) FROM geo_province"),
-            "municipalities": await c.fetchval("SELECT count(*) FROM geo_municipality"),
-        }
-    response = ok({"counts": counts})
+        # Fast path: the precomputed product_stats row (refreshed off-request by the scheduler) — one
+        # single-row read instead of 5 COUNT(DISTINCT)/JOIN over millions (~83s cold). Falls back to a
+        # live compute when the row/table is absent (pre-migration 0055 / pre-first-refresh), so the
+        # endpoint always returns the EXACT counts — just instantly once warmed. computed_at is exposed
+        # so the (bounded) cache age is explicit, never a silent stale value.
+        row = None
+        try:
+            row = await c.fetchrow(
+                "SELECT dealers, vehicles_unique_available, events, provinces, municipalities, "
+                "computed_at FROM product_stats WHERE id = 1"
+            )
+        except asyncpg.exceptions.UndefinedTableError:
+            row = None
+        if row is not None:
+            counts = {k: row[k] for k in STAT_KEYS}
+            response = ok({"counts": counts}, computed_at=str(row["computed_at"]), source="precomputed")
+        else:
+            counts = await compute_counts(c)
+            response = ok({"counts": counts}, source="live")
     return cache_set(request, response)
 
 
