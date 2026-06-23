@@ -3440,3 +3440,18 @@
   limpia (autocasion_facet en vuelo ahora) — config durable, activa al reiniciar.
 - Mandato 10 fases: SELLADAS 0,7,3 + Fase 4 código. PROXIMO: FASE 8 PILOTO país #2 (corona del mandato:
   migracion 0053 onboarding PK-swap + 1 dealer DE end-to-end + cero regresion ES) -> luego 5/2/6/3b/9.
+
+## 2026-06-23 — FASE 8: REPLICACIÓN PROBADA end-to-end (LA CORONA DEL MANDATO)
+- Migración 0053 onboarding APLICADA+verificada YO (la más arriesgada: PK swap geo->(country_code,code)
+  + 6 FK rewrites composite + relax CHECKs ES per-country + country_code en denominator_estimate/
+  organization). migrate verify 47/0 drift; PKs composite; 6 FKs; 0 orphans; ES byte-idéntico (golden);
+  ES counts intactos. Dry-run BEGIN/ROLLBACK del review previo + mi verificación. Reversible.
+- PILOTO país #2 (DE) PROBADO LIVE (scripts/pilot_country.py): CDP-DE-28-* coexiste con CDP-ES-28
+  (colisión de PK ELIMINADA: provincia '28' = (ES,Madrid) Y (DE,Brandenburg)); FK geo composite resuelve
+  por-país; CDP-DE resuelve sin bleed a ES; ES byte-idéntico. -> Revertido (DB servida ES-only, cero fake).
+- VEREDICTO: el objetivo PRIMARIO del owner (replicable a otros países al 100%) está VALIDADO end-to-end:
+  un dealer alemán fluye entity->CDP-DE->API coexistiendo con España sin tocar nada de ES. Fase 0 (código)
+  + Fase 7 (biblia) + Fase 8 (esquema+prueba) = la replicación es OPERATIVA, no aspiracional.
+- Mandato 10 fases: SELLADAS 0,7,3,8 + 4-código. Ferrari bb7lffn39 sella 0053. PENDIENTE: activar Fase 4
+  (reinicio scheduler ventana limpia) + Fases 5 (recipe-harness) / 2 (ops) / 6 (API-delta polish) / 3b
+  (particulares R-stratum) / 9 (auditoría adversarial final).
