@@ -3535,3 +3535,27 @@
   (test_virtual_display), y un seeded-snapshot del censo para los census-dependent. Tracked con causa.
 - PROXIMO: VIGILANCIA continua; siguiente incremento FASE 1 = geo-seed en el job db-tests (recupera ~15
   tests geo) cuando proceda.
+
+## 2026-06-23 — FASE 1 incremento #2: geo-seed + statsmodels en CI (+ bug real load_geo) — 5/5 verde
+- Workflow investigacion CI-recovery (w3w6qvd5w): 3 lentes cayeron por 529 Overloaded; el sintetizador
+  investigo solo pero CAYO en el leak 5433 (verifico contra datos vivos) -> afirmo que load_geo seedea ok.
+  ANTIALUCINACION: verifique yo contra ephemeral 5434 FRESCO y descubri el bug real (no confiar ciego).
+- BUG REAL arreglado a la raiz: scripts/load_geo.py usaba ON CONFLICT (code) pero el PK de geo es
+  compuesto (country_code, code) desde 0052/0053 -> InvalidColumnReferenceError en CUALQUIER DB fresca
+  (el bring-up limpio / onboarding de pais NO podian seedear geo; "funcionaba" solo en la 5433-viva
+  pre-swap). Fix: ON CONFLICT (country_code, code) (country_code DEFAULT 'ES'). Verificado en 5434 fresco:
+  52 provincias / 8132 municipios / 8117 centroides, idempotente.
+- IMPLEMENTADO (additive): paso "Seed geo backbone" en el job db-tests (load_geo + seed_geo_centroides,
+  data INE in-repo, €0 sin red) + statsmodels declarado en requirements-dev.txt (estaba instalado pero
+  no declarado -> en CI loglinear_mse degradaba a loglinear_failed y rompia test_exhaustiveness).
+- RECUPERADOS en CI (CI = clasificador fiel; local hardcodea :5433 y no se puede verificar fiel):
+  test_geo_reverse + test_geo_upsert_backfill + test_exhaustiveness. Commits 701bf79 + 3a9377c.
+  db-tests 686 -> 749 passed (8 skipped incl R-tests que skippean limpio sin R). CI total ~1214 tests
+  ejecutados (749 db + 465 unit) vs 465 hace 2 incrementos. 5/5 jobs verdes.
+- LECCION reforzada: el repro local NO es fiable (leak 5433) NI el de un agente (mismo leak); CI es el
+  unico clasificador fiel para DB-vacia. Iterar via CI, no asumir.
+- TRACKED con causa (siguiente increment): test_geo_fuzzy necesita el gazetteer de localidades/parroquias
+  (Orense->Ourense, parroquias) — sin seeder €0 aun; test_virtual_display (xvfb env); census snapshot
+  para el bloque (1) census-dependent. tests/ci_local_only.txt los documenta.
+- PROXIMO: investigar seeder €0 del gazetteer (data/geo/nomenclator_entidades_ine.csv existe) para
+  recuperar test_geo_fuzzy; si no es €0 limpio, dejar tracked y vigilancia.
