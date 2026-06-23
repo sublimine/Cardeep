@@ -102,15 +102,21 @@ def _cluster_counts(cdp: str) -> tuple[int, int, int]:
                     FROM entity e LEFT JOIN v_canonical vc ON vc.entity_ulid = e.entity_ulid
                    WHERE COALESCE(vc.canonical_ulid, e.entity_ulid) = (SELECT canon FROM target)
                 )
+                -- Mirror the API's available_inventory exactly (services/api/routers/entities.py):
+                -- servable_vehicle + LEFT JOIN + COALESCE-to-self. A vehicle absent from
+                -- v_canonical_vehicle (not yet in a vehicle-cluster run) IS its own canonical and
+                -- MUST be counted (audit P2 E-inventory). The prior INNER JOIN on `vehicle` dropped
+                -- those, undercounting any dealer with un-clustered cars and diverging from the API.
                 SELECT
                   count(*) FILTER (WHERE v.status='available') AS raw,
                   count(*) FILTER (WHERE v.status='available'
-                                   AND cv.vehicle_ulid = cv.canonical_vehicle_ulid) AS global_only,
-                  count(DISTINCT cv.canonical_vehicle_ulid)
+                                   AND (cv.vehicle_ulid IS NULL
+                                        OR cv.vehicle_ulid = cv.canonical_vehicle_ulid)) AS global_only,
+                  count(DISTINCT COALESCE(cv.canonical_vehicle_ulid, v.vehicle_ulid))
                     FILTER (WHERE v.status='available') AS within_cluster
-                FROM vehicle v
+                FROM servable_vehicle v
                 JOIN members m ON m.entity_ulid = v.entity_ulid
-                JOIN v_canonical_vehicle cv ON cv.vehicle_ulid = v.vehicle_ulid
+                LEFT JOIN v_canonical_vehicle cv ON cv.vehicle_ulid = v.vehicle_ulid
                 """,
                 cdp,
             )
@@ -799,25 +805,35 @@ class TestVDealerResolved:
 
     @SKIP_NO_DB
     def test_view_dealer_resolved_merge_correctness(self, client: TestClient) -> None:
-        """All 5 cluster members must resolve to the super-canonical in v_dealer_resolved.
+        """All 5 cluster members must resolve to ONE canonical in v_dealer_resolved.
 
-        Verifies the view is correctly populated: every member of the
-        CDP-ES-07-AVYXV1NM cluster (1 representative + 4 absorbed) has
-        resolved_cdp_code = 'CDP-ES-07-AVYXV1NM'.  A COUNT(*) = 5 proves
-        no member is missing and none points to a wrong target.
+        REP-ROBUST: the union-find representative cdp_code is NOT stable across re-clusters
+        (it shifted from CDP-ES-07-AVYXV1NM to another member when Overture was folded in), so
+        this asserts the genuine invariant — every member of CLUSTER_ALL shares a single
+        resolved_cdp_code (5 -> 1) — instead of pinning a volatile representative.
         """
-        count = _fetchval(
+        distinct_resolved = _fetchval(
+            f"""
+            SELECT count(DISTINCT resolved_cdp_code)
+              FROM v_dealer_resolved
+             WHERE cdp_code = ANY(ARRAY{CLUSTER_ALL!r}::text[])
+            """
+        )
+        assert distinct_resolved == 1, (
+            f"Expected all {len(CLUSTER_ALL)} cluster members to resolve to ONE canonical, "
+            f"but got {distinct_resolved} distinct resolved_cdp_code values. "
+            "v_dealer_resolved merge may be incomplete or stale."
+        )
+        present = _fetchval(
             f"""
             SELECT count(*)
               FROM v_dealer_resolved
              WHERE cdp_code = ANY(ARRAY{CLUSTER_ALL!r}::text[])
-               AND resolved_cdp_code = '{SUPER_CANONICAL}'
             """
         )
-        assert count == len(CLUSTER_ALL), (
-            f"Expected all {len(CLUSTER_ALL)} cluster members to resolve to "
-            f"'{SUPER_CANONICAL}', but only {count} do. "
-            "v_dealer_resolved merge may be incomplete or stale."
+        assert present == len(CLUSTER_ALL), (
+            f"Expected all {len(CLUSTER_ALL)} cluster members present in v_dealer_resolved, "
+            f"but only {present} are. A member is missing."
         )
 
     # ------------------------------------------------------------------
@@ -826,33 +842,41 @@ class TestVDealerResolved:
 
     @SKIP_NO_DB
     def test_entity_cluster_includes_absorbed_members(self, client: TestClient) -> None:
-        """Querying the super-canonical must expose n_aliases >= 4 (the absorbed members).
+        """Querying the cluster canonical must expose n_aliases >= 4 (the absorbed members).
 
-        Also verifies that querying an absorbed member resolves to the
-        super-canonical (canonical_cdp_code == SUPER_CANONICAL).
+        REP-ROBUST: derive the CURRENT canonical (the resolved_cdp_code the 5 members share) and
+        an absorbed member (a member whose own cdp_code is not the canonical) dynamically, since the
+        representative is not stable across re-clusters. Verifies the real invariant: the canonical
+        exposes the absorbed aliases, and an absorbed member resolves back to the canonical.
         """
-        # Super-canonical endpoint
-        r_canon = client.get(f"/entities/{SUPER_CANONICAL}")
-        assert r_canon.status_code == 200, (
-            f"/entities/{SUPER_CANONICAL} returned {r_canon.status_code}"
+        # Current super-canonical = the single resolved_cdp_code all CLUSTER_ALL members share.
+        canonical = _fetchval(
+            f"SELECT resolved_cdp_code FROM v_dealer_resolved "
+            f"WHERE cdp_code = ANY(ARRAY{CLUSTER_ALL!r}::text[]) LIMIT 1"
         )
-        data_canon = r_canon.json()["data"]
-        n_aliases = data_canon["n_aliases"]
-        assert n_aliases >= 4, (
-            f"Super-canonical {SUPER_CANONICAL} must expose n_aliases >= 4 "
-            f"(the 4 absorbed members), got n_aliases={n_aliases}"
+        # An absorbed member = a cluster member whose own cdp_code differs from the canonical.
+        absorbed = _fetchval(
+            f"SELECT cdp_code FROM v_dealer_resolved "
+            f"WHERE cdp_code = ANY(ARRAY{CLUSTER_ALL!r}::text[]) "
+            f"AND resolved_cdp_code <> cdp_code LIMIT 1"
+        )
+        assert canonical and absorbed, (
+            f"could not derive canonical/absorbed for the cluster {CLUSTER_ALL}"
         )
 
-        # Absorbed member endpoint — must resolve to super-canonical
-        absorbed = ABSORBED_MEMBERS[0]  # CDP-ES-07-Z0HM5Y3F
-        r_absorbed = client.get(f"/entities/{absorbed}")
-        assert r_absorbed.status_code == 200, (
-            f"/entities/{absorbed} returned {r_absorbed.status_code}"
+        r_canon = client.get(f"/entities/{canonical}")
+        assert r_canon.status_code == 200, f"/entities/{canonical} returned {r_canon.status_code}"
+        n_aliases = r_canon.json()["data"]["n_aliases"]
+        assert n_aliases >= 4, (
+            f"Canonical {canonical} must expose n_aliases >= 4 (the absorbed members), "
+            f"got n_aliases={n_aliases}"
         )
-        data_absorbed = r_absorbed.json()["data"]
-        assert data_absorbed["canonical_cdp_code"] == SUPER_CANONICAL, (
+
+        r_absorbed = client.get(f"/entities/{absorbed}")
+        assert r_absorbed.status_code == 200, f"/entities/{absorbed} returned {r_absorbed.status_code}"
+        assert r_absorbed.json()["data"]["canonical_cdp_code"] == canonical, (
             f"Absorbed member {absorbed} must resolve canonical_cdp_code to "
-            f"'{SUPER_CANONICAL}', got '{data_absorbed['canonical_cdp_code']}'"
+            f"'{canonical}', got '{r_absorbed.json()['data']['canonical_cdp_code']}'"
         )
 
     # ------------------------------------------------------------------
