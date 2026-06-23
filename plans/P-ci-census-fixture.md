@@ -45,7 +45,10 @@ entity_ulid must match `^[0-9A-HJKMNP-TV-Z]{26}$` (Crockford-26); cdp_code per t
   quorum / engine_license — network/external-engine; test_virtual_display — needs xvfb env.
 
 ## STATUS
-- [ ] OLA 1 batch A (tiny-seed: evict, entity_muni_province, emit_gone, reconcile, servable-mechanical)
-- [ ] OLA 1 batch B (dedup_invariants served-run + components)
+- [x] OLA 1 batch A — DONE 2026-06-23 (commit 8bd745c): seed_ci_fixture.py (25 dealers prov28 + source +
+      25 vehicles) recovered evict / emit_gone / entity_muni_province / reconcile. db-tests 790->830, no
+      regression to the 790. servable-mechanical deferred to batch B.
+- [ ] OLA 1 batch B (dedup_invariants served-run + components; servable_status_filter mechanical)
 - [ ] OLA 1 batch C (seal + province_seal + exhaustiveness + denominator loader)
-- [ ] OLA 2 (pagination + canonical + ratelimit-cache; exact cdp_codes)
+- [ ] OLA 2 (pagination + canonical + ratelimit-cache; exact cdp_codes + volume in prov 28 — seed already
+      has 25 dealers prov28, extend with the exact cdp_code constants)

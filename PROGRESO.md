@@ -3576,3 +3576,21 @@
   del censo) + network/engine (8) + test_virtual_display (xvfb). Documentado en tests/ci_local_only.txt.
 - PROXIMO: VIGILANCIA; el siguiente increment grande (census snapshot para CI) es proyecto mayor -> evaluar
   coste/beneficio antes; network/xvfb son menores. Sistema sano (5/5 CI, 2 schedulers, cosecha viva).
+
+## 2026-06-23 — FASE 1 incremento #4: census fixture sintetico (OLA 1 batch A) -> db-tests 830, 5/5 verde
+- SCOPING workflow w79zq4bpo (6 agentes read-only anti-leak, line-by-line): el bloque census-dependent
+  (17 ficheros) es recuperable ~95-115 tests via UN seed sintetico idempotente €0 (OLA 1 ~62 + OLA 2 ~33);
+  pisos de magnitud de censo real (dedup_integrity 30-60k, api_gaps cross-dealer, coexistence baseline
+  431k, km-live, lens-D-1292) se quedan local-only con causa. Blueprint -> plans/P-ci-census-fixture.md.
+- RIESGO identificado: un seed GLOBAL cambia el estado para TODA la suite db-tests -> podria romper los 790
+  ya-verdes que asuman DB vacia. Mitigacion: batch minimo + CI verifica recupera Y no-regresa.
+- IMPLEMENTADO batch A: scripts/seed_ci_fixture.py (idempotente/additive: 25 dealers compraventa prov28
+  muni28079 + entity_source + 25 vehicles available) + paso en job db-tests tras geo-seed. Recupero
+  test_evict + test_emit_gone_events + test_entity_muni_province_invariant + test_reconcile_gone_coverage.
+  Verificado seed en ephemeral 5434 (25/25 idempotente, visible en servable views). CI 5/5 VERDE: db-tests
+  790->830 (+40), CERO regresion en los 790. Commit 8bd745c.
+- RESUMEN sesion FASE 1 (4 incrementos): CI paso de 465 (solo unit) a ~1295 (830 db-tests + 465 unit). 2
+  bugs reales (load_geo ON CONFLICT; rapidfuzz). Commits 36adb7d -> 8bd745c. RESTA (blueprint, incremental):
+  OLA 1 batch B (dedup_invariants served-run + servable-mechanical), batch C (seal/exhaustiveness/
+  denominator), OLA 2 (pagination/canonical/ratelimit, cdp_codes exactos); local-only floor honesto.
+- PROXIMO: VIGILANCIA; continuar batch B/C/OLA2 incremental (mecanismo probado), siempre verificar via CI.
