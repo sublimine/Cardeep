@@ -3628,3 +3628,17 @@
   = default aceptable). UNICO pendiente = reinicio OWNER de uvicorn :8090 + scheduler (build viejo) para
   activar codec-events / stats-rapido / /geo/exhaustiveness / paginacion / fases previas.
 - PROXIMO: VIGILANCIA (salud + recordar reinicio API); continuar FASE 1 census batch B/C/OLA2 si procede.
+
+## 2026-06-23 — AUDITORIA CALIDAD DE DATO (owner: puntos de venta inflados) + dealers honesto
+- Auditoria wqvzjds77 (5 agentes vs DB): el censo inflaba puntos de venta. Cascada honesta: 54.587 titular
+  (INFLADO ~2.9x) -> 52.405 ex-desguace -> 42.603 directorio activo -> 19.144 CON inventario -> 18.994 venta.
+  Causas: particulares (352k anuncios privados de wallapop/milanuncios = canal, no PV), desguace (piezas),
+  35.443 (65%) shells vacios, 3 superficies con 3 scopes, 4.485 deep_links duplicados (B1 exige mismo muni),
+  coches 1.84M incluye 510k C2C (dealer=1.33M), precios sentinel 22.5k.
+- FIX #1 HECHO (e2f19a2, CI verde): /stats.dealers = no-particular ^ no-desguace ^ con-inventario = 19.144
+  (stats.py compute_counts + ops.py docstring + test_api_gaps honesto+cache-aware; product_stats refrescado).
+- BLUEPRINT completo: plans/P-census-data-quality.md (8 pasos: v_servable_dealer unico + unificar geo/seal +
+  vehicles dealer-stock + re-run cross_source_dedup + endurecer servable_vehicle + saneo fichas).
+- WIP AJENA detectada: rediseno frontend sin commitear (Landing.tsx/css, Layout, VehicleCard) -> NO tocada.
+- PENDIENTE OWNER: reiniciar uvicorn :8090 (+scheduler) -> activa /stats honesto + fixes previos.
+- PROXIMO: ejecutar plan P-census-data-quality pasos 1-8, cada cambio servido con dry-run+golden+Ferrari+CI.
