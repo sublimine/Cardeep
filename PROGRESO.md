@@ -3559,3 +3559,20 @@
   para el bloque (1) census-dependent. tests/ci_local_only.txt los documenta.
 - PROXIMO: investigar seeder €0 del gazetteer (data/geo/nomenclator_entidades_ine.csv existe) para
   recuperar test_geo_fuzzy; si no es €0 limpio, dejar tracked y vigilancia.
+
+## 2026-06-23 — FASE 1 incremento #3: rapidfuzz (bug real runtime) -> test_geo_fuzzy recuperado, 5/5 verde
+- INVESTIGACION (no asumir): la causa de test_geo_fuzzy NO era "gazetteer sin sembrar" (el gazetteer se
+  carga en memoria del CSV in-repo, _load_gazetteer); era rapidfuzz UNDECLARED. pipeline/geo.py Tier-B
+  fuzzy (WRatio>=88) hace import lazy-guarded de rapidfuzz; sin el paquete el paso fuzzy se SALTA en
+  silencio -> alt-spellings (Orense->Ourense, Palma de Mallorca) devuelven None. Bug REAL de runtime
+  (la resolucion geo en prod se degradaba sin rapidfuzz, no solo CI). Corregi la causa que habia
+  documentado mal antes (antialucinacion).
+- FIX: rapidfuzz>=3,<4 en requirements.txt (runtime; geo.py es pipeline). Commit e26d406. CI 5/5 verde.
+  db-tests 749 -> 790 passed (+41 = test_geo_fuzzy completo, incl. parroquia Casomera). test_geo_fuzzy
+  fuera del manifiesto.
+- RESUMEN sesion FASE 1 (3 incrementos): CI paso de ejecutar 465 tests (solo unit) a ~1255 (790 db-tests
+  + 465 unit). 2 bugs reales arreglados (load_geo ON CONFLICT compuesto; rapidfuzz undeclared). Commits
+  36adb7d -> e26d406. RESTA tracked con causa: bloque census-dependent (17 ficheros, necesita snapshot
+  del censo) + network/engine (8) + test_virtual_display (xvfb). Documentado en tests/ci_local_only.txt.
+- PROXIMO: VIGILANCIA; el siguiente increment grande (census snapshot para CI) es proyecto mayor -> evaluar
+  coste/beneficio antes; network/xvfb son menores. Sistema sano (5/5 CI, 2 schedulers, cosecha viva).
