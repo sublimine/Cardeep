@@ -1,0 +1,55 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "cardeep — inicio" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - generic [ref=e8]: cardeep
+      - navigation "Navegacion principal" [ref=e9]:
+        - link "Mapa" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "Explorar" [ref=e11] [cursor=pointer]:
+          - /url: /explore
+        - link "Acceso API" [ref=e12] [cursor=pointer]:
+          - /url: https://github.com/sublimine/Cardeep
+  - main [ref=e13]:
+    - region "El mapa completo de un mercado que hoy nadie tiene entero." [ref=e15]:
+      - generic [ref=e17]:
+        - paragraph [ref=e18]: Inteligencia de mercado · Automoción · España
+        - heading "El mapa completo de un mercado que hoy nadie tiene entero." [level=1] [ref=e20]:
+          - text: El mapa completo de un mercado
+          - text: que hoy nadie tiene entero.
+        - paragraph [ref=e21]: Cada coche en venta de España, desde la gran plataforma hasta el garaje perdido en la montaña. Indexado, deduplicado y verificado — servido por una API viva con su delta completo.
+        - generic [ref=e22]:
+          - link "Explorar el inventario" [ref=e23] [cursor=pointer]:
+            - /url: /explore
+          - link "Acceso API" [ref=e24] [cursor=pointer]:
+            - /url: https://github.com/sublimine/Cardeep
+      - region "Cobertura nacional de venta" [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e33]:
+            - generic [ref=e34]: Cobertura nacional · venta
+            - generic [ref=e35]: Última instantánea
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - generic [ref=e40]: Coches únicos
+              - generic [ref=e41]: 1.486.285
+              - generic [ref=e42]: en venta, deduplicados
+            - generic [ref=e43]:
+              - generic [ref=e44]: Puntos de venta
+              - generic [ref=e45]: "40.194"
+              - generic [ref=e46]: concesionarios · compraventas · desguaces
+            - generic [ref=e47]:
+              - generic [ref=e48]: Provincias
+              - generic [ref=e49]: "52"
+              - generic [ref=e50]: cobertura nacional
+            - generic [ref=e51]:
+              - generic [ref=e52]: Municipios
+              - generic [ref=e53]: "8132"
+              - generic [ref=e54]: hasta el último pueblo
+  - contentinfo [ref=e55]:
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - img [ref=e58]
+        - generic [ref=e59]: cardeep · ES
+      - generic [ref=e60]: El mapa completo de un mercado que hoy nadie tiene entero.

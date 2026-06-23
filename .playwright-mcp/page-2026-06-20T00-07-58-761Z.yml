@@ -1,0 +1,504 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "cardeep — inicio" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - generic [ref=e8]: cardeep
+      - navigation "Navegacion principal" [ref=e9]:
+        - link "Mapa" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "Explorar" [ref=e11] [cursor=pointer]:
+          - /url: /explore
+        - link "Acceso API" [ref=e12] [cursor=pointer]:
+          - /url: https://github.com/sublimine/Cardeep
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e22]:
+        - link "← Barcelona" [ref=e23] [cursor=pointer]:
+          - /url: /explore?prov=08
+        - heading "Ocasionplus" [level=1] [ref=e25]
+        - generic [ref=e26]:
+          - generic [ref=e27]: Compraventa
+          - generic [ref=e29]: Barcelona
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - term [ref=e33]: Inventario disponible
+            - definition [ref=e34]: 494 coches
+          - generic [ref=e35]:
+            - term [ref=e36]: Fichas agrupadas
+            - definition [ref=e37]: "2"
+          - generic [ref=e38]:
+            - term [ref=e39]: cdp_code
+            - definition [ref=e40]: CDP-ES-08-BJR97XV9
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - heading "Inventario 494" [level=2] [ref=e43]:
+            - text: Inventario
+            - generic [ref=e44]: "494"
+          - generic [ref=e45]:
+            - link "BMW X2 sDrive18i 103 kW (140 CV) BMW X2 sDrive18i 103 kW (140 CV) 2021 · 30.950 km · Gasolina 21.355 €" [ref=e46] [cursor=pointer]:
+              - /url: /vehicle/01KV5ZYE5B34NXVWXGDNZ7R2V2
+              - img "BMW X2 sDrive18i 103 kW (140 CV)" [ref=e48]
+              - generic [ref=e49]:
+                - generic [ref=e50]: BMW X2 sDrive18i 103 kW (140 CV)
+                - generic [ref=e51]: 2021 · 30.950 km · Gasolina
+                - generic [ref=e52]: 21.355 €
+            - link "Toyota Yaris Cross 120H Active Tech 85 kW (116 CV) Toyota Yaris Cross 120H Active Tech 85 kW (116 CV) 2022 · 55.565 km · Híbrido 19.410 €" [ref=e53] [cursor=pointer]:
+              - /url: /vehicle/01KV5ZYE5BK4M7SHJYYVQT5AVW
+              - img "Toyota Yaris Cross 120H Active Tech 85 kW (116 CV)" [ref=e55]
+              - generic [ref=e56]:
+                - generic [ref=e57]: Toyota Yaris Cross 120H Active Tech 85 kW (116 CV)
+                - generic [ref=e58]: 2022 · 55.565 km · Híbrido
+                - generic [ref=e59]: 19.410 €
+            - link "Honda Civic 1.0 I-VTEC TURBO Elegance 95 kW (129 CV) Honda Civic 1.0 I-VTEC TURBO Elegance 95 kW (129 CV) 2017 · 81.447 km · Gasolina 15.732 €" [ref=e60] [cursor=pointer]:
+              - /url: /vehicle/01KV5ZYE5BR3QPEESGRK4VS0WV
+              - img "Honda Civic 1.0 I-VTEC TURBO Elegance 95 kW (129 CV)" [ref=e62]
+              - generic [ref=e63]:
+                - generic [ref=e64]: Honda Civic 1.0 I-VTEC TURBO Elegance 95 kW (129 CV)
+                - generic [ref=e65]: 2017 · 81.447 km · Gasolina
+                - generic [ref=e66]: 15.732 €
+            - link "Hyundai Kona EV Style 150 kW (204 CV) Hyundai Kona EV Style 150 kW (204 CV) 2019 · 52.725 km · Eléctrico 16.546 €" [ref=e67] [cursor=pointer]:
+              - /url: /vehicle/01KV5ZYE5BTXDNR5CDB4AJJ40T
+              - img "Hyundai Kona EV Style 150 kW (204 CV)" [ref=e69]
+              - generic [ref=e70]:
+                - generic [ref=e71]: Hyundai Kona EV Style 150 kW (204 CV)
+                - generic [ref=e72]: 2019 · 52.725 km · Eléctrico
+                - generic [ref=e73]: 16.546 €
+            - link "Kia Sportage 1.6 GDI Drive 4x2 99 kW (135 CV) Kia Sportage 1.6 GDI Drive 4x2 99 kW (135 CV) 2015 · 166.157 km · Gasolina 10.990 €" [ref=e74] [cursor=pointer]:
+              - /url: /vehicle/01KV24RGYJ4CEPTMDN0PFXC1KM
+              - img "Kia Sportage 1.6 GDI Drive 4x2 99 kW (135 CV)" [ref=e76]
+              - generic [ref=e77]:
+                - generic [ref=e78]: Kia Sportage 1.6 GDI Drive 4x2 99 kW (135 CV)
+                - generic [ref=e79]: 2015 · 166.157 km · Gasolina
+                - generic [ref=e80]: 10.990 €
+            - link "Toyota C-HR 1.8 125H Advance 90 kW (122 CV) Toyota C-HR 1.8 125H Advance 90 kW (122 CV) 2019 · 97.253 km · Híbrido 16.773 €" [ref=e81] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VG69M767PTQP5YNPGW
+              - img "Toyota C-HR 1.8 125H Advance 90 kW (122 CV)" [ref=e83]
+              - generic [ref=e84]:
+                - generic [ref=e85]: Toyota C-HR 1.8 125H Advance 90 kW (122 CV)
+                - generic [ref=e86]: 2019 · 97.253 km · Híbrido
+                - generic [ref=e87]: 16.773 €
+            - link "Peugeot 2008 BlueHDi 120 S&S Allure 88 kW (120 CV) Peugeot 2008 BlueHDi 120 S&S Allure 88 kW (120 CV) 2016 · 108.633 km · Diésel 9713 €" [ref=e88] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VGC5F4FQW60CZA2BSP
+              - img "Peugeot 2008 BlueHDi 120 S&S Allure 88 kW (120 CV)" [ref=e90]
+              - generic [ref=e91]:
+                - generic [ref=e92]: Peugeot 2008 BlueHDi 120 S&S Allure 88 kW (120 CV)
+                - generic [ref=e93]: 2016 · 108.633 km · Diésel
+                - generic [ref=e94]: 9713 €
+            - link "Audi Q3 S line 35 TDI 110 kW (150 CV) S tronic Audi Q3 S line 35 TDI 110 kW (150 CV) S tronic 2019 · 165.018 km · Diésel 19.900 €" [ref=e95] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VGMNBQM4B7N9NPQQE4
+              - img "Audi Q3 S line 35 TDI 110 kW (150 CV) S tronic" [ref=e97]
+              - generic [ref=e98]:
+                - generic [ref=e99]: Audi Q3 S line 35 TDI 110 kW (150 CV) S tronic
+                - generic [ref=e100]: 2019 · 165.018 km · Diésel
+                - generic [ref=e101]: 19.900 €
+            - link "BMW X2 sDrive18i 103 kW (140 CV) BMW X2 sDrive18i 103 kW (140 CV) 2022 · 38.426 km · Gasolina 22.546 €" [ref=e102] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VGTEJN2CS0XXPKAYGP
+              - img "BMW X2 sDrive18i 103 kW (140 CV)" [ref=e104]
+              - generic [ref=e105]:
+                - generic [ref=e106]: BMW X2 sDrive18i 103 kW (140 CV)
+                - generic [ref=e107]: 2022 · 38.426 km · Gasolina
+                - generic [ref=e108]: 22.546 €
+            - link "Fiat 500L 1.4 16v Pop Star 70 kW (95 CV) Fiat 500L 1.4 16v Pop Star 70 kW (95 CV) 2016 · 144.991 km · Gasolina 9167 €" [ref=e109] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VGW6MFF84CHDAD555G
+              - img "Fiat 500L 1.4 16v Pop Star 70 kW (95 CV)" [ref=e111]
+              - generic [ref=e112]:
+                - generic [ref=e113]: Fiat 500L 1.4 16v Pop Star 70 kW (95 CV)
+                - generic [ref=e114]: 2016 · 144.991 km · Gasolina
+                - generic [ref=e115]: 9167 €
+            - link "Citroen Berlingo 1.6 HDI XTR Plus 68 kW (92 CV) Citroen Berlingo 1.6 HDI XTR Plus 68 kW (92 CV) 2013 · 166.925 km · Diésel 9500 €" [ref=e116] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VH0G8NQSMPDPPABE94
+              - img "Citroen Berlingo 1.6 HDI XTR Plus 68 kW (92 CV)" [ref=e118]
+              - generic [ref=e119]:
+                - generic [ref=e120]: Citroen Berlingo 1.6 HDI XTR Plus 68 kW (92 CV)
+                - generic [ref=e121]: 2013 · 166.925 km · Diésel
+                - generic [ref=e122]: 9500 €
+            - link "Citroen C4 PureTech 130 S&S Shine 96 kW (130 CV) Citroen C4 PureTech 130 S&S Shine 96 kW (130 CV) 2023 · 111.502 km · Gasolina 11.910 €" [ref=e123] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VH0YE0AMJSPW8S2GN9
+              - img "Citroen C4 PureTech 130 S&S Shine 96 kW (130 CV)" [ref=e125]
+              - generic [ref=e126]:
+                - generic [ref=e127]: Citroen C4 PureTech 130 S&S Shine 96 kW (130 CV)
+                - generic [ref=e128]: 2023 · 111.502 km · Gasolina
+                - generic [ref=e129]: 11.910 €
+            - link "Hyundai i30 2.0 TGDI N Performance Sky 202 kW (275 CV) Hyundai i30 2.0 TGDI N Performance Sky 202 kW (275 CV) 2018 · 100.751 km · Gasolina 23.628 €" [ref=e130] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VH1DFACJRS178GMVER
+              - img "Hyundai i30 2.0 TGDI N Performance Sky 202 kW (275 CV)" [ref=e132]
+              - generic [ref=e133]:
+                - generic [ref=e134]: Hyundai i30 2.0 TGDI N Performance Sky 202 kW (275 CV)
+                - generic [ref=e135]: 2018 · 100.751 km · Gasolina
+                - generic [ref=e136]: 23.628 €
+            - link "Mazda CX-30 2.0 Skyactiv-G Evolution 2WD 90 kW (122 CV) Mazda CX-30 2.0 Skyactiv-G Evolution 2WD 90 kW (122 CV) 2023 · 91.570 km · Gasolina 17.082 €" [ref=e137] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VH513BW0GPTA88JYES
+              - img "Mazda CX-30 2.0 Skyactiv-G Evolution 2WD 90 kW (122 CV)" [ref=e139]
+              - generic [ref=e140]:
+                - generic [ref=e141]: Mazda CX-30 2.0 Skyactiv-G Evolution 2WD 90 kW (122 CV)
+                - generic [ref=e142]: 2023 · 91.570 km · Gasolina
+                - generic [ref=e143]: 17.082 €
+            - link "Renault Kangoo Furgon Profesional Blue dCi 70 kW (95 CV) Renault Kangoo Furgon Profesional Blue dCi 70 kW (95 CV) 2022 · 78.499 km · Diésel 12.637 €" [ref=e144] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VH7TY3MBGAGT6F85C5
+              - img "Renault Kangoo Furgon Profesional Blue dCi 70 kW (95 CV)" [ref=e146]
+              - generic [ref=e147]:
+                - generic [ref=e148]: Renault Kangoo Furgon Profesional Blue dCi 70 kW (95 CV)
+                - generic [ref=e149]: 2022 · 78.499 km · Diésel
+                - generic [ref=e150]: 12.637 €
+            - link "Kia Rio 1.0 T-GDi MHEV iMT Concept 74 kW (100 CV) Kia Rio 1.0 T-GDi MHEV iMT Concept 74 kW (100 CV) 2022 · 65.682 km · Gasolina 12.546 €" [ref=e151] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VH8A1HFZV3QBQ32Y5Y
+              - img "Kia Rio 1.0 T-GDi MHEV iMT Concept 74 kW (100 CV)" [ref=e153]
+              - generic [ref=e154]:
+                - generic [ref=e155]: Kia Rio 1.0 T-GDi MHEV iMT Concept 74 kW (100 CV)
+                - generic [ref=e156]: 2022 · 65.682 km · Gasolina
+                - generic [ref=e157]: 12.546 €
+            - link "Citroen C3 PureTech 82 C-Series 61 kW (83 CV) Citroen C3 PureTech 82 C-Series 61 kW (83 CV) 2020 · 67.560 km · Gasolina 9537 €" [ref=e158] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VH8G4D6M0RQ6M5QWH2
+              - img "Citroen C3 PureTech 82 C-Series 61 kW (83 CV)" [ref=e160]
+              - generic [ref=e161]:
+                - generic [ref=e162]: Citroen C3 PureTech 82 C-Series 61 kW (83 CV)
+                - generic [ref=e163]: 2020 · 67.560 km · Gasolina
+                - generic [ref=e164]: 9537 €
+            - link "Nissan Qashqai 1.6 dCi Tekna Premium 4x2 XTronic 96 kW (130 CV) Nissan Qashqai 1.6 dCi Tekna Premium 4x2 XTronic 96 kW (130 CV) 2015 · 164.037 km · Diésel 11.790 €" [ref=e165] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VHB2FV5AD33ZQ0CCEF
+              - img "Nissan Qashqai 1.6 dCi Tekna Premium 4x2 XTronic 96 kW (130 CV)" [ref=e167]
+              - generic [ref=e168]:
+                - generic [ref=e169]: Nissan Qashqai 1.6 dCi Tekna Premium 4x2 XTronic 96 kW (130 CV)
+                - generic [ref=e170]: 2015 · 164.037 km · Diésel
+                - generic [ref=e171]: 11.790 €
+            - link "Volkswagen Polo Edition 1.0 59 kW (80 CV) Volkswagen Polo Edition 1.0 59 kW (80 CV) 2018 · 121.682 km · Gasolina 9273 €" [ref=e172] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VHFYD1QBMZC7AVGHQE
+              - img "Volkswagen Polo Edition 1.0 59 kW (80 CV)" [ref=e174]
+              - generic [ref=e175]:
+                - generic [ref=e176]: Volkswagen Polo Edition 1.0 59 kW (80 CV)
+                - generic [ref=e177]: 2018 · 121.682 km · Gasolina
+                - generic [ref=e178]: 9273 €
+            - link "Citroen C3 PureTech 68 Tonic 50 kW (68 CV) Citroen C3 PureTech 68 Tonic 50 kW (68 CV) 2015 · 106.408 km · Gasolina 5900 €" [ref=e179] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VHMZ28DSNG3W7YFDYJ
+              - img "Citroen C3 PureTech 68 Tonic 50 kW (68 CV)" [ref=e181]
+              - generic [ref=e182]:
+                - generic [ref=e183]: Citroen C3 PureTech 68 Tonic 50 kW (68 CV)
+                - generic [ref=e184]: 2015 · 106.408 km · Gasolina
+                - generic [ref=e185]: 5900 €
+            - link "SEAT Ibiza 1.0 MPI Style Plus 59 kW (80 CV) SEAT Ibiza 1.0 MPI Style Plus 59 kW (80 CV) 2019 · 103.850 km · Gasolina 10.173 €" [ref=e186] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VHP2SE61K4ATT55KVV
+              - img "SEAT Ibiza 1.0 MPI Style Plus 59 kW (80 CV)" [ref=e188]
+              - generic [ref=e189]:
+                - generic [ref=e190]: SEAT Ibiza 1.0 MPI Style Plus 59 kW (80 CV)
+                - generic [ref=e191]: 2019 · 103.850 km · Gasolina
+                - generic [ref=e192]: 10.173 €
+            - link "Citroen Berlingo Combi PureTech 110 S&S Talla M 100 Años 81 kW (110 CV) Citroen Berlingo Combi PureTech 110 S&S Talla M 100 Años 81 kW (110 CV) 2019 · 107.322 km · Gasolina 12.264 €" [ref=e193] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VHWG1N6M8036NBWRTV
+              - img "Citroen Berlingo Combi PureTech 110 S&S Talla M 100 Años 81 kW (110 CV)" [ref=e195]
+              - generic [ref=e196]:
+                - generic [ref=e197]: Citroen Berlingo Combi PureTech 110 S&S Talla M 100 Años 81 kW (110 CV)
+                - generic [ref=e198]: 2019 · 107.322 km · Gasolina
+                - generic [ref=e199]: 12.264 €
+            - link "Volkswagen Transporter Mixto Batalla Corta TN 2.0 TDI BMT 110 kW (150 CV) 2.800 Volkswagen Transporter Mixto Batalla Corta TN 2.0 TDI BMT 110 kW (150 CV) 2.800 2019 · 132.538 km · Diésel 21.137 €" [ref=e200] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VHWS7A7NPV617DKNP6
+              - img "Volkswagen Transporter Mixto Batalla Corta TN 2.0 TDI BMT 110 kW (150 CV) 2.800" [ref=e202]
+              - generic [ref=e203]:
+                - generic [ref=e204]: Volkswagen Transporter Mixto Batalla Corta TN 2.0 TDI BMT 110 kW (150 CV) 2.800
+                - generic [ref=e205]: 2019 · 132.538 km · Diésel
+                - generic [ref=e206]: 21.137 €
+            - link "Nissan Townstar 1.3G L1 Tekna 96 kW (130 CV) Nissan Townstar 1.3G L1 Tekna 96 kW (130 CV) 2022 · 93.169 km · Gasolina 19.537 €" [ref=e207] [cursor=pointer]:
+              - /url: /vehicle/01KV23M4VHXWVG3VZM54T64M7Q
+              - img "Nissan Townstar 1.3G L1 Tekna 96 kW (130 CV)" [ref=e209]
+              - generic [ref=e210]:
+                - generic [ref=e211]: Nissan Townstar 1.3G L1 Tekna 96 kW (130 CV)
+                - generic [ref=e212]: 2022 · 93.169 km · Gasolina
+                - generic [ref=e213]: 19.537 €
+            - link "Toyota Rav4 2.5l hybrid Feel! 2WD 145 kW (197 CV) Toyota Rav4 2.5l hybrid Feel! 2WD 145 kW (197 CV) 2017 · 107.074 km · Híbrido 18.936 €" [ref=e214] [cursor=pointer]:
+              - /url: /vehicle/01KTZT9C3RESBTPSFZ0TABF0YB
+              - img "Toyota Rav4 2.5l hybrid Feel! 2WD 145 kW (197 CV)" [ref=e216]
+              - generic [ref=e217]:
+                - generic [ref=e218]: Toyota Rav4 2.5l hybrid Feel! 2WD 145 kW (197 CV)
+                - generic [ref=e219]: 2017 · 107.074 km · Híbrido
+                - generic [ref=e220]: 18.936 €
+            - link "Skoda Kamiq 1.5 TSI Montecarlo DSG 110 kW (150 CV) Skoda Kamiq 1.5 TSI Montecarlo DSG 110 kW (150 CV) 2023 · 56.693 km · Gasolina 22.489 €" [ref=e221] [cursor=pointer]:
+              - /url: /vehicle/01KTZMV3K394YHXT35HN7M6FZW
+              - img "Skoda Kamiq 1.5 TSI Montecarlo DSG 110 kW (150 CV)" [ref=e223]
+              - generic [ref=e224]:
+                - generic [ref=e225]: Skoda Kamiq 1.5 TSI Montecarlo DSG 110 kW (150 CV)
+                - generic [ref=e226]: 2023 · 56.693 km · Gasolina
+                - generic [ref=e227]: 22.489 €
+            - link "Opel Mokka 1.6 CDTI S&S Excellence 4x2 100 kW (136 CV) Opel Mokka 1.6 CDTI S&S Excellence 4x2 100 kW (136 CV) 2016 · 77.754 km · Diésel 10.602 €" [ref=e228] [cursor=pointer]:
+              - /url: /vehicle/01KTZG344GE2M76CP1RAYHKNAA
+              - img "Opel Mokka 1.6 CDTI S&S Excellence 4x2 100 kW (136 CV)" [ref=e230]
+              - generic [ref=e231]:
+                - generic [ref=e232]: Opel Mokka 1.6 CDTI S&S Excellence 4x2 100 kW (136 CV)
+                - generic [ref=e233]: 2016 · 77.754 km · Diésel
+                - generic [ref=e234]: 10.602 €
+            - link "Audi A5 Sportback S Line 40 TFSI 140 kW (190 CV) S tronic Audi A5 Sportback S Line 40 TFSI 140 kW (190 CV) S tronic 2018 · 72.798 km · Gasolina 23.067 €" [ref=e235] [cursor=pointer]:
+              - /url: /vehicle/01KTZFSNDZEKA5R7HMG4FZXN7T
+              - img "Audi A5 Sportback S Line 40 TFSI 140 kW (190 CV) S tronic" [ref=e237]
+              - generic [ref=e238]:
+                - generic [ref=e239]: Audi A5 Sportback S Line 40 TFSI 140 kW (190 CV) S tronic
+                - generic [ref=e240]: 2018 · 72.798 km · Gasolina
+                - generic [ref=e241]: 23.067 €
+            - link "Volkswagen T-Roc Cabrio 1.5 TSI 110 kW (150 CV) DSG Volkswagen T-Roc Cabrio 1.5 TSI 110 kW (150 CV) DSG 2020 · 95.030 km · Gasolina 22.537 €" [ref=e242] [cursor=pointer]:
+              - /url: /vehicle/01KTZFSNDZH3G20VA8V25QV49X
+              - img "Volkswagen T-Roc Cabrio 1.5 TSI 110 kW (150 CV) DSG" [ref=e244]
+              - generic [ref=e245]:
+                - generic [ref=e246]: Volkswagen T-Roc Cabrio 1.5 TSI 110 kW (150 CV) DSG
+                - generic [ref=e247]: 2020 · 95.030 km · Gasolina
+                - generic [ref=e248]: 22.537 €
+            - link "SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV) SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV) 2023 · 63.414 km · Gasolina 17.182 €" [ref=e249] [cursor=pointer]:
+              - /url: /vehicle/01KTZFSKR3DFAJ37QS93BF4PHT
+              - img "SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV)" [ref=e251]
+              - generic [ref=e252]:
+                - generic [ref=e253]: SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV)
+                - generic [ref=e254]: 2023 · 63.414 km · Gasolina
+                - generic [ref=e255]: 17.182 €
+            - link "Ford S-Max 2.0 TDCI Titanium 110 kW (150 CV) Ford S-Max 2.0 TDCI Titanium 110 kW (150 CV) 2017 · 114.938 km · Diésel 16.250 €" [ref=e256] [cursor=pointer]:
+              - /url: /vehicle/01KTZFSKF65WG4BJ4CQ5A0C7XB
+              - img "Ford S-Max 2.0 TDCI Titanium 110 kW (150 CV)" [ref=e258]
+              - generic [ref=e259]:
+                - generic [ref=e260]: Ford S-Max 2.0 TDCI Titanium 110 kW (150 CV)
+                - generic [ref=e261]: 2017 · 114.938 km · Diésel
+                - generic [ref=e262]: 16.250 €
+            - link "Ford Focus SportBreak 1.0 Ecoboost MHEV ST-Line Auto 114 kW (155 CV) Ford Focus SportBreak 1.0 Ecoboost MHEV ST-Line Auto 114 kW (155 CV) 2024 · 53.324 km · Gasolina 17.991 €" [ref=e263] [cursor=pointer]:
+              - /url: /vehicle/01KTZFSJCW8137V53ZPBNWYGP0
+              - img "Ford Focus SportBreak 1.0 Ecoboost MHEV ST-Line Auto 114 kW (155 CV)" [ref=e265]
+              - generic [ref=e266]:
+                - generic [ref=e267]: Ford Focus SportBreak 1.0 Ecoboost MHEV ST-Line Auto 114 kW (155 CV)
+                - generic [ref=e268]: 2024 · 53.324 km · Gasolina
+                - generic [ref=e269]: 17.991 €
+            - link "Lynk & Co 01 1.5 PHEV 192 kW (261 CV) Lynk & Co 01 1.5 PHEV 192 kW (261 CV) 2023 · 45.457 km · Híbrido enchufable 21.228 €" [ref=e270] [cursor=pointer]:
+              - /url: /vehicle/01KTZFSJCWFT8X9DJETEB5S9JJ
+              - img "Lynk & Co 01 1.5 PHEV 192 kW (261 CV)" [ref=e272]
+              - generic [ref=e273]:
+                - generic [ref=e274]: Lynk & Co 01 1.5 PHEV 192 kW (261 CV)
+                - generic [ref=e275]: 2023 · 45.457 km · Híbrido enchufable
+                - generic [ref=e276]: 21.228 €
+            - link "Opel Combo Life 1.5 TD S&S Innovation L Auto 96 kW (131 CV) Opel Combo Life 1.5 TD S&S Innovation L Auto 96 kW (131 CV) 2019 · 46.865 km · Diésel 17.653 €" [ref=e277] [cursor=pointer]:
+              - /url: /vehicle/01KTZFSJCWZW950HQTHE5NHXWN
+              - img "Opel Combo Life 1.5 TD S&S Innovation L Auto 96 kW (131 CV)" [ref=e279]
+              - generic [ref=e280]:
+                - generic [ref=e281]: Opel Combo Life 1.5 TD S&S Innovation L Auto 96 kW (131 CV)
+                - generic [ref=e282]: 2019 · 46.865 km · Diésel
+                - generic [ref=e283]: 17.653 €
+            - link "SEAT Arona 1.6 TDI S&S Style 85 kW (115 CV) SEAT Arona 1.6 TDI S&S Style 85 kW (115 CV) 2019 · 145.016 km · Diésel 12.773 €" [ref=e284] [cursor=pointer]:
+              - /url: /vehicle/01KTZF7909WRCV71WBJTA7RYCD
+              - img "SEAT Arona 1.6 TDI S&S Style 85 kW (115 CV)" [ref=e286]
+              - generic [ref=e287]:
+                - generic [ref=e288]: SEAT Arona 1.6 TDI S&S Style 85 kW (115 CV)
+                - generic [ref=e289]: 2019 · 145.016 km · Diésel
+                - generic [ref=e290]: 12.773 €
+            - link "Toyota Prius 1.8 hibrido 90 kW (122 CV) Toyota Prius 1.8 hibrido 90 kW (122 CV) 2018 · 46.422 km · Híbrido 18.628 €" [ref=e291] [cursor=pointer]:
+              - /url: /vehicle/01KTZE5P56JN10GJW87XDBCV8T
+              - img "Toyota Prius 1.8 hibrido 90 kW (122 CV)" [ref=e293]
+              - generic [ref=e294]:
+                - generic [ref=e295]: Toyota Prius 1.8 hibrido 90 kW (122 CV)
+                - generic [ref=e296]: 2018 · 46.422 km · Híbrido
+                - generic [ref=e297]: 18.628 €
+            - link "BMW Serie 3 318d 110 kW (150 CV) BMW Serie 3 318d 110 kW (150 CV) 2016 · 124.411 km · Diésel 15.000 €" [ref=e298] [cursor=pointer]:
+              - /url: /vehicle/01KTZE1TF2SCE6FF9CP36RPQDG
+              - img "BMW Serie 3 318d 110 kW (150 CV)" [ref=e300]
+              - generic [ref=e301]:
+                - generic [ref=e302]: BMW Serie 3 318d 110 kW (150 CV)
+                - generic [ref=e303]: 2016 · 124.411 km · Diésel
+                - generic [ref=e304]: 15.000 €
+            - link "Renault Express Furgon Confort Blue dCi 55 kW (75 CV) Renault Express Furgon Confort Blue dCi 55 kW (75 CV) 2022 · 85.340 km · Diésel 10.864 €" [ref=e305] [cursor=pointer]:
+              - /url: /vehicle/01KTZDQDB5KFMXDJF0S0DB46MQ
+              - img "Renault Express Furgon Confort Blue dCi 55 kW (75 CV)" [ref=e307]
+              - generic [ref=e308]:
+                - generic [ref=e309]: Renault Express Furgon Confort Blue dCi 55 kW (75 CV)
+                - generic [ref=e310]: 2022 · 85.340 km · Diésel
+                - generic [ref=e311]: 10.864 €
+            - link "Renault Arkana Evolution E-Tech full hybrid 107 kW (145 CV) Renault Arkana Evolution E-Tech full hybrid 107 kW (145 CV) 2025 · 36.353 km · Híbrido 22.173 €" [ref=e312] [cursor=pointer]:
+              - /url: /vehicle/01KTZCSZ18DBHZWZTAE115BBE5
+              - img "Renault Arkana Evolution E-Tech full hybrid 107 kW (145 CV)" [ref=e314]
+              - generic [ref=e315]:
+                - generic [ref=e316]: Renault Arkana Evolution E-Tech full hybrid 107 kW (145 CV)
+                - generic [ref=e317]: 2025 · 36.353 km · Híbrido
+                - generic [ref=e318]: 22.173 €
+            - link "Hyundai Tucson 1.7 CRDI BlueDrive 25 Aniversario 4x2 84 kW (115 CV) Hyundai Tucson 1.7 CRDI BlueDrive 25 Aniversario 4x2 84 kW (115 CV) 2016 · 83.690 km · Diésel 14.991 €" [ref=e319] [cursor=pointer]:
+              - /url: /vehicle/01KTZCSZ18NZ99SXXCXDA70DEP
+              - img "Hyundai Tucson 1.7 CRDI BlueDrive 25 Aniversario 4x2 84 kW (115 CV)" [ref=e321]
+              - generic [ref=e322]:
+                - generic [ref=e323]: Hyundai Tucson 1.7 CRDI BlueDrive 25 Aniversario 4x2 84 kW (115 CV)
+                - generic [ref=e324]: 2016 · 83.690 km · Diésel
+                - generic [ref=e325]: 14.991 €
+            - link "Opel Mokka 1.4 Turbo S&S Selective 4x2 103 kW (140 CV) Opel Mokka 1.4 Turbo S&S Selective 4x2 103 kW (140 CV) 2016 · 105.069 km · Gasolina 8797 €" [ref=e326] [cursor=pointer]:
+              - /url: /vehicle/01KTZC717H6AD8VD27AG8DH4AM
+              - img "Opel Mokka 1.4 Turbo S&S Selective 4x2 103 kW (140 CV)" [ref=e328]
+              - generic [ref=e329]:
+                - generic [ref=e330]: Opel Mokka 1.4 Turbo S&S Selective 4x2 103 kW (140 CV)
+                - generic [ref=e331]: 2016 · 105.069 km · Gasolina
+                - generic [ref=e332]: 8797 €
+            - link "Kia Sportage 1.6 T-GDi PHEV Drive 4x4 195 kW (265 CV) Kia Sportage 1.6 T-GDi PHEV Drive 4x4 195 kW (265 CV) 2022 · 75.250 km · Híbrido enchufable 24.091 €" [ref=e333] [cursor=pointer]:
+              - /url: /vehicle/01KTZC717H6YAPAB0SBKXJGH41
+              - img "Kia Sportage 1.6 T-GDi PHEV Drive 4x4 195 kW (265 CV)" [ref=e335]
+              - generic [ref=e336]:
+                - generic [ref=e337]: Kia Sportage 1.6 T-GDi PHEV Drive 4x4 195 kW (265 CV)
+                - generic [ref=e338]: 2022 · 75.250 km · Híbrido enchufable
+                - generic [ref=e339]: 24.091 €
+            - link "Kia Stonic 1.0 T-GDi MHEV Drive DCT 88 kW (120 CV) Kia Stonic 1.0 T-GDi MHEV Drive DCT 88 kW (120 CV) 2021 · 112.644 km · Gasolina 13.319 €" [ref=e340] [cursor=pointer]:
+              - /url: /vehicle/01KTZC717H7E11MGS5J5DNEJ7Y
+              - img "Kia Stonic 1.0 T-GDi MHEV Drive DCT 88 kW (120 CV)" [ref=e342]
+              - generic [ref=e343]:
+                - generic [ref=e344]: Kia Stonic 1.0 T-GDi MHEV Drive DCT 88 kW (120 CV)
+                - generic [ref=e345]: 2021 · 112.644 km · Gasolina
+                - generic [ref=e346]: 13.319 €
+            - link "Kia Stonic 1.0 T-GDi Eco-Dynamic Drive 88 kW (120 CV) Kia Stonic 1.0 T-GDi Eco-Dynamic Drive 88 kW (120 CV) 2018 · 75.404 km · Gasolina 13.182 €" [ref=e347] [cursor=pointer]:
+              - /url: /vehicle/01KTZC717HEHDHZQ56YTRCY8W9
+              - img "Kia Stonic 1.0 T-GDi Eco-Dynamic Drive 88 kW (120 CV)" [ref=e349]
+              - generic [ref=e350]:
+                - generic [ref=e351]: Kia Stonic 1.0 T-GDi Eco-Dynamic Drive 88 kW (120 CV)
+                - generic [ref=e352]: 2018 · 75.404 km · Gasolina
+                - generic [ref=e353]: 13.182 €
+            - link "Opel Combo Life 1.2 Turbo S&S Expression L 81 kW (110 CV) Opel Combo Life 1.2 Turbo S&S Expression L 81 kW (110 CV) 2019 · 52.245 km · Gasolina 13.682 €" [ref=e354] [cursor=pointer]:
+              - /url: /vehicle/01KTZC717HY9APPC6GN2X1R56J
+              - img "Opel Combo Life 1.2 Turbo S&S Expression L 81 kW (110 CV)" [ref=e356]
+              - generic [ref=e357]:
+                - generic [ref=e358]: Opel Combo Life 1.2 Turbo S&S Expression L 81 kW (110 CV)
+                - generic [ref=e359]: 2019 · 52.245 km · Gasolina
+                - generic [ref=e360]: 13.682 €
+            - link "Toyota Corolla Touring Sports 180H Feel! E-CVT 132 kW (180 CV) Toyota Corolla Touring Sports 180H Feel! E-CVT 132 kW (180 CV) 2020 · 102.909 km · Híbrido 18.500 €" [ref=e361] [cursor=pointer]:
+              - /url: /vehicle/01KTZC717HYW9NSCWHJGDBJ9FG
+              - img "Toyota Corolla Touring Sports 180H Feel! E-CVT 132 kW (180 CV)" [ref=e363]
+              - generic [ref=e364]:
+                - generic [ref=e365]: Toyota Corolla Touring Sports 180H Feel! E-CVT 132 kW (180 CV)
+                - generic [ref=e366]: 2020 · 102.909 km · Híbrido
+                - generic [ref=e367]: 18.500 €
+            - link "Kia Sportage 1.6 GDi Drive 4x2 97 kW (132 CV) Kia Sportage 1.6 GDi Drive 4x2 97 kW (132 CV) 2020 · 60.974 km · Gasolina 15.955 €" [ref=e368] [cursor=pointer]:
+              - /url: /vehicle/01KTZC70R3SRN9JYR689310FDK
+              - img "Kia Sportage 1.6 GDi Drive 4x2 97 kW (132 CV)" [ref=e370]
+              - generic [ref=e371]:
+                - generic [ref=e372]: Kia Sportage 1.6 GDi Drive 4x2 97 kW (132 CV)
+                - generic [ref=e373]: 2020 · 60.974 km · Gasolina
+                - generic [ref=e374]: 15.955 €
+            - link "Kia Sportage 1.6 T-GDi Drive 4x2 110 kW (150 CV) Kia Sportage 1.6 T-GDi Drive 4x2 110 kW (150 CV) 2022 · 52.480 km · Gasolina 19.992 €" [ref=e375] [cursor=pointer]:
+              - /url: /vehicle/01KTZC70R3ZT6HRSGBRFSHWB9G
+              - img "Kia Sportage 1.6 T-GDi Drive 4x2 110 kW (150 CV)" [ref=e377]
+              - generic [ref=e378]:
+                - generic [ref=e379]: Kia Sportage 1.6 T-GDi Drive 4x2 110 kW (150 CV)
+                - generic [ref=e380]: 2022 · 52.480 km · Gasolina
+                - generic [ref=e381]: 19.992 €
+            - link "Fiat Tipo 1.5 Hybrid Red DCT 97 kW (130 CV) Fiat Tipo 1.5 Hybrid Red DCT 97 kW (130 CV) 2022 · 98.758 km · Gasolina 13.000 €" [ref=e382] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6HTJBHKP5VB129DWMFF2
+              - img "Fiat Tipo 1.5 Hybrid Red DCT 97 kW (130 CV)" [ref=e384]
+              - generic [ref=e385]:
+                - generic [ref=e386]: Fiat Tipo 1.5 Hybrid Red DCT 97 kW (130 CV)
+                - generic [ref=e387]: 2022 · 98.758 km · Gasolina
+                - generic [ref=e388]: 13.000 €
+            - link "Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV) Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV) 2022 · 63.191 km · Gasolina 17.273 €" [ref=e389] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6HTJJYWR97KNWX4W3DKN
+              - img "Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV)" [ref=e391]
+              - generic [ref=e392]:
+                - generic [ref=e393]: Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV)
+                - generic [ref=e394]: 2022 · 63.191 km · Gasolina
+                - generic [ref=e395]: 17.273 €
+            - link "Honda HR-V 1.6 i-DTEC Executive 88 kW (120 CV) Honda HR-V 1.6 i-DTEC Executive 88 kW (120 CV) 2017 · 77.552 km · Diésel 17.130 €" [ref=e396] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6HTJRQHG4KZ5CYTNWEGX
+              - img "Honda HR-V 1.6 i-DTEC Executive 88 kW (120 CV)" [ref=e398]
+              - generic [ref=e399]:
+                - generic [ref=e400]: Honda HR-V 1.6 i-DTEC Executive 88 kW (120 CV)
+                - generic [ref=e401]: 2017 · 77.552 km · Diésel
+                - generic [ref=e402]: 17.130 €
+            - link "Audi A4 Avant 2.0 TFSI quattro 155 kW (211 CV) S tronic Audi A4 Avant 2.0 TFSI quattro 155 kW (211 CV) S tronic 2011 · 206.223 km · Gasolina 14.200 €" [ref=e403] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6HTK8704HY997ZKN9R1X
+              - img "Audi A4 Avant 2.0 TFSI quattro 155 kW (211 CV) S tronic" [ref=e405]
+              - generic [ref=e406]:
+                - generic [ref=e407]: Audi A4 Avant 2.0 TFSI quattro 155 kW (211 CV) S tronic
+                - generic [ref=e408]: 2011 · 206.223 km · Gasolina
+                - generic [ref=e409]: 14.200 €
+            - link "Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV) Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV) 2024 · 64.474 km · Gasolina 21.173 €" [ref=e410] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632T7TCBGWCRBE1C1EQT
+              - img "Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV)" [ref=e412]
+              - generic [ref=e413]:
+                - generic [ref=e414]: Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV)
+                - generic [ref=e415]: 2024 · 64.474 km · Gasolina
+                - generic [ref=e416]: 21.173 €
+            - link "Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV) Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV) 2023 · 92.336 km · Diésel 19.537 €" [ref=e417] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632TGQ9VM10026Q8VMRF
+              - img "Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV)" [ref=e419]
+              - generic [ref=e420]:
+                - generic [ref=e421]: Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV)
+                - generic [ref=e422]: 2023 · 92.336 km · Diésel
+                - generic [ref=e423]: 19.537 €
+            - link "SEAT León 1.2 TSI S&S I-Tech DSG 81 kW (110 CV) SEAT León 1.2 TSI S&S I-Tech DSG 81 kW (110 CV) 2015 · 108.932 km · Gasolina 12.450 €" [ref=e424] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632TQBRGRZMDJ8NNE2VD
+              - img "SEAT León 1.2 TSI S&S I-Tech DSG 81 kW (110 CV)" [ref=e426]
+              - generic [ref=e427]:
+                - generic [ref=e428]: SEAT León 1.2 TSI S&S I-Tech DSG 81 kW (110 CV)
+                - generic [ref=e429]: 2015 · 108.932 km · Gasolina
+                - generic [ref=e430]: 12.450 €
+            - link "Smart ForFour 0.9 S&S Passion 66 kW (90 CV) Smart ForFour 0.9 S&S Passion 66 kW (90 CV) 2018 · 57.335 km · Gasolina 11.218 €" [ref=e431] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632TST6H5QT7CGKWX8K2
+              - img "Smart ForFour 0.9 S&S Passion 66 kW (90 CV)" [ref=e433]
+              - generic [ref=e434]:
+                - generic [ref=e435]: Smart ForFour 0.9 S&S Passion 66 kW (90 CV)
+                - generic [ref=e436]: 2018 · 57.335 km · Gasolina
+                - generic [ref=e437]: 11.218 €
+            - link "Mercedes-Benz Clase C 200 135 kW (184 CV) Mercedes-Benz Clase C 200 135 kW (184 CV) 2019 · 118.229 km · Gasolina 21.556 €" [ref=e438] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632V2Y2E0HB7PF0FKW0X
+              - img "Mercedes-Benz Clase C 200 135 kW (184 CV)" [ref=e440]
+              - generic [ref=e441]:
+                - generic [ref=e442]: Mercedes-Benz Clase C 200 135 kW (184 CV)
+                - generic [ref=e443]: 2019 · 118.229 km · Gasolina
+                - generic [ref=e444]: 21.556 €
+            - link "Audi A5 Coupe S line 35 TDI 110 kW (150 CV) S tronic Audi A5 Coupe S line 35 TDI 110 kW (150 CV) S tronic 2020 · 35.895 km · Diésel 27.067 €" [ref=e445] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632V39A79V1PRXGC35Y2
+              - img "Audi A5 Coupe S line 35 TDI 110 kW (150 CV) S tronic" [ref=e447]
+              - generic [ref=e448]:
+                - generic [ref=e449]: Audi A5 Coupe S line 35 TDI 110 kW (150 CV) S tronic
+                - generic [ref=e450]: 2020 · 35.895 km · Diésel
+                - generic [ref=e451]: 27.067 €
+            - link "Volkswagen Polo Sport 1.2 TSI BMT 81 kW (110 CV) Volkswagen Polo Sport 1.2 TSI BMT 81 kW (110 CV) 2017 · 166.116 km · Gasolina 11.204 €" [ref=e452] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632V6QPW15MA2FR8YREZ
+              - img "Volkswagen Polo Sport 1.2 TSI BMT 81 kW (110 CV)" [ref=e454]
+              - generic [ref=e455]:
+                - generic [ref=e456]: Volkswagen Polo Sport 1.2 TSI BMT 81 kW (110 CV)
+                - generic [ref=e457]: 2017 · 166.116 km · Gasolina
+                - generic [ref=e458]: 11.204 €
+            - link "Fiat Tipo SW 1.6 Multijet II Pop Business 88 kW (120 CV) Fiat Tipo SW 1.6 Multijet II Pop Business 88 kW (120 CV) 2019 · 68.373 km · Diésel 11.137 €" [ref=e459] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632V91ZQHN5TG5H9BZ1Z
+              - img "Fiat Tipo SW 1.6 Multijet II Pop Business 88 kW (120 CV)" [ref=e461]
+              - generic [ref=e462]:
+                - generic [ref=e463]: Fiat Tipo SW 1.6 Multijet II Pop Business 88 kW (120 CV)
+                - generic [ref=e464]: 2019 · 68.373 km · Diésel
+                - generic [ref=e465]: 11.137 €
+          - navigation "Paginación" [ref=e466]:
+            - button "← Anterior" [disabled] [ref=e467]
+            - generic [ref=e468]: Página 1
+            - button "Siguiente →" [ref=e469] [cursor=pointer]
+        - complementary [ref=e470]:
+          - heading "Actividad reciente" [level=2] [ref=e471]
+          - list [ref=e473]:
+            - listitem [ref=e474]:
+              - generic [ref=e476]:
+                - generic [ref=e477]: Alta
+                - generic [ref=e478]: 15 jun 2026
+            - listitem [ref=e479]:
+              - generic [ref=e481]:
+                - generic [ref=e482]: Alta
+                - generic [ref=e483]: 15 jun 2026
+            - listitem [ref=e484]:
+              - generic [ref=e486]:
+                - generic [ref=e487]: Alta
+                - generic [ref=e488]: 15 jun 2026
+            - listitem [ref=e489]:
+              - generic [ref=e491]:
+                - generic [ref=e492]: Alta
+                - generic [ref=e493]: 15 jun 2026
+            - listitem [ref=e494]:
+              - generic [ref=e496]:
+                - generic [ref=e497]: Alta
+                - generic [ref=e498]: 14 jun 2026
+            - listitem [ref=e499]:
+              - generic [ref=e501]:
+                - generic [ref=e502]: Alta
+                - generic [ref=e503]: 14 jun 2026
+            - listitem [ref=e504]:
+              - generic [ref=e506]:
+                - generic [ref=e507]: Alta
+                - generic [ref=e508]: 14 jun 2026
+            - listitem [ref=e509]:
+              - generic [ref=e511]:
+                - generic [ref=e512]: Alta
+                - generic [ref=e513]: 14 jun 2026
+  - contentinfo [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - img [ref=e19]
+        - generic [ref=e20]: cardeep · ES
+      - generic [ref=e21]: El mapa completo de un mercado que hoy nadie tiene entero.

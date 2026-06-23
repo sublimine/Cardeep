@@ -1,99 +1,108 @@
-// CARDEEP API client — typed wrapper over the FastAPI service.
-//
-// Base URL + key from Vite env (dev). SECURITY NOTE: VITE_* vars ship in the bundle, so the API key
-// here is for LOCAL/INTERNAL dev only. For a public deployment the frontend must go through a BFF /
-// proxy (or the API must expose unauthenticated read endpoints) — never ship a real key client-side.
-import type {
-  DeltaEvent,
-  EntityDetail,
-  EntitySummary,
-  Envelope,
-  Exhaustiveness,
-  GeoSeal,
-  Paginated,
-  Stats,
-  VehicleDetail,
-  VehicleHistoryEvent,
-  VehicleListItem,
-  VehiclePlatforms,
-} from './types';
+const TOKEN_KEY  = 'cx_token'
+const TENANT_KEY = 'cx_tenant'
+const EXPIRY_KEY = 'cx_expiry'
 
-// Default = the canonical local API port (uvicorn services.api.main:app --port 8090). Override with
-// VITE_API_BASE (e.g. web/.env.local in dev, or .env.production / CI for a real deployment).
-const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? 'http://127.0.0.1:8090';
-const API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? '';
+// Restore from localStorage on module init
+let accessToken: string | null    = localStorage.getItem(TOKEN_KEY)
+let tenantId: string | null       = localStorage.getItem(TENANT_KEY)
+let tokenExpiresAt: number | null = Number(localStorage.getItem(EXPIRY_KEY)) || null
+let refreshPromise: Promise<void> | null = null
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token
+  if (token) localStorage.setItem(TOKEN_KEY, token)
+  else { localStorage.removeItem(TOKEN_KEY); tokenExpiresAt = null; localStorage.removeItem(EXPIRY_KEY) }
+}
+
+export function setTenantId(id: string | null): void {
+  tenantId = id
+  if (id) localStorage.setItem(TENANT_KEY, id)
+  else localStorage.removeItem(TENANT_KEY)
+}
+
+export function setTokenExpiry(expiresInSeconds: number): void {
+  tokenExpiresAt = Date.now() + expiresInSeconds * 1000
+  localStorage.setItem(EXPIRY_KEY, String(tokenExpiresAt))
+}
+
+export function getStoredToken(): string | null { return accessToken }
+export function getStoredTenantId(): string | null { return tenantId }
+export function isTokenValid(): boolean {
+  if (!accessToken) return false
+  if (tokenExpiresAt && Date.now() > tokenExpiresAt) { setAccessToken(null); return false }
+  return true
+}
 
 export class ApiError extends Error {
-  readonly status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
+  constructor(public readonly status: number, message: string) {
+    super(message); this.name = 'ApiError'
   }
 }
 
-type Params = Record<string, string | number | undefined>;
-
-async function getData<T>(path: string, params?: Params): Promise<T> {
-  const url = new URL(BASE + path);
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined) url.searchParams.set(k, String(v));
-    }
-  }
-  let res: Response;
-  try {
-    res = await fetch(url.toString(), {
-      headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined,
-    });
-  } catch {
-    throw new ApiError(`network error reaching the CARDEEP API at ${BASE}`, 0);
-  }
-  let body: Envelope<T>;
-  try {
-    body = (await res.json()) as Envelope<T>;
-  } catch {
-    throw new ApiError(`non-JSON response (HTTP ${res.status}) from ${path}`, res.status);
-  }
-  if (!res.ok || !body.ok || body.data === null) {
-    throw new ApiError(body.error ?? `HTTP ${res.status} on ${path}`, res.status);
-  }
-  return body.data;
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  body?: unknown
+  headers?: Record<string, string>
+  signal?: AbortSignal
 }
 
-// Same as getData but also returns the pagination meta (for list endpoints).
-async function getPaged<T>(path: string, params?: Params): Promise<Paginated<T>> {
-  const url = new URL(BASE + path);
-  if (params) for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, String(v));
-  const res = await fetch(url.toString(), { headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined });
-  const body = (await res.json()) as Envelope<T[]>;
-  if (!res.ok || !body.ok || body.data === null) throw new ApiError(body.error ?? `HTTP ${res.status} on ${path}`, res.status);
-  const m = body.meta ?? {};
-  return {
-    items: body.data,
-    page: (m.page as number) ?? 1,
-    size: (m.size as number) ?? body.data.length,
-    returned: (m.returned as number) ?? body.data.length,
-    has_more: (m.has_more as boolean) ?? false,
-  };
+async function refreshIfNeeded(): Promise<void> {
+  if (!accessToken || !tokenExpiresAt) return
+  if (Date.now() + 5 * 60 * 1000 < tokenExpiresAt) return
+  if (refreshPromise) return refreshPromise
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch('/api/v1/auth/refresh', {
+        method: 'POST', headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAccessToken(data.token)
+        setTokenExpiry(data.expires_in as number)
+      } else {
+        setAccessToken(null)
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      }
+    } finally { refreshPromise = null }
+  })()
+  return refreshPromise
+}
+
+export async function apiRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
+  const { method = 'GET', body, headers = {}, signal } = opts
+  await refreshIfNeeded()
+
+  const res = await fetch(`/api/v1${path}`, {
+    method, signal,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(tenantId    ? { 'X-Tenant-ID': tenantId } : {}),
+      ...headers,
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  })
+
+  if (res.status === 401) {
+    setAccessToken(null)
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+    throw new ApiError(401, 'Unauthorized')
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new ApiError(res.status, text || `HTTP ${res.status}`)
+  }
+
+  if (res.status === 204) return null as T
+  return res.json() as Promise<T>
 }
 
 export const api = {
-  stats: () => getData<{ counts: Stats }>('/stats').then((d) => d.counts),
-  geoSeal: () => getData<GeoSeal>('/geo/seal'),
-  geoExhaustiveness: () => getData<Exhaustiveness>('/geo/exhaustiveness'),
-  provinceEntities: (province: string, page = 1, size = 50) =>
-    getPaged<EntitySummary>(`/geo/${province}/entities`, { page, size }),
-  municipalityEntities: (province: string, muni: string, page = 1, size = 50) =>
-    getPaged<EntitySummary>(`/geo/${province}/municipalities/${muni}/entities`, { page, size }),
-  provinceTree: (province: string) => getData<unknown>(`/geo/${province}/tree`),
-  entity: (cdp: string) => getData<EntityDetail>(`/entities/${cdp}`),
-  entityInventory: (cdp: string, page = 1, size = 50) =>
-    getPaged<VehicleListItem>(`/entities/${cdp}/inventory`, { page, size }),
-  entityDelta: (cdp: string, page = 1, size = 50, since?: string) =>
-    getPaged<DeltaEvent>(`/entities/${cdp}/delta`, { page, size, since }),
-  vehicle: (ulid: string) => getData<VehicleDetail>(`/vehicles/${ulid}`),
-  vehicleHistory: (ulid: string, page = 1, size = 50) =>
-    getPaged<VehicleHistoryEvent>(`/vehicles/${ulid}/history`, { page, size }),
-  vehiclePlatforms: (ulid: string) => getData<VehiclePlatforms>(`/vehicles/${ulid}/platforms`),
-};
+  get:    <T>(path: string, signal?: AbortSignal)  => apiRequest<T>(path, { signal }),
+  post:   <T>(path: string, body: unknown)          => apiRequest<T>(path, { method: 'POST',   body }),
+  put:    <T>(path: string, body: unknown)          => apiRequest<T>(path, { method: 'PUT',    body }),
+  patch:  <T>(path: string, body: unknown)          => apiRequest<T>(path, { method: 'PATCH',  body }),
+  delete: <T>(path: string)                         => apiRequest<T>(path, { method: 'DELETE' }),
+}

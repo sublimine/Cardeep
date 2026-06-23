@@ -1,0 +1,504 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "cardeep — inicio" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - generic [ref=e8]: cardeep
+      - navigation "Navegacion principal" [ref=e9]:
+        - link "Mapa" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "Explorar" [ref=e11] [cursor=pointer]:
+          - /url: /explore
+        - link "Acceso API" [ref=e12] [cursor=pointer]:
+          - /url: https://github.com/sublimine/Cardeep
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e22]:
+        - link "← Barcelona" [ref=e23] [cursor=pointer]:
+          - /url: /explore?prov=08
+        - heading "Ocasionplus" [level=1] [ref=e25]
+        - generic [ref=e26]:
+          - generic [ref=e27]: Compraventa
+          - generic [ref=e29]: Barcelona
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - term [ref=e33]: Inventario disponible
+            - definition [ref=e34]: 494 coches
+          - generic [ref=e35]:
+            - term [ref=e36]: Fichas agrupadas
+            - definition [ref=e37]: "2"
+          - generic [ref=e38]:
+            - term [ref=e39]: cdp_code
+            - definition [ref=e40]: CDP-ES-08-BJR97XV9
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - heading "Inventario 494" [level=2] [ref=e43]:
+            - text: Inventario
+            - generic [ref=e44]: "494"
+          - generic [ref=e514]:
+            - link "Hyundai i20 1.0 TGDI SLX 74 kW (100 CV) Hyundai i20 1.0 TGDI SLX 74 kW (100 CV) 2022 · 94.170 km · Gasolina 12.628 €" [ref=e515] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632V961SM8KY37H6NG3B
+              - img "Hyundai i20 1.0 TGDI SLX 74 kW (100 CV)" [ref=e517]
+              - generic [ref=e518]:
+                - generic [ref=e519]: Hyundai i20 1.0 TGDI SLX 74 kW (100 CV)
+                - generic [ref=e520]: 2022 · 94.170 km · Gasolina
+                - generic [ref=e521]: 12.628 €
+            - link "Mercedes-Benz Clase C C Coupe 220 CDI 125 kW (170 CV) Mercedes-Benz Clase C C Coupe 220 CDI 125 kW (170 CV) 2013 · 183.724 km · Diésel 13.450 €" [ref=e522] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VA2F35NZXS9MZXCBE
+              - img "Mercedes-Benz Clase C C Coupe 220 CDI 125 kW (170 CV)" [ref=e524]
+              - generic [ref=e525]:
+                - generic [ref=e526]: Mercedes-Benz Clase C C Coupe 220 CDI 125 kW (170 CV)
+                - generic [ref=e527]: 2013 · 183.724 km · Diésel
+                - generic [ref=e528]: 13.450 €
+            - link "Peugeot Partner Tepee Combi 1.6 BlueHDi Outdoor 73 kW (100 CV) Peugeot Partner Tepee Combi 1.6 BlueHDi Outdoor 73 kW (100 CV) 2016 · 113.440 km · Diésel 11.389 €" [ref=e529] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VFHKHB7HF9WVM5BVH
+              - img "Peugeot Partner Tepee Combi 1.6 BlueHDi Outdoor 73 kW (100 CV)" [ref=e531]
+              - generic [ref=e532]:
+                - generic [ref=e533]: Peugeot Partner Tepee Combi 1.6 BlueHDi Outdoor 73 kW (100 CV)
+                - generic [ref=e534]: 2016 · 113.440 km · Diésel
+                - generic [ref=e535]: 11.389 €
+            - link "Nissan Qashqai DIG-T 140 mHEV N-Connecta 4x2 103 kW (140 CV) Nissan Qashqai DIG-T 140 mHEV N-Connecta 4x2 103 kW (140 CV) 2023 · 117.059 km · Gasolina 18.569 €" [ref=e536] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VGZS63XDJFANVVKWA
+              - img "Nissan Qashqai DIG-T 140 mHEV N-Connecta 4x2 103 kW (140 CV)" [ref=e538]
+              - generic [ref=e539]:
+                - generic [ref=e540]: Nissan Qashqai DIG-T 140 mHEV N-Connecta 4x2 103 kW (140 CV)
+                - generic [ref=e541]: 2023 · 117.059 km · Gasolina
+                - generic [ref=e542]: 18.569 €
+            - link "Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV) Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV) 2021 · 88.662 km · Gasolina 11.355 €" [ref=e543] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VHYRYER7C63SR1DSQ
+              - img "Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV)" [ref=e545]
+              - generic [ref=e546]:
+                - generic [ref=e547]: Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV)
+                - generic [ref=e548]: 2021 · 88.662 km · Gasolina
+                - generic [ref=e549]: 11.355 €
+            - link "BMW Serie 2 218d Active Tourer 110 kW (150 CV) BMW Serie 2 218d Active Tourer 110 kW (150 CV) 2023 · 67.501 km · Diésel 22.228 €" [ref=e550] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VJH0FZETXGQRZ12DZ
+              - img "BMW Serie 2 218d Active Tourer 110 kW (150 CV)" [ref=e552]
+              - generic [ref=e553]:
+                - generic [ref=e554]: BMW Serie 2 218d Active Tourer 110 kW (150 CV)
+                - generic [ref=e555]: 2023 · 67.501 km · Diésel
+                - generic [ref=e556]: 22.228 €
+            - link "Kia Ceed 1.6 MHEV iMT Drive 100 kW (136 CV) Kia Ceed 1.6 MHEV iMT Drive 100 kW (136 CV) 2023 · 76.081 km · Diésel 16.591 €" [ref=e557] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VJR78MZTR2H65VSFS
+              - img "Kia Ceed 1.6 MHEV iMT Drive 100 kW (136 CV)" [ref=e559]
+              - generic [ref=e560]:
+                - generic [ref=e561]: Kia Ceed 1.6 MHEV iMT Drive 100 kW (136 CV)
+                - generic [ref=e562]: 2023 · 76.081 km · Diésel
+                - generic [ref=e563]: 16.591 €
+            - link "BMW Serie 3 318d 105 kW (143 CV) BMW Serie 3 318d 105 kW (143 CV) 2014 · 184.206 km · Diésel 10.900 €" [ref=e564] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VM4ZTM1AZPAT9QYKS
+              - img "BMW Serie 3 318d 105 kW (143 CV)" [ref=e566]
+              - generic [ref=e567]:
+                - generic [ref=e568]: BMW Serie 3 318d 105 kW (143 CV)
+                - generic [ref=e569]: 2014 · 184.206 km · Diésel
+                - generic [ref=e570]: 10.900 €
+            - link "Toyota Proace City 1.5 D VX L1 75 kW (102 CV) Toyota Proace City 1.5 D VX L1 75 kW (102 CV) 2021 · 117.011 km · Diésel 13.810 €" [ref=e571] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VPBNX309Z8Q82M3RT
+              - img "Toyota Proace City 1.5 D VX L1 75 kW (102 CV)" [ref=e573]
+              - generic [ref=e574]:
+                - generic [ref=e575]: Toyota Proace City 1.5 D VX L1 75 kW (102 CV)
+                - generic [ref=e576]: 2021 · 117.011 km · Diésel
+                - generic [ref=e577]: 13.810 €
+            - link "Peugeot Rifter BlueHDi 130 S&S Allure Standard 96 kW (130 CV) Peugeot Rifter BlueHDi 130 S&S Allure Standard 96 kW (130 CV) 2019 · 105.267 km · Diésel 16.273 €" [ref=e578] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VRPDTN18HZK8CDXM7
+              - img "Peugeot Rifter BlueHDi 130 S&S Allure Standard 96 kW (130 CV)" [ref=e580]
+              - generic [ref=e581]:
+                - generic [ref=e582]: Peugeot Rifter BlueHDi 130 S&S Allure Standard 96 kW (130 CV)
+                - generic [ref=e583]: 2019 · 105.267 km · Diésel
+                - generic [ref=e584]: 16.273 €
+            - link "Mazda Mazda 3 2.0 e-SKYACTIV-G Homura AT 89 kW (122 CV) Mazda Mazda 3 2.0 e-SKYACTIV-G Homura AT 89 kW (122 CV) 2024 · 4009 km · Gasolina 25.446 €" [ref=e585] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VT7TPG8M63NDJX53A
+              - img "Mazda Mazda 3 2.0 e-SKYACTIV-G Homura AT 89 kW (122 CV)" [ref=e587]
+              - generic [ref=e588]:
+                - generic [ref=e589]: Mazda Mazda 3 2.0 e-SKYACTIV-G Homura AT 89 kW (122 CV)
+                - generic [ref=e590]: 2024 · 4009 km · Gasolina
+                - generic [ref=e591]: 25.446 €
+            - link "Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV) Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV) 2022 · 69.537 km · Gasolina 17.091 €" [ref=e592] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VWPTQV85MYNFDR1N8
+              - img "Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV)" [ref=e594]
+              - generic [ref=e595]:
+                - generic [ref=e596]: Alfa Romeo Tonale 1.5 MHEV Sprint FWD 96 kW (130 CV)
+                - generic [ref=e597]: 2022 · 69.537 km · Gasolina
+                - generic [ref=e598]: 17.091 €
+            - link "Ford Fiesta 1.0 EcoBoost S&S ST-Line 103 kW (140 CV) Ford Fiesta 1.0 EcoBoost S&S ST-Line 103 kW (140 CV) 2020 · 50.131 km · Gasolina 14.319 €" [ref=e599] [cursor=pointer]:
+              - /url: /vehicle/01KTZC632VZPET67S0WDBVS35H
+              - img "Ford Fiesta 1.0 EcoBoost S&S ST-Line 103 kW (140 CV)" [ref=e601]
+              - generic [ref=e602]:
+                - generic [ref=e603]: Ford Fiesta 1.0 EcoBoost S&S ST-Line 103 kW (140 CV)
+                - generic [ref=e604]: 2020 · 50.131 km · Gasolina
+                - generic [ref=e605]: 14.319 €
+            - link "Renault Arkana Esprit Alpine full hybrid E-Tech 107 kW (145 CV) Renault Arkana Esprit Alpine full hybrid E-Tech 107 kW (145 CV) 2025 · 9617 km · Híbrido 25.628 €" [ref=e606] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H40A65BA6KDYNX45MP
+              - img "Renault Arkana Esprit Alpine full hybrid E-Tech 107 kW (145 CV)" [ref=e608]
+              - generic [ref=e609]:
+                - generic [ref=e610]: Renault Arkana Esprit Alpine full hybrid E-Tech 107 kW (145 CV)
+                - generic [ref=e611]: 2025 · 9617 km · Híbrido
+                - generic [ref=e612]: 25.628 €
+            - link "Kia Ceed Tourer 1.0 MHEV Style Edition DCT 74 kW (100 CV) Kia Ceed Tourer 1.0 MHEV Style Edition DCT 74 kW (100 CV) 2025 · 25.572 km · Gasolina 18.000 €" [ref=e613] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H40YSZ8ZV9MVDC571B
+              - img "Kia Ceed Tourer 1.0 MHEV Style Edition DCT 74 kW (100 CV)" [ref=e615]
+              - generic [ref=e616]:
+                - generic [ref=e617]: Kia Ceed Tourer 1.0 MHEV Style Edition DCT 74 kW (100 CV)
+                - generic [ref=e618]: 2025 · 25.572 km · Gasolina
+                - generic [ref=e619]: 18.000 €
+            - link "SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV) SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV) 2023 · 85.157 km · Gasolina 18.628 €" [ref=e620] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H41VGS1GZV1XW2M6CC
+              - img "SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV)" [ref=e622]
+              - generic [ref=e623]:
+                - generic [ref=e624]: SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV)
+                - generic [ref=e625]: 2023 · 85.157 km · Gasolina
+                - generic [ref=e626]: 18.628 €
+            - link "SEAT Tarraco 1.5 TSI S&S Style XL DSG 110 kW (150 CV) SEAT Tarraco 1.5 TSI S&S Style XL DSG 110 kW (150 CV) 2023 · 89.301 km · Gasolina 21.628 €" [ref=e627] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H42FCDPPGZE2YJASNW
+              - img "SEAT Tarraco 1.5 TSI S&S Style XL DSG 110 kW (150 CV)" [ref=e629]
+              - generic [ref=e630]:
+                - generic [ref=e631]: SEAT Tarraco 1.5 TSI S&S Style XL DSG 110 kW (150 CV)
+                - generic [ref=e632]: 2023 · 89.301 km · Gasolina
+                - generic [ref=e633]: 21.628 €
+            - link "Hyundai Tucson 1.6 TGDI N-Line 30 Aniversario 110 kW (150 CV) Hyundai Tucson 1.6 TGDI N-Line 30 Aniversario 110 kW (150 CV) 2023 · 93.450 km · Gasolina 22.537 €" [ref=e634] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H439F5BM8EKDEEYVF7
+              - img "Hyundai Tucson 1.6 TGDI N-Line 30 Aniversario 110 kW (150 CV)" [ref=e636]
+              - generic [ref=e637]:
+                - generic [ref=e638]: Hyundai Tucson 1.6 TGDI N-Line 30 Aniversario 110 kW (150 CV)
+                - generic [ref=e639]: 2023 · 93.450 km · Gasolina
+                - generic [ref=e640]: 22.537 €
+            - link "Hyundai Tucson 1.6 TGDI HEV Klass AT 158 kW (215 CV) Hyundai Tucson 1.6 TGDI HEV Klass AT 158 kW (215 CV) 2024 · 32.486 km · Híbrido 27.000 €" [ref=e641] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H45CX6PM1AYXR82FR0
+              - img "Hyundai Tucson 1.6 TGDI HEV Klass AT 158 kW (215 CV)" [ref=e643]
+              - generic [ref=e644]:
+                - generic [ref=e645]: Hyundai Tucson 1.6 TGDI HEV Klass AT 158 kW (215 CV)
+                - generic [ref=e646]: 2024 · 32.486 km · Híbrido
+                - generic [ref=e647]: 27.000 €
+            - link "Renault Clio Esprit Alpine E-Tech 105 kW (143 CV) Renault Clio Esprit Alpine E-Tech 105 kW (143 CV) 2025 · 19.200 km · Híbrido 19.446 €" [ref=e648] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H462HCXDNCWBBTD2XH
+              - img "Renault Clio Esprit Alpine E-Tech 105 kW (143 CV)" [ref=e650]
+              - generic [ref=e651]:
+                - generic [ref=e652]: Renault Clio Esprit Alpine E-Tech 105 kW (143 CV)
+                - generic [ref=e653]: 2025 · 19.200 km · Híbrido
+                - generic [ref=e654]: 19.446 €
+            - link "Opel Grandland X 1.2 Turbo S&S Design Line Auto 96 kW (130 CV) Opel Grandland X 1.2 Turbo S&S Design Line Auto 96 kW (130 CV) 2019 · 47.728 km · Gasolina 14.173 €" [ref=e655] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H46NFJ9SEN0BKT8EQH
+              - img "Opel Grandland X 1.2 Turbo S&S Design Line Auto 96 kW (130 CV)" [ref=e657]
+              - generic [ref=e658]:
+                - generic [ref=e659]: Opel Grandland X 1.2 Turbo S&S Design Line Auto 96 kW (130 CV)
+                - generic [ref=e660]: 2019 · 47.728 km · Gasolina
+                - generic [ref=e661]: 14.173 €
+            - link "Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV) Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV) 2023 · 94.890 km · Diésel 19.537 €" [ref=e662] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H47AQHG3GGTGZFBHWM
+              - img "Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV)" [ref=e664]
+              - generic [ref=e665]:
+                - generic [ref=e666]: Kia Sportage 1.6 CRDi MHEV Business 4x2 100 kW (136 CV)
+                - generic [ref=e667]: 2023 · 94.890 km · Diésel
+                - generic [ref=e668]: 19.537 €
+            - link "Kia Sportage 1.6 CRDi MHEV Business 4x2 DCT 100 kW (136 CV) Kia Sportage 1.6 CRDi MHEV Business 4x2 DCT 100 kW (136 CV) 2024 · 62.383 km · Diésel 22.228 €" [ref=e669] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H48JB16BEPP7J006SX
+              - img "Kia Sportage 1.6 CRDi MHEV Business 4x2 DCT 100 kW (136 CV)" [ref=e671]
+              - generic [ref=e672]:
+                - generic [ref=e673]: Kia Sportage 1.6 CRDi MHEV Business 4x2 DCT 100 kW (136 CV)
+                - generic [ref=e674]: 2024 · 62.383 km · Diésel
+                - generic [ref=e675]: 22.228 €
+            - link "Suzuki Ignis 1.2 Mild Hybrid GLE 66 kW (90 CV) Suzuki Ignis 1.2 Mild Hybrid GLE 66 kW (90 CV) 2020 · 99.952 km · Gasolina 11.591 €" [ref=e676] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4BFB80QV3YV98FS1R
+              - img "Suzuki Ignis 1.2 Mild Hybrid GLE 66 kW (90 CV)" [ref=e678]
+              - generic [ref=e679]:
+                - generic [ref=e680]: Suzuki Ignis 1.2 Mild Hybrid GLE 66 kW (90 CV)
+                - generic [ref=e681]: 2020 · 99.952 km · Gasolina
+                - generic [ref=e682]: 11.591 €
+            - link "Alfa Romeo Stelvio 2.0 Turbo Speciale AWD 206 kW (280 CV) Alfa Romeo Stelvio 2.0 Turbo Speciale AWD 206 kW (280 CV) 2018 · 65.572 km · Gasolina 25.364 €" [ref=e683] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4BSPN83YW37YDK99Y
+              - img "Alfa Romeo Stelvio 2.0 Turbo Speciale AWD 206 kW (280 CV)" [ref=e685]
+              - generic [ref=e686]:
+                - generic [ref=e687]: Alfa Romeo Stelvio 2.0 Turbo Speciale AWD 206 kW (280 CV)
+                - generic [ref=e688]: 2018 · 65.572 km · Gasolina
+                - generic [ref=e689]: 25.364 €
+            - link "Citroen C5 Aircross Hybrid 225 Shine e-EAT8 165 kW (225 CV) Citroen C5 Aircross Hybrid 225 Shine e-EAT8 165 kW (225 CV) 2021 · 119.490 km · Híbrido enchufable 14.728 €" [ref=e690] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4C79J44GVRV0FTN3T
+              - img "Citroen C5 Aircross Hybrid 225 Shine e-EAT8 165 kW (225 CV)" [ref=e692]
+              - generic [ref=e693]:
+                - generic [ref=e694]: Citroen C5 Aircross Hybrid 225 Shine e-EAT8 165 kW (225 CV)
+                - generic [ref=e695]: 2021 · 119.490 km · Híbrido enchufable
+                - generic [ref=e696]: 14.728 €
+            - link "Citroen Berlingo BlueHDi 130 S&S Talla M Shine 96 kW (130 CV) Citroen Berlingo BlueHDi 130 S&S Talla M Shine 96 kW (130 CV) 2018 · 63.488 km · Diésel 17.719 €" [ref=e697] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4E9XT0RXTX2VVPJRK
+              - img "Citroen Berlingo BlueHDi 130 S&S Talla M Shine 96 kW (130 CV)" [ref=e699]
+              - generic [ref=e700]:
+                - generic [ref=e701]: Citroen Berlingo BlueHDi 130 S&S Talla M Shine 96 kW (130 CV)
+                - generic [ref=e702]: 2018 · 63.488 km · Diésel
+                - generic [ref=e703]: 17.719 €
+            - link "Kia ProCeed 1.4 T-GDI GT Line 103 kW (140 CV) Kia ProCeed 1.4 T-GDI GT Line 103 kW (140 CV) 2020 · 103.432 km · Gasolina 17.245 €" [ref=e704] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4EGY1YGE5R5T1HH2T
+              - img "Kia ProCeed 1.4 T-GDI GT Line 103 kW (140 CV)" [ref=e706]
+              - generic [ref=e707]:
+                - generic [ref=e708]: Kia ProCeed 1.4 T-GDI GT Line 103 kW (140 CV)
+                - generic [ref=e709]: 2020 · 103.432 km · Gasolina
+                - generic [ref=e710]: 17.245 €
+            - link "Peugeot Rifter Allure Standard PureTech EAT8 96 kW (130 CV) Peugeot Rifter Allure Standard PureTech EAT8 96 kW (130 CV) 2019 · 97.800 km · Gasolina 15.209 €" [ref=e711] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4K33ZZCTB4EP3JENX
+              - img "Peugeot Rifter Allure Standard PureTech EAT8 96 kW (130 CV)" [ref=e713]
+              - generic [ref=e714]:
+                - generic [ref=e715]: Peugeot Rifter Allure Standard PureTech EAT8 96 kW (130 CV)
+                - generic [ref=e716]: 2019 · 97.800 km · Gasolina
+                - generic [ref=e717]: 15.209 €
+            - link "Honda HR-V 1.5 i-VTEC Elegance CVT 96 kW (130 CV) Honda HR-V 1.5 i-VTEC Elegance CVT 96 kW (130 CV) 2018 · 95.373 km · Gasolina 15.910 €" [ref=e718] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4M18MHRTT0HRXPW26
+              - img "Honda HR-V 1.5 i-VTEC Elegance CVT 96 kW (130 CV)" [ref=e720]
+              - generic [ref=e721]:
+                - generic [ref=e722]: Honda HR-V 1.5 i-VTEC Elegance CVT 96 kW (130 CV)
+                - generic [ref=e723]: 2018 · 95.373 km · Gasolina
+                - generic [ref=e724]: 15.910 €
+            - link "SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV) SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV) 2024 · 17.641 km · Gasolina 19.273 €" [ref=e725] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4M7MM5WAT8SEG7PAZ
+              - img "SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV)" [ref=e727]
+              - generic [ref=e728]:
+                - generic [ref=e729]: SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV)
+                - generic [ref=e730]: 2024 · 17.641 km · Gasolina
+                - generic [ref=e731]: 19.273 €
+            - link "SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV) SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV) 2024 · 29.216 km · Gasolina 18.910 €" [ref=e732] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4MEW86X1V9XS6QRWG
+              - img "SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV)" [ref=e734]
+              - generic [ref=e735]:
+                - generic [ref=e736]: SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV)
+                - generic [ref=e737]: 2024 · 29.216 km · Gasolina
+                - generic [ref=e738]: 18.910 €
+            - link "Opel Astra 1.2 Turbo SHL GS Line 81 kW (110 CV) Opel Astra 1.2 Turbo SHL GS Line 81 kW (110 CV) 2020 · 18.080 km · Gasolina 11.728 €" [ref=e739] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4MS5KYFNAFY9MYECZ
+              - img "Opel Astra 1.2 Turbo SHL GS Line 81 kW (110 CV)" [ref=e741]
+              - generic [ref=e742]:
+                - generic [ref=e743]: Opel Astra 1.2 Turbo SHL GS Line 81 kW (110 CV)
+                - generic [ref=e744]: 2020 · 18.080 km · Gasolina
+                - generic [ref=e745]: 11.728 €
+            - link "SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV) SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV) 2023 · 44.712 km · Gasolina 17.637 €" [ref=e746] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4N4T8VGGZZXS38Y7B
+              - img "SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV)" [ref=e748]
+              - generic [ref=e749]:
+                - generic [ref=e750]: SEAT Arona 1.5 TSI S&S FR XL DSG 110 kW (150 CV)
+                - generic [ref=e751]: 2023 · 44.712 km · Gasolina
+                - generic [ref=e752]: 17.637 €
+            - link "Renault Express Advance Furgon Tce 75 kW (102 CV) Renault Express Advance Furgon Tce 75 kW (102 CV) 2023 · 18.525 km · Gasolina 15.245 €" [ref=e753] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4PRM0RBE48R2T1ZVW
+              - img "Renault Express Advance Furgon Tce 75 kW (102 CV)" [ref=e755]
+              - generic [ref=e756]:
+                - generic [ref=e757]: Renault Express Advance Furgon Tce 75 kW (102 CV)
+                - generic [ref=e758]: 2023 · 18.525 km · Gasolina
+                - generic [ref=e759]: 15.245 €
+            - link "Skoda Kamiq 1.0 TSI Ambition DSG 81 kW (110 CV) Skoda Kamiq 1.0 TSI Ambition DSG 81 kW (110 CV) 2021 · 122.107 km · Gasolina 13.319 €" [ref=e760] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4QSMTT6BK6366D4W4
+              - img "Skoda Kamiq 1.0 TSI Ambition DSG 81 kW (110 CV)" [ref=e762]
+              - generic [ref=e763]:
+                - generic [ref=e764]: Skoda Kamiq 1.0 TSI Ambition DSG 81 kW (110 CV)
+                - generic [ref=e765]: 2021 · 122.107 km · Gasolina
+                - generic [ref=e766]: 13.319 €
+            - link "SEAT León ST 1.5 TSI Style 25 Aniversario 85 kW (116 CV) SEAT León ST 1.5 TSI Style 25 Aniversario 85 kW (116 CV) 2025 · 10.899 km · Gasolina 17.591 €" [ref=e767] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4R1Q0G2T22MY89W8R
+              - img "SEAT León ST 1.5 TSI Style 25 Aniversario 85 kW (116 CV)" [ref=e769]
+              - generic [ref=e770]:
+                - generic [ref=e771]: SEAT León ST 1.5 TSI Style 25 Aniversario 85 kW (116 CV)
+                - generic [ref=e772]: 2025 · 10.899 km · Gasolina
+                - generic [ref=e773]: 17.591 €
+            - link "Audi Q3 2.0 TDI Attraction edition 110 kW (150 CV) Audi Q3 2.0 TDI Attraction edition 110 kW (150 CV) 2016 · 129.397 km · Diésel 16.852 €" [ref=e774] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4R96CZN32XFXKAX35
+              - img "Audi Q3 2.0 TDI Attraction edition 110 kW (150 CV)" [ref=e776]
+              - generic [ref=e777]:
+                - generic [ref=e778]: Audi Q3 2.0 TDI Attraction edition 110 kW (150 CV)
+                - generic [ref=e779]: 2016 · 129.397 km · Diésel
+                - generic [ref=e780]: 16.852 €
+            - link "Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV) Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV) 2024 · 64.754 km · Gasolina 21.173 €" [ref=e781] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4SJ4RT5EH2G0ZWVEX
+              - img "Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV)" [ref=e783]
+              - generic [ref=e784]:
+                - generic [ref=e785]: Kia Sportage 1.6 T-GDi MHEV Drive 4x2 110 kW (150 CV)
+                - generic [ref=e786]: 2024 · 64.754 km · Gasolina
+                - generic [ref=e787]: 21.173 €
+            - link "Opel Crossland 1.5D Business Elegance Auto 88 kW (120 CV) Opel Crossland 1.5D Business Elegance Auto 88 kW (120 CV) 2021 · 101.057 km · Diésel 12.173 €" [ref=e788] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4TJAGWGHWWS6ZPB6B
+              - img "Opel Crossland 1.5D Business Elegance Auto 88 kW (120 CV)" [ref=e790]
+              - generic [ref=e791]:
+                - generic [ref=e792]: Opel Crossland 1.5D Business Elegance Auto 88 kW (120 CV)
+                - generic [ref=e793]: 2021 · 101.057 km · Diésel
+                - generic [ref=e794]: 12.173 €
+            - link "Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV) Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV) 2023 · 101.186 km · Gasolina 12.182 €" [ref=e795] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4VV23HPRKE550RFGW
+              - img "Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV)" [ref=e797]
+              - generic [ref=e798]:
+                - generic [ref=e799]: Peugeot 2008 PureTech 130 S&S Allure Pack 96 kW (130 CV)
+                - generic [ref=e800]: 2023 · 101.186 km · Gasolina
+                - generic [ref=e801]: 12.182 €
+            - link "Toyota Corolla 1.8 125 Híbrido Active Tech E-CVT Sedán 90 kW (122 CV) Toyota Corolla 1.8 125 Híbrido Active Tech E-CVT Sedán 90 kW (122 CV) 2019 · 133.617 km · Híbrido 17.264 €" [ref=e802] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4W1727CK5DVX4S26S
+              - img "Toyota Corolla 1.8 125 Híbrido Active Tech E-CVT Sedán 90 kW (122 CV)" [ref=e804]
+              - generic [ref=e805]:
+                - generic [ref=e806]: Toyota Corolla 1.8 125 Híbrido Active Tech E-CVT Sedán 90 kW (122 CV)
+                - generic [ref=e807]: 2019 · 133.617 km · Híbrido
+                - generic [ref=e808]: 17.264 €
+            - link "SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV) SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV) 2023 · 99.000 km · Gasolina 18.446 €" [ref=e809] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4XB6Q3W7D8FFK8ZA2
+              - img "SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV)" [ref=e811]
+              - generic [ref=e812]:
+                - generic [ref=e813]: SEAT Ateca 1.5 TSI S&S Style XL 110 kW (150 CV)
+                - generic [ref=e814]: 2023 · 99.000 km · Gasolina
+                - generic [ref=e815]: 18.446 €
+            - link "Renault Megane Limited Energy S&S TCe 85 kW (115 CV) Renault Megane Limited Energy S&S TCe 85 kW (115 CV) 2015 · 109.274 km · Gasolina 8850 €" [ref=e816] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62H4ZWJAGH33WSM68HBJ
+              - img "Renault Megane Limited Energy S&S TCe 85 kW (115 CV)" [ref=e818]
+              - generic [ref=e819]:
+                - generic [ref=e820]: Renault Megane Limited Energy S&S TCe 85 kW (115 CV)
+                - generic [ref=e821]: 2015 · 109.274 km · Gasolina
+                - generic [ref=e822]: 8850 €
+            - link "Opel Movano Furgon 2.2 BlueHDi Base L3H2 3.5T 103 kW (140 CV) Opel Movano Furgon 2.2 BlueHDi Base L3H2 3.5T 103 kW (140 CV) 2023 · 120.187 km · Diésel 18.546 €" [ref=e823] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278463VJNW2HQJYEJXF
+              - img "Opel Movano Furgon 2.2 BlueHDi Base L3H2 3.5T 103 kW (140 CV)" [ref=e825]
+              - generic [ref=e826]:
+                - generic [ref=e827]: Opel Movano Furgon 2.2 BlueHDi Base L3H2 3.5T 103 kW (140 CV)
+                - generic [ref=e828]: 2023 · 120.187 km · Diésel
+                - generic [ref=e829]: 18.546 €
+            - link "Suzuki S-Cross 1.4T Mild Hybrid S2 4WD 95 kW (129 CV) Suzuki S-Cross 1.4T Mild Hybrid S2 4WD 95 kW (129 CV) 2023 · 80.814 km · Gasolina 16.637 €" [ref=e830] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62785JS3WMC7ZW4W883Z
+              - img "Suzuki S-Cross 1.4T Mild Hybrid S2 4WD 95 kW (129 CV)" [ref=e832]
+              - generic [ref=e833]:
+                - generic [ref=e834]: Suzuki S-Cross 1.4T Mild Hybrid S2 4WD 95 kW (129 CV)
+                - generic [ref=e835]: 2023 · 80.814 km · Gasolina
+                - generic [ref=e836]: 16.637 €
+            - link "BMW Serie 3 330i 190 kW (258 CV) BMW Serie 3 330i 190 kW (258 CV) 2020 · 82.832 km · Gasolina 29.819 €" [ref=e837] [cursor=pointer]:
+              - /url: /vehicle/01KTZC62787VM53NWCC6MENDRW
+              - img "BMW Serie 3 330i 190 kW (258 CV)" [ref=e839]
+              - generic [ref=e840]:
+                - generic [ref=e841]: BMW Serie 3 330i 190 kW (258 CV)
+                - generic [ref=e842]: 2020 · 82.832 km · Gasolina
+                - generic [ref=e843]: 29.819 €
+            - link "Toyota Aygo X Cross 1.0 VVT-I Play 53 kW (72 CV) Toyota Aygo X Cross 1.0 VVT-I Play 53 kW (72 CV) 2025 · 3657 km · Gasolina 17.264 €" [ref=e844] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278A7RMQ1JWKGWDJZVC
+              - img "Toyota Aygo X Cross 1.0 VVT-I Play 53 kW (72 CV)" [ref=e846]
+              - generic [ref=e847]:
+                - generic [ref=e848]: Toyota Aygo X Cross 1.0 VVT-I Play 53 kW (72 CV)
+                - generic [ref=e849]: 2025 · 3657 km · Gasolina
+                - generic [ref=e850]: 17.264 €
+            - link "Dacia Duster Prestige TCE 96 kW (130 CV) 4X2 Dacia Duster Prestige TCE 96 kW (130 CV) 4X2 2022 · 31.044 km · Gasolina 15.864 €" [ref=e851] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278AVQFEHGJ57TJ7BDM
+              - img "Dacia Duster Prestige TCE 96 kW (130 CV) 4X2" [ref=e853]
+              - generic [ref=e854]:
+                - generic [ref=e855]: Dacia Duster Prestige TCE 96 kW (130 CV) 4X2
+                - generic [ref=e856]: 2022 · 31.044 km · Gasolina
+                - generic [ref=e857]: 15.864 €
+            - link "Renault Clio Sport Tourer Zen Energy TCe 88 kW (120 CV) Renault Clio Sport Tourer Zen Energy TCe 88 kW (120 CV) 2018 · 72.598 km · Gasolina 10.900 €" [ref=e858] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278B6BNR2FXYN945VYT
+              - img "Renault Clio Sport Tourer Zen Energy TCe 88 kW (120 CV)" [ref=e860]
+              - generic [ref=e861]:
+                - generic [ref=e862]: Renault Clio Sport Tourer Zen Energy TCe 88 kW (120 CV)
+                - generic [ref=e863]: 2018 · 72.598 km · Gasolina
+                - generic [ref=e864]: 10.900 €
+            - link "MINI MINI Cooper Cabrio D 85 kW (116 CV) MINI MINI Cooper Cabrio D 85 kW (116 CV) 2017 · 114.328 km · Diésel 13.010 €" [ref=e865] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278C1SMVDMTTNKR5EC3
+              - img "MINI MINI Cooper Cabrio D 85 kW (116 CV)" [ref=e867]
+              - generic [ref=e868]:
+                - generic [ref=e869]: MINI MINI Cooper Cabrio D 85 kW (116 CV)
+                - generic [ref=e870]: 2017 · 114.328 km · Diésel
+                - generic [ref=e871]: 13.010 €
+            - link "Peugeot 5008 BlueHDi 130 S&S Allure 96 kW (130 CV) EAT8 Peugeot 5008 BlueHDi 130 S&S Allure 96 kW (130 CV) EAT8 2020 · 106.499 km · Diésel 18.082 €" [ref=e872] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278CQVVKBMTXNV4GYCF
+              - img "Peugeot 5008 BlueHDi 130 S&S Allure 96 kW (130 CV) EAT8" [ref=e874]
+              - generic [ref=e875]:
+                - generic [ref=e876]: Peugeot 5008 BlueHDi 130 S&S Allure 96 kW (130 CV) EAT8
+                - generic [ref=e877]: 2020 · 106.499 km · Diésel
+                - generic [ref=e878]: 18.082 €
+            - link "SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV) SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV) 2024 · 31.052 km · Gasolina 18.728 €" [ref=e879] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278DRFH9G3FVXDKJ2M4
+              - img "SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV)" [ref=e881]
+              - generic [ref=e882]:
+                - generic [ref=e883]: SEAT Ibiza 1.5 TSI FR XL DSG 110 kW (150 CV)
+                - generic [ref=e884]: 2024 · 31.052 km · Gasolina
+                - generic [ref=e885]: 18.728 €
+            - link "Volvo V40 D2 Kinetic 85 kW (115 CV) Volvo V40 D2 Kinetic 85 kW (115 CV) 2014 · 68.233 km · Diésel 12.090 €" [ref=e886] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278E4SW7WVPDJVZ2V1X
+              - img "Volvo V40 D2 Kinetic 85 kW (115 CV)" [ref=e888]
+              - generic [ref=e889]:
+                - generic [ref=e890]: Volvo V40 D2 Kinetic 85 kW (115 CV)
+                - generic [ref=e891]: 2014 · 68.233 km · Diésel
+                - generic [ref=e892]: 12.090 €
+            - link "Land Rover Defender Comercial 90 SW E 90 kW (122 CV) Land Rover Defender Comercial 90 SW E 90 kW (122 CV) 2007 · 128.596 km · Diésel 25.900 €" [ref=e893] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278EQDPFSKTERCKQKAY
+              - img "Land Rover Defender Comercial 90 SW E 90 kW (122 CV)" [ref=e895]
+              - generic [ref=e896]:
+                - generic [ref=e897]: Land Rover Defender Comercial 90 SW E 90 kW (122 CV)
+                - generic [ref=e898]: 2007 · 128.596 km · Diésel
+                - generic [ref=e899]: 25.900 €
+            - link "Citroen C4 Picasso PureTech 130 S&S Feel 96 kW (130 CV) Citroen C4 Picasso PureTech 130 S&S Feel 96 kW (130 CV) 2017 · 122.884 km · Gasolina 10.084 €" [ref=e900] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278F8CARF14D2JZM5C7
+              - img "Citroen C4 Picasso PureTech 130 S&S Feel 96 kW (130 CV)" [ref=e902]
+              - generic [ref=e903]:
+                - generic [ref=e904]: Citroen C4 Picasso PureTech 130 S&S Feel 96 kW (130 CV)
+                - generic [ref=e905]: 2017 · 122.884 km · Gasolina
+                - generic [ref=e906]: 10.084 €
+            - link "Fiat Tipo 1.5 Hybrid Cross DCT 97 kW (130 CV) Fiat Tipo 1.5 Hybrid Cross DCT 97 kW (130 CV) 2023 · 50.014 km · Gasolina 14.364 €" [ref=e907] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278FXT6NF2EZZ44QJGF
+              - img "Fiat Tipo 1.5 Hybrid Cross DCT 97 kW (130 CV)" [ref=e909]
+              - generic [ref=e910]:
+                - generic [ref=e911]: Fiat Tipo 1.5 Hybrid Cross DCT 97 kW (130 CV)
+                - generic [ref=e912]: 2023 · 50.014 km · Gasolina
+                - generic [ref=e913]: 14.364 €
+            - link "Hyundai Tucson 1.6T Klass 118 kW (160 CV) Hyundai Tucson 1.6T Klass 118 kW (160 CV) 2025 · 38.480 km · Gasolina 22.537 €" [ref=e914] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278FYGR7ETJ5X27PKHF
+              - img "Hyundai Tucson 1.6T Klass 118 kW (160 CV)" [ref=e916]
+              - generic [ref=e917]:
+                - generic [ref=e918]: Hyundai Tucson 1.6T Klass 118 kW (160 CV)
+                - generic [ref=e919]: 2025 · 38.480 km · Gasolina
+                - generic [ref=e920]: 22.537 €
+            - link "Citroen C4 PureTech 130 S&S 6v Feel Pack 96 kW (130 CV) Citroen C4 PureTech 130 S&S 6v Feel Pack 96 kW (130 CV) 2023 · 116.006 km · Gasolina 11.458 €" [ref=e921] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278HQ7J4WBQBCDG8ZDP
+              - img "Citroen C4 PureTech 130 S&S 6v Feel Pack 96 kW (130 CV)" [ref=e923]
+              - generic [ref=e924]:
+                - generic [ref=e925]: Citroen C4 PureTech 130 S&S 6v Feel Pack 96 kW (130 CV)
+                - generic [ref=e926]: 2023 · 116.006 km · Gasolina
+                - generic [ref=e927]: 11.458 €
+            - link "Fiat Panda 1.0 Hybrid GSE City Life 51 kW (70 CV) Fiat Panda 1.0 Hybrid GSE City Life 51 kW (70 CV) 2023 · 26.223 km · Gasolina 9773 €" [ref=e928] [cursor=pointer]:
+              - /url: /vehicle/01KTZC6278JDTV41VXPX5H6GS7
+              - img "Fiat Panda 1.0 Hybrid GSE City Life 51 kW (70 CV)" [ref=e930]
+              - generic [ref=e931]:
+                - generic [ref=e932]: Fiat Panda 1.0 Hybrid GSE City Life 51 kW (70 CV)
+                - generic [ref=e933]: 2023 · 26.223 km · Gasolina
+                - generic [ref=e934]: 9773 €
+          - navigation "Paginación" [ref=e935]:
+            - button "← Anterior" [ref=e936] [cursor=pointer]
+            - generic [ref=e937]: Página 2
+            - button "Siguiente →" [ref=e938] [cursor=pointer]
+        - complementary [ref=e470]:
+          - heading "Actividad reciente" [level=2] [ref=e471]
+          - list [ref=e473]:
+            - listitem [ref=e474]:
+              - generic [ref=e476]:
+                - generic [ref=e477]: Alta
+                - generic [ref=e478]: 15 jun 2026
+            - listitem [ref=e479]:
+              - generic [ref=e481]:
+                - generic [ref=e482]: Alta
+                - generic [ref=e483]: 15 jun 2026
+            - listitem [ref=e484]:
+              - generic [ref=e486]:
+                - generic [ref=e487]: Alta
+                - generic [ref=e488]: 15 jun 2026
+            - listitem [ref=e489]:
+              - generic [ref=e491]:
+                - generic [ref=e492]: Alta
+                - generic [ref=e493]: 15 jun 2026
+            - listitem [ref=e494]:
+              - generic [ref=e496]:
+                - generic [ref=e497]: Alta
+                - generic [ref=e498]: 14 jun 2026
+            - listitem [ref=e499]:
+              - generic [ref=e501]:
+                - generic [ref=e502]: Alta
+                - generic [ref=e503]: 14 jun 2026
+            - listitem [ref=e504]:
+              - generic [ref=e506]:
+                - generic [ref=e507]: Alta
+                - generic [ref=e508]: 14 jun 2026
+            - listitem [ref=e509]:
+              - generic [ref=e511]:
+                - generic [ref=e512]: Alta
+                - generic [ref=e513]: 14 jun 2026
+  - contentinfo [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - img [ref=e19]
+        - generic [ref=e20]: cardeep · ES
+      - generic [ref=e21]: El mapa completo de un mercado que hoy nadie tiene entero.

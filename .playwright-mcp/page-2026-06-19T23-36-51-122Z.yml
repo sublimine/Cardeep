@@ -1,0 +1,446 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "cardeep — inicio" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img [ref=e7]
+        - generic [ref=e8]: cardeep
+      - navigation "Navegacion principal" [ref=e9]:
+        - link "Mapa" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "Explorar" [ref=e11] [cursor=pointer]:
+          - /url: /explore
+        - link "Acceso API" [ref=e12] [cursor=pointer]:
+          - /url: https://github.com/sublimine/Cardeep
+  - main [ref=e13]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "Explora por provincia" [level=1] [ref=e18]
+          - paragraph [ref=e19]: 52 provincias · cobertura de venta sobre el censo registral. Elige una para ver sus puntos de venta y su inventario.
+        - generic [ref=e20]:
+          - button "Cobertura" [ref=e21] [cursor=pointer]
+          - button "A–Z" [ref=e22] [cursor=pointer]
+      - generic [ref=e23]:
+        - button "Salamanca Castilla y León 128% Sellado 221 dealers servidos" [ref=e446] [cursor=pointer]:
+          - generic [ref=e313]:
+            - generic [ref=e314]: Salamanca
+            - generic [ref=e315]: Castilla y León
+          - generic [ref=e316]:
+            - generic [ref=e317]: 128%
+            - generic [ref=e447]: Sellado
+          - generic [ref=e319]: 221 dealers servidos
+        - button "La Rioja La Rioja 110% Sellado 161 dealers servidos" [ref=e450] [cursor=pointer]:
+          - generic [ref=e225]:
+            - generic [ref=e226]: La Rioja
+            - generic [ref=e227]: La Rioja
+          - generic [ref=e228]:
+            - generic [ref=e229]: 110%
+            - generic [ref=e451]: Sellado
+          - generic [ref=e231]: 161 dealers servidos
+        - button "Lugo Galicia 109% Sellado 246 dealers servidos" [ref=e454] [cursor=pointer]:
+          - generic [ref=e233]:
+            - generic [ref=e234]: Lugo
+            - generic [ref=e235]: Galicia
+          - generic [ref=e236]:
+            - generic [ref=e237]: 109%
+            - generic [ref=e455]: Sellado
+          - generic [ref=e239]: 246 dealers servidos
+        - button "Navarra Navarra 104% Sellado 324 dealers servidos" [ref=e458] [cursor=pointer]:
+          - generic [ref=e265]:
+            - generic [ref=e266]: Navarra
+            - generic [ref=e267]: Navarra
+          - generic [ref=e268]:
+            - generic [ref=e269]: 104%
+            - generic [ref=e459]: Sellado
+          - generic [ref=e271]: 324 dealers servidos
+        - button "Madrid Madrid 100% Sellado 3026 dealers servidos" [ref=e462] [cursor=pointer]:
+          - generic [ref=e241]:
+            - generic [ref=e242]: Madrid
+            - generic [ref=e243]: Madrid
+          - generic [ref=e244]:
+            - generic [ref=e245]: 100%
+            - generic [ref=e463]: Sellado
+          - generic [ref=e247]: 3026 dealers servidos
+        - button "Murcia Murcia 100% Sellado 807 dealers servidos" [ref=e466] [cursor=pointer]:
+          - generic [ref=e257]:
+            - generic [ref=e258]: Murcia
+            - generic [ref=e259]: Murcia
+          - generic [ref=e260]:
+            - generic [ref=e261]: 100%
+            - generic [ref=e467]: Sellado
+          - generic [ref=e263]: 807 dealers servidos
+        - button "Girona Cataluña 97% Sellado 398 dealers servidos" [ref=e470] [cursor=pointer]:
+          - generic [ref=e153]:
+            - generic [ref=e154]: Girona
+            - generic [ref=e155]: Cataluña
+          - generic [ref=e156]:
+            - generic [ref=e157]: 97%
+            - generic [ref=e471]: Sellado
+          - generic [ref=e159]: 398 dealers servidos
+        - button "Valencia C. Valenciana 94% Sellado 1137 dealers servidos" [ref=e474] [cursor=pointer]:
+          - generic [ref=e385]:
+            - generic [ref=e386]: Valencia
+            - generic [ref=e387]: C. Valenciana
+          - generic [ref=e388]:
+            - generic [ref=e389]: 94%
+            - generic [ref=e475]: Sellado
+          - generic [ref=e391]: 1137 dealers servidos
+        - button "A Coruña Galicia 92% Sellado 533 dealers servidos" [ref=e478] [cursor=pointer]:
+          - generic [ref=e137]:
+            - generic [ref=e138]: A Coruña
+            - generic [ref=e139]: Galicia
+          - generic [ref=e140]:
+            - generic [ref=e141]: 92%
+            - generic [ref=e479]: Sellado
+          - generic [ref=e143]: 533 dealers servidos
+        - button "Bizkaia País Vasco 91% Sellado 348 dealers servidos" [ref=e482] [cursor=pointer]:
+          - generic [ref=e401]:
+            - generic [ref=e402]: Bizkaia
+            - generic [ref=e403]: País Vasco
+          - generic [ref=e404]:
+            - generic [ref=e405]: 91%
+            - generic [ref=e483]: Sellado
+          - generic [ref=e407]: 348 dealers servidos
+        - button "Asturias Asturias 88% Sellado 395 dealers servidos" [ref=e486] [cursor=pointer]:
+          - generic [ref=e281]:
+            - generic [ref=e282]: Asturias
+            - generic [ref=e283]: Asturias
+          - generic [ref=e284]:
+            - generic [ref=e285]: 88%
+            - generic [ref=e487]: Sellado
+          - generic [ref=e287]: 395 dealers servidos
+        - button "Málaga Andalucía 86% Sellado 801 dealers servidos" [ref=e490] [cursor=pointer]:
+          - generic [ref=e249]:
+            - generic [ref=e250]: Málaga
+            - generic [ref=e251]: Andalucía
+          - generic [ref=e252]:
+            - generic [ref=e253]: 86%
+            - generic [ref=e491]: Sellado
+          - generic [ref=e255]: 801 dealers servidos
+        - button "Barcelona Cataluña 85% Sellado 1891 dealers servidos" [ref=e494] [cursor=pointer]:
+          - generic [ref=e81]:
+            - generic [ref=e82]: Barcelona
+            - generic [ref=e83]: Cataluña
+          - generic [ref=e84]:
+            - generic [ref=e85]: 85%
+            - generic [ref=e495]: Sellado
+          - generic [ref=e87]: 1891 dealers servidos
+        - button "Sevilla Andalucía 84% Parcial 841 dealers servidos" [ref=e498] [cursor=pointer]:
+          - generic [ref=e345]:
+            - generic [ref=e346]: Sevilla
+            - generic [ref=e347]: Andalucía
+          - generic [ref=e348]:
+            - generic [ref=e349]: 84%
+            - generic [ref=e499]: Parcial
+          - generic [ref=e351]: 841 dealers servidos
+        - button "Burgos Castilla y León 81% Parcial 136 dealers servidos" [ref=e502] [cursor=pointer]:
+          - generic [ref=e89]:
+            - generic [ref=e90]: Burgos
+            - generic [ref=e91]: Castilla y León
+          - generic [ref=e92]:
+            - generic [ref=e93]: 81%
+            - generic [ref=e503]: Parcial
+          - generic [ref=e95]: 136 dealers servidos
+        - button "Illes Balears Illes Balears 80% Parcial 397 dealers servidos" [ref=e506] [cursor=pointer]:
+          - generic [ref=e73]:
+            - generic [ref=e74]: Illes Balears
+            - generic [ref=e75]: Illes Balears
+          - generic [ref=e76]:
+            - generic [ref=e77]: 80%
+            - generic [ref=e507]: Parcial
+          - generic [ref=e79]: 397 dealers servidos
+        - button "Zaragoza Aragón 78% Parcial 291 dealers servidos" [ref=e510] [cursor=pointer]:
+          - generic [ref=e417]:
+            - generic [ref=e418]: Zaragoza
+            - generic [ref=e419]: Aragón
+          - generic [ref=e420]:
+            - generic [ref=e421]: 78%
+            - generic [ref=e511]: Parcial
+          - generic [ref=e423]: 291 dealers servidos
+        - button "Alicante C. Valenciana 78% Parcial 799 dealers servidos" [ref=e514] [cursor=pointer]:
+          - generic [ref=e41]:
+            - generic [ref=e42]: Alicante
+            - generic [ref=e43]: C. Valenciana
+          - generic [ref=e44]:
+            - generic [ref=e45]: 78%
+            - generic [ref=e515]: Parcial
+          - generic [ref=e47]: 799 dealers servidos
+        - button "Álava País Vasco 77% Parcial 94 dealers servidos" [ref=e518] [cursor=pointer]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: Álava
+            - generic [ref=e27]: País Vasco
+          - generic [ref=e28]:
+            - generic [ref=e29]: 77%
+            - generic [ref=e519]: Parcial
+          - generic [ref=e31]: 94 dealers servidos
+        - button "Ourense Galicia 77% Parcial 148 dealers servidos" [ref=e522] [cursor=pointer]:
+          - generic [ref=e273]:
+            - generic [ref=e274]: Ourense
+            - generic [ref=e275]: Galicia
+          - generic [ref=e276]:
+            - generic [ref=e277]: 77%
+            - generic [ref=e523]: Parcial
+          - generic [ref=e279]: 148 dealers servidos
+        - button "Cantabria Cantabria 77% Parcial 190 dealers servidos" [ref=e526] [cursor=pointer]:
+          - generic [ref=e329]:
+            - generic [ref=e330]: Cantabria
+            - generic [ref=e331]: Cantabria
+          - generic [ref=e332]:
+            - generic [ref=e333]: 77%
+            - generic [ref=e527]: Parcial
+          - generic [ref=e335]: 190 dealers servidos
+        - button "Zamora Castilla y León 76% Parcial 74 dealers servidos" [ref=e530] [cursor=pointer]:
+          - generic [ref=e409]:
+            - generic [ref=e410]: Zamora
+            - generic [ref=e411]: Castilla y León
+          - generic [ref=e412]:
+            - generic [ref=e413]: 76%
+            - generic [ref=e531]: Parcial
+          - generic [ref=e415]: 74 dealers servidos
+        - button "Tarragona Cataluña 75% Parcial 302 dealers servidos" [ref=e534] [cursor=pointer]:
+          - generic [ref=e361]:
+            - generic [ref=e362]: Tarragona
+            - generic [ref=e363]: Cataluña
+          - generic [ref=e364]:
+            - generic [ref=e365]: 75%
+            - generic [ref=e535]: Parcial
+          - generic [ref=e367]: 302 dealers servidos
+        - button "Valladolid Castilla y León 73% Parcial 156 dealers servidos" [ref=e538] [cursor=pointer]:
+          - generic [ref=e393]:
+            - generic [ref=e394]: Valladolid
+            - generic [ref=e395]: Castilla y León
+          - generic [ref=e396]:
+            - generic [ref=e397]: 73%
+            - generic [ref=e539]: Parcial
+          - generic [ref=e399]: 156 dealers servidos
+        - button "Jaén Andalucía 70% Parcial 234 dealers servidos" [ref=e542] [cursor=pointer]:
+          - generic [ref=e201]:
+            - generic [ref=e202]: Jaén
+            - generic [ref=e203]: Andalucía
+          - generic [ref=e204]:
+            - generic [ref=e205]: 70%
+            - generic [ref=e543]: Parcial
+          - generic [ref=e207]: 234 dealers servidos
+        - button "Pontevedra Galicia 70% Parcial 367 dealers servidos" [ref=e546] [cursor=pointer]:
+          - generic [ref=e305]:
+            - generic [ref=e306]: Pontevedra
+            - generic [ref=e307]: Galicia
+          - generic [ref=e308]:
+            - generic [ref=e309]: 70%
+            - generic [ref=e547]: Parcial
+          - generic [ref=e311]: 367 dealers servidos
+        - button "Granada Andalucía 69% Parcial 327 dealers servidos" [ref=e550] [cursor=pointer]:
+          - generic [ref=e161]:
+            - generic [ref=e162]: Granada
+            - generic [ref=e163]: Andalucía
+          - generic [ref=e164]:
+            - generic [ref=e165]: 69%
+            - generic [ref=e551]: Parcial
+          - generic [ref=e167]: 327 dealers servidos
+        - button "Huesca Aragón 67% Parcial 76 dealers servidos" [ref=e554] [cursor=pointer]:
+          - generic [ref=e193]:
+            - generic [ref=e194]: Huesca
+            - generic [ref=e195]: Aragón
+          - generic [ref=e196]:
+            - generic [ref=e197]: 67%
+            - generic [ref=e555]: Parcial
+          - generic [ref=e199]: 76 dealers servidos
+        - button "Lleida Cataluña 65% Parcial 188 dealers servidos" [ref=e558] [cursor=pointer]:
+          - generic [ref=e217]:
+            - generic [ref=e218]: Lleida
+            - generic [ref=e219]: Cataluña
+          - generic [ref=e220]:
+            - generic [ref=e221]: 65%
+            - generic [ref=e559]: Parcial
+          - generic [ref=e223]: 188 dealers servidos
+        - button "Cádiz Andalucía 64% Parcial 299 dealers servidos" [ref=e562] [cursor=pointer]:
+          - generic [ref=e105]:
+            - generic [ref=e106]: Cádiz
+            - generic [ref=e107]: Andalucía
+          - generic [ref=e108]:
+            - generic [ref=e109]: 64%
+            - generic [ref=e563]: Parcial
+          - generic [ref=e111]: 299 dealers servidos
+        - button "Toledo Castilla-La Mancha 63% Parcial 290 dealers servidos" [ref=e566] [cursor=pointer]:
+          - generic [ref=e377]:
+            - generic [ref=e378]: Toledo
+            - generic [ref=e379]: Castilla-La Mancha
+          - generic [ref=e380]:
+            - generic [ref=e381]: 63%
+            - generic [ref=e567]: Parcial
+          - generic [ref=e383]: 290 dealers servidos
+        - button "Castellón C. Valenciana 63% Parcial 180 dealers servidos" [ref=e570] [cursor=pointer]:
+          - generic [ref=e113]:
+            - generic [ref=e114]: Castellón
+            - generic [ref=e115]: C. Valenciana
+          - generic [ref=e116]:
+            - generic [ref=e117]: 63%
+            - generic [ref=e571]: Parcial
+          - generic [ref=e119]: 180 dealers servidos
+        - button "Córdoba Andalucía 62% Parcial 272 dealers servidos" [ref=e574] [cursor=pointer]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: Córdoba
+            - generic [ref=e131]: Andalucía
+          - generic [ref=e132]:
+            - generic [ref=e133]: 62%
+            - generic [ref=e575]: Parcial
+          - generic [ref=e135]: 272 dealers servidos
+        - button "Ciudad Real Castilla-La Mancha 62% Parcial 177 dealers servidos" [ref=e578] [cursor=pointer]:
+          - generic [ref=e121]:
+            - generic [ref=e122]: Ciudad Real
+            - generic [ref=e123]: Castilla-La Mancha
+          - generic [ref=e124]:
+            - generic [ref=e125]: 62%
+            - generic [ref=e579]: Parcial
+          - generic [ref=e127]: 177 dealers servidos
+        - button "Gipuzkoa País Vasco 61% Parcial 151 dealers servidos" [ref=e582] [cursor=pointer]:
+          - generic [ref=e177]:
+            - generic [ref=e178]: Gipuzkoa
+            - generic [ref=e179]: País Vasco
+          - generic [ref=e180]:
+            - generic [ref=e181]: 61%
+            - generic [ref=e583]: Parcial
+          - generic [ref=e183]: 151 dealers servidos
+        - button "Guadalajara Castilla-La Mancha 60% Parcial 73 dealers servidos" [ref=e586] [cursor=pointer]:
+          - generic [ref=e169]:
+            - generic [ref=e170]: Guadalajara
+            - generic [ref=e171]: Castilla-La Mancha
+          - generic [ref=e172]:
+            - generic [ref=e173]: 60%
+            - generic [ref=e587]: Parcial
+          - generic [ref=e175]: 73 dealers servidos
+        - button "Segovia Castilla y León 58% Parcial 46 dealers servidos" [ref=e590] [cursor=pointer]:
+          - generic [ref=e337]:
+            - generic [ref=e338]: Segovia
+            - generic [ref=e339]: Castilla y León
+          - generic [ref=e340]:
+            - generic [ref=e341]: 58%
+            - generic [ref=e591]: Parcial
+          - generic [ref=e343]: 46 dealers servidos
+        - button "Albacete Castilla-La Mancha 56% Parcial 120 dealers servidos" [ref=e594] [cursor=pointer]:
+          - generic [ref=e33]:
+            - generic [ref=e34]: Albacete
+            - generic [ref=e35]: Castilla-La Mancha
+          - generic [ref=e36]:
+            - generic [ref=e37]: 56%
+            - generic [ref=e595]: Parcial
+          - generic [ref=e39]: 120 dealers servidos
+        - button "Soria Castilla y León 55% Parcial 23 dealers servidos" [ref=e598] [cursor=pointer]:
+          - generic [ref=e353]:
+            - generic [ref=e354]: Soria
+            - generic [ref=e355]: Castilla y León
+          - generic [ref=e356]:
+            - generic [ref=e357]: 55%
+            - generic [ref=e599]: Parcial
+          - generic [ref=e359]: 23 dealers servidos
+        - button "León Castilla y León 54% Parcial 140 dealers servidos" [ref=e602] [cursor=pointer]:
+          - generic [ref=e209]:
+            - generic [ref=e210]: León
+            - generic [ref=e211]: Castilla y León
+          - generic [ref=e212]:
+            - generic [ref=e213]: 54%
+            - generic [ref=e603]: Parcial
+          - generic [ref=e215]: 140 dealers servidos
+        - button "Badajoz Extremadura 54% Parcial 237 dealers servidos" [ref=e606] [cursor=pointer]:
+          - generic [ref=e65]:
+            - generic [ref=e66]: Badajoz
+            - generic [ref=e67]: Extremadura
+          - generic [ref=e68]:
+            - generic [ref=e69]: 54%
+            - generic [ref=e607]: Parcial
+          - generic [ref=e71]: 237 dealers servidos
+        - button "Palencia Castilla y León 52% Parcial 39 dealers servidos" [ref=e610] [cursor=pointer]:
+          - generic [ref=e289]:
+            - generic [ref=e290]: Palencia
+            - generic [ref=e291]: Castilla y León
+          - generic [ref=e292]:
+            - generic [ref=e293]: 52%
+            - generic [ref=e611]: Parcial
+          - generic [ref=e295]: 39 dealers servidos
+        - button "Santa Cruz de Tenerife Canarias 52% Parcial 298 dealers servidos" [ref=e614] [cursor=pointer]:
+          - generic [ref=e321]:
+            - generic [ref=e322]: Santa Cruz de Tenerife
+            - generic [ref=e323]: Canarias
+          - generic [ref=e324]:
+            - generic [ref=e325]: 52%
+            - generic [ref=e615]: Parcial
+          - generic [ref=e327]: 298 dealers servidos
+        - button "Cáceres Extremadura 49% Gap 112 dealers servidos" [ref=e618] [cursor=pointer]:
+          - generic [ref=e97]:
+            - generic [ref=e98]: Cáceres
+            - generic [ref=e99]: Extremadura
+          - generic [ref=e100]:
+            - generic [ref=e101]: 49%
+            - generic [ref=e619]: Gap
+          - generic [ref=e103]: 112 dealers servidos
+        - button "Las Palmas Canarias 49% Gap 277 dealers servidos" [ref=e622] [cursor=pointer]:
+          - generic [ref=e297]:
+            - generic [ref=e298]: Las Palmas
+            - generic [ref=e299]: Canarias
+          - generic [ref=e300]:
+            - generic [ref=e301]: 49%
+            - generic [ref=e623]: Gap
+          - generic [ref=e303]: 277 dealers servidos
+        - button "Almería Andalucía 46% Gap 179 dealers servidos" [ref=e626] [cursor=pointer]:
+          - generic [ref=e49]:
+            - generic [ref=e50]: Almería
+            - generic [ref=e51]: Andalucía
+          - generic [ref=e52]:
+            - generic [ref=e53]: 46%
+            - generic [ref=e627]: Gap
+          - generic [ref=e55]: 179 dealers servidos
+        - button "Huelva Andalucía 42% Gap 97 dealers servidos" [ref=e630] [cursor=pointer]:
+          - generic [ref=e185]:
+            - generic [ref=e186]: Huelva
+            - generic [ref=e187]: Andalucía
+          - generic [ref=e188]:
+            - generic [ref=e189]: 42%
+            - generic [ref=e631]: Gap
+          - generic [ref=e191]: 97 dealers servidos
+        - button "Ávila Castilla y León 41% Gap 36 dealers servidos" [ref=e634] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: Ávila
+            - generic [ref=e59]: Castilla y León
+          - generic [ref=e60]:
+            - generic [ref=e61]: 41%
+            - generic [ref=e635]: Gap
+          - generic [ref=e63]: 36 dealers servidos
+        - button "Cuenca Castilla-La Mancha 40% Gap 53 dealers servidos" [ref=e638] [cursor=pointer]:
+          - generic [ref=e145]:
+            - generic [ref=e146]: Cuenca
+            - generic [ref=e147]: Castilla-La Mancha
+          - generic [ref=e148]:
+            - generic [ref=e149]: 40%
+            - generic [ref=e639]: Gap
+          - generic [ref=e151]: 53 dealers servidos
+        - button "Teruel Aragón 40% Gap 30 dealers servidos" [ref=e642] [cursor=pointer]:
+          - generic [ref=e369]:
+            - generic [ref=e370]: Teruel
+            - generic [ref=e371]: Aragón
+          - generic [ref=e372]:
+            - generic [ref=e373]: 40%
+            - generic [ref=e643]: Gap
+          - generic [ref=e375]: 30 dealers servidos
+        - button "Melilla Melilla 5% Gap 2 dealers servidos" [ref=e646] [cursor=pointer]:
+          - generic [ref=e433]:
+            - generic [ref=e434]: Melilla
+            - generic [ref=e435]: Melilla
+          - generic [ref=e436]:
+            - generic [ref=e437]: 5%
+            - generic [ref=e647]: Gap
+          - generic [ref=e439]: 2 dealers servidos
+        - button "Ceuta Ceuta 4% Gap 1 dealers servidos" [ref=e650] [cursor=pointer]:
+          - generic [ref=e425]:
+            - generic [ref=e426]: Ceuta
+            - generic [ref=e427]: Ceuta
+          - generic [ref=e428]:
+            - generic [ref=e429]: 4%
+            - generic [ref=e651]: Gap
+          - generic [ref=e431]: 1 dealers servidos
+  - contentinfo [ref=e440]:
+    - generic [ref=e441]:
+      - generic [ref=e442]:
+        - img [ref=e443]
+        - generic [ref=e444]: cardeep · ES
+      - generic [ref=e445]: El mapa completo de un mercado que hoy nadie tiene entero.

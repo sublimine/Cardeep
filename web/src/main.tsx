@@ -1,39 +1,36 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import './styles/global.css';
-import { Layout } from './components/Layout';
-import { Landing } from './routes/Landing';
-import { Explore } from './routes/Explore';
-import { Dealer } from './routes/Dealer';
-import { Vehicle } from './routes/Vehicle';
-import { NotFound } from './routes/NotFound';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App'
+import { AuthProvider } from './auth/AuthContext'
+import { ToastProvider } from './components/Toast'
+import './index.css'
 
-const qc = new QueryClient({
-  defaultOptions: {
-    queries: { staleTime: 60_000, retry: 1, refetchOnWindowFocus: false },
-  },
-});
+// Apply saved theme before first paint.
+// CSS tokens: :root = dark (default), .light = light overrides.
+// Tailwind darkMode:'class' requires the .dark class on <html>.
+const saved = localStorage.getItem('theme')
+if (saved === 'light') {
+  document.documentElement.classList.add('light')
+} else {
+  document.documentElement.classList.add('dark')
+}
 
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Layout />,
-    children: [
-      { index: true, element: <Landing /> },
-      { path: 'explore', element: <Explore /> },
-      { path: 'dealer/:cdp', element: <Dealer /> },
-      { path: 'vehicle/:ulid', element: <Vehicle /> },
-      { path: '*', element: <NotFound /> },
-    ],
-  },
-]);
+// Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(console.error)
+  })
+}
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={qc}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
-);
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <App />
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  </React.StrictMode>,
+)

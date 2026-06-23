@@ -1,0 +1,23 @@
+# Cardeep extraction recipe — CDP-ES-07-KWGRMQ7B
+# Reusable; re-scrape without raw crude.
+version: 1
+source: okmobility.com
+group: rentacar_vo
+scope: rentacar_vo wholesale (OK Mobility SSR HTML used-stock storefront, per-page
+  paginated)
+engine: curl_cffi+chrome131_impersonate+ssr_html_embedded_card_markup(GET)
+access: OPEN server-rendered HTML (Chrome TLS fingerprint; no proxy/browser/cookie).
+  '/en/' serves; '/es/' 404s. Opticks bot beacon on the public site -> t1_soft; the
+  listing HTML is unwalled.
+endpoint: GET https://okmobility.com/en/buy-car/used?page=N
+enumeration: ?page=1..N (~35 cars/page); id="total-cars" declares full stock (172
+  live)
+field_map:
+  deep_link: a.own-car-card href
+  listing_ref: data-carid
+  make_model: div.car-name
+  version: div.car-motorization
+  summary: div.car-summary spans [year|km|fuel|transmission]
+  price: div.big-cipher-text
+  prev_price: div.deleted-small-cipher-text
+  photo_url: div.car-image data-srcbg (cdn.okrentacar.es)
