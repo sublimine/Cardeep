@@ -3420,3 +3420,15 @@
   (identidad+reconciliación super-canónica cadena completa + R-stratum 339.8k particulares + sellar
   cross-source-dedup-v1; toca datos servidos -> migración/gate los aplico+verifico yo) -> Fase 4 cosecha ->
   Fase 5 recipe-harness -> Fase 2 ops -> Fase 6 API/delta -> Fase 8 piloto país -> Fase 9 auditoría final.
+
+## 2026-06-23 — FASE 3 (identidad) SELLADA + Fase 4 (cosecha) en review
+- FASE 3 COMPLETA x2 vías: Ferrari 1489 passed / 0 failed / 1 xfailed. CI verde. Cadena super-canónica
+  COMPLETA servida (residual-namemuni-v1; deeplink+particular+residual los 3 vam_verified). Dealers
+  47.538->47.519 (19 merges seguros de stragglers); particulares colapsan 846 dupes; 0 cross-kind; mayor
+  componente 22 (LOUZAO); DEALER_CDP sano; cdp byte-idéntico (golden 34/0). Over-merge residual RESUELTO a
+  la raíz (_is_eligible dropea bystander-drag; guard pasa por mérito). Particular rep=most-available
+  (richest-member violations 0). 11 tests-invariante anti-over-merge (incl chain-only-coarsens re-apuntado).
+- Mandato 10 fases: SELLADAS 0 (replicación código), 7 (biblia), 3 (identidad). EN REVIEW Fase 4 (cosecha:
+  dealerprobe batch + SearXNG self-host €0 + motor_es) — scheduler.py/motor_es escritos, commit tras review.
+- PROXIMO: integrar Fase 4 -> Fase 5 recipe-harness -> Fase 2 ops -> Fase 6 API/delta -> Fase 3b particulares
+  R-stratum -> Fase 8 PILOTO-PAIS-XX -> Fase 9 auditoría adversarial final.
