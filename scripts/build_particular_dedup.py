@@ -70,6 +70,19 @@ async def build(apply: bool, new_run_id: str) -> None:
                 WHERE kind='particular' AND canonical_key IS NOT NULL
                 GROUP BY canonical_key HAVING count(*) > 1""")
 
+        # Available-vehicle count per canonical, for richest-member representative selection
+        # (consistent with build_canonical_dedup.py and build_residual_namemuni_dedup.py: the
+        # canonical must be the most-information-rich node so /entities + inventory resolve to the
+        # seller that actually holds the listings). FASE 3 fix for Case A below.
+        avail_rows = await conn.fetch(
+            """SELECT COALESCE(vc.canonical_cdp_code, e.cdp_code) AS canon, count(*) AS c
+                 FROM vehicle v
+                 JOIN entity e ON e.entity_ulid = v.entity_ulid
+                 LEFT JOIN v_canonical vc ON vc.entity_ulid = v.entity_ulid
+                WHERE v.status='available'
+                GROUP BY 1""")
+        avail = {r["canon"]: r["c"] for r in avail_rows}
+
         case_a = case_b = case_c = 0
         new_pairs: list[tuple] = []        # (canon_cdp, canon_ulid, super_cdp, super_ulid, is_rep, key, size)
         skipped_groups: list[str] = []
@@ -88,9 +101,12 @@ async def build(apply: bool, new_run_id: str) -> None:
                 case_b += 1
                 rep_cdp, rep_ulid, _ = next(iter(existing))
             else:
-                # Case A: fully unmapped -> representative = MIN(cdp_code) (members sorted by cdp_code).
+                # Case A: fully unmapped -> representative = MOST-AVAILABLE member (tie-break cdp asc),
+                # consistent with the rest of the pipeline. The prior rep=MIN(cdp_code) could surface an
+                # emptier node as canonical (FASE 3 canonical_tiebreak: 57 particular groups had a member
+                # richer than its canonical). Dealers are unaffected (these are all kind=particular).
                 case_a += 1
-                rep_cdp, rep_ulid = members[0]
+                rep_cdp, rep_ulid = min(members, key=lambda m: (-avail.get(m[0], 0), m[0]))
             size = len(members)
             for c, u in members:
                 if c in mapped:

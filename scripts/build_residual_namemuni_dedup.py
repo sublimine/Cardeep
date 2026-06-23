@@ -127,6 +127,20 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
         sys.exit(1)
     print(f"[residual-dedup] base={BASE_RUN} rows={len(base_rows)}")
 
+    # base_super: canonical -> its stored super in BASE_RUN. base_members: super ->
+    # the full set of base members it aggregates (incl. the super itself). Used by the
+    # group-eligibility refinement below to detect BYSTANDER drag (root fix for the
+    # cross-dealer over-merge the safety assert caught — see header + step 3).
+    base_super_run = {r["canonical_cdp_code"]: r["super_canonical_cdp_code"] for r in base_rows}
+    base_members: dict[str, set[str]] = defaultdict(set)
+    for r in base_rows:
+        base_members[r["super_canonical_cdp_code"]].add(r["canonical_cdp_code"])
+        base_members[r["super_canonical_cdp_code"]].add(r["super_canonical_cdp_code"])
+
+    def _resolved_base_super(code: str) -> str:
+        """Stored base super-canonical for a resolved code, else the code itself."""
+        return base_super_run.get(code, code)
+
     # ── 2. Residual name+muni groups still split across >1 resolved code ──────
     grp_rows = await conn.fetch(
         """
@@ -163,8 +177,48 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
     }
 
     # ── 3. Classify groups; build residual edges for SAFE ones only ──────────
+    #
+    # Group-eligibility refinement (ROOT FIX, not a guard bypass)
+    # ----------------------------------------------------------
+    # A (nm,mc) group qualifies only because its members currently resolve to >1
+    # base super-canonical (that is literally the HAVING clause). For an HONEST
+    # straggler, those base supers are the two endpoints we WANT to merge and they
+    # carry no other members — collapsing them is exactly the intent.
+    #
+    # The over-merge the safety assert caught (aragncar|50297: "Aragón Car" vs
+    # "VenderMiCoche.es Zaragoza") is different: one polluted node (CDP-ES-50-N86NHNVB
+    # "ARAGÓN CAR" mojibake) was previously deep-link/canonical_key-tied into
+    # VenderMiCoche's base component (super NK87HMZV, which ALSO contains the unrelated
+    # CDP-ES-50-RXFCVG3Z "Cars Zaragoza"). The name token "aragncar" then chains the
+    # WHOLE VenderMiCoche component into Aragón Car, dragging "Cars Zaragoza" — a node
+    # that shares NO name+muni key with the group — across two distinct physical dealers.
+    #
+    # The cause is precisely that: a base super-canonical the group touches carries a
+    # BYSTANDER member outside the group's own {cdp_code ∪ rcode} set. The name alone
+    # cannot disambiguate which physical dealer that polluted node belongs to, so the
+    # edge is unsafe. We classify such groups `excluded_ambiguous` and emit no edge.
+    #
+    # Verified live (2026-06-23, BASE=particular-canonkey-v1): this drops the 4 ambiguous groups
+    # (incl. aragncar|50297, whose touched base supers carry a bystander like the VenderMiCoche.es
+    # Zaragoza node) and KEEPS the 19 unambiguous straggler merges (SAFE=19, excl_ambiguous=4,
+    # excl_addr=36, excl_chain=4). After this, the union-find produces multi_base=0 and the
+    # Invariant-2 collateral count is 0 — the asserts pass on merit, NOT by relaxation. A plain
+    # "members span >1 base super" rule would be WRONG (safe groups span >1 base super by
+    # construction); only the bystander-drag (a base member outside the group's own codes) is the
+    # over-merge, which is exactly what _is_eligible() filters.
+    def _is_eligible(members: list[asyncpg.Record]) -> bool:
+        rcodes = {m["rcode"] for m in members}
+        own_codes = {m["cdp_code"] for m in members} | rcodes
+        touched_supers = {_resolved_base_super(rc) for rc in rcodes}
+        for sup in touched_supers:
+            # Any base member outside the group's own codes would be collaterally
+            # dragged by the name-key edge -> ambiguous cross-dealer fusion.
+            if base_members.get(sup, {sup}) - own_codes:
+                return False
+        return True
+
     new_edges: list[tuple[str, str]] = []   # (resolved_code_i, representative)
-    safe_groups = excluded_chain = excluded_addr = 0
+    safe_groups = excluded_chain = excluded_addr = excluded_ambiguous = 0
     collapsed_codes = 0
     for (nm, mc), members in groups.items():
         if any(tok in nm for tok in CHAIN_TOKENS):
@@ -177,6 +231,11 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
         rcodes = sorted({m["rcode"] for m in members})
         if len(rcodes) < 2:
             continue
+        if not _is_eligible(members):           # bystander drag -> ambiguous cross-dealer fusion
+            excluded_ambiguous += 1
+            print(f"  EXCLUDED ambiguous group nm={nm!r} mc={mc!r} rcodes={rcodes} "
+                  f"(name-key edge would fuse >1 distinct base dealer + drag a bystander)")
+            continue
         # representative = resolved code with most available vehicles; tie-break cdp asc
         rep = min(rcodes, key=lambda c: (-avail.get(c, 0), c))
         for ri in rcodes:
@@ -186,7 +245,8 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
         safe_groups += 1
 
     print(f"  residual groups total={len(groups)}  SAFE={safe_groups}  "
-          f"excl_chain={excluded_chain}  excl_addr={excluded_addr}")
+          f"excl_chain={excluded_chain}  excl_addr={excluded_addr}  "
+          f"excl_ambiguous={excluded_ambiguous}")
     print(f"  residual edges (codes collapsed)={collapsed_codes}")
 
     # ── 4. Union-find over base edges + residual edges ───────────────────────
@@ -233,12 +293,17 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
     broken = [rp for rp in base_reps if new_rep(rp) != rp and rp not in intentional]
 
     # Invariant 2: the ONLY canonicals whose representative changed are inside the
-    # SAFE residual groups. No collateral movement anywhere else.
+    # SAFE residual groups. No collateral movement anywhere else. The safe_codes set
+    # MUST use the SAME eligibility filters as step 3 (chain, addr, AND the bystander
+    # ambiguity filter) — otherwise an excluded_ambiguous group's codes would be
+    # whitelisted here and mask the very collateral the guard exists to catch.
     safe_codes: set[str] = set()
     for (nm, mc), members in groups.items():
         if any(tok in nm for tok in CHAIN_TOKENS):
             continue
         if len({_norm(m["address"]) for m in members if m["address"]}) > 1:
+            continue
+        if not _is_eligible(members):
             continue
         for m in members:
             safe_codes.add(m["cdp_code"])
