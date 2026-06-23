@@ -13,29 +13,22 @@ import './Landing.css';
 // Three.js map is lazy-loaded so it stays out of the initial bundle.
 const SpainMap = lazy(() => import('../three/SpainMap'));
 
-// Verified live counts as of 2026-06-20 (Postgres :5433 census). Graceful fallback
-// so the hero never renders empty if /stats is offline; the live map + coverage +
-// explorer still read straight from the API (/geo/seal, /geo/{prov}/entities).
-const FALLBACK: Stats = {
-  dealers: 61_729,
-  vehicles_unique_available: 1_704_968,
-  events: 0,
-  provinces: 52,
-  municipalities: 8_132,
-};
-
 interface Metric {
   label: string;
-  value: number;
+  value: number | null; // null = unknown (stats loading/unavailable) -> rendered '—', NEVER a fake number
   hint: string;
 }
 
-function buildMetrics(s: Stats): Metric[] {
+// Reads straight from live /stats. There is NO hardcoded fallback: a fabricated literal would drift
+// from the census and lie to the user (the prior 1_704_968 / 61_729 stale-fallback bug). When stats
+// are not yet available the values render as '—' (see the metric render below); the live map, coverage
+// and explorer read straight from the API too.
+function buildMetrics(s: Stats | undefined): Metric[] {
   return [
-    { label: 'Coches únicos', value: s.vehicles_unique_available, hint: 'en venta, deduplicados' },
-    { label: 'Puntos de venta', value: s.dealers, hint: 'concesionarios · compraventas · desguaces' },
-    { label: 'Provincias', value: s.provinces, hint: 'cobertura nacional' },
-    { label: 'Municipios', value: s.municipalities, hint: 'hasta el último pueblo' },
+    { label: 'Coches únicos', value: s?.vehicles_unique_available ?? null, hint: 'en venta, deduplicados' },
+    { label: 'Puntos de venta', value: s?.dealers ?? null, hint: 'concesionarios · compraventas · desguaces' },
+    { label: 'Provincias', value: s?.provinces ?? null, hint: 'cobertura nacional' },
+    { label: 'Municipios', value: s?.municipalities ?? null, hint: 'hasta el último pueblo' },
   ];
 }
 
@@ -64,9 +57,8 @@ const SEGMENT_META: Record<Segment, { title: string; den: (num: number, den: num
 
 export function Landing() {
   const { data, isError } = useStats();
-  const stats = data ?? FALLBACK;
   const isLive = !!data && !isError;
-  const metrics = buildMetrics(stats);
+  const metrics = buildMetrics(data);
 
   const [segment, setSegment] = useState<Segment>('venta');
   const seal = useSealMap(segment);
@@ -162,7 +154,10 @@ export function Landing() {
                 <>
                   <div className="coverage__figure">
                     <span className="coverage__pct mono">
-                      {coverage.pct.toFixed(1)}
+                      {/* Cap at 100%: discovery can find MORE than the census (desguace found>DGT),
+                          but a coverage figure >100% is nonsensical to the user. The real found/census
+                          numbers are shown verbatim on the den line below, so nothing is hidden. */}
+                      {Math.min(100, coverage.pct).toFixed(1)}
                       <i>%</i>
                     </span>
                     <span className="coverage__den mono">
@@ -211,7 +206,7 @@ export function Landing() {
               {metrics.map((m) => (
                 <div key={m.label} className="stat">
                   <span className="stat__label">{m.label}</span>
-                  <span className="stat__value mono">{formatInt(m.value)}</span>
+                  <span className="stat__value mono">{m.value === null ? '—' : formatInt(m.value)}</span>
                   <span className="stat__hint">{m.hint}</span>
                 </div>
               ))}

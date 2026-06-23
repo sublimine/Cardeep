@@ -1,5 +1,5 @@
-// Seal coverage per province, from the live API (/geo/seal) or the static snapshot
-// (public/geo/seal-snapshot.json) so the map is alive even when the API is offline.
+// Seal coverage per province, derived ONLY from the live API (/geo/seal). The static snapshot
+// fallback was removed: a frozen JSON drifted from the live seal and painted wrong verdicts.
 import type { GeoSeal, SealVerdict } from '../api/types';
 
 export type Segment = 'venta' | 'desguace';
@@ -12,13 +12,6 @@ export interface ProvinceCoverage {
 }
 
 export type SealMap = Record<string, ProvinceCoverage>;
-
-// Shape of public/geo/seal-snapshot.json (generated from v_province_seal).
-interface SnapshotShape {
-  segments?: Record<string, Record<string, ProvinceCoverage>>;
-}
-
-const SNAPSHOT_URL = '/geo/seal-snapshot.json';
 
 // Build a code→coverage map for one segment from the live GeoSeal envelope.
 export function sealMapFromLive(seal: GeoSeal, segment: Segment): SealMap {
@@ -34,11 +27,4 @@ export function sealMapFromLive(seal: GeoSeal, segment: Segment): SealMap {
     };
   }
   return out;
-}
-
-export async function loadSealSnapshot(segment: Segment): Promise<SealMap> {
-  const res = await fetch(SNAPSHOT_URL);
-  if (!res.ok) throw new Error(`seal snapshot HTTP ${res.status}`);
-  const snap = (await res.json()) as SnapshotShape;
-  return snap.segments?.[segment] ?? {};
 }
