@@ -197,20 +197,28 @@ class TestHealthSealedCounts:
         dealers = r.json()["data"]["counts"]["dealers"]
         vc_rows = _fetchval("SELECT count(*) FROM v_canonical")
         b1_distinct = _fetchval("SELECT count(DISTINCT canonical_cdp_code) FROM v_canonical")
-        # Independent cross-check: same predicate as main.py /health
+        # Independent cross-check: the HONEST "puntos de venta" predicate (services.api.stats), i.e.
+        # resolved-distinct, NOT particular, NOT desguace, and with >=1 servable vehicle. The prior
+        # predicate (kind<>'particular' only) over-counted ~35k empty entities + ~2.3k desguace.
         vdr_count = _fetchval(
             """
             SELECT count(DISTINCT vdr.resolved_cdp_code)
               FROM v_dealer_resolved vdr
               JOIN entity e ON e.entity_ulid = vdr.entity_ulid
-             WHERE e.kind <> 'particular'
+             WHERE e.kind::text NOT IN ('particular', 'desguace')
+               AND EXISTS (SELECT 1 FROM servable_vehicle sv WHERE sv.entity_ulid = e.entity_ulid)
             """
         )
         assert isinstance(dealers, int) and dealers > 0, (
             "health dealers must be a positive integer"
         )
-        assert dealers == vdr_count, (
-            f"dealers={dealers} must equal v_dealer_resolved non-particular count={vdr_count}"
+        # /stats is now served from the product_stats cache (refreshed off-request), so under the live
+        # cosecha the cached value lags a live recompute by a small drift — assert within tolerance.
+        # The honest-predicate IDENTITY is the real guarantee; the tolerance only absorbs cache+harvest
+        # timing (the same reasoning as test_health_dealers_equals_db).
+        assert abs(dealers - vdr_count) <= _DEALER_COUNT_TOLERANCE, (
+            f"dealers={dealers} diverges from the honest sales-point recompute={vdr_count} by "
+            f">{_DEALER_COUNT_TOLERANCE} (non-particular, non-desguace, with servable inventory)"
         )
         # Dedup-active invariant (corrected): the served dealer count must be
         # strictly below the RAW non-particular entity count — that is what proves
@@ -778,13 +786,15 @@ class TestVDealerResolved:
         assert r.status_code == 200
         api_dealers = r.json()["data"]["counts"]["dealers"]
 
-        # Independent SQL cross-check (same predicate as main.py /health query)
+        # Independent SQL cross-check: the HONEST sales-point predicate (services.api.stats) —
+        # non-particular, non-desguace, with >=1 servable vehicle.
         db_dealers = _fetchval(
             """
             SELECT count(DISTINCT vdr.resolved_cdp_code)
               FROM v_dealer_resolved vdr
               JOIN entity e ON e.entity_ulid = vdr.entity_ulid
-             WHERE e.kind <> 'particular'
+             WHERE e.kind::text NOT IN ('particular', 'desguace')
+               AND EXISTS (SELECT 1 FROM servable_vehicle sv WHERE sv.entity_ulid = e.entity_ulid)
             """
         )
         assert isinstance(api_dealers, int) and api_dealers > 0

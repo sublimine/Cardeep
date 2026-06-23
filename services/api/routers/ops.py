@@ -56,10 +56,12 @@ async def stats(
 
     Moved off /health (audit): anonymous callers must not learn coverage scale.
 
-    dealers        — sealed dealer count from v_dealer_resolved excluding
-                     particulares (kind <> 'particular'); count grows with discovery,
-                     so it is computed live, not pinned here (was a stale hardcoded
-                     40 016 — audit Q10 doc-drift; live ~40 194 as of 2026-06-16).
+    dealers        — REAL car sales points ("Puntos de venta"): resolved-distinct,
+                     kind NOT IN (particular, desguace), with >=1 servable vehicle.
+                     Excludes private platform listings (particular), parts-only
+                     scrapyards (desguace) and discovered-but-empty entities. Honest
+                     figure ~19.1k (the old kind<>'particular' count ~54.6k included
+                     ~35.4k empty + ~2.3k desguace). See services/api/stats.py.
     vehicles_unique_available — canonical-only + status='available' (one row per
                     physical car, not the raw count that includes cross-entity aliases).
     events         — total event rows (not filtered: historical record).

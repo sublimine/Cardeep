@@ -12,11 +12,19 @@ from typing import Any
 # vehicles_unique_available) are COUNT(DISTINCT)/JOIN over millions of rows — that is why /stats is
 # precomputed into product_stats off the request path.
 _QUERIES: dict[str, str] = {
+    # "dealers" = REAL car sales points (the portal's "Puntos de venta"). Honest definition after the
+    # owner caught the inflated figure: a resolved-distinct entity that (a) is NOT particular (private
+    # sellers scraped from platforms — Wallapop/Milanuncios — are listings, not sales points; the
+    # platform is one channel), (b) is NOT desguace (scrapyards sell parts, not cars), and (c) has >=1
+    # servable vehicle (a discovered-but-empty entity is not an active sales point). The old count
+    # (kind<>'particular' only) was ~54.6k but included ~35.4k empty + ~2.3k desguace; the honest
+    # figure is ~19.1k. v_dealer_resolved already dedups duplicate dealers into one resolved_cdp_code.
     "dealers": """
         SELECT count(DISTINCT vdr.resolved_cdp_code)
           FROM v_dealer_resolved vdr
           JOIN entity e ON e.entity_ulid = vdr.entity_ulid
-         WHERE e.kind <> 'particular'
+         WHERE e.kind::text NOT IN ('particular', 'desguace')
+           AND EXISTS (SELECT 1 FROM servable_vehicle sv WHERE sv.entity_ulid = e.entity_ulid)
     """,
     "vehicles_unique_available": """
         SELECT count(*)
