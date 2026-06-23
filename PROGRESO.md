@@ -3406,3 +3406,17 @@
   adversarial. Al volver: integro + aplico migración additive + golden + Ferrari verde + cero regresión ES.
 - PROXIMO: integrar/verificar Fase 0 -> encadenar CI-seeded-snapshot, identity-r-stratum, harvest-drain,
   recipe-harness, ops-hardening, bible-executable, piloto-país, auditoría-adversarial-final.
+
+## 2026-06-23 — FASE 0 SELLADA (replicación desbloqueada en código) + biblia en review
+- FASE 0 COMPLETA x2 vías: Ferrari COMPLETO 1478 passed / 0 failed / 1 xfailed (el xfail = widening G1
+  diferido al onboarding de país). CI verde. country_code parametrizado (DEFAULT 'ES'), migración 0052
+  applied (backfill geo backbone + 431k entity todas ES, 0 NULL, 0 FK orphans, composite UNIQUEs, PKs
+  intactas), cdp_code ES BYTE-IDÉNTICO (golden 34/0), migrate verify 46 match/0 drift. Commiteada+pusheada.
+  -> El fundamento de la replicación multi-país está PUESTO (un país #2 ya no colisiona en PK).
+- FASE 7 (biblia) lanzada en paralelo (workflow wk21u2od9): 5 docs escritos (REPLICATION-PLAYBOOK,
+  runbook/E2E-PER-STAGE, API_CONTRACT, GUIDE-NEW-SOURCE-ADAPTER, COUNTRY-SWITCHOVER), en ConsistencyReview
+  (anti-drift contra código/DB real). Commit tras review.
+- Mandato: 10 fases; SELLADA Fase 0; en vuelo Fase 7. PROXIMO: integrar biblia -> encadenar Fase 3
+  (identidad+reconciliación super-canónica cadena completa + R-stratum 339.8k particulares + sellar
+  cross-source-dedup-v1; toca datos servidos -> migración/gate los aplico+verifico yo) -> Fase 4 cosecha ->
+  Fase 5 recipe-harness -> Fase 2 ops -> Fase 6 API/delta -> Fase 8 piloto país -> Fase 9 auditoría final.
