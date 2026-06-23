@@ -3642,3 +3642,21 @@
 - WIP AJENA detectada: rediseno frontend sin commitear (Landing.tsx/css, Layout, VehicleCard) -> NO tocada.
 - PENDIENTE OWNER: reiniciar uvicorn :8090 (+scheduler) -> activa /stats honesto + fixes previos.
 - PROXIMO: ejecutar plan P-census-data-quality pasos 1-8, cada cambio servido con dry-run+golden+Ferrari+CI.
+
+## 2026-06-23 — PROGRAMA INSTITUCIONAL A->Z (rediseno por mandato owner)
+- Owner rechazo el plan-checklist fragmentario (P-census-data-quality) y exigio: A->Z, cada dominio = proyecto
+  institucional individual, investigando TODAS las herramientas, nivel inalcanzable humano/IA, solo huella DIGITAL,
+  EUR0. Alcance grabado en memoria feedback_cardeep_scope_digital.
+- Orquestado via Workflow cardeep-masterplan (32 agentes: 10 recon del sistema real + 10 research SOTA EUR0 en
+  paralelo -> 10 specs institucionales + master -> revision adversarial). 1er run: Overload de API tumbo 7 specs+
+  master+review; RESUMEN reanudado (cache de recon/research) completo 10/10.
+- ENTREGADO plans/cardeep-program/ (commit 8f52c42, local master): 00-MASTER.md + 01..10 por dominio
+  (discovery,extraction,identity,vehicle,geo,quality,serving,product,trust,ops). Cada uno: estado actual VERIFICADO,
+  objetivo siguiente-nivel, tecnologia EUR0 con fuente, arquitectura, fases con verificacion+rollback, riesgos, metricas.
+- Revision adversarial = APPROVED_WITH_MINOR (0 critical; antialucinacion PASS vs HEAD 81de58e; scope+EUR0 COMPLIANT).
+  3 HIGH + gaps resueltos en master (seccion Post-review reconciliation): semantica de aristas (sin ciclo de build),
+  UNA metrica canonica de cobertura (coverage_lower; 0.95 por-estrato / >=80% rollup / 80.6% registral cross-check),
+  gate de definicion canonica v_servable_dealer (0056) sobre serving/trust/product, propiedad de compliance (Quality+Ops,
+  legal PENDING-OWNER), prerequisitos EUR0 (SearXNG p/DORK, axesor+paginas_amarillas en registry, R runtime p/Trust).
+- PROXIMO: ejecutar el programa por waves (Wave 0 = Discovery + Extraction). Cada cambio servido: dry-run :5434 +
+  golden + Ferrari + CI. PENDIENTE OWNER sigue: reiniciar uvicorn :8090 (+scheduler) -> activa /stats honesto + fixes.
