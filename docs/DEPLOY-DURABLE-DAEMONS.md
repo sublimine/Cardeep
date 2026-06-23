@@ -64,11 +64,11 @@ En **prod** hay que inyectar valores reales o los guards de seguridad fallan al 
 | `CARDEEP_LEASE_TTL_MIN` | ambos schedulers | `6` (default) | TTL de lease-stale = 3× el heartbeat (2 min). |
 | `CARDEEP_CORS_ORIGINS` | API (`main.py:114`) | `https://tu-frontend` | Opcional; default apunta a Vite local. |
 
-> Con `CARDEEP_ENV=prod`, `config_guard.assert_safe_dsn` **rechaza** cualquier DSN que aún
-> lleve la credencial de dev `cardeep_dev_only` (o `localhost`/`127.0.0.1`), con
-> `RuntimeError`. Verifica el DSN de prod **antes** de poner `CARDEEP_ENV=prod`: si tu
-> Postgres legítimo de prod viviera en `localhost` (p. ej. socket local), eso dispararía un
-> falso positivo — usa la IP/host real o un nombre DNS, no `localhost`.
+> Con `CARDEEP_ENV=prod`, `config_guard.assert_safe_dsn` **rechaza** con `RuntimeError`
+> cualquier DSN resuelto que aún lleve la credencial de dev `cardeep_dev_only` (la señal de que
+> no se inyectó un DSN real). El **host NO se inspecciona**: un Postgres de prod en `localhost`
+> (socket/proxy local) es válido siempre que la credencial sea real. Verifica el DSN de prod
+> **antes** de poner `CARDEEP_ENV=prod`.
 
 Estos valores van en un **EnvironmentFile** fuera del repo. En Linux:
 `/etc/cardeep/cardeep.env` (modo `0600`, owner `cardeep`). **Nunca** commitees un `.env` real.
@@ -352,9 +352,9 @@ Para el día a día (salud de fuentes, breakers, alertas, delta), el runbook ope
   `/stats`). Es fail-closed intencional. `/health` sigue abierto para que las sondas de
   liveness pasen. Si el API devuelve 503 tras poner `CARDEEP_ENV=prod`, casi seguro falta la
   clave.
-- **`localhost` en el DSN de prod dispara el fail-fast.** Si tu Postgres real vive en
-  `localhost` (socket/proxy local), usa el host/IP real para no chocar con el guard, o revisa
-  el guard antes de flipear `CARDEEP_ENV=prod`.
+- **El fail-fast del DSN sólo mira la credencial, no el host.** `assert_safe_dsn` rechaza un DSN
+  de prod que conserve la credencial de dev `cardeep_dev_only`; **NO** rechaza `localhost`. Un
+  Postgres de prod en `localhost` (socket/proxy local) es válido si la credencial es real.
 - **Units/tareas mal configuradas corren en modo dev silenciosamente.** Si el EnvironmentFile
   no carga o falta `CARDEEP_ENV=prod`, los guards quedan no-op. Mitigación: las units fijan
   `EnvironmentFile=/etc/cardeep/cardeep.env`; los guards fallan ruidosamente en cuanto

@@ -62,6 +62,10 @@ check_and_clear_stale_lease(conn, lock_key, *, now=None, ttl_minutes=None) -> bo
     already be gone once PG has reaped it). Returns False when the lease is fresh,
     absent, or unreadable. Does NOT touch the advisory lock and does NOT delete the
     lease row (the live holder's next heartbeat / next acquire overwrites it).
+
+acquire_with_stale_retry(conn, lock_key, *, now=None, ttl_minutes=None) -> bool
+    Shared single-producer acquire: take the advisory lock, retrying once only when the
+    prior holder's lease is stale. Never displaces a live holder (the lock is atomic).
 """
 from __future__ import annotations
 
@@ -86,9 +90,6 @@ _DEFAULT_TTL_MIN: int = 6  # 3× the 2-min heartbeat — matches the design spec
 
 # The lease table from migration 0054. Centralized so a rename is a one-line change.
 _LEASE_TABLE: str = "scheduler_lease"
-
-# psycopg2 SQLSTATE for "undefined_table" — raised when 0054 has not been applied.
-_UNDEFINED_TABLE: str = "42P01"
 
 
 def _positive_int_env(name: str, default: int) -> int:
@@ -194,6 +195,13 @@ def record_heartbeat(
         ON CONFLICT (lock_key) DO UPDATE
             SET holder = EXCLUDED.holder,
                 pid = EXCLUDED.pid,
+                -- started_at marks when the CURRENT holder claimed the lease: keep it stable across
+                -- a same-holder heartbeat, but reset it to now() when a SUCCESSOR takes over after a
+                -- stale reap (holder or pid changed), so the lease never shows the dead holder's epoch.
+                started_at = CASE
+                    WHEN {_LEASE_TABLE}.holder IS DISTINCT FROM EXCLUDED.holder
+                      OR {_LEASE_TABLE}.pid    IS DISTINCT FROM EXCLUDED.pid
+                    THEN now() ELSE {_LEASE_TABLE}.started_at END,
                 last_heartbeat = now()
     """
     params = {"lock_key": lock_key, "holder": holder, "pid": effective_pid}
@@ -292,6 +300,42 @@ def check_and_clear_stale_lease(
         ttl,
     )
     return True
+
+
+# ---------------------------------------------------------------------------
+# Shared single-producer acquire (used by both daemons)
+# ---------------------------------------------------------------------------
+
+def acquire_with_stale_retry(
+    conn: "psycopg2.extensions.connection",
+    lock_key: int,
+    *,
+    now: Optional[datetime] = None,
+    ttl_minutes: Optional[int] = None,
+) -> bool:
+    """Take the session advisory lock for ``lock_key``; retry ONCE only if the lease is stale.
+
+    The shared single-producer acquire for both long-lived daemons. Flow:
+      1. pg_try_advisory_lock(lock_key) -> if it succeeds, return True.
+      2. Otherwise the lock is held. check_and_clear_stale_lease: if the prior holder's lease is
+         STALE (crashed hard, PG may not have reaped its session yet) it logs CRITICAL and we retry
+         pg_try_advisory_lock ONCE — once PG reaps the dead session the lock is free.
+      3. Return whether the lock is now held by THIS session.
+
+    pg_try_advisory_lock is the atomic mutex: this can NEVER acquire a lock a LIVE session still
+    holds, so the retry carries no double-producer / AS24 risk. The stale check is best-effort
+    (no retry, inert, on a DB without migration 0054). The advisory lock is session-scoped on
+    ``conn`` and is NOT released by closing the transient cursor used here.
+    """
+    with conn.cursor() as cur:
+        cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
+        if cur.fetchone()[0]:
+            return True
+        if check_and_clear_stale_lease(conn, lock_key, now=now, ttl_minutes=ttl_minutes):
+            cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_key,))
+            if cur.fetchone()[0]:
+                return True
+    return False
 
 
 # ---------------------------------------------------------------------------

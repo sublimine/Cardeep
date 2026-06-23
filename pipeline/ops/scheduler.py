@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -40,7 +41,7 @@ from pipeline.ops.silence_watchdog import (
     run_silence_watchdog,
 )
 from pipeline.ops.lock_heartbeat import (
-    check_and_clear_stale_lease,
+    acquire_with_stale_retry,
     heartbeat_interval_minutes,
     record_heartbeat,
 )
@@ -75,6 +76,18 @@ _ASYNCPG_DSN = os.environ.get(
     "CARDEEP_ASYNCPG_DSN",
     "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep",
 )
+
+
+def _redact_dsn(dsn: str) -> str:
+    """Mask the password so a DSN is safe to print to stdout/logs.
+
+    Handles both the psycopg2 keyword form (``password=secret``) and the URL form
+    (``scheme://user:secret@host``). In dev the credential is the public default, but a
+    prod DSN printed by ``--dry-run`` would otherwise leak a real password into logs.
+    """
+    redacted = re.sub(r"(password=)[^\s]+", r"\1***", dsn)
+    redacted = re.sub(r"(://[^:/@\s]+:)[^@/\s]+@", r"\1***@", redacted)
+    return redacted
 
 # ---------------------------------------------------------------------------
 # Heartbeat cadence
@@ -728,7 +741,7 @@ def _dry_run() -> None:
     print()
     print("=" * 72)
     print("CARDEEP SCHEDULER - DRY RUN")
-    print(f"  DB:        {_RAW_DSN}")
+    print(f"  DB:        {_redact_dsn(_RAW_DSN)}")
     print(f"  Tick:      every {TICK_INTERVAL_MINUTES} min")
     print(f"  Timeout:   {SUBPROCESS_TIMEOUT_SEC}s per subprocess")
     print(f"  Timestamp: {datetime.now(timezone.utc).isoformat()}")
@@ -798,7 +811,7 @@ def _check_silence() -> None:
     print()
     print("=" * 72)
     print("CARDEEP SCHEDULER - SILENCE CHECK (read-only, no alerts fired)")
-    print(f"  DB:        {_RAW_DSN}")
+    print(f"  DB:        {_redact_dsn(_RAW_DSN)}")
     print(f"  Threshold: > 2x harvest_interval_hours without last_ok or last_fail")
     print(f"  Timestamp: {datetime.now(timezone.utc).isoformat()}")
     print("=" * 72)
@@ -880,24 +893,15 @@ def _start_scheduler() -> None:
     _SCHEDULER_SINGLETON_LOCK = 0x43415244  # ASCII 'CARD' = 1128354372 — fixed host-singleton key
     _lock_conn = psycopg2.connect(_RAW_DSN)
     _lock_conn.autocommit = True
-    _cur = _lock_conn.cursor()
-    _cur.execute("SELECT pg_try_advisory_lock(%s)", (_SCHEDULER_SINGLETON_LOCK,))
-    if not _cur.fetchone()[0]:
-        # The lock is held. Surface WHY before refusing: a STALE lease means the prior holder
-        # crashed hard and PG may not have reaped its session yet. Log CRITICAL and retry ONCE.
-        # pg_try_advisory_lock is the atomic mutex, so this can NEVER acquire a lock a live session
-        # still holds (no double-producer / AS24 risk); it only converts a silent orphan into a
-        # logged, retried start. Best-effort: a no-op on a DB without migration 0054.
-        _reacquired = False
-        if check_and_clear_stale_lease(_lock_conn, _SCHEDULER_SINGLETON_LOCK):
-            _cur.execute("SELECT pg_try_advisory_lock(%s)", (_SCHEDULER_SINGLETON_LOCK,))
-            _reacquired = bool(_cur.fetchone()[0])
-        if not _reacquired:
-            _lock_conn.close()
-            raise SystemExit(
-                "another cardeep scheduler already holds the singleton advisory lock "
-                f"({_SCHEDULER_SINGLETON_LOCK}); refusing to start a second producer on this host"
-            )
+    # Shared single-producer acquire (same path as discovery): take the lock, retry once ONLY if the
+    # prior holder's lease is stale. pg_try_advisory_lock is the atomic mutex so a live holder is
+    # never displaced (no AS24 double-producer). Best-effort stale check; inert without migration 0054.
+    if not acquire_with_stale_retry(_lock_conn, _SCHEDULER_SINGLETON_LOCK):
+        _lock_conn.close()
+        raise SystemExit(
+            "another cardeep scheduler already holds the singleton advisory lock "
+            f"({_SCHEDULER_SINGLETON_LOCK}); refusing to start a second producer on this host"
+        )
     log.info("Acquired singleton scheduler advisory lock %s", _SCHEDULER_SINGLETON_LOCK)
     # FASE-2 ops-hardening: claim/refresh the observable lease for this holder so a would-be
     # successor can tell a healthy holder from a crashed one. Best-effort; inert without 0054.

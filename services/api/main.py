@@ -80,14 +80,18 @@ from services.api.deps import (  # noqa: F401
 from services.api.ratelimit import limiter, rate_limit_handler
 from services.api.routers import entities, geo, ops, platforms, vehicles
 
-# Prod-gated fail-fast: in CARDEEP_ENV=prod, refuse to start on the dev-default DSN.
-# No-op in dev/test (CARDEEP_ENV unset) — startup stays byte-identical.
-from pipeline.config_guard import assert_safe_dsn
+# Prod-gated fail-fast: in CARDEEP_ENV=prod, refuse to start on the dev-default DSN OR without an
+# API key configured. No-op in dev/test (CARDEEP_ENV unset) — startup stays byte-identical.
+from pipeline.config_guard import require_prod_secrets
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    assert_safe_dsn(DSN, var="CARDEEP_DSN")
+    # Fail fast in prod on a dev-default DSN or a missing API key, so a misconfigured server never
+    # reaches a live state serving the coverage signal wide open (symmetry with the schedulers'
+    # startup guard; the per-request require_api_key dependency stays the second line of defence).
+    # No-op in dev/test.
+    require_prod_secrets((DSN, "CARDEEP_DSN"), require_api_key=True)
     app.state.pool = await asyncpg.create_pool(DSN, min_size=1, max_size=8)
     try:
         yield

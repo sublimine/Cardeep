@@ -96,7 +96,9 @@ async def resolve_cluster(conn: asyncpg.Connection, cdp_code: str) -> ClusterInf
        that canonical_ulid — those form the complete cluster.
 
     Note: uses v_dealer_resolved instead of the deprecated v_canonical so that
-    resolution is consistent with the sealed B1 dealer count (40 016).
+    resolution is consistent with the served dealer set. v_dealer_resolved is the
+    source of truth for the resolved CDP of every entity (count drifts with the
+    living census — do not hardcode an absolute here).
     """
     entity_row = await conn.fetchrow(
         """

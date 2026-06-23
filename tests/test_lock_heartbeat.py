@@ -24,6 +24,7 @@ from pipeline.ops.lock_heartbeat import (
     _DEFAULT_HEARTBEAT_MIN,
     _DEFAULT_TTL_MIN,
     _LEASE_TABLE,
+    acquire_with_stale_retry,
     check_and_clear_stale_lease,
     heartbeat_interval_minutes,
     is_lease_stale,
@@ -169,6 +170,18 @@ def test_record_heartbeat_executes_upsert_and_returns_true():
 
 
 @pytest.mark.unit
+def test_record_heartbeat_refreshes_started_at_only_on_takeover():
+    # started_at must reset to now() ONLY when holder/pid changes (a successor takeover after a
+    # stale reap), not on every same-holder beat — else it would always read ~now() and be useless.
+    conn, cur = _mock_conn_with_row(None)
+    record_heartbeat(conn, _LOCK_KEY, holder="harvest", pid=1)
+    sql, _ = cur.execute.call_args.args
+    assert "started_at = CASE" in sql
+    assert "IS DISTINCT FROM EXCLUDED.holder" in sql
+    assert "IS DISTINCT FROM EXCLUDED.pid" in sql
+
+
+@pytest.mark.unit
 def test_record_heartbeat_defaults_pid_to_current_process():
     conn, cur = _mock_conn_with_row(None)
     record_heartbeat(conn, _LOCK_KEY, holder="discovery")
@@ -301,3 +314,65 @@ def test_null_heartbeat_lease_is_stale():
     }
     conn, _ = _mock_conn_with_row(null_row)
     assert check_and_clear_stale_lease(conn, _LOCK_KEY, now=_NOW, ttl_minutes=6) is True
+
+
+# ---------------------------------------------------------------------------
+# acquire_with_stale_retry — the shared single-producer acquire path
+# ---------------------------------------------------------------------------
+
+def _mock_conn_seq(fetch_results):
+    """psycopg2 connection mock whose cursor.fetchone yields ``fetch_results`` in order.
+
+    The same cursor backs both the pg_try_advisory_lock executes (outer cursor) and the
+    read_lease SELECT inside check_and_clear_stale_lease, so fetchone results must be
+    ordered across the whole acquire flow.
+    """
+    cur = MagicMock()
+    cur.fetchone.side_effect = list(fetch_results)
+    cur.__enter__.return_value = cur
+    cur.__exit__.return_value = False
+    conn = MagicMock()
+    conn.cursor.return_value = cur
+    return conn, cur
+
+
+_STALE_ROW = {
+    "lock_key": _LOCK_KEY, "holder": "harvest", "pid": 13337,
+    "started_at": _NOW - timedelta(hours=5), "last_heartbeat": _NOW - timedelta(minutes=20),
+}
+_FRESH_ROW = {
+    "lock_key": _LOCK_KEY, "holder": "harvest", "pid": 7,
+    "started_at": _NOW - timedelta(hours=1), "last_heartbeat": _NOW - timedelta(minutes=1),
+}
+
+
+@pytest.mark.unit
+def test_acquire_succeeds_immediately_no_stale_check():
+    # Lock is free on the first try -> True, and we never run the stale SELECT.
+    conn, cur = _mock_conn_seq([(True,)])
+    assert acquire_with_stale_retry(conn, _LOCK_KEY, now=_NOW, ttl_minutes=6) is True
+    assert cur.execute.call_count == 1  # only the one pg_try_advisory_lock
+
+
+@pytest.mark.unit
+def test_acquire_held_then_stale_retry_succeeds():
+    # Held -> lease stale -> retry once -> now free. THREE executes: lock, select, lock.
+    conn, cur = _mock_conn_seq([(False,), _STALE_ROW, (True,)])
+    assert acquire_with_stale_retry(conn, _LOCK_KEY, now=_NOW, ttl_minutes=6) is True
+    assert cur.execute.call_count == 3
+
+
+@pytest.mark.unit
+def test_acquire_held_then_stale_retry_still_held_returns_false():
+    # Held -> stale -> retry -> STILL held (session not yet reaped). No double-producer.
+    conn, cur = _mock_conn_seq([(False,), _STALE_ROW, (False,)])
+    assert acquire_with_stale_retry(conn, _LOCK_KEY, now=_NOW, ttl_minutes=6) is False
+    assert cur.execute.call_count == 3
+
+
+@pytest.mark.unit
+def test_acquire_held_by_fresh_holder_does_not_retry():
+    # Held by a LIVE holder (fresh lease) -> no retry, refuse. Only lock + select execute.
+    conn, cur = _mock_conn_seq([(False,), _FRESH_ROW])
+    assert acquire_with_stale_retry(conn, _LOCK_KEY, now=_NOW, ttl_minutes=6) is False
+    assert cur.execute.call_count == 2  # lock attempt + the lease SELECT, NO second lock try

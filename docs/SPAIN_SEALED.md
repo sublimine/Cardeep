@@ -8,6 +8,13 @@
 > `vehicle-identity-det-v1` `vam_verified=TRUE`). Detalle del porque y mapa de fallos en
 > [`ARCHITECTURE/ERROR-ORIGIN-MAP.md`](ARCHITECTURE/ERROR-ORIGIN-MAP.md) §"seal not moving".
 >
+> **[ADDENDUM FASE-9, VERIFICADO DB 2026-06-23, run `fase9-audit-20260623`, unit=`resolved`]:**
+> re-medido sobre la capa RESOLVED final (cadena super-canonica + overture): **12 / 210 estratos**
+> sellados a 95% (n_obs=6.642 · N_hat=15.560 · IC95% [13.509–17.611] · cobertura certificada
+> 42,69% / lower 37,72% · NOT sealed at 95%). El **14/210** del titular es el snapshot `splink`-unit
+> de 2026-06-22; ambos son reales y de **unidades de captura DISTINTAS** (splink vs resolved), NO
+> comparables 1:1. Techo €0 honesto en ambos: no forzado (cero maquillaje).
+>
 > Autor: agente data-engineer B6.4 · Reconciliacion MSE: Director (Opus)
 > Fecha original: 2026-06-14 · Titular y addendum §0-bis reconciliados: 2026-06-22
 > DB: `cardeep-pg` localhost:5433, db `cardeep`

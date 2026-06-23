@@ -233,7 +233,7 @@ def _serve() -> None:
     import psycopg2
 
     from pipeline.ops.lock_heartbeat import (
-        check_and_clear_stale_lease,
+        acquire_with_stale_retry,
         heartbeat_interval_minutes,
         record_heartbeat,
     )
@@ -246,18 +246,11 @@ def _serve() -> None:
     require_prod_secrets((raw, "CARDEEP_DSN_KW"), (_ASYNCPG_DSN, "CARDEEP_ASYNCPG_DSN"))
     lock = psycopg2.connect(raw)
     lock.autocommit = True
-    cur = lock.cursor()
-    cur.execute("SELECT pg_try_advisory_lock(%s)", (_LOCK_KEY,))
-    if not cur.fetchone()[0]:
-        # Held: surface a STALE lease (crashed prior holder PG has not reaped) and retry once.
-        # pg_try_advisory_lock is the atomic mutex — this can never steal a live lock. Best-effort;
-        # inert without migration 0054.
-        reacquired = False
-        if check_and_clear_stale_lease(lock, _LOCK_KEY):
-            cur.execute("SELECT pg_try_advisory_lock(%s)", (_LOCK_KEY,))
-            reacquired = bool(cur.fetchone()[0])
-        if not reacquired:
-            raise SystemExit("another discovery scheduler holds the advisory lock; refusing to start")
+    # Shared single-producer acquire (same path as harvest): take the lock, retry once ONLY if the
+    # prior holder's lease is stale. pg_try_advisory_lock is the atomic mutex — never steals a live
+    # lock. Best-effort stale check; inert without migration 0054.
+    if not acquire_with_stale_retry(lock, _LOCK_KEY):
+        raise SystemExit("another discovery scheduler holds the advisory lock; refusing to start")
     # FASE-2 ops-hardening: claim the observable lease (best-effort; inert without migration 0054).
     record_heartbeat(lock, _LOCK_KEY, holder="discovery")
     sched = BlockingScheduler(timezone="UTC")
