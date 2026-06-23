@@ -3432,3 +3432,11 @@
   dealerprobe batch + SearXNG self-host €0 + motor_es) — scheduler.py/motor_es escritos, commit tras review.
 - PROXIMO: integrar Fase 4 -> Fase 5 recipe-harness -> Fase 2 ops -> Fase 6 API/delta -> Fase 3b particulares
   R-stratum -> Fase 8 PILOTO-PAIS-XX -> Fase 9 auditoría adversarial final.
+
+## 2026-06-23 — FASE 4 (cosecha) código SELLADO (activación pendiente ventana limpia)
+- FASE 4 commiteada + Ferrari 1496/0 (+7 cursor tests). dealerprobe --limit 2000 --concurrency 24
+  (backlog real 5.052 en ~2.5d); motor_es argv->--cursor bounded slice (root-fix del timeout 4h);
+  ops/searxng €0 (desgate dork). ACTIVACION pendiente: requiere reiniciar harvest scheduler en ventana
+  limpia (autocasion_facet en vuelo ahora) — config durable, activa al reiniciar.
+- Mandato 10 fases: SELLADAS 0,7,3 + Fase 4 código. PROXIMO: FASE 8 PILOTO país #2 (corona del mandato:
+  migracion 0053 onboarding PK-swap + 1 dealer DE end-to-end + cero regresion ES) -> luego 5/2/6/3b/9.
