@@ -25,15 +25,11 @@ tests/test_api_seal.py
 tests/test_api_canonical.py
 tests/test_api_gaps.py
 tests/test_api_ratelimit_cache.py
-tests/test_evict.py
 tests/test_country_coexistence.py
 tests/test_dedup_integrity.py
 tests/test_dedup_invariants.py
-tests/test_emit_gone_events.py
-tests/test_entity_muni_province_invariant.py
 tests/test_km_enrichment.py
 tests/test_province_seal_view.py
-tests/test_reconcile_gone_coverage.py
 tests/test_servable_status_filter.py
 tests/test_inquisition_lenses_db.py
 

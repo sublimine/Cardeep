@@ -143,6 +143,11 @@ jobs:
           python -m scripts.load_geo
           python -m scripts.seed_geo_centroides
 
+      - name: Seed CI census fixture (tiny synthetic dealers/vehicles — recovers census-dependent tests)
+        # Idempotent, additive: a handful of active compraventa dealers in province 28 + available
+        # vehicles, so census-reading tests (evict / muni-province / emit-gone / reconcile) can run.
+        run: python -m scripts.seed_ci_fixture
+
       - name: Run the self-seeding DB-backed suite (excludes tests/ci_local_only.txt)
         run: |
           IGN=$(grep -vE '^#|^[[:space:]]*$' tests/ci_local_only.txt | sed 's#^#--ignore=#' | tr '\n' ' ')
