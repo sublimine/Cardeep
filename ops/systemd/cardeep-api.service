@@ -1,0 +1,60 @@
+# Cardeep API — durable systemd unit (Linux VPS, eventual prod target).
+#
+# Serves services/api/main.py (FastAPI `app`) over uvicorn. Verified entrypoint:
+#   services/api/main.py:6   -> "uvicorn services.api.main:app --host ... --port 8090"
+#   services/api/main.py:134 -> dev default bind is 127.0.0.1:8090
+# In prod the bind is 0.0.0.0:8090 so a reverse proxy / firewall fronts it; keep
+# the host firewalled and terminate TLS at the proxy — the API speaks plain HTTP.
+#
+# Restart=always so a crash or OOM is auto-recovered; the in-process cache is
+# rebuilt on restart and the single-worker design (main.py:109 comment) is kept.
+#
+# INSTALL is an OWNER host step (touches the machine). This file is an inert
+# in-repo artifact until copied to /etc/systemd/system/ and enabled. See
+# docs/DEPLOY-DURABLE-DAEMONS.md for the full procedure and the required env vars.
+
+[Unit]
+Description=Cardeep API (FastAPI/uvicorn, services.api.main:app)
+Documentation=file:///opt/cardeep/docs/DEPLOY-DURABLE-DAEMONS.md
+After=network-online.target
+Wants=network-online.target
+# If Postgres runs on the same host as a systemd unit, uncomment to order after it:
+# After=postgresql.service
+# Wants=postgresql.service
+
+[Service]
+Type=simple
+User=cardeep
+Group=cardeep
+WorkingDirectory=/opt/cardeep
+
+# EnvironmentFile MUST carry CARDEEP_ENV=prod plus the real DSNs and the API key,
+# otherwise the prod fail-fast guard (pipeline/config_guard.assert_safe_dsn) and the
+# require_api_key prod check (services/api/deps.py) will refuse to serve. Required keys:
+#   CARDEEP_ENV=prod
+#   CARDEEP_DSN=postgres://USER:PASS@DBHOST:5432/cardeep        (asyncpg; deps.py:15)
+#   CARDEEP_API_KEY=<a-real-strong-key>                         (deps.py require_api_key)
+#   CARDEEP_CORS_ORIGINS=https://your-frontend.example          (main.py:114, optional)
+EnvironmentFile=/etc/cardeep/cardeep.env
+
+# Bind 0.0.0.0 in prod (proxy/firewall in front); :8090 matches the dev port.
+ExecStart=/opt/cardeep/.venv/bin/uvicorn services.api.main:app --host 0.0.0.0 --port 8090
+
+Restart=always
+RestartSec=10
+
+# Readiness / liveness: /health is UNAUTHENTICATED (services/api/main.py:34,
+# services/api/deps.py:26 — require_api_key is NOT applied to it), so probes pass
+# even when CARDEEP_API_KEY is required for data endpoints. Check after start:
+#   curl -fsS http://127.0.0.1:8090/health
+# To turn this into a hard systemd readiness gate, front it with a oneshot probe
+# unit or an ExecStartPost retry loop; uvicorn itself does not sd_notify.
+
+# Hardening (safe defaults; relax only if a feature needs more):
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

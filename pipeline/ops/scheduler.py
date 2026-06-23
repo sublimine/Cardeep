@@ -39,6 +39,12 @@ from pipeline.ops.silence_watchdog import (
     find_silent_sources,
     run_silence_watchdog,
 )
+from pipeline.ops.lock_heartbeat import (
+    check_and_clear_stale_lease,
+    heartbeat_interval_minutes,
+    record_heartbeat,
+)
+from pipeline.config_guard import require_prod_secrets
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -828,8 +834,40 @@ def _check_silence() -> None:
 # Live scheduler
 # ---------------------------------------------------------------------------
 
+def _lease_heartbeat_job(lock_key: int, holder: str) -> None:
+    """Picklable heartbeat job: bump the observable scheduler_lease for ``lock_key``.
+
+    Persisted in the SQLAlchemy jobstore, so it MUST be a module-level function with
+    picklable args (a closure over the held _lock_conn cannot be pickled). Runs on its own
+    short-lived autocommit connection; the lease row is plain data, independent of the
+    advisory-lock session, so a separate connection writes it correctly. Fully best-effort:
+    record_heartbeat never raises and a connect failure is swallowed — a missed beat must
+    never kill the single producer. Inert (one warning) on a DB without migration 0054.
+    """
+    try:
+        conn = psycopg2.connect(_RAW_DSN)
+        conn.autocommit = True
+    except psycopg2.Error as exc:
+        log.warning("lease heartbeat could not connect for lock_key=%s: %s", lock_key, exc)
+        return
+    try:
+        record_heartbeat(conn, lock_key, holder=holder)
+    finally:
+        try:
+            conn.close()
+        except psycopg2.Error:
+            pass
+
+
 def _start_scheduler() -> None:
     """Start the durable BlockingScheduler. Blocks until SIGINT/SIGTERM."""
+    # FASE-2 ops-hardening: in prod, fail fast if any DSN still carries the dev credential (i.e. no
+    # real DSN was supplied). No-op when CARDEEP_ENV is unset/dev — dev/test stays byte-identical.
+    require_prod_secrets(
+        (_RAW_DSN, "CARDEEP_DSN"),
+        (DB_URL, "CARDEEP_DB_URL"),
+        (_ASYNCPG_DSN, "CARDEEP_ASYNCPG_DSN"),
+    )
     from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
     from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -845,12 +883,25 @@ def _start_scheduler() -> None:
     _cur = _lock_conn.cursor()
     _cur.execute("SELECT pg_try_advisory_lock(%s)", (_SCHEDULER_SINGLETON_LOCK,))
     if not _cur.fetchone()[0]:
-        _lock_conn.close()
-        raise SystemExit(
-            "another cardeep scheduler already holds the singleton advisory lock "
-            f"({_SCHEDULER_SINGLETON_LOCK}); refusing to start a second producer on this host"
-        )
+        # The lock is held. Surface WHY before refusing: a STALE lease means the prior holder
+        # crashed hard and PG may not have reaped its session yet. Log CRITICAL and retry ONCE.
+        # pg_try_advisory_lock is the atomic mutex, so this can NEVER acquire a lock a live session
+        # still holds (no double-producer / AS24 risk); it only converts a silent orphan into a
+        # logged, retried start. Best-effort: a no-op on a DB without migration 0054.
+        _reacquired = False
+        if check_and_clear_stale_lease(_lock_conn, _SCHEDULER_SINGLETON_LOCK):
+            _cur.execute("SELECT pg_try_advisory_lock(%s)", (_SCHEDULER_SINGLETON_LOCK,))
+            _reacquired = bool(_cur.fetchone()[0])
+        if not _reacquired:
+            _lock_conn.close()
+            raise SystemExit(
+                "another cardeep scheduler already holds the singleton advisory lock "
+                f"({_SCHEDULER_SINGLETON_LOCK}); refusing to start a second producer on this host"
+            )
     log.info("Acquired singleton scheduler advisory lock %s", _SCHEDULER_SINGLETON_LOCK)
+    # FASE-2 ops-hardening: claim/refresh the observable lease for this holder so a would-be
+    # successor can tell a healthy holder from a crashed one. Best-effort; inert without 0054.
+    record_heartbeat(_lock_conn, _SCHEDULER_SINGLETON_LOCK, holder="harvest")
 
     jobstores = {
         "default": SQLAlchemyJobStore(url=DB_URL),
@@ -949,6 +1000,22 @@ def _start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=600,
+    )
+
+    # FASE-2 ops-hardening: keep the observable scheduler_lease fresh so a crashed holder is
+    # diagnosable (docs/DEPLOY-DURABLE-DAEMONS.md §4). Module-level picklable job + literal args
+    # (the SQLAlchemy jobstore pickles jobs). Best-effort + inert without migration 0054.
+    scheduler.add_job(
+        _lease_heartbeat_job,
+        trigger="interval",
+        minutes=heartbeat_interval_minutes(),
+        args=[_SCHEDULER_SINGLETON_LOCK, "harvest"],
+        id="lease_heartbeat",
+        name="cardeep scheduler lease heartbeat",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=120,
     )
 
     log.info(

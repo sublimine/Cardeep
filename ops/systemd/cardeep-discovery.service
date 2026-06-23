@@ -1,0 +1,53 @@
+# Cardeep DISCOVERY daemon — durable systemd unit (Linux VPS, eventual prod target).
+#
+# Runs the continuous discovery cadence (the 6th axis). Verified entrypoint:
+#   pipeline/discover_schedule.py:28  -> "python -m pipeline.discover_schedule --serve"
+#   pipeline/discover_schedule.py:230 -> _serve(): BlockingScheduler, own advisory lock
+# Blocking process (Type=simple is correct).
+#
+# SINGLE-INSTANCE enforced INSIDE the code by a DISTINCT Postgres advisory lock
+#   0x43415244 + 1 = 1128354373  (discover_schedule.py:50, acquired at :240)
+# distinct from the harvest scheduler's 1128354372, so harvest and discovery coexist
+# but neither can double itself. A second copy SystemExits with "another discovery
+# scheduler holds the advisory lock". Restart=always therefore cannot double-produce.
+#
+# INSTALL is an OWNER host step. Inert in-repo artifact until installed.
+
+[Unit]
+Description=Cardeep discovery daemon (continuous discovery cadence)
+Documentation=file:///opt/cardeep/docs/DEPLOY-DURABLE-DAEMONS.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cardeep
+Group=cardeep
+WorkingDirectory=/opt/cardeep
+
+# The discovery daemon reads (discover_schedule.py:42-45, :235-236):
+#   CARDEEP_ENV=prod
+#   CARDEEP_ASYNCPG_DSN=postgresql://USER:PASS@DBHOST:5432/cardeep            (asyncpg; :42)
+#     (falls back to CARDEEP_DSN if ASYNCPG is unset — keep both consistent)
+#   CARDEEP_DSN_KW=host=DBHOST port=5432 dbname=cardeep user=USER password=PASS  (psycopg2 kw lock conn; :235)
+#   CARDEEP_LEASE_TTL_MIN=6                                                   (stale-lease TTL; optional)
+# With CARDEEP_ENV=prod the runtime guard rejects the 'cardeep_dev_only' default,
+# so these MUST be set to real values.
+EnvironmentFile=/etc/cardeep/cardeep.env
+
+ExecStart=/opt/cardeep/.venv/bin/python -m pipeline.discover_schedule --serve
+
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+Restart=always
+RestartSec=10
+
+# Hardening:
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

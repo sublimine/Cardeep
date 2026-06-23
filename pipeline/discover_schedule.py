@@ -232,18 +232,43 @@ def _serve() -> None:
 
     import psycopg2
 
+    from pipeline.ops.lock_heartbeat import (
+        check_and_clear_stale_lease,
+        heartbeat_interval_minutes,
+        record_heartbeat,
+    )
+    from pipeline.config_guard import require_prod_secrets
+
     raw = os.environ.get("CARDEEP_DSN_KW",
                          "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only")
+    # FASE-2 ops-hardening: in prod, fail fast if a DSN still carries the dev credential. No-op in
+    # dev/test (CARDEEP_ENV unset) — byte-identical behaviour.
+    require_prod_secrets((raw, "CARDEEP_DSN_KW"), (_ASYNCPG_DSN, "CARDEEP_ASYNCPG_DSN"))
     lock = psycopg2.connect(raw)
     lock.autocommit = True
     cur = lock.cursor()
     cur.execute("SELECT pg_try_advisory_lock(%s)", (_LOCK_KEY,))
     if not cur.fetchone()[0]:
-        raise SystemExit("another discovery scheduler holds the advisory lock; refusing to start")
+        # Held: surface a STALE lease (crashed prior holder PG has not reaped) and retry once.
+        # pg_try_advisory_lock is the atomic mutex — this can never steal a live lock. Best-effort;
+        # inert without migration 0054.
+        reacquired = False
+        if check_and_clear_stale_lease(lock, _LOCK_KEY):
+            cur.execute("SELECT pg_try_advisory_lock(%s)", (_LOCK_KEY,))
+            reacquired = bool(cur.fetchone()[0])
+        if not reacquired:
+            raise SystemExit("another discovery scheduler holds the advisory lock; refusing to start")
+    # FASE-2 ops-hardening: claim the observable lease (best-effort; inert without migration 0054).
+    record_heartbeat(lock, _LOCK_KEY, holder="discovery")
     sched = BlockingScheduler(timezone="UTC")
     sched.add_job(lambda: asyncio.run(_tick()), trigger="interval",
                   minutes=TICK_INTERVAL_MINUTES, id="discovery_tick",
                   max_instances=1, coalesce=True, misfire_grace_time=600)
+    # FASE-2 ops-hardening: keep the lease fresh on the held lock connection (€0, MemoryJobStore so
+    # the closure is fine). docs/DEPLOY-DURABLE-DAEMONS.md §4.
+    sched.add_job(lambda: record_heartbeat(lock, _LOCK_KEY, holder="discovery"),
+                  trigger="interval", minutes=heartbeat_interval_minutes(),
+                  id="lease_heartbeat", max_instances=1, coalesce=True, misfire_grace_time=120)
     print(f"[discovery] scheduler started — tick every {TICK_INTERVAL_MINUTES} min")
     try:
         sched.start()

@@ -80,9 +80,14 @@ from services.api.deps import (  # noqa: F401
 from services.api.ratelimit import limiter, rate_limit_handler
 from services.api.routers import entities, geo, ops, platforms, vehicles
 
+# Prod-gated fail-fast: in CARDEEP_ENV=prod, refuse to start on the dev-default DSN.
+# No-op in dev/test (CARDEEP_ENV unset) — startup stays byte-identical.
+from pipeline.config_guard import assert_safe_dsn
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    assert_safe_dsn(DSN, var="CARDEEP_DSN")
     app.state.pool = await asyncpg.create_pool(DSN, min_size=1, max_size=8)
     try:
         yield

@@ -12,6 +12,8 @@ import asyncpg
 from fastapi import Header, HTTPException
 from fastapi.responses import JSONResponse
 
+from pipeline.config_guard import is_prod
+
 DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep")
 
 
@@ -19,17 +21,29 @@ DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localho
 # B3.5 — API key authentication (backward-compatible).
 #
 # Behaviour:
-#   CARDEEP_API_KEY not set in environment  ->  public mode; all callers pass
-#   CARDEEP_API_KEY set in environment      ->  protected mode; X-API-Key required
+#   CARDEEP_API_KEY not set + CARDEEP_ENV unset/dev  ->  public mode (all pass)
+#   CARDEEP_API_KEY not set + CARDEEP_ENV=prod       ->  fail closed (503)
+#   CARDEEP_API_KEY set                              ->  protected (X-API-Key required)
 #
 # Applied via Depends(require_api_key) on data endpoints only.
 # NOT applied to /health so that liveness probes always reach it.
 # ---------------------------------------------------------------------------
 
 def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
-    """FastAPI dependency: enforce the API key when CARDEEP_API_KEY is set."""
+    """FastAPI dependency: enforce the API key when CARDEEP_API_KEY is set.
+
+    Production fails closed: when CARDEEP_ENV=prod and no key is configured, the
+    endpoint returns 503 instead of silently serving the competitive coverage
+    signal wide open. Dev/test (CARDEEP_ENV unset) stays public and byte-identical
+    to the prior behaviour (FASE 2 ops-hardening).
+    """
     configured_key = os.environ.get("CARDEEP_API_KEY")
     if configured_key is None:
+        if is_prod():
+            raise HTTPException(
+                status_code=503,
+                detail="API authentication is not configured on this server",
+            )
         return
     if x_api_key != configured_key:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")

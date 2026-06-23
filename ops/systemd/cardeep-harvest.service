@@ -1,0 +1,63 @@
+# Cardeep HARVEST scheduler — durable systemd unit (Linux VPS, eventual prod target).
+#
+# Runs the single-producer harvest cadence engine. Verified entrypoint:
+#   pipeline/ops/scheduler.py:22  -> "python -m pipeline.ops.scheduler"  (start, blocking)
+#   pipeline/ops/scheduler.py:831 -> _start_scheduler(): BlockingScheduler + SQLAlchemyJobStore
+# It is a BLOCKING process (Type=simple is correct — it does not daemonize).
+#
+# SINGLE-INSTANCE is enforced INSIDE the code by a Postgres session advisory lock
+#   0x43415244 = 1128354372  (scheduler.py:842-852)
+# A second copy SystemExits with "another cardeep scheduler already holds the singleton
+# advisory lock". So Restart=always can NEVER double-produce (the AS24 scar): on restart
+# the new process simply takes the lock the dead one released, or — if the prior holder
+# crashed hard — retries once Postgres reaps the dead session. The scheduler_lease
+# table (migrations/0054) + 2-min heartbeat make a crashed-vs-healthy holder OBSERVABLE
+# (see docs/DEPLOY-DURABLE-DAEMONS.md, "Lease TTL semantics").
+#
+# Crash-safe by design: APScheduler jobs persist in cardeep-pg (SQLAlchemyJobStore,
+# scheduler.py:855-857), so a restart resumes the cadence without re-firing.
+#
+# INSTALL is an OWNER host step. Inert in-repo artifact until installed.
+
+[Unit]
+Description=Cardeep harvest scheduler (single-producer cadence engine)
+Documentation=file:///opt/cardeep/docs/DEPLOY-DURABLE-DAEMONS.md
+After=network-online.target
+Wants=network-online.target
+# Order after the API only if you want a stable boot sequence (not required):
+# After=cardeep-api.service
+
+[Service]
+Type=simple
+User=cardeep
+Group=cardeep
+WorkingDirectory=/opt/cardeep
+
+# The harvest scheduler reads THREE DSNs (scheduler.py:57-71) — all must be real in prod:
+#   CARDEEP_ENV=prod
+#   CARDEEP_DB_URL=postgresql+psycopg2://USER:PASS@DBHOST:5432/cardeep   (SA jobstore; scheduler.py:57)
+#   CARDEEP_DSN=host=DBHOST port=5432 dbname=cardeep user=USER password=PASS  (psycopg2 kw; scheduler.py:62)
+#   CARDEEP_ASYNCPG_DSN=postgresql://USER:PASS@DBHOST:5432/cardeep      (asyncpg URL; scheduler.py:68)
+#   CARDEEP_LEASE_TTL_MIN=6                                             (stale-lease TTL; optional)
+# With CARDEEP_ENV=prod, config_guard.require_prod_secrets (assert_safe_dsn) refuses any DSN still
+# carrying the 'cardeep_dev_only' dev default — so these MUST be real values or the daemon fails fast.
+EnvironmentFile=/etc/cardeep/cardeep.env
+
+ExecStart=/opt/cardeep/.venv/bin/python -m pipeline.ops.scheduler
+
+# SIGINT/SIGTERM exits the BlockingScheduler cleanly, which closes the advisory-lock
+# connection and RELEASES the singleton lock — so a normal restart never orphans it.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+Restart=always
+RestartSec=10
+
+# Hardening:
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
