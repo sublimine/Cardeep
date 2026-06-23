@@ -11,4 +11,9 @@ Pillow>=10,<13             # P08 pHash tests (tests/test_delta_photo.py, @pytest
                            # photo hot-path is GASTO-gated, so it lives in dev for now.
 scipy>=1.13,<2             # delta_photo.py DCT (lazy) — exercised by the same pHash unit tests; >=1.13
                            # for numpy-2 compat. Was UNDECLARED alongside Pillow.
+statsmodels>=0.14,<0.15    # pipeline/exhaustiveness/estimators.py uses it (lazy) for the log-linear GLM
+                           # of the capture-recapture/MSE seal. Was UNDECLARED → in CI loglinear_mse
+                           # degraded to method='loglinear_failed' (n_hat==n_obs) and broke
+                           # tests/test_exhaustiveness.py. Pulls pandas transitively; the R-bridge tests
+                           # in that file skip cleanly without R.
 httpx>=0.27,<0.29          # starlette.testclient (FastAPI TestClient) needs httpx — API tests only

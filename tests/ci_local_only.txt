@@ -1,19 +1,20 @@
 # CI local-only test files — EXCLUDED from the `db-tests` CI job (pytest -m "not unit" --ignore=...).
 #
-# WHY. The db-tests CI job runs the DB-backed suite against an EPHEMERAL, freshly-migrated, EMPTY
-# Postgres (no census, no geo seed) on a runner with no R bridge and no display. The files below need
-# the developer's POPULATED cardeep-pg, the seeded geo backbone, live network/external engines, the R
-# capture-recapture bridge, or a virtual display — none present in CI — so they cannot pass there.
-# They stay part of the full local Ferrari run (pre-push) and are verified against the live dev DB.
+# WHY. The db-tests CI job runs the DB-backed suite against an EPHEMERAL, freshly-migrated Postgres that
+# is seeded with the geo backbone (provinces/municipalities/centroids) but has NO census and no live
+# network. The files below still need either the developer's POPULATED cardeep-pg (millions of rows,
+# served vam_verified runs) or live network/external engines, so they cannot pass there. They stay part
+# of the full local Ferrari run (pre-push) and are verified against the live dev DB.
 #
-# GROUND TRUTH: the CI db-tests job (run 28008809920) executed the full non-unit suite against an
-# empty migrated CI Postgres; the 15 files below are EXACTLY the ones that failed there (55 tests).
-# Everything not listed passed in CI and is therefore genuinely CI-safe (self-seeding). Lines starting
-# with '#' and blank lines are ignored by the CI step.
+# GROUND TRUTH: the CI db-tests job is the faithful classifier (local runs leak to the live dev DB on
+# :5433). Files NOT listed here pass in CI and are genuinely CI-safe. Lines starting with '#' and blank
+# lines are ignored by the CI step.
 #
-# Revisit incrementally: seeding the geo backbone (provinces/municipalities/centroids) in CI would
-# recover the geo-* files; installing R would recover test_exhaustiveness; an xvfb display would
-# recover test_virtual_display. Conservative default = keep them local-only until that CI setup lands.
+# RECOVERED (no longer here): tests/test_geo_fuzzy|reverse|upsert_backfill.py — now pass via the CI
+# "Seed geo backbone" step (after fixing scripts/load_geo.py ON CONFLICT for the composite geo PK);
+# tests/test_exhaustiveness.py — now passes after declaring statsmodels in requirements-dev.txt (its R
+# tests skip cleanly without R). Future incremental recovery: xvfb env for test_virtual_display, and a
+# seeded census snapshot for the census-dependent block below.
 
 # (1) Census / served-data dependent — need the live populated census or a served vam_verified run
 #     (pagination / seal / exhaustiveness API / canonical entity+inventory / API gaps / response cache /
@@ -36,14 +37,8 @@ tests/test_reconcile_gone_coverage.py
 tests/test_servable_status_filter.py
 tests/test_inquisition_lenses_db.py
 
-# (2) Geo-reference-seed dependent — need the seeded geo backbone (geo_province/municipality/centroids);
-#     on an empty migrated DB they hit FK violations or find zero provinces:
-tests/test_geo_fuzzy.py
-tests/test_geo_reverse.py
-tests/test_geo_upsert_backfill.py
-
-# (3) Network / external-engine / R-bridge / display dependent (real fetch / fingerprints / engine
-#     licensing / inquisition engines+lenses+prosecutor / quorum gate / R capture-recapture / xvfb):
+# (2) Network / external-engine / display dependent (real fetch cascade / fingerprints / engine
+#     licensing / inquisition engines+lenses+prosecutor / quorum precision gate / virtual display):
 tests/test_dealerprobe_concurrent.py
 tests/test_engine_license_default.py
 tests/test_fetch_cascade.py
@@ -52,5 +47,4 @@ tests/test_inquisition_engines.py
 tests/test_inquisition_lenses.py
 tests/test_inquisition_prosecutor.py
 tests/test_quorum_precision_gate.py
-tests/test_exhaustiveness.py
 tests/test_virtual_display.py

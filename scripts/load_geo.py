@@ -76,13 +76,15 @@ async def main() -> None:
     conn = await asyncpg.connect(DSN)
     try:
         await conn.executemany(
+            # PK is composite (country_code, code) since migration 0052/0053; country_code defaults
+            # to 'ES' for these rows, so the conflict target must name both columns of the PK.
             "INSERT INTO geo_province (code, name, ccaa_code, ccaa_name) "
-            "VALUES ($1, $2, $3, $4) ON CONFLICT (code) DO NOTHING",
+            "VALUES ($1, $2, $3, $4) ON CONFLICT (country_code, code) DO NOTHING",
             [(code, name, ccaa, CCAA[ccaa]) for code, (name, ccaa) in PROVINCES.items()],
         )
         await conn.executemany(
             "INSERT INTO geo_municipality (code, name, province_code) "
-            "VALUES ($1, $2, $3) ON CONFLICT (code) DO NOTHING",
+            "VALUES ($1, $2, $3) ON CONFLICT (country_code, code) DO NOTHING",
             munis,
         )
         nprov = await conn.fetchval("SELECT count(*) FROM geo_province")

@@ -136,6 +136,13 @@ jobs:
       - name: Migrate up (build schema from empty)
         run: python scripts/migrate.py up
 
+      - name: Seed geo backbone (INE provinces+municipalities+centroids — in-repo data, zero network)
+        # In-repo INE data (data/geo/*.xlsx/.csv, tracked); idempotent ON CONFLICT seeds. Unblocks the
+        # geo-* tests (province/municipality/centroid lookups + entity_province_code FK) on the empty DB.
+        run: |
+          python -m scripts.load_geo
+          python -m scripts.seed_geo_centroides
+
       - name: Run the self-seeding DB-backed suite (excludes tests/ci_local_only.txt)
         run: |
           IGN=$(grep -vE '^#|^[[:space:]]*$' tests/ci_local_only.txt | sed 's#^#--ignore=#' | tr '\n' ' ')
