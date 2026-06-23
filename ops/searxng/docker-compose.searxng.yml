@@ -1,0 +1,64 @@
+# Cardeep — €0 local SearXNG meta-search for discovery VECTOR 3 (dork_municipal).
+#
+# WHY THIS EXISTS
+#   pipeline/sources/dork_municipal.py sweeps the 8.132 INE municipalities for
+#   dealer-OWNED domains. Its primary engine is a SearXNG JSON endpoint
+#   (CARDEEP_SEARXNG_URL); without it the adapter falls back to scraping
+#   DuckDuckGo HTML directly (dork_municipal.py:122-139), which an unbounded
+#   national sweep (8.132 municipios x 5 templates ~= 40k requests) would hammer
+#   into a ban. SearXNG fronts the upstream engines, rotates them, and absorbs the
+#   per-engine rate — so the adapter's auto-run gate
+#   (pipeline/discover_schedule.py:77-83) is satisfied the moment this instance is
+#   up and CARDEEP_SEARXNG_URL is exported. No application code change is needed.
+#
+# COST / SAFETY CONTRACT
+#   - €0: a local container, no account, no quota, no paid proxy.
+#   - localhost-ONLY: bound to 127.0.0.1:8888 (mirrors the cardeep-pg
+#     127.0.0.1:5433 convention) — the instance is NEVER publicly exposed.
+#   - Ban-free by construction: the politeness budget lives in the adapter
+#     (CARDEEP_DORK_DELAY>=1.0 s/req, bounded slices via CARDEEP_DORK_LIMIT /
+#     CARDEEP_DORK_MUNI). SearXNG only rotates the upstream engines.
+#
+# PREREQUISITE
+#   A ./settings.yml MUST exist next to this file with `json` in search.formats
+#   and the limiter OFF (a default SearXNG enables only `html` and returns
+#   HTTP 403 for ?format=json, which would silently knock the adapter back onto
+#   the gated DDG fallback). See ops/searxng/README.md — it generates the exact
+#   file. Bring up with:
+#
+#     SEARXNG_SECRET=$(openssl rand -hex 32) \
+#       docker compose -f ops/searxng/docker-compose.searxng.yml up -d
+#
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: cardeep-searxng
+    ports:
+      # localhost-only — matches CARDEEP_SEARXNG_URL=http://127.0.0.1:8888 and the
+      # value the adapter probes (pipeline/sources/dork_municipal.py:154-163).
+      - "127.0.0.1:8888:8080"
+    volumes:
+      # The whole dir is the SearXNG config root. ./settings.yml (created per the
+      # README) lands at /etc/searxng/settings.yml and turns on JSON + limiter-off.
+      - "./:/etc/searxng:rw"
+    environment:
+      # Inbound link base; harmless for the JSON API but keeps the UI coherent if
+      # an operator opens http://127.0.0.1:8888 to eyeball results.
+      SEARXNG_BASE_URL: "http://127.0.0.1:8888/"
+      # secret_key is mandatory. Inject it at launch — never commit a real one:
+      #   SEARXNG_SECRET=$(openssl rand -hex 32) docker compose -f ... up -d
+      # settings.yml reads it via the ${SEARXNG_SECRET} placeholder.
+      SEARXNG_SECRET: "${SEARXNG_SECRET:?set SEARXNG_SECRET, e.g. $(openssl rand -hex 32)}"
+    restart: unless-stopped
+    healthcheck:
+      # Prove the JSON API the adapter depends on actually answers (not just that
+      # the HTML UI is up). A default-format instance returns 403 here, surfacing
+      # the misconfiguration as an UNHEALTHY container instead of a silent DDG
+      # fallback at sweep time.
+      test:
+        - "CMD-SHELL"
+        - "wget -q -O /dev/null 'http://127.0.0.1:8080/search?q=test&format=json' || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s

@@ -153,8 +153,14 @@ def _build_registry() -> dict[str, SourceEntry]:
                     "pipeline.platform.coches_net_segments", []),
         SourceEntry("milanuncios_wholesale",
                     "pipeline.platform.milanuncios_wholesale", []),
-        SourceEntry("motor_es_wholesale",     # --full --segment all = full census (vo+vn+renting)
-                    "pipeline.platform.motor_es_wholesale", ["--full", "--segment", "all"]),
+        SourceEntry("motor_es_wholesale",     # BOUNDED resumable slice (FASE 4 trigger-fix): the prior
+                    # --full --segment all drained the ~51k census in one ~4.7h run -> exceeded the 4h
+                    # SUBPROCESS_TIMEOUT wall -> SIGKILLed before record_run -> silent re-timeout each
+                    # cadence (last_ok stuck 2026-06-15). --cursor advances a persistent per-segment cell
+                    # offset across ticks so ~ceil(cells/40) runs cover the whole make->model partition,
+                    # each finishing well inside the wall and writing last_ok (watchdog clears, breaker 0).
+                    "pipeline.platform.motor_es_wholesale",
+                    ["--segment", "all", "--max-cells", "40", "--limit", "12000", "--cursor"]),
         SourceEntry("wallapop_wholesale",     # key=WP_SOURCE_KEY (facet imports it); module=facet
                     "pipeline.platform.wallapop_facet", []),
 
@@ -266,9 +272,19 @@ def _build_registry() -> dict[str, SourceEntry]:
         # is mandatory; --limit bounds the per-tick batch well within the 4h subprocess wall. Ban-free:
         # probes are spread across thousands of distinct dealer hosts, not one host (no AS24 scar).
         # (Audit deferred-harvest gap: was KNOWN_UNMAPPED; now wired so the own-site drain is hands-off.)
+        #
+        # SAFE ACCELERATION (2026-06-23): --limit 500 -> 2000, --concurrency 16 -> 24. The own-site
+        # frontier audit (LIVE PG, 2026-06-23) put real drainable backlog at ~5,052 hosts; at 500/24h
+        # that is ~10 days, at 2000/24h ~2.5 days. Ban-free by construction: --concurrency widens only
+        # DEALER-level parallelism (distinct hosts); per-HOST pressure is the unchanged pdp_conc=6
+        # semaphore (dealerprobe_wholesale.py:364), and --pdp-conc/--pdp-delay defaults (the politeness
+        # contract per host) are left untouched. Sizing within the 4h wall: 2000 dealers / 24 parallel
+        # waves ~= 84 serial waves; even at a pessimistic 60s/wave ~= 84 min << 4h SUBPROCESS_TIMEOUT.
+        # asyncpg pool max_size=12 / write_sem=12 caps concurrent cages (held only ~<100ms, never during
+        # network I/O), so 24 parallel dealers do not starve the pool. Do NOT also raise --pdp-conc.
         SourceEntry("dealerprobe_ownsite",
                     "pipeline.platform.dealerprobe_wholesale",
-                    ["--from-db", "--limit", "500"]),
+                    ["--from-db", "--limit", "2000", "--concurrency", "24"]),
 
         # ── Families (720h) ───────────────────────────────────────────────
         SourceEntry("family_builder_wholesale",

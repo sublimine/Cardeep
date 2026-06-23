@@ -66,6 +66,27 @@ Run (bounded proof):  python -m pipeline.platform.motor_es_wholesale --max-cells
 Run (FULL ~51k used): python -m pipeline.platform.motor_es_wholesale --full
 Run (ALL segments):   python -m pipeline.platform.motor_es_wholesale --segment all --full
 Run (new-car proof):  python -m pipeline.platform.motor_es_wholesale --segment vn --max-cells 3
+Run (CADENCE drain):  python -m pipeline.platform.motor_es_wholesale --segment all --max-cells 40 --limit 12000 --cursor
+
+SCHEDULER NOTE (2026-06-23, ~176h-silence root-cause). The connector below is CORRECT; the
+silence was NOT a breaker/cap/partition bug here. It was the SCHEDULER invoking this module
+with `--full --segment all` (pipeline/ops/scheduler.py REGISTRY): `--full` drains the entire
+~51k census, one PDP per car, at the governor's 3 req/s bucket ≈ 4.7h — which exceeds the 4h
+CARDEEP_SUBPROCESS_TIMEOUT wall (scheduler.py). The process is SIGKILLed mid-crawl BEFORE it
+reaches its own record_run, so source_health is never updated by this connector and the
+scheduler's crash-net records `exited -1` (the TimeoutExpired path). consecutive_fails stays
+at 1 (< BREAKER_TRIP_AT=3), so the breaker never even engages — it just silently re-times-out
+each cadence (verified live: source_health last_ok 2026-06-15, last_fail 2026-06-22, run id
+1683 ok=False exit -1).
+
+THE REAL TRIGGER-FIX is the scheduler argv (owned by scheduler.py, not this file): replace the
+un-finishable `--full --segment all` with a BOUNDED resumable slice, e.g.
+`--segment all --max-cells 40 --limit 12000 --cursor`. The connector contribution that makes
+that slice actually COMPLETE the census instead of re-draining the same head every tick is the
+--cursor flag added here: it advances a persistent per-segment cell offset across runs so
+~ceil(cells/max-cells) ticks cover the whole make->model partition, each run finishing well
+inside the 4h wall and writing last_ok (so the silence watchdog clears and consecutive_fails
+stays 0). --full and proof --max-cells (no --cursor) are byte-for-byte unchanged.
 """
 from __future__ import annotations
 
@@ -858,6 +879,103 @@ def _configure_motor_host(rate_per_sec: float = 3.0) -> None:
                        min_spacing_s=0.05, jitter_s=0.05)
 
 
+# ---------------------------------------------------------------------------
+# MONOTONIC CELL CURSOR (opt-in via --cursor) — makes a BOUNDED facet drain advance
+# across runs instead of re-draining the same alphabetical prefix every tick.
+#
+# Why this exists: a bounded run takes cells[:max_cells] (a fixed prefix). Run un-cursored
+# on a 24h cadence, every tick re-drains the SAME head cells and the census TAIL is never
+# reached — the bounded slice never completes the partition. With --cursor on, each segment
+# remembers WHERE it stopped (a per-segment offset persisted in this connector's OWN
+# source_health.tuning row, under a namespaced key the health writer never touches) and the
+# NEXT bounded run drains the next window, wrapping at the end. Over ~ceil(cells/max_cells)
+# ticks the whole make->model partition is covered, idempotently (ON CONFLICT re-coverage on
+# the wrap). --full is unaffected (it always drains every cell in one run); proof --max-cells
+# without --cursor is byte-for-byte unchanged (a deterministic prefix, as the proof tests
+# expect). No guard is touched: breaker gate, governor pacing, per-host bucket, VAM quorum,
+# and made_progress all stay exactly as they were.
+#
+# The cursor lives in tuning["motor_cell_cursor"] = {segment_key: next_offset}. record_run
+# never writes the tuning column (it only READS it for breaker thresholds), so persisting the
+# cursor here cannot be lost-update-clobbered by the run's own record_run, and an unknown key
+# is ignored by _tuning_int. The read-modify-write preserves every other tuning key.
+# ---------------------------------------------------------------------------
+
+_CURSOR_TUNING_KEY = "motor_cell_cursor"
+
+
+async def _read_cell_cursor(conn: asyncpg.Connection) -> dict[str, int]:
+    """Read the per-segment next-offset map from this source's source_health.tuning.
+    Returns {} when no row / no tuning / no cursor (a fresh start). Never raises — a missing
+    or malformed cursor must degrade to offset 0, not abort the drain."""
+    try:
+        raw = await conn.fetchval(
+            "SELECT tuning FROM source_health WHERE source_key=$1", MOTOR_SOURCE_KEY)
+    except Exception:  # noqa: BLE001 — cursor is an optimization, never a hard dependency
+        return {}
+    if not raw:
+        return {}
+    try:
+        tuning = json.loads(raw) if isinstance(raw, str) else raw
+        cur = tuning.get(_CURSOR_TUNING_KEY) if isinstance(tuning, dict) else None
+        if not isinstance(cur, dict):
+            return {}
+        return {str(k): int(v) for k, v in cur.items() if isinstance(v, (int, float))}
+    except Exception:  # noqa: BLE001 — malformed cursor -> start clean
+        return {}
+
+
+async def _write_cell_cursor(conn: asyncpg.Connection, seg_key: str, next_offset: int) -> None:
+    """Persist the NEXT-window offset for one segment via a read-modify-write that preserves
+    every other tuning key (and any other segment's cursor). Upserts the source_health row so
+    the cursor survives even if record_run has not yet created it. Best-effort: a cursor write
+    failure must never fail the harvest (the data is already caged)."""
+    try:
+        async with conn.transaction():
+            raw = await conn.fetchval(
+                "SELECT tuning FROM source_health WHERE source_key=$1 FOR UPDATE",
+                MOTOR_SOURCE_KEY)
+            tuning: dict = {}
+            if raw:
+                try:
+                    parsed = json.loads(raw) if isinstance(raw, str) else raw
+                    if isinstance(parsed, dict):
+                        tuning = parsed
+                except Exception:  # noqa: BLE001 — overwrite a malformed blob cleanly
+                    tuning = {}
+            cur = tuning.get(_CURSOR_TUNING_KEY)
+            if not isinstance(cur, dict):
+                cur = {}
+            cur[seg_key] = int(max(0, next_offset))
+            tuning[_CURSOR_TUNING_KEY] = cur
+            await conn.execute(
+                """INSERT INTO source_health (source_key, tuning)
+                       VALUES ($1, $2::jsonb)
+                   ON CONFLICT (source_key) DO UPDATE SET tuning = $2::jsonb""",
+                MOTOR_SOURCE_KEY, json.dumps(tuning))
+    except Exception as e:  # noqa: BLE001 — never let cursor persistence abort a good run
+        print(f"[motor_es_wholesale] cursor persist skipped for '{seg_key}' ({e}).")
+
+
+def _cursor_window(cells: list[str], start: int, max_cells: int) -> tuple[list[str], int]:
+    """Select the next bounded window of cells starting at `start`, wrapping at the end of the
+    partition. Returns (window, next_offset). The window is contiguous from `start`; if it runs
+    off the end it wraps to the front so no cell is starved. next_offset is the post-window
+    cursor (modulo len) so the FOLLOWING run continues where this one stopped.
+
+    Pure function (no I/O) so it is unit-testable in isolation."""
+    n = len(cells)
+    if n == 0:
+        return [], 0
+    take = max(0, max_cells)
+    if take == 0:
+        return [], start % n
+    take = min(take, n)  # never drain a cell twice within ONE window
+    s = start % n
+    window = [cells[(s + i) % n] for i in range(take)]
+    return window, (s + take) % n
+
+
 async def _declared_total(governed_fetch) -> int | None:
     """Read the live census denominator from SURFACE B (get-data-ajax data.total)."""
     try:
@@ -1226,22 +1344,37 @@ async def _harvest_facet_segment(
         fetcher: "MotorFetcher", governed_fetch, conn: asyncpg.Connection, geo: "GeoResolver",
         platform_ulid: str, seg: SegmentSpec, *, full: bool, max_cells: int, limit: int,
         seen_ids: set[str], harvested_cageable: set[tuple[str, str]],
-        stats: dict) -> tuple[str | None, int | None]:
+        stats: dict, cursor_start: int | None = None) -> tuple[str | None, int | None, int | None]:
     """Drain a FACET segment (vo / km0): enumerate its make->model MECE partition, drain each
     cell's SSR cards, PDP-enrich for the selling dealer, and bulk-cage. VO and km0 share this
     EXACT path (km0 PDPs are the same /segunda-mano/anuncio/{id}/ namespace). Returns
-    (fetch_error, last_http). km0 cars are a SUBSET of the VO census, so seen_ids is shared
-    across segments in one run to dedup a car drained under both."""
+    (fetch_error, last_http, next_cursor). km0 cars are a SUBSET of the VO census, so seen_ids
+    is shared across segments in one run to dedup a car drained under both.
+
+    Cell selection:
+      full=True            -> every cell (one run = the whole census). next_cursor=None.
+      cursor_start is None -> the proof prefix cells[:max_cells] (deterministic, unchanged).
+                              next_cursor=None.
+      cursor_start is int  -> the rotating window from cursor_start (advances across runs,
+                              wraps at the end). next_cursor = where the NEXT run resumes."""
     fetch_error: str | None = None
     last_http: int | None = None
     try:
         cells = await build_cells(fetcher, governed_fetch, seg, stats)
     except Exception as e:  # noqa: BLE001 — taxonomy fetch failed: stop honestly
         print(f"[motor_es_wholesale] segment '{seg.key}' enumeration failed ({e}); skipping.")
-        return str(e), fetcher.last_status
+        return str(e), fetcher.last_status, None
 
-    cells_to_drain = cells if full else cells[:max(0, max_cells)]
-    mode = "FULL" if full else "PROOF"
+    next_cursor: int | None = None
+    if full:
+        cells_to_drain = cells
+        mode = "FULL"
+    elif cursor_start is not None:
+        cells_to_drain, next_cursor = _cursor_window(cells, cursor_start, max_cells)
+        mode = f"CURSOR(@{cursor_start % max(1, len(cells))}->@{next_cursor})"
+    else:
+        cells_to_drain = cells[:max(0, max_cells)]
+        mode = "PROOF"
     print(f"[motor_es_wholesale] segment '{seg.key}' (facet) {mode}: draining "
           f"{len(cells_to_drain)} of {len(cells)} cells (displayed_count={seg.displayed_count}).")
 
@@ -1311,16 +1444,25 @@ async def _harvest_facet_segment(
               f"pdp_fail={stats['pdp_failed']}")
         if stop:
             break
-    return fetch_error, last_http
+    # Only advance the cursor on a clean window: a fetch_error broke the drain mid-window, so
+    # the same window must be retried next run rather than skipping the unreached cells.
+    if fetch_error is not None:
+        next_cursor = None
+    return fetch_error, last_http, next_cursor
 
 
 async def harvest(max_cells: int = DEFAULT_MAX_CELLS, limit: int = DEFAULT_LIMIT,
                   full: bool = False, concurrency: int = DEFAULT_CONCURRENCY,
-                  rate_per_sec: float = 3.0, segment: str = "vo") -> dict:
+                  rate_per_sec: float = 3.0, segment: str = "vo",
+                  cursor: bool = False) -> dict:
     conn = await asyncpg.connect(DSN)
     concurrency = max(1, concurrency)
     fetcher = MotorFetcher(pool_size=concurrency)  # one coherent session per concurrency slot
     segments = resolve_segments(segment)
+    # CURSOR mode is a BOUNDED-run accelerator only: it makes successive --max-cells ticks
+    # advance through the partition (see _cursor_window). It is meaningless under --full (which
+    # already drains every cell) and is silently ignored there.
+    use_cursor = cursor and not full
     stats = {
         "makes_discovered": 0, "cells_enumerated": 0, "province_split_leaves": 0,
         "cells_drained": 0, "pages_fetched": 0, "cards_seen": 0, "pdp_fetched": 0,
@@ -1328,7 +1470,7 @@ async def harvest(max_cells: int = DEFAULT_MAX_CELLS, limit: int = DEFAULT_LIMIT
         "cars_caged": 0, "new_cars": 0, "edges_created": 0, "new_events": 0,
         "declared_full": None, "dup_ids_collapsed": 0, "dealers_distinct": 0,
         "offer_links_found": 0,
-        "full": full, "concurrency": concurrency,
+        "full": full, "concurrency": concurrency, "cursor": use_cursor,
         "segment_arg": segment, "segments_run": [s.key for s in segments],
     }
     # Harvest-side truth for the VAM: distinct CAGEABLE cars = distinct (dealer-slug,
@@ -1369,15 +1511,29 @@ async def harvest(max_cells: int = DEFAULT_MAX_CELLS, limit: int = DEFAULT_LIMIT
         dealers_before = {r["cdp_code"] for r in await conn.fetch(
             "SELECT cdp_code FROM entity WHERE kind='compraventa'")}
 
+        # CURSOR: load the per-segment resume offsets once (empty -> fresh start at 0). Only
+        # consulted in bounded cursor mode; --full and proof mode ignore it entirely.
+        cell_cursor = await _read_cell_cursor(conn) if use_cursor else {}
+        if use_cursor:
+            stats["cursor_start"] = dict(cell_cursor)
+
         for seg in segments:
             if not full and len(harvested_cageable) >= limit:
                 print(f"[motor_es_wholesale] global --limit {limit} reached; stopping before '{seg.key}'.")
                 break
             if seg.family == "facet":
-                ferr, lhttp = await _harvest_facet_segment(
+                cursor_start = cell_cursor.get(seg.key, 0) if use_cursor else None
+                ferr, lhttp, next_cur = await _harvest_facet_segment(
                     fetcher, governed_fetch, conn, geo, platform_ulid, seg,
                     full=full, max_cells=max_cells, limit=limit,
-                    seen_ids=seen_ids, harvested_cageable=harvested_cageable, stats=stats)
+                    seen_ids=seen_ids, harvested_cageable=harvested_cageable, stats=stats,
+                    cursor_start=cursor_start)
+                # Advance + persist the cursor ONLY for a clean cursor-mode window (next_cur is
+                # None under --full, proof mode, or a mid-window fetch_error).
+                if use_cursor and next_cur is not None:
+                    cell_cursor[seg.key] = next_cur
+                    await _write_cell_cursor(conn, seg.key, next_cur)
+                    stats.setdefault("cursor_next", {})[seg.key] = next_cur
             else:
                 ferr, lhttp = None, None
                 try:
@@ -1471,10 +1627,18 @@ def _print_report(stats: dict) -> None:
         print(f"\n[motor_es_wholesale] SKIPPED: {stats.get('reason')}")
         return
     print("\n" + "=" * 64)
-    mode = "FULL CENSUS" if stats.get("full") else "PROOF (bounded cells)"
+    if stats.get("full"):
+        mode = "FULL CENSUS"
+    elif stats.get("cursor"):
+        mode = "CURSOR (bounded, monotonic)"
+    else:
+        mode = "PROOF (bounded cells)"
     print(f"MOTOR.ES WHOLESALE HARVEST — {mode} REPORT")
     print("=" * 64)
     print(f"  platform cdp_code     : {stats.get('platform_code')}")
+    if stats.get("cursor"):
+        print(f"  cell cursor start     : {stats.get('cursor_start')}")
+        print(f"  cell cursor next      : {stats.get('cursor_next')}")
     print(f"  segments run          : {stats.get('segments_run')} (--segment {stats.get('segment_arg')})")
     print(f"  declared full (source): {stats.get('declared_full')} (used-car census; km0 included)")
     print(f"  offer links found     : {stats.get('offer_links_found')} (vn/catalog/renting offer pages)")
@@ -1545,9 +1709,16 @@ def main() -> None:
                               "models, ⊃ vn); renting=renting offers (~132); "
                               "all=vo+vn+renting (the additive union, skips the redundant "
                               "km0⊂vo and catalog⊃vn). Default 'vo'."))
+    parser.add_argument("--cursor", action="store_true",
+                        help=("MONOTONIC bounded drain: advance a persistent per-segment cell "
+                              "offset across runs so successive --max-cells ticks cover the WHOLE "
+                              "make->model partition (wrapping at the end) instead of re-draining "
+                              "the same prefix. Ignored under --full. This is the flag that makes "
+                              "a bounded scheduler slice actually complete the ~51k census over "
+                              "~ceil(cells/max-cells) ticks, each well inside the 4h wall."))
     args = parser.parse_args()
     stats = asyncio.run(harvest(args.max_cells, args.limit, args.full,
-                                args.concurrency, args.rate, args.segment))
+                                args.concurrency, args.rate, args.segment, args.cursor))
     _print_report(stats)
 
 
