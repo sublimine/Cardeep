@@ -3622,4 +3622,9 @@
   existe en codigo) -> REINICIAR API. SpainMap 'venta' hardcode = default aceptable.
 - ACCION OWNER (1 paso manual): reiniciar uvicorn :8090 (+ harvest scheduler) -> activa /geo/exhaustiveness,
   el codec de events, y el /stats rapido (yo no puedo: proceso persistente, NUNCA & / run_in_background).
-- PROXIMO: reportar; (opcional) cerrar #7 paginacion; vigilancia.
+- #7 CERRADO (8046d8e): paginacion N+1 honesta (deps.page_slice; over-fetch LIMIT size+1) en los 7
+  handlers paginados -> sin pagina-fantasma; tests/test_page_slice.py (DB-free unit, CI) + test_api_pagination
+  27 passed local. AUDITORIA FRONTEND 100% (7 fixes a la raiz + guardrail, todos CI-verde; SpainMap 'venta'
+  = default aceptable). UNICO pendiente = reinicio OWNER de uvicorn :8090 + scheduler (build viejo) para
+  activar codec-events / stats-rapido / /geo/exhaustiveness / paginacion / fases previas.
+- PROXIMO: VIGILANCIA (salud + recordar reinicio API); continuar FASE 1 census batch B/C/OLA2 si procede.
