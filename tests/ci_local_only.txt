@@ -1,21 +1,20 @@
 # CI local-only test files — EXCLUDED from the `db-tests` CI job (pytest -m "not unit" --ignore=...).
 #
 # WHY. The db-tests CI job runs the DB-backed suite against an EPHEMERAL, freshly-migrated Postgres
-# seeded with the geo backbone (provinces/municipalities/centroids) but with NO census, no locality
-# gazetteer, and no live network. The files below still need either the developer's POPULATED cardeep-pg
-# (millions of rows, served vam_verified runs), the locality gazetteer, or live network/external engines,
-# so they cannot pass there. They stay part of the full local Ferrari run (pre-push), verified vs the
-# live dev DB.
+# seeded with the geo backbone (provinces/municipalities/centroids) but with NO census and no live
+# network. The files below still need either the developer's POPULATED cardeep-pg (millions of rows,
+# served vam_verified runs) or live network/external engines, so they cannot pass there. They stay part
+# of the full local Ferrari run (pre-push), verified vs the live dev DB.
 #
 # GROUND TRUTH: the CI db-tests job is the faithful classifier (local runs hardcode :5433, the live dev
 # DB). Files NOT listed here pass in CI and are genuinely CI-safe. '#' and blank lines are ignored.
 #
-# RECOVERED (no longer here): tests/test_geo_reverse.py + tests/test_geo_upsert_backfill.py — now pass
-# via the CI "Seed geo backbone" step (after fixing scripts/load_geo.py ON CONFLICT for the composite
-# geo PK); tests/test_exhaustiveness.py — now passes after declaring statsmodels in requirements-dev.txt
-# (its R tests skip cleanly without R). NEXT incremental recovery: seed the locality/parroquia gazetteer
-# (recovers test_geo_fuzzy), an xvfb env for test_virtual_display, and a seeded census snapshot for the
-# census-dependent block below.
+# RECOVERED (no longer here): tests/test_geo_reverse.py + tests/test_geo_upsert_backfill.py (CI "Seed geo
+# backbone" step after fixing scripts/load_geo.py ON CONFLICT for the composite geo PK);
+# tests/test_exhaustiveness.py (declared statsmodels in requirements-dev.txt); tests/test_geo_fuzzy.py
+# (declared rapidfuzz in requirements.txt — the fuzzy resolver tier was silently skipped without it; the
+# gazetteer itself loads from the in-repo CSV, not a DB seed). NEXT incremental recovery: xvfb env for
+# test_virtual_display, and a seeded census snapshot for the census-dependent block below.
 
 # (1) Census / served-data dependent — need the live populated census or a served vam_verified run
 #     (pagination / seal / exhaustiveness API / canonical entity+inventory / API gaps / response cache /
@@ -38,12 +37,7 @@ tests/test_reconcile_gone_coverage.py
 tests/test_servable_status_filter.py
 tests/test_inquisition_lenses_db.py
 
-# (2) Locality-gazetteer dependent — needs the parroquia/locality gazetteer + name aliases seeded
-#     (Orense->Ourense, Palma de Mallorca, Asturian/Galician parroquias); the geo backbone alone is
-#     insufficient (the fuzzy resolver returns None / the wrong municipality). No zero-cost seeder yet:
-tests/test_geo_fuzzy.py
-
-# (3) Network / external-engine / display dependent (real fetch cascade / fingerprints / engine
+# (2) Network / external-engine / display dependent (real fetch cascade / fingerprints / engine
 #     licensing / inquisition engines+lenses+prosecutor / quorum precision gate / virtual display):
 tests/test_dealerprobe_concurrent.py
 tests/test_engine_license_default.py
