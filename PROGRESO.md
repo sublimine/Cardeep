@@ -3368,3 +3368,24 @@
   ambiguo); sealed-values census-brittle (convertir a guard estructural). Cadena super-canonica completa =
   reconciliacion nivel-Director pendiente.
 - PROXIMO: fix 2 Blau tests rep-robustos + root-cause DEALER_CDP available_inventory + suite Ferrari completa -> green.
+
+## 2026-06-23 — VIGILANCIA-ACTIVA #8: main VERDE — incidente re-cluster CERRADO
+- Suite Ferrari COMPLETA (b7oyg0yhv): **1442 passed, 0 failed, 5 skipped** (verificado x2 vias: passed-line
+  + 0 lineas FAILED; NO me fie del "exit 0" de la notif). CI verde. main VERDE.
+- INCIDENTE re-cluster RESUELTO, sistema MAS correcto que antes:
+  - Overture plegado al censo servido: dealers no-particular 42.259 -> 54.567 (+overture, precision-clean).
+  - Over-merge catastrofico (113k "Particulares coches.net") FIJADO a la raiz (build_canonical_dedup excluye
+    kind=particular del deep-link; verificado 0 particular, mayores = splits reales Louzao/Dimovil).
+  - 3 tests stale arreglados A LA RAIZ sin debilitar: _cluster_counts espeja la API (servable+LEFT JOIN+
+    COALESCE; el INNER JOIN crudo era el bug, no la API); 2 Blau rep-robustos (invariante 5->1 dinamico).
+- DISCIPLINA mantenida en todo el incidente: NUNCA forcé un guard, NUNCA fudgeé un test, NUNCA servi el
+  over-merge. Los guards del sistema (B1-vam, sealed-values, residual-collateral) hicieron su trabajo.
+- Servido ACTUAL = deeplink-fixed gateado (B1+overture, real-dealer dedup, precision-clean). Estado VALIDO+seguro.
+- PENDIENTE (proyectos, NO bloquean; documentados): (a) reconciliacion super-canonica completa = DECISION
+  OWNER (¿los 49 "Particulares coches.net" deben mergear a 1? no afecta dealer-count; + resolver residual
+  collateral a la raiz; + convertir sealed-values exact-match a guard estructural census-robusto). (b)
+  RE-EVALUAR MSE/sello DESPUES de finalizar el resolved (re-medir sobre interino seria prematuro). (c)
+  proyectos reversibles: conector OEM-red, fix VAM collapse_invisible, densificar MSE.
+- LECCION (memoria): el re-cluster era Director-gated; ejecutarlo agresivo en loop autonomo destapo el
+  over-merge. Recuperado a la raiz; overture (+16k dealers) logrado. NO repetir mutaciones de datos servidos
+  sin plan completo verificado.
