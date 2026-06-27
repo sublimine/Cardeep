@@ -59,12 +59,17 @@ import logging
 import os
 import re
 import sys
-import unicodedata
 from collections import defaultdict
 from typing import Any
 
 import psycopg2
 import psycopg2.extras
+
+# Shared, single-source-of-truth ASCII fold (OPEN-C / gap C, project 360-A): the
+# SAME per-character hybrid transliteration used by the dealer-name normaliser, so
+# the vehicle title gate and the dealer name key can never drift in how they treat
+# non-Latin scripts. See _normalize_title below for why a title needs it.
+from pipeline.identity.name_normalize import _ascii_fold_transliterate
 
 logging.basicConfig(
     level=logging.INFO,
@@ -173,14 +178,34 @@ def _normalize_photo_url(url: str | None) -> str | None:
 
 
 def _normalize_title(title: str | None) -> str | None:
-    """NFKD → ASCII ignore → lower → strip non-[a-z0-9].
+    """Transliterate non-Latin letters → lower → strip non-[a-z0-9].
+
+    The normalized title is the SOLE cross-entity corroboration gate for Signal B
+    (firma): a merge requires ``ta and tb and ta == tb`` (see _build_edges). It is
+    therefore a real clustering signal — not display/log — so its fold must not
+    silently destroy a country's title-identity space.
+
+    OPEN-C sibling (project F3). The legacy ``NFKD + encode('ascii','ignore')`` fold
+    ERASED every codepoint without an ASCII decomposition, so a non-Latin title
+    (Greek / Cyrillic / CJK) folded to '' → None and the gate failed (Signal B DEAD
+    for non-Latin tenants = under-merge), or a short incidental Latin/digit residue
+    survived ('1.6' → '16') and made two DIFFERENT cars false-corroborate
+    (over-merge). We reuse the dealer normaliser's per-character hybrid fold
+    (``name_normalize._ascii_fold_transliterate``, anyascii): every character the
+    legacy fold already turned into ASCII is kept BYTE-FOR-BYTE (Spanish / Latin
+    titles are unchanged — 'León' → 'leon', 'Citroën' → 'citroen', 'Škoda' →
+    'skoda'), and only the previously-erased non-Latin LETTERS gain a value
+    ('Σεάτ Ίμπιζα' → 'seatimpiza').
+
+    NOTE: the dealer normaliser's legal-suffix strip (sl / sa / slu …) is
+    deliberately NOT applied here — those are company-form tokens, meaningless and
+    harmful inside a car title (they can be a real trim / version token).
 
     Returns None for empty/missing titles.
     """
     if not title or not title.strip():
         return None
-    nfkd = unicodedata.normalize("NFKD", title)
-    clean = _RE_NON_ALNUM.sub("", nfkd.encode("ascii", "ignore").decode("ascii").lower())
+    clean = _RE_NON_ALNUM.sub("", _ascii_fold_transliterate(title).lower())
     return clean if clean else None
 
 

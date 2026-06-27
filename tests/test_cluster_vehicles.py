@@ -24,6 +24,8 @@ Covers:
 from __future__ import annotations
 
 import datetime
+import re
+import unicodedata
 from decimal import Decimal
 from typing import Any
 
@@ -136,6 +138,107 @@ class TestNormalizeTitle:
     def test_same_title_same_result(self) -> None:
         t = "Volkswagen Golf VII 1.6 TDI"
         assert _normalize_title(t) == _normalize_title(t)
+
+
+# ---------------------------------------------------------------------------
+# _normalize_title — OPEN-C sibling closure (project F3)
+#
+# The normalized title is the SOLE cross-entity corroboration gate for Signal B
+# (firma) at cluster_vehicles.py:491-494 —
+#   ta = _normalize_title(va["title"]); tb = _normalize_title(vb["title"])
+#   if not (ta and tb and ta == tb): continue
+# so the title normaliser is a REAL clustering signal, not display/log. The
+# legacy NFKD + encode('ascii','ignore') fold ERASED every non-Latin codepoint,
+# so a Greek/Cyrillic/CJK title folded to '' -> None and the gate failed (Signal
+# B DEAD for non-Latin tenants = under-merge), or a short incidental Latin/digit
+# residue ('1.6' -> '16') survived and made two DIFFERENT cars false-corroborate
+# (over-merge). The fix reuses the dealer normaliser's per-character hybrid fold
+# (name_normalize._ascii_fold_transliterate), so Spanish/Latin titles stay
+# BYTE-IDENTICAL and only the previously-erased non-Latin letters gain a value.
+# ---------------------------------------------------------------------------
+
+# Non-Latin fixtures (codepoint-built so this source stays ASCII-explicit).
+_NL_GREEK_SEAT_IBIZA = "".join(
+    chr(c) for c in (0x3A3, 0x3B5, 0x3AC, 0x3C4, 0x20, 0x38A, 0x3BC, 0x3C0, 0x3B9, 0x3B6, 0x3B1)
+)  # 'Σεάτ Ίμπιζα'  (Seat Ibiza, Greek)
+_NL_CYRILLIC_VW = "".join(
+    chr(c) for c in (0x412, 0x41E, 0x41B, 0x41A, 0x421, 0x412, 0x410, 0x413, 0x415, 0x41D)
+)  # 'ВОЛКСВАГЕН'  (Volkswagen, Cyrillic)
+_NL_JP_TOYOTA = "".join(chr(c) for c in (0x30C8, 0x30E8, 0x30BF))  # 'トヨタ'  (Toyota, katakana)
+_NL_IBIZA = "".join(chr(c) for c in (0x38A, 0x3BC, 0x3C0, 0x3B9, 0x3B6, 0x3B1))  # 'Ίμπιζα'
+_NL_STYLE = "".join(chr(c) for c in (0x3A3, 0x3C4, 0x3AC, 0x3C5, 0x3BB))  # 'Στάυλ'
+_NL_REFER = "".join(chr(c) for c in (0x3A1, 0x3B5, 0x3C6, 0x3B5, 0x3C1, 0x3AD, 0x3BD, 0x3C2))  # 'Ρεφερένς'
+# Two DIFFERENT Greek-trim Ibizas that the legacy fold both collapsed to '16'.
+_NL_IBIZA_STYLE = _NL_IBIZA + " " + _NL_STYLE + " 1.6"
+_NL_IBIZA_REFER = _NL_IBIZA + " " + _NL_REFER + " 1.6"
+
+_RE_TITLE_NON_ALNUM = re.compile(r"[^a-z0-9]")
+
+
+def _legacy_normalize_title(title: str | None) -> str | None:
+    """Frozen copy of the pre-fix ascii-ERASE normaliser: the ES byte-identity
+    oracle and the documented RED. NFKD -> encode('ascii','ignore') -> lower ->
+    strip non-[a-z0-9]."""
+    if not title or not title.strip():
+        return None
+    nfkd = unicodedata.normalize("NFKD", title)
+    clean = _RE_TITLE_NON_ALNUM.sub("", nfkd.encode("ascii", "ignore").decode("ascii").lower())
+    return clean if clean else None
+
+
+class TestNormalizeTitleNonLatin:
+    """GOLDEN — the vehicle title gate must TRANSLITERATE non-Latin scripts, not
+    erase them, while staying byte-identical for Spanish / Latin titles."""
+
+    def test_greek_title_transliterated_not_erased(self) -> None:
+        # RED: the legacy ascii-erase fold wipes the whole Greek title to None.
+        assert _legacy_normalize_title(_NL_GREEK_SEAT_IBIZA) is None
+        # GREEN: a live, legible key (Signal B corroboration restored).
+        assert _normalize_title(_NL_GREEK_SEAT_IBIZA) == "seatimpiza"
+
+    def test_cyrillic_and_cjk_titles_transliterated_not_erased(self) -> None:
+        assert _legacy_normalize_title(_NL_CYRILLIC_VW) is None   # RED
+        assert _legacy_normalize_title(_NL_JP_TOYOTA) is None     # RED
+        assert _normalize_title(_NL_CYRILLIC_VW) == "volksvagen"  # GREEN
+        assert _normalize_title(_NL_JP_TOYOTA) == "toyota"        # GREEN
+
+    def test_latin_residue_over_merge_is_fixed(self) -> None:
+        """RED: two different Greek-trim titles both collapsed to the incidental
+        '1.6' -> '16' residue, so they false-corroborated. GREEN: the full title
+        survives, so the two keys differ and no longer over-merge."""
+        # RED — legacy collapses both distinct titles onto the same '16' residue.
+        assert _legacy_normalize_title(_NL_IBIZA_STYLE) == "16"
+        assert _legacy_normalize_title(_NL_IBIZA_REFER) == "16"
+        assert _legacy_normalize_title(_NL_IBIZA_STYLE) == _legacy_normalize_title(_NL_IBIZA_REFER)
+        # GREEN — full transliterated titles are distinct.
+        assert _normalize_title(_NL_IBIZA_STYLE) == "impizastayl16"
+        assert _normalize_title(_NL_IBIZA_REFER) == "impizareferens16"
+        assert _normalize_title(_NL_IBIZA_STYLE) != _normalize_title(_NL_IBIZA_REFER)
+
+    def test_es_titles_byte_identical_to_legacy(self) -> None:
+        """HARD GATE: every real Spanish / Latin car-title shape normalises EXACTLY
+        as the legacy fold did — the fix must not move a single ES byte."""
+        es_titles = [
+            "Seat Ibiza 1.6 TDI", "Volkswagen Golf VII", "Citroën C4 Picasso",
+            "Peugeot 308 Allure", "SEAT León 2.0 TDI FR", "Renault Mégane",
+            "BMW Série 3", "Škoda Octavia", "Audi A4 Avant 2.0 TDI 150cv",
+            "Mercedes-Benz Clase A", "Señal 2020", "Seat - Ibiza, 2020",
+        ]
+        for t in es_titles:
+            assert _normalize_title(t) == _legacy_normalize_title(t), t
+
+    def test_per_character_survivor_byte_identity(self) -> None:
+        """Formal guarantee: for EVERY codepoint whose legacy fold is non-empty (a
+        'survivor'), the new normaliser yields the identical result; only codepoints
+        the legacy fold ERASED may gain a transliteration. Swept Latin..Arabic."""
+        violations = []
+        for cp in range(0x0, 0x3000):
+            ch = chr(cp)
+            if unicodedata.normalize("NFKD", ch).encode("ascii", "ignore").decode("ascii"):
+                probe = "z" + ch + "z"
+                if _normalize_title(probe) != _legacy_normalize_title(probe):
+                    violations.append(hex(cp))
+        assert not violations, f"survivor byte-identity divergences: {violations[:20]}"
 
 
 # ---------------------------------------------------------------------------
@@ -318,6 +421,47 @@ class TestSignalBFirma:
         for r in cluster_rows:
             if r["cluster_size"] > 1:
                 assert r["match_signal"] in ("firma", "both")
+
+
+class TestSignalBNonLatinTitle:
+    """End-to-end Signal B (firma) behaviour with non-Latin titles — proves the
+    title normaliser is a REAL merge gate, not cosmetic (OPEN-C sibling, F3)."""
+
+    def test_cross_entity_identical_greek_title_merges(self) -> None:
+        """RED (pre-fix): the Greek title folded to None, the firma title gate
+        failed, and two genuine cross-platform duplicates stayed SPLIT (Signal B
+        dead for non-Latin tenants). GREEN: the transliterated titles match, so
+        the duplicate collapses into one canonical car."""
+        va = _vehicle("V1", entity_ulid="ENT1", price=Decimal("8000"), title=_NL_GREEK_SEAT_IBIZA)
+        vb = _vehicle("V2", entity_ulid="ENT2", price=Decimal("8000"), title=_NL_GREEK_SEAT_IBIZA)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 1, (
+            "Cross-entity firma + identical non-Latin title must merge — the title "
+            "gate must transliterate, not erase, the corroboration signal"
+        )
+        for r in cluster_rows:
+            if r["cluster_size"] > 1:
+                assert r["match_signal"] in ("firma", "both")
+
+    def test_cross_entity_different_greek_trims_do_not_over_merge(self) -> None:
+        """RED (pre-fix): two DIFFERENT Greek-trim Ibizas both folded to the '16'
+        residue, so the gate false-corroborated and over-merged two distinct cars.
+        GREEN: the full transliterated titles differ, so they stay split."""
+        va = _vehicle("V1", entity_ulid="ENT1", price=Decimal("8000"), title=_NL_IBIZA_STYLE)
+        vb = _vehicle("V2", entity_ulid="ENT2", price=Decimal("8000"), title=_NL_IBIZA_REFER)
+
+        edges, esm = _build_edges([va, vb])
+        cluster_rows = _build_cluster_table([va, vb], edges, esm)
+
+        canonical_ids = {r["canonical_vehicle_ulid"] for r in cluster_rows}
+        assert len(canonical_ids) == 2, (
+            "Two different non-Latin trim titles sharing only an incidental Latin "
+            "residue must NOT over-merge once the full title survives"
+        )
 
 
 # ---------------------------------------------------------------------------
