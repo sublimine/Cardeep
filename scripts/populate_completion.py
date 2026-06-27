@@ -65,11 +65,11 @@ _PROVINCE_PATTERN = r"^(0[1-9]|[1-4][0-9]|5[0-2])$"
 # Non-ES tenants do not follow the Spanish 01-52 grid: France's Corsica departments
 # are '2A'/'2B' and Paris is '75' (outside 01-52), Italy's provinces are 2-letter
 # ('RM'/'MI'). For a second country the only province invariant the identity gate can
-# assert generically is the geo_province.code shape itself -- exactly 2 alphanumeric
-# chars. ES keeps the strict 01-52 path so its G1 verdicts stay byte-identical. Mirrors
-# _NON_ES_PROVINCE_RE in pipeline/complete.py (commit 052fa8f) and migration 0053's
-# country-guarded geo CHECKs.
-_NON_ES_PROVINCE_PATTERN = r"^[0-9A-Z]{2}$"
+# assert generically is the geo_province.code shape itself -- 2 to 8 alphanumeric chars
+# (VARCHAR(8) since 0059). ES keeps the strict 01-52 path so its G1 verdicts stay
+# byte-identical. Mirrors _NON_ES_PROVINCE_RE in pipeline/complete.py and migration
+# 0062's [0-9A-Z]{2,8} cdp CHECK.
+_NON_ES_PROVINCE_PATTERN = r"^[0-9A-Z]{2,8}$"
 # National kinds carry a NULL province by design (mirrors _NATIONAL_KINDS in
 # complete.py); for them a NULL province is the correct geo, not an identity gap.
 _NATIONAL_KINDS_SQL = "'subasta','plataforma','oem_vo_portal','importador'"
@@ -80,7 +80,7 @@ _NATIONAL_KINDS_SQL = "'subasta','plataforma','oem_vo_portal','importador'"
 # G1 gate must validate EVERY tenant's code, not only Spain -- a country-blind ^CDP-ES-
 # with a numeric-only [0-9]{2} province wrongly failed identity for any second-country
 # entity. Mirrors _CDP_CODE_RE in pipeline/complete.py (commit 052fa8f).
-_CDP_CODE_PATTERN = r"^CDP-[A-Z]{2}-([0-9A-Z]{2})-[0-9A-HJKMNP-TV-Z]{8}$"
+_CDP_CODE_PATTERN = r"^CDP-[A-Z]{2}-([0-9A-Z]{2,8})-[0-9A-HJKMNP-TV-Z]{8}$"
 _FIELD_INTEGRITY_FLOOR = 0.98
 
 # The main INSERT … SELECT.

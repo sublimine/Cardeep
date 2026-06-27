@@ -75,10 +75,10 @@ _PROVINCE_RE = re.compile(r"^(0[1-9]|[1-4][0-9]|5[0-2])$")
 # Non-ES tenants do not follow the Spanish 01-52 grid: France's Corsica departments
 # are '2A'/'2B' and Paris is '75' (outside 01-52), Italy's provinces are 2-letter
 # ('RM'/'MI'). For a second country the only province invariant the identity gate can
-# assert generically is the geo_province.code shape itself — exactly 2 alphanumeric
-# chars (CHAR(2), migration 0053 composite PK). ES keeps the strict 01-52 path so its
-# G1 verdicts stay byte-identical.
-_NON_ES_PROVINCE_RE = re.compile(r"^[0-9A-Z]{2}$")
+# assert generically is the geo_province.code shape itself — 2 to 8 alphanumeric chars
+# (VARCHAR(8) since migration 0059, widened for FR DOM '971' / German Kreis / NUTS-3).
+# ES keeps the strict 01-52 path so its G1 verdicts stay byte-identical.
+_NON_ES_PROVINCE_RE = re.compile(r"^[0-9A-Z]{2,8}$")
 
 # National entities operate country-wide and carry a NULL province_code by design
 # (the '00' lives only in the CDP-ES-00-* code, NOT in the province_code column —
@@ -97,15 +97,14 @@ _NATIONAL_KINDS: frozenset[str] = frozenset(
 # output is byte-identical ('ES' matches the generic [A-Z]{2}), but the G1 identity gate
 # must now validate EVERY tenant's code (CDP-DE-…, CDP-FR-…), not only Spain — a
 # country-blind ^CDP-ES- wrongly failed identity for any second-country entity.
-# PP is the 2-char province segment. It is ALPHANUMERIC, not numeric-only: the mint
-# (codes.py:mint_code) and the geo backbone (geo_province.code CHAR(2)) both accept a
-# 2-char province that contains letters — France's Corsica departments are '2A'/'2B'
-# and Italy's provinces are 2-letter ('RM' Roma, 'MI' Milano). A numeric-only [0-9]{2}
-# here wrongly rejected every Corsican/Italian dealer the mint legitimately produced
-# (country-proof: PP must mirror what mint_code can emit). ES provinces are 01-52, all
-# digits, so 'ES' codes still match [0-9A-Z]{2} byte-identically.
+# PP is the province segment: 2-to-8 ALPHANUMERIC chars, mirroring geo_province.code
+# (VARCHAR(8) since 0059) and the evict-ledger CHECK in 0062 ([0-9A-Z]{2,8}). The mint
+# (codes.py:mint_code) interpolates geo_province.code verbatim — FR Corsica '2A'/'2B',
+# IT 'RM'/'MI', FR DOM '971' (3 digits), German Kreis (up to 5), NUTS-3 'ITI43'. A fixed
+# [0-9A-Z]{2} wrongly rejected every >2-char province the mint legitimately produced.
+# ES provinces are 01-52 (2 digits) so 'ES' codes still match [0-9A-Z]{2,8} byte-identically.
 # Crockford alphabet (the 8-char suffix): digits + uppercase excluding I, L, O, U.
-_CDP_CODE_RE = re.compile(r"^CDP-[A-Z]{2}-([0-9A-Z]{2})-[0-9A-HJKMNP-TV-Z]{8}$")
+_CDP_CODE_RE = re.compile(r"^CDP-[A-Z]{2}-([0-9A-Z]{2,8})-[0-9A-HJKMNP-TV-Z]{8}$")
 
 # Field-integrity floor (V2 §3.B): fraction of landed rows that are valid
 _FIELD_INTEGRITY_FLOOR: float = 0.98

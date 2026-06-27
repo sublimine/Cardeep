@@ -273,22 +273,23 @@ def test_es_and_second_country_isolated_in_one_populate(dry_conn):
 @pytest.mark.integration
 def test_non_es_malformed_province_still_false(dry_conn):
     """The fix GENERALISES the shape, it does NOT disable validation. A non-ES dealer whose
-    province_code is a malformed 3-char value ('2AB') must STILL fail G1 (the generic non-ES
-    shape is exactly 2 alphanumeric chars, mirroring geo_province.code / complete.py's
-    _NON_ES_PROVINCE_RE). Invariant: FALSE today AND after the fix."""
+    province_code is a malformed 1-char value ('7') must STILL fail G1 (the generic non-ES
+    shape is 2 to 8 alphanumeric chars, mirroring geo_province.code VARCHAR(8) / complete.py's
+    _NON_ES_PROVINCE_RE). Invariant: FALSE — a 3-char province is now valid (0059/0062, see
+    test_g1_province_width) but a 1-char province is still rejected."""
     with dry_conn.cursor() as cur:
-        _seed_geo(cur, "FR", "2AB", "2AB01")
+        _seed_geo(cur, "FR", "7", "701")
         e = _seed_entity(cur, ulid_tag="G1FRBAD", cdp=_CDP_FR_MALFORMED,
                          name="automobiles malforme", country="FR",
-                         province="2AB", muni="2AB01")
+                         province="7", muni="701")
         _seed_vehicle(cur, ulid_tag="G1FRBADV", entity_ulid=e,
                       deep_link="https://fr.example/v/3")
 
     g1 = _run_populate_g1(dry_conn)
 
     assert g1.get(_CDP_FR_MALFORMED) is False, (
-        "NON-ES VALIDATION LOOSENED: a malformed 3-char province '2AB' passed G1 "
-        f"(got {g1.get(_CDP_FR_MALFORMED)!r}); the non-ES shape must stay exactly 2 chars.")
+        "NON-ES VALIDATION LOOSENED: a malformed 1-char province '7' passed G1 "
+        f"(got {g1.get(_CDP_FR_MALFORMED)!r}); the non-ES shape (2-8 chars) must still reject it.")
 
 
 @pytest.mark.integration
@@ -326,7 +327,8 @@ def test_cdp_pattern_accepts_second_country_codes():
     assert rx.match("CDP-DE-09-DEABCD12"), "DE code wrongly rejected (country-blind)"
     assert rx.match("CDP-IT-RM-RMVENT23"), "IT 2-letter province code wrongly rejected"
     # Malformed shapes must STILL be rejected (the fix generalises, not loosens).
-    assert not rx.match("CDP-FR-2AB-FRBADPR1"), "3-char province segment must be rejected"
+    assert rx.match("CDP-FR-2AB-FRBADPR1"), "3-char province (geo VARCHAR(8), e.g. FR DOM '971') must now be accepted"
+    assert not rx.match("CDP-FR-2-FRBADPR1"), "1-char province segment must still be rejected"
     assert not rx.match("CDP-F-28-ESMADRD1"), "1-char country segment must be rejected"
     assert not rx.match("CDP-ES-28-ESMADRDI"), "Crockford 'I' in suffix must be rejected"
 
@@ -343,14 +345,15 @@ def test_es_province_pattern_unchanged():
 
 
 @pytest.mark.unit
-def test_non_es_province_pattern_exists_and_is_generic_2char():
-    """After the fix, populate_completion exposes _NON_ES_PROVINCE_PATTERN mirroring
-    complete.py's _NON_ES_PROVINCE_RE: exactly 2 alphanumeric chars. RED today via hasattr
-    (the constant does not exist yet) -- a clean assertion failure, not a collection error."""
+def test_non_es_province_pattern_exists_and_is_generic_2_to_8char():
+    """populate_completion exposes _NON_ES_PROVINCE_PATTERN mirroring complete.py's
+    _NON_ES_PROVINCE_RE: 2 to 8 alphanumeric chars (geo_province.code is VARCHAR(8) since
+    migration 0059, widened for FR DOM '971' / NUTS-3 'ITI43' / German Kreis)."""
     from scripts import populate_completion as pc
     assert hasattr(pc, "_NON_ES_PROVINCE_PATTERN"), (
         "fix not applied: _NON_ES_PROVINCE_PATTERN missing from populate_completion")
     rx = re.compile(pc._NON_ES_PROVINCE_PATTERN)
     assert rx.match("2A") and rx.match("75") and rx.match("RM"), "generic 2-char shape"
-    assert not rx.match("2AB"), "3 chars must be rejected (geo_province.code is 2 chars here)"
+    assert rx.match("2AB") and rx.match("971") and rx.match("ITI43"), "2-to-8-char shape (geo VARCHAR(8))"
     assert not rx.match("7"), "1 char must be rejected"
+    assert not rx.match("ABCDEFGHI"), "9 chars must be rejected"
