@@ -4,11 +4,12 @@ Fills entity_completion for ALL served dealers (kind <> 'particular' with >= 1
 available vehicle) using a single INSERT … SELECT that mirrors the gate logic
 in pipeline/complete.py exactly:
 
-    G1  entity exists ∧ cdp_code ~ '^CDP-[A-Z]{2}-([0-9A-Z]{2})-[0-9A-HJKMNP-TV-Z]{8}$'
+    G1  entity exists ∧ cdp_code ~ '^CDP-[A-Z]{2}-([0-9A-Z]{2,8})-[0-9A-HJKMNP-TV-Z]{8}$'
         ∧ province_code valid for the entity's country (ES: '^(0[1-9]|[1-4][0-9]|5[0-2])$'
-        01-52 grid, byte-identical; non-ES: '^[0-9A-Z]{2}$' generic geo_province.code shape)
+        01-52 grid, byte-identical; non-ES: '^[0-9A-Z]{2,8}$' generic geo_province.code shape,
+        VARCHAR(8) since 0059 — FR DOM '971', NUTS-3 'ITI43')
         OR a NATIONAL kind with NULL province. Country-scoped exactly like check_g1 in
-        complete.py (commit 052fa8f) and migration 0053's country-guarded geo CHECKs.
+        complete.py (commit 052fa8f) and migration 0062's [0-9A-Z]{2,8} cdp CHECK.
     G2  (count deep_link NOT NULL / count available) >= 0.98
         computed purely from the vehicle table (same numerator/denominator
         as check_g2 in complete.py).
