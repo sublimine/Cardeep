@@ -35,10 +35,12 @@ Cerrar la country-blindness del motor → **país nuevo = otra ejecución** (cer
 ## Cutover — ÚNICO gate del owner (irreversible, prod viva)
 **(1)** aplicar `0057→0061` a `:5433` (ADITIVAS, probadas byte-idénticas ES) **ANTES** que el código · **(2)** merge `feature/country-proof-build` → `main` · **(3)** re-correr el clustering servido en `:5433` (los block-keys ahora llevan país) · **(4)** job CI `country-proof-invariant` + Ferrari verdes. **NO ejecutar sin la palabra "cutover" del owner.**
 
-## OPEN honestos (con causa — NO core de merge; declarados, no atajos)
-- **Exhaustividad pipeline** (`pipeline/exhaustiveness/seal.py`, `report.py`): país por DEFAULT 'ES' hoy; setear explícito cuando el **país-#2** corra exhaustividad real. (Dependiente de que país-#2 exista.)
-- **Tests de integración** `test_province_seal_view` / `test_api_*`: atados a `cdp_code` reales del censo vivo → no retrofitteables a `:5434`; **corren en `db-tests` CI (:5433 efímero geo-sembrado) + Ferrari local** (cubiertos, no es hueco).
-- **OPEN-D:** `cluster_dealers.py:816-950` auditoría ES-hardcoded — **diagnóstico**, no afecta correctitud de merge multi-país.
+## Estado de los OPEN (assessed — reversible 100% cerrado)
+- ✅ **Exhaustividad pipeline** (`b36224a`): `seal.py::_persist` + `report.py` ahora **country-aware** (derivan el país del dato, defensivo para país-#2). Golden 5/5, gate 106, ES byte-idéntico. (Recuperado tras morir un agente por `API 529`; verificado por mí.)
+- ✅ **OPEN-D assessed BENIGNO:** `cluster_dealers.py:816-918` = CHECKs de auto-auditoría ES-específicos (Megar/Vegar, Automoción del Oeste). Para país no-ES devuelven `"N/A -- no encontrados"` → **degradación elegante, cero impacto en correctitud de merge**. No es bug; opcional moverlos a un ES-pack (refactor cosmético).
+- **Tests de integración** `test_province_seal_view` / `test_api_*`: atados a `cdp_code` reales del censo vivo → corren en `db-tests` CI (`:5433` efímero geo-sembrado) + Ferrari local. **Cubiertos, no es hueco.**
+
+**⇒ El build country-proof reversible está 100% cerrado, probado y gateado. Solo resta el CUTOVER (gate del owner).**
 
 ## Resume
 1. Re-corre el gate: `CARDEEP_DSN=…:5434 pytest` los 13 ficheros del job `country-proof-invariant` (`ci.yml`) → 106 passed.
