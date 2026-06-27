@@ -25,8 +25,11 @@ CLASSIFICATION
                    ``entity_ulid = $/%/ANY``, ``vehicle_ulid = $/%``,
                    ``platform_entity_ulid = $/%`` -- because a cdp_code/ulid already
                    pins the tenant and the country-proof clustering (#1-#4) guarantees a
-                   cluster never spans borders. Monitoring tables (alert, source_health),
-                   product_stats and the per-province seal views are not census surfaces.
+                   cluster never spans borders. Monitoring tables (alert, source_health)
+                   and product_stats are not census surfaces. The certificate views
+                   (v_province_seal, v_exhaustiveness_seal) ARE census surfaces and are
+                   country-validated here since migration 0060 (vector #5, 360-B) -- they
+                   were previously allowlisted as "province-keyed" and are now closed for real.
 """
 from __future__ import annotations
 
@@ -55,7 +58,7 @@ _SERVING_FILES = (
 # A SQL string reads the served CENSUS iff it names one of these row surfaces.
 _CENSUS_SURFACE = re.compile(
     r"\b(servable_entity|servable_vehicle|v_servable_dealer|v_dealer_resolved|"
-    r"v_canonical_vehicle)\b"
+    r"v_canonical_vehicle|v_province_seal|v_exhaustiveness_seal)\b"
     r"|\bfrom\s+entity\b|\bjoin\s+entity\b"
     r"|\bfrom\s+vehicle\b|\bjoin\s+vehicle\b"
     r"|\bfrom\s+geo_province\b|\bfrom\s+geo_municipality\b|\bfrom\s+geo_comarca\b",

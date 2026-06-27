@@ -106,13 +106,20 @@ async def geo_completeness(
 @limiter.limit(RATE_EXPENSIVE)
 async def geo_seal(
     request: Request,
+    country: str = Query(default="ES", description="ISO-3166 alpha-2 tenant (default ES)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Per-province SU-SEAL, by segment. VENTA = served CANONICAL dealers vs the DIRCE CNAE-451
-    registral ceiling (SELLADO >=85% / PARCIAL 50-85% / GAP <50%). DESGUACE = discovery coverage:
-    scrapyards found vs the DGT official census (SELLADO when found >= census). Backed by the live
-    view v_province_seal (migrations 0042+0043) so it always reflects the current harvest. Cached +
-    EXPENSIVE (GROUP BY over entities + dedup join; stable between harvests)."""
+    """Per-province SU-SEAL, by segment, for ONE tenant. VENTA = served CANONICAL dealers vs the
+    DIRCE CNAE-451 registral ceiling (SELLADO >=85% / PARCIAL 50-85% / GAP <50%). DESGUACE = discovery
+    coverage: scrapyards found vs the DGT official census (SELLADO when found >= census). Backed by the
+    live view v_province_seal (migrations 0042+0043+0060) so it always reflects the current harvest.
+
+    Country-scope (vector #5, 360-B): scoped by ``country_code = $1`` (``country`` query param, default
+    'ES') — the seal is keyed by (province_code, country_code) since 0060 so a 2nd tenant reusing the
+    same numeric province code (DE '28' vs ES Madrid '28', migration 0053) is never POOLED into the
+    Spanish numerator. With the default it is byte-identical to the historical seal (today all rows ES).
+
+    Cached + EXPENSIVE (GROUP BY over entities + dedup join; stable between harvests)."""
     cached = try_cache_get(request)
     if cached is not None:
         return cached
@@ -124,7 +131,8 @@ async def geo_seal(
     async with request.app.state.pool.acquire() as c:
         rows = await c.fetch(
             "SELECT province_code, segment, denominator, numerator, coverage_pct, verdict "
-            "FROM v_province_seal ORDER BY segment, province_code")
+            "FROM v_province_seal WHERE country_code = $1 ORDER BY segment, province_code",
+            country)
 
     segments: dict[str, dict[str, Any]] = {}
     for r in rows:
@@ -161,9 +169,10 @@ async def geo_seal(
 @limiter.limit(RATE_EXPENSIVE)
 async def geo_exhaustiveness(
     request: Request,
+    country: str = Query(default="ES", description="ISO-3166 alpha-2 tenant (default ES)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """National coverage CERTIFICATE — capture-recapture / MSE (Multi-Source Estimation).
+    """National coverage CERTIFICATE — capture-recapture / MSE (Multi-Source Estimation), for ONE tenant.
 
     Distinct from /geo/seal (registral DIRCE ceiling): this serves the live view
     v_exhaustiveness_seal — the STATISTICAL lower bound on completeness from k orthogonal
@@ -171,6 +180,13 @@ async def geo_exhaustiveness(
     province NULL) is the headline certificate: coverage_lower with CI, method, confidence,
     sealed flag, and build_run_id (re-executable provenance). Honest by construction — a
     thin stratum reports coverage_lower near 0 and sealed=false, never a fabricated 100%.
+
+    Country-scope (vector #5, 360-B): scoped by ``country_code = $1`` (``country`` query param,
+    default 'ES'). Since 0060 the certificate base carries country_code and the view's ``latest``
+    build is chosen PER COUNTRY, so a newer 2nd-tenant build never evicts this tenant's certificate
+    and a foreign stratum is never served here. With the default it is byte-identical to the
+    historical certificate (today all rows ES).
+
     Cached + EXPENSIVE; stable within a build. Authed (coverage scale is a competitive signal).
     """
     cached = try_cache_get(request)
@@ -182,7 +198,9 @@ async def geo_exhaustiveness(
             "SELECT province_code, segment, k_lists, n_obs, n_hat, ci_low, ci_high, "
             "coverage_point, coverage_lower, method, confidence, seal_threshold, sealed, "
             "build_run_id, created_at FROM v_exhaustiveness_seal "
-            "ORDER BY segment NULLS FIRST, province_code NULLS FIRST")
+            "WHERE country_code = $1 "
+            "ORDER BY segment NULLS FIRST, province_code NULLS FIRST",
+            country)
 
     def _cert(r: Any) -> dict[str, Any]:
         def _f(key: str, nd: int) -> float | None:

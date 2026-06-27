@@ -299,6 +299,7 @@ jobs:
             tests/test_country_isolation_beta.py \
             tests/test_country_isolation_serving.py \
             tests/test_country_isolation_multicountry.py \
+            tests/test_country_isolation_seal.py \
             tests/test_country_proof_guard.py \
             tests/test_served_queries_have_country.py \
             tests/test_geo_width_multicountry.py \
