@@ -12,8 +12,15 @@ import psycopg2
 from pipeline.exhaustiveness.capture import DSN
 
 
-def coverage_report(*, dsn: str = DSN) -> dict:
-    """Return {national: {...}, strata: [{...}]} from the latest sealed build."""
+def coverage_report(*, dsn: str = DSN, country_code: str = "ES") -> dict:
+    """Return {national: {...}, strata: [{...}]} from the latest sealed build of ONE tenant.
+
+    country_code : ISO-3166 alpha-2 tenant to report (the same scope the
+                   ``/geo/exhaustiveness`` endpoint serves). Filters
+                   ``v_exhaustiveness_seal`` so two tenants never pool into one
+                   national headline. Defaults to 'ES': byte-identical to the
+                   historical country-blind report for today's sole tenant.
+    """
     conn = psycopg2.connect(dsn)
     try:
         with conn.cursor() as cur:
@@ -21,10 +28,12 @@ def coverage_report(*, dsn: str = DSN) -> dict:
                 """
                 SELECT province_code, segment, k_lists, n_obs, n_hat,
                        ci_low, ci_high, coverage_point, coverage_lower,
-                       method, confidence, seal_threshold, sealed
+                       method, confidence, seal_threshold, sealed, country_code
                 FROM v_exhaustiveness_seal
+                WHERE country_code = %s
                 ORDER BY (province_code IS NULL) DESC, n_obs DESC
-                """
+                """,
+                (country_code,),
             )
             rows = cur.fetchall()
     finally:
@@ -33,7 +42,7 @@ def coverage_report(*, dsn: str = DSN) -> dict:
     cols = [
         "province_code", "segment", "k_lists", "n_obs", "n_hat", "ci_low",
         "ci_high", "coverage_point", "coverage_lower", "method", "confidence",
-        "seal_threshold", "sealed",
+        "seal_threshold", "sealed", "country_code",
     ]
     national = None
     strata = []
@@ -43,7 +52,12 @@ def coverage_report(*, dsn: str = DSN) -> dict:
             national = d
         else:
             strata.append(d)
-    return {"national": national, "strata": strata, "n_strata": len(strata)}
+    return {
+        "country_code": country_code,
+        "national": national,
+        "strata": strata,
+        "n_strata": len(strata),
+    }
 
 
 if __name__ == "__main__":

@@ -55,6 +55,7 @@ def compute(
     include_mkt: bool = False,
     r_crosscheck: bool = False,
     external_census: dict | None = None,
+    country_code: str = "ES",
 ) -> dict:
     """Estimate every stratum, persist to exhaustiveness_estimate, return summary.
 
@@ -64,6 +65,14 @@ def compute(
                       seam (e.g. CNAE-451/DIRCE). When a stratum has an external
                       anchor, it is stored in exhaustiveness_estimate.external_ref.
                       If None, the CSV at countries/ES/census/ is auto-loaded.
+    country_code    : ISO-3166 alpha-2 tenant this build certifies (the COUNTRY OF
+                      THE RUN). Stamped on every persisted row so a 2nd tenant's
+                      certificate cannot pool with ES. Province codes collide across
+                      tenants (0053: DE '28' == ES '28') and geo_province's PK is the
+                      single column ``code`` (0052), so province->country is not a
+                      function — the run is the only sound country source (migration
+                      0060 §2). Defaults to 'ES': byte-identical to the column DEFAULT
+                      for today's sole tenant.
     """
     if external_census is None:
         external_census = triangulation.load_external_census()
@@ -116,10 +125,11 @@ def compute(
     _persist(build_run_id, seals, threshold, buckets,
              national=(n_obs_cert, n_hat_sum, nat_ci_low, nat_ci_high,
                        nat_cov_point, nat_cov_lower), dsn=dsn,
-             external_census=external_census)
+             external_census=external_census, country_code=country_code)
 
     return {
         "build_run_id": build_run_id,
+        "country_code": country_code,
         "buckets": list(buckets),
         "n_strata": len(seals),
         "n_strata_identified": len(identified),
@@ -163,7 +173,7 @@ def compute(
 
 
 def _persist(build_run_id, seals, threshold, buckets, *, national, dsn,
-             external_census=None):
+             external_census=None, country_code="ES"):
     external_census = external_census or {}
     conn = psycopg2.connect(dsn)
     try:
@@ -180,14 +190,15 @@ def _persist(build_run_id, seals, threshold, buckets, *, national, dsn,
                 cur.execute(
                     """
                     INSERT INTO exhaustiveness_estimate
-                      (build_run_id, province_code, segment, k_lists, n_obs, n_hat,
-                       ci_low, ci_high, coverage_point, coverage_lower, method,
-                       confidence, seal_threshold, sealed, external_ref, diagnostics)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                      (build_run_id, country_code, province_code, segment, k_lists,
+                       n_obs, n_hat, ci_low, ci_high, coverage_point, coverage_lower,
+                       method, confidence, seal_threshold, sealed, external_ref,
+                       diagnostics)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
                     (
-                        build_run_id, s.province_code, s.segment, e.k_lists, e.n_obs,
-                        e.n_hat, e.ci_low,
+                        build_run_id, country_code, s.province_code, s.segment,
+                        e.k_lists, e.n_obs, e.n_hat, e.ci_low,
                         (e.ci_high if math.isfinite(e.ci_high) else 1e18),
                         (e.coverage_point if math.isfinite(e.coverage_point) else 0.0),
                         (e.coverage_lower if math.isfinite(e.coverage_lower) else 0.0),
@@ -196,19 +207,19 @@ def _persist(build_run_id, seals, threshold, buckets, *, national, dsn,
                         json.dumps(diag),
                     ),
                 )
-            # national row (province_code NULL, segment NULL)
+            # national row (province_code NULL, segment NULL) — stamped with the run country
             n_obs, n_hat, cl, ch, cp, clow = national
             cur.execute(
                 """
                 INSERT INTO exhaustiveness_estimate
-                  (build_run_id, province_code, segment, k_lists, n_obs, n_hat,
-                   ci_low, ci_high, coverage_point, coverage_lower, method,
+                  (build_run_id, country_code, province_code, segment, k_lists, n_obs,
+                   n_hat, ci_low, ci_high, coverage_point, coverage_lower, method,
                    confidence, seal_threshold, sealed, diagnostics)
-                VALUES (%s,NULL,NULL,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                VALUES (%s,%s,NULL,NULL,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
-                    build_run_id, len(buckets), n_obs, n_hat, cl, ch, cp, clow,
-                    "stratified_sum", "high", threshold, clow >= threshold,
+                    build_run_id, country_code, len(buckets), n_obs, n_hat, cl, ch,
+                    cp, clow, "stratified_sum", "high", threshold, clow >= threshold,
                     json.dumps({"buckets": list(buckets), "rollup": "sum_of_strata"}),
                 ),
             )
