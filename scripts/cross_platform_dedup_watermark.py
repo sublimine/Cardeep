@@ -90,25 +90,53 @@ async def _vin_exact_resolver(conn: asyncpg.Connection, *, apply: bool) -> dict:
     IDEMPOTENCY / SELF-FOLD SAFETY. The trigger is `count(DISTINCT v.vehicle_ulid) >= 2`,
     NOT a platform count — a single vehicle already carrying N edges is the CANONICAL
     target and must never be touched. `array_agg(DISTINCT ...)` guarantees one ULID per
-    vehicle so the survivor can never appear in its own fold list (the data-loss trap)."""
+    vehicle so the survivor can never appear in its own fold list (the data-loss trap).
+
+    COUNTRY-PROOF (vehicle vector #2, strong-key arm). The group key is country-SCOPED:
+    `GROUP BY upper(v.vin_ref), e.country_code` (country reached via JOIN
+    vehicle.entity_ulid -> entity.country_code — vehicle has no country_code, mig 0003 /
+    0052). A VIN shared by an ES car and a DE car therefore lands in TWO single-member
+    groups (each filtered out by HAVING >= 2), so the foreign listing/event can never be
+    repointed onto the domestic survivor nor the foreign row deleted — the cross-border
+    mix in what is served. This mirrors the country-scoping cluster_vehicles already does
+    on its photo/firma signals; the VIN strong key was the one path that lacked it. For a
+    single-country census every row's country_code is constant, so the added GROUP BY key
+    is a no-op and the ES collapse is BYTE-IDENTICAL to the pre-country behaviour."""
     groups = await conn.fetch(
         f"""SELECT upper(v.vin_ref) AS vin,
+                   e.country_code AS country,
                    array_agg(DISTINCT v.vehicle_ulid) AS vehicles,
                    min(v.first_seen) AS oldest
               FROM vehicle v
               JOIN platform_listing pl ON pl.vehicle_ulid = v.vehicle_ulid AND pl.status = 'listed'
+              JOIN entity e ON e.entity_ulid = v.entity_ulid
              WHERE {_VIN_SQL} AND v.status = 'available'
-             GROUP BY upper(v.vin_ref)
+             GROUP BY upper(v.vin_ref), e.country_code
             HAVING count(DISTINCT v.vehicle_ulid) >= 2""")
 
     backup: list[dict] = []
     folded_total = 0
     for g in groups:
         vehicles = list(g["vehicles"])
-        # Survivor = oldest first_seen (stable, deterministic). Re-resolve precisely:
+        # Survivor = oldest first_seen (stable, deterministic). Re-resolve precisely,
+        # carrying each member's country_code (via entity) for the blocking guard below.
         order = await conn.fetch(
-            "SELECT vehicle_ulid FROM vehicle WHERE vehicle_ulid = ANY($1::text[]) "
-            "ORDER BY first_seen, vehicle_ulid", vehicles)
+            "SELECT v.vehicle_ulid, e.country_code "
+            "FROM vehicle v JOIN entity e ON e.entity_ulid = v.entity_ulid "
+            "WHERE v.vehicle_ulid = ANY($1::text[]) "
+            "ORDER BY v.first_seen, v.vehicle_ulid", vehicles)
+        # COUNTRY-PROOF blocking guard (defence-in-depth, mirror of
+        # cluster_vehicles._assert_no_cross_country_clusters). The GROUP BY above already
+        # partitions by country so a group holds exactly one country; this INDEPENDENTLY
+        # recomputes the members' countries and REFUSES the fold should that ever regress —
+        # a cross-border collapse would repoint a foreign listing/event onto a domestic
+        # vehicle (and delete the foreign row), mixing two countries in what is served.
+        member_countries = {r["country_code"] for r in order}
+        if member_countries != {g["country"]}:
+            raise RuntimeError(
+                f"COUNTRY-PROOF VIOLATION (VIN x-platform): VIN {g['vin']!r} fold group "
+                f"spans countries {sorted(member_countries)} — refusing a cross-border "
+                "collapse (foreign listing/event repointed onto a domestic vehicle).")
         vehicles = [r["vehicle_ulid"] for r in order]
         survivor, folds = vehicles[0], [u for u in vehicles[1:] if u != vehicles[0]]
         if not folds:
