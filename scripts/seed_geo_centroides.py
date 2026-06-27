@@ -26,6 +26,12 @@ _CSV_PATH: Path = (
     Path(__file__).resolve().parent.parent / "data" / "geo" / "municipios_centroides.csv"
 )
 
+# This seed is sourced from INE (Spanish official statistics), so every centroid it
+# applies belongs to country_code='ES'. geo_municipality's PK is (country_code, code)
+# and other tenants deliberately reuse INE-shaped codes (migration 0053), so the seed
+# MUST scope every read and write to ES — never matching on `code` alone.
+COUNTRY = "ES"
+
 
 def _load_centroides() -> dict[str, tuple[float, float]]:
     """Return {ine_code5: (lat, lon)} from the centroid CSV.
@@ -65,36 +71,43 @@ async def seed(conn: asyncpg.Connection) -> dict[str, int]:
     centroides = _load_centroides()
     print(f"Loaded {len(centroides)} centroids from CSV.")
 
-    # Fetch current state — only codes present in the CSV
+    # Fetch current state — only ES rows for codes present in the CSV. The country_code
+    # filter is what prevents an ES seed from reaching another tenant's municipality, and
+    # ::text[] (not the old ::char(5)[]) drops the ES INE 5-char width assumption that the
+    # 0059 widening to VARCHAR(16) invalidated.
     codes = list(centroides.keys())
     rows = await conn.fetch(
-        "SELECT code, lat, lon FROM geo_municipality WHERE code = ANY($1::char(5)[])",
+        "SELECT country_code, code, lat, lon FROM geo_municipality "
+        "WHERE country_code = $1 AND code = ANY($2::text[])",
+        COUNTRY,
         codes,
     )
-    db_state: dict[str, tuple[float | None, float | None]] = {
-        r["code"]: (r["lat"], r["lon"]) for r in rows
+    db_state: dict[tuple[str, str], tuple[float | None, float | None]] = {
+        (r["country_code"], r["code"]): (r["lat"], r["lon"]) for r in rows
     }
 
-    missing_in_db = set(centroides.keys()) - set(db_state.keys())
+    missing_in_db = set(centroides.keys()) - {code for _country, code in db_state}
     if missing_in_db:
         print(f"  WARNING: {len(missing_in_db)} CSV codes not found in geo_municipality (ignored).")
 
-    to_update: list[tuple[float, float, str]] = []
+    to_update: list[tuple[float, float, str, str]] = []
     skipped = 0
     for code, (lat, lon) in centroides.items():
-        if code not in db_state:
+        key = (COUNTRY, code)
+        if key not in db_state:
             continue
-        current_lat, current_lon = db_state[code]
+        current_lat, current_lon = db_state[key]
         # Skip if already correct (PG MVCC doctrine: no UPDATE of non-mutated rows)
         if current_lat is not None and abs(current_lat - lat) < 1e-9 and abs(current_lon - lon) < 1e-9:
             skipped += 1
         else:
-            to_update.append((lat, lon, code))
+            to_update.append((lat, lon, code, COUNTRY))
 
     if to_update:
         async with conn.transaction():
             await conn.executemany(
-                "UPDATE geo_municipality SET lat = $1, lon = $2 WHERE code = $3",
+                "UPDATE geo_municipality SET lat = $1, lon = $2 "
+                "WHERE code = $3 AND country_code = $4",
                 to_update,
             )
         print(f"  Updated: {len(to_update)}, Skipped (already correct): {skipped}")

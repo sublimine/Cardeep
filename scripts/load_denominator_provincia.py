@@ -25,13 +25,16 @@ from __future__ import annotations
 import asyncio
 import csv
 import json
+import os
 import sys
 from pathlib import Path
 
 import asyncpg
 
 ROOT = Path(__file__).resolve().parent.parent
-DSN = "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep"
+# Defaults to live production (:5433) for a real load; CARDEEP_DSN overrides it so the
+# loader can be exercised against the :5434 dry-run without ever touching production.
+DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep")
 CSV_PATH = ROOT / "data" / "official" / "denominador_cnae45_provincia_2024.csv"
 
 # DIRCE 2025 national: group 451 (4511 sale + 4519 other vehicles) / division 45 (sale+repair).
@@ -41,6 +44,12 @@ SOURCES = [
     "DIRCE 2025 tabla 294/39372 (grupo 451 por CCAA, nacional=23085)",
 ]
 EVIDENCE = "data/official/denominador_cnae45_provincia_2024.csv + docs/recon/B6_venta_sello.md"
+
+# This DIRCE denominator is ES-sourced (the 52 ES provinces). denominator_estimate carries
+# country_code since migration 0053 and feeds the SERVED seals (v_province_seal /
+# v_exhaustiveness_seal), so the load MUST scope its pre-check, DELETE and INSERT to ES — a
+# country-blind DELETE would wipe another tenant's denominators and silently break its seal.
+COUNTRY = "ES"
 
 
 def _load_rows() -> list[tuple[str, int, int]]:
@@ -55,7 +64,13 @@ def _load_rows() -> list[tuple[str, int, int]]:
     return out
 
 
-async def main(apply: bool) -> None:
+async def load(conn: asyncpg.Connection, *, apply: bool) -> dict[str, int]:
+    """Load the per-province VENTA denominator against a provided connection.
+
+    Separated from connection management so the loader can be driven against the :5434
+    dry-run inside a rolled-back transaction (isolation-safe testing). Returns counts:
+    provinces (in the CSV), existing (segment='venta' rows replaced), loaded (rows now).
+    """
     rows = _load_rows()
     sum_cnae45 = sum(r[1] for r in rows)
     sum_den = sum(r[2] for r in rows)
@@ -64,40 +79,55 @@ async def main(apply: bool) -> None:
     if len(rows) != 52:
         raise SystemExit(f"ABORT: expected 52 provinces, got {len(rows)} — refusing to load a partial set.")
 
+    # Validate every province_code exists in geo_province FOR THIS COUNTRY before writing
+    # (the composite FK (country_code, province_code) would reject otherwise; a country-blind
+    # pre-check could pass on a province that only exists under another tenant and then fail
+    # at INSERT). A clean pre-check gives an honest report and never half-applies.
+    valid = {r["code"] for r in await conn.fetch(
+        "SELECT code FROM geo_province WHERE country_code = $1", COUNTRY)}
+    bad = [pc for pc, _, _ in rows if pc not in valid]
+    if bad:
+        raise SystemExit(f"ABORT: province_code(s) not in geo_province[{COUNTRY}]: {bad}")
+
+    existing = await conn.fetchval(
+        "SELECT count(*) FROM denominator_estimate "
+        "WHERE segment = 'venta' AND country_code = $1", COUNTRY)
+    print(f"existing segment='venta' rows ({COUNTRY}): {existing}  (will be replaced)")
+
+    if not apply:
+        print("DRY-RUN -- no writes. Sample:")
+        for pc, c, d in rows[:5]:
+            print(f"   {pc}: cnae45={c} -> den_venta(registral_ceiling)={d}")
+        return {"provinces": len(rows), "existing": existing, "loaded": 0}
+
+    async with conn.transaction():
+        await conn.execute(
+            "DELETE FROM denominator_estimate WHERE segment = 'venta' AND country_code = $1",
+            COUNTRY,
+        )
+        await conn.executemany(
+            """INSERT INTO denominator_estimate
+                   (segment, province_code, method, n1, point_est, ci_low, ci_high,
+                    sources_used, evidence_uri, country_code)
+               VALUES ('venta', $1, 'registral_ceiling', $2, $3, $3, $3, $4, $5, $6)""",
+            [(pc, cnae45, den, json.dumps(SOURCES), EVIDENCE, COUNTRY)
+             for pc, cnae45, den in rows],
+        )
+    loaded = await conn.fetchval(
+        "SELECT count(*) FROM denominator_estimate "
+        "WHERE segment = 'venta' AND country_code = $1", COUNTRY)
+    db_sum = await conn.fetchval(
+        "SELECT sum(point_est) FROM denominator_estimate "
+        "WHERE segment = 'venta' AND country_code = $1", COUNTRY)
+    print(f"APPLIED. segment='venta' rows now {loaded} ({COUNTRY}), sum(point_est)={db_sum} "
+          f"(national P_all floor + other-country denominators untouched).")
+    return {"provinces": len(rows), "existing": existing, "loaded": loaded}
+
+
+async def main(apply: bool) -> None:
     conn = await asyncpg.connect(DSN)
     try:
-        # Validate every province_code exists in geo_province BEFORE writing (the FK would reject,
-        # but a clean pre-check gives an honest report and never leaves a half-applied state).
-        valid = {r["code"] for r in await conn.fetch("SELECT code FROM geo_province")}
-        bad = [pc for pc, _, _ in rows if pc not in valid]
-        if bad:
-            raise SystemExit(f"ABORT: province_code(s) not in geo_province: {bad}")
-
-        existing = await conn.fetchval(
-            "SELECT count(*) FROM denominator_estimate WHERE segment = 'venta'")
-        print(f"existing segment='venta' rows: {existing}  (will be replaced)")
-
-        if not apply:
-            print("DRY-RUN -- no writes. Sample:")
-            for pc, c, d in rows[:5]:
-                print(f"   {pc}: cnae45={c} -> den_venta(registral_ceiling)={d}")
-            return
-
-        async with conn.transaction():
-            await conn.execute("DELETE FROM denominator_estimate WHERE segment = 'venta'")
-            await conn.executemany(
-                """INSERT INTO denominator_estimate
-                       (segment, province_code, method, n1, point_est, ci_low, ci_high,
-                        sources_used, evidence_uri)
-                   VALUES ('venta', $1, 'registral_ceiling', $2, $3, $3, $3, $4, $5)""",
-                [(pc, cnae45, den, json.dumps(SOURCES), EVIDENCE) for pc, cnae45, den in rows],
-            )
-        loaded = await conn.fetchval(
-            "SELECT count(*) FROM denominator_estimate WHERE segment = 'venta'")
-        db_sum = await conn.fetchval(
-            "SELECT sum(point_est) FROM denominator_estimate WHERE segment = 'venta'")
-        print(f"APPLIED. segment='venta' rows now {loaded}, sum(point_est)={db_sum} "
-              f"(national P_all floor row untouched).")
+        await load(conn, apply=apply)
     finally:
         await conn.close()
 
