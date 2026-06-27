@@ -72,6 +72,14 @@ import asyncpg
 # Valid province codes for Spain: 01–52 (as zero-padded 2-char strings)
 _PROVINCE_RE = re.compile(r"^(0[1-9]|[1-4][0-9]|5[0-2])$")
 
+# Non-ES tenants do not follow the Spanish 01-52 grid: France's Corsica departments
+# are '2A'/'2B' and Paris is '75' (outside 01-52), Italy's provinces are 2-letter
+# ('RM'/'MI'). For a second country the only province invariant the identity gate can
+# assert generically is the geo_province.code shape itself — exactly 2 alphanumeric
+# chars (CHAR(2), migration 0053 composite PK). ES keeps the strict 01-52 path so its
+# G1 verdicts stay byte-identical.
+_NON_ES_PROVINCE_RE = re.compile(r"^[0-9A-Z]{2}$")
+
 # National entities operate country-wide and carry a NULL province_code by design
 # (the '00' lives only in the CDP-ES-00-* code, NOT in the province_code column —
 # verified live 2026-06-15): marketplaces, OEM-VO portals, auctions, importers.
@@ -84,13 +92,20 @@ _NATIONAL_KINDS: frozenset[str] = frozenset(
     {"subasta", "plataforma", "oem_vo_portal", "importador"}
 )
 
-# cdp_code format: CDP-{CC}-{NN}-{8×Crockford-base32}
+# cdp_code format: CDP-{CC}-{PP}-{8×Crockford-base32}
 # CC is the ISO-3166 alpha-2 tenant minted by services/api/codes.py. The historical ES
 # output is byte-identical ('ES' matches the generic [A-Z]{2}), but the G1 identity gate
 # must now validate EVERY tenant's code (CDP-DE-…, CDP-FR-…), not only Spain — a
 # country-blind ^CDP-ES- wrongly failed identity for any second-country entity.
-# Crockford alphabet: digits + uppercase excluding I, L, O, U
-_CDP_CODE_RE = re.compile(r"^CDP-[A-Z]{2}-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$")
+# PP is the 2-char province segment. It is ALPHANUMERIC, not numeric-only: the mint
+# (codes.py:mint_code) and the geo backbone (geo_province.code CHAR(2)) both accept a
+# 2-char province that contains letters — France's Corsica departments are '2A'/'2B'
+# and Italy's provinces are 2-letter ('RM' Roma, 'MI' Milano). A numeric-only [0-9]{2}
+# here wrongly rejected every Corsican/Italian dealer the mint legitimately produced
+# (country-proof: PP must mirror what mint_code can emit). ES provinces are 01-52, all
+# digits, so 'ES' codes still match [0-9A-Z]{2} byte-identically.
+# Crockford alphabet (the 8-char suffix): digits + uppercase excluding I, L, O, U.
+_CDP_CODE_RE = re.compile(r"^CDP-[A-Z]{2}-([0-9A-Z]{2})-[0-9A-HJKMNP-TV-Z]{8}$")
 
 # Field-integrity floor (V2 §3.B): fraction of landed rows that are valid
 _FIELD_INTEGRITY_FLOOR: float = 0.98
@@ -114,10 +129,12 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
     Returns (passed: bool, reason: str).
     PASS iff:
       - Exactly one entity row exists for cdp_code
-      - province_code is a valid 2-digit Spanish province (01-52), OR the entity
-        is a NATIONAL kind (subasta/plataforma/oem_vo_portal/importador) carrying
-        the '00' sentinel — for those, '00' is the correct geo, not a gap (§Deuda
-        B2 closed 2026-06-15: ~130 national entities were wrongly failing identity).
+      - province_code is valid for the entity's country (ES: the 01-52 Spanish grid,
+        byte-identical to the historical gate; non-ES tenant: the generic 2-char
+        geo_province.code shape, so France/Italy provinces are not wrongly rejected),
+        OR the entity is a NATIONAL kind (subasta/plataforma/oem_vo_portal/importador)
+        carrying the '00' sentinel — for those, '00' is the correct geo, not a gap
+        (§Deuda B2 closed 2026-06-15: ~130 national entities were wrongly failing identity).
       - cdp_code matches the CDP-CC-NN-XXXXXXXX pattern (CC = ISO-3166 alpha-2
         tenant, Crockford base32 tail) — generalised from the ES-only validator so
         a second country's codes pass identity (the mint already emits them)
@@ -128,7 +145,7 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
     """
     row = await conn.fetchrow(
         """
-        SELECT cdp_code, province_code, kind::text AS kind
+        SELECT cdp_code, province_code, kind::text AS kind, country_code
         FROM entity
         WHERE cdp_code = $1
         LIMIT 1
@@ -145,7 +162,15 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
     # works on both asyncpg.Record (real query selects kind) and partial dict mocks
     # (kind absent → None → treated as non-national = fail-closed, the safe default).
     is_national = row.get("kind") in _NATIONAL_KINDS and prov_str is None
-    if not is_national and (prov_str is None or not _PROVINCE_RE.match(prov_str)):
+    # Country-scope the province-validity rule (mirrors migration 0053's country-guarded
+    # geo CHECKs). ES keeps the historical 01-52 grid so its verdicts stay byte-identical;
+    # a non-ES tenant validates against the generic 2-alphanumeric geo_province.code shape
+    # — without this, France (Paris '75', Corsica '2A') and Italy ('RM') wrongly fail
+    # identity. country_code is NOT NULL DEFAULT 'ES' (migration 0052) so a real row always
+    # carries it; absent only on partial mocks → default 'ES' (fail-closed to the strict path).
+    country = row.get("country_code") or "ES"
+    province_re = _PROVINCE_RE if country == "ES" else _NON_ES_PROVINCE_RE
+    if not is_national and (prov_str is None or not province_re.match(prov_str)):
         return False, f"invalid_province_code:{prov!r}"
 
     if not _CDP_CODE_RE.match(cdp_code):
