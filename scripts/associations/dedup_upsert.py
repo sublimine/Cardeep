@@ -23,7 +23,7 @@ import psycopg2.extras
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from services.api.codes import cdp_code  # noqa: E402
+from services.api.codes import DEFAULT_COUNTRY, cdp_code  # noqa: E402
 
 DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep")
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -71,12 +71,18 @@ class DedupIndex:
         idx = cls()
         cur = conn.cursor()
         cur.execute(
-            "SELECT cdp_code, trade_name, legal_name, website, municipality_code, province_code FROM entity"
+            "SELECT cdp_code, trade_name, legal_name, website, municipality_code, "
+            "province_code, country_code FROM entity"
         )
-        for cdp, trade, legal, website, muni, prov in cur:
+        for cdp, trade, legal, website, muni, prov, country in cur:
             h = bare_host(website)
             if h:
                 idx.by_host.setdefault(h, cdp)
+            # COUNTRY-PROOF: the name+muni / name+prov keys carry country_code, so a
+            # POS only ever dedups against an entity in the SAME country. A second
+            # country reuses the numeric municipality_code/province_code space
+            # (migrations/0053: DE province '28' coexists with ES Madrid '28').
+            cc = country or DEFAULT_COUNTRY
             for nm in (trade, legal):
                 if not nm:
                     continue
@@ -84,37 +90,48 @@ class DedupIndex:
                 if not n:
                     continue
                 if muni:
-                    idx.by_name_muni.setdefault((n, muni), cdp)
+                    idx.by_name_muni.setdefault((n, muni, cc), cdp)
                 if prov:
-                    idx.by_name_prov.setdefault((n, prov), cdp)
+                    idx.by_name_prov.setdefault((n, prov, cc), cdp)
         cur.close()
         return idx
 
     def match(self, *, name: str | None, website: str | None,
-              municipality_code: str | None, province_code: str | None):
-        """Return (existing_cdp, reason) if duplicate, else (None, None)."""
+              municipality_code: str | None, province_code: str | None,
+              country_code: str = DEFAULT_COUNTRY):
+        """Return (existing_cdp, reason) if duplicate, else (None, None).
+
+        COUNTRY-PROOF: the name+muni / name+prov lookups are scoped by country_code,
+        so a point of sale is only ever deduped against an existing entity in the
+        SAME country. A bare-host (the dealer's own registered domain) is a
+        globally-unique identity and stays country-blind by design. country_code
+        defaults to DEFAULT_COUNTRY ('ES'), so every ES call site is byte-identical.
+        """
         h = bare_host(website)
         if h and h in self.by_host:
             return self.by_host[h], f"host:{h}"
         if name:
+            cc = country_code or DEFAULT_COUNTRY
             n = normalize_name(name)
-            if n and municipality_code and (n, municipality_code) in self.by_name_muni:
-                return self.by_name_muni[(n, municipality_code)], f"name+muni:{n}|{municipality_code}"
-            if n and province_code and (n, province_code) in self.by_name_prov:
-                return self.by_name_prov[(n, province_code)], f"name+prov:{n}|{province_code}"
+            if n and municipality_code and (n, municipality_code, cc) in self.by_name_muni:
+                return self.by_name_muni[(n, municipality_code, cc)], f"name+muni:{n}|{municipality_code}"
+            if n and province_code and (n, province_code, cc) in self.by_name_prov:
+                return self.by_name_prov[(n, province_code, cc)], f"name+prov:{n}|{province_code}"
         return None, None
 
     def register(self, *, cdp: str, name: str | None, website: str | None,
-                 municipality_code: str | None, province_code: str | None) -> None:
+                 municipality_code: str | None, province_code: str | None,
+                 country_code: str = DEFAULT_COUNTRY) -> None:
         h = bare_host(website)
         if h:
             self.by_host.setdefault(h, cdp)
         if name:
+            cc = country_code or DEFAULT_COUNTRY
             n = normalize_name(name)
             if n and municipality_code:
-                self.by_name_muni.setdefault((n, municipality_code), cdp)
+                self.by_name_muni.setdefault((n, municipality_code, cc), cdp)
             if n and province_code:
-                self.by_name_prov.setdefault((n, province_code), cdp)
+                self.by_name_prov.setdefault((n, province_code, cc), cdp)
 
 
 class GeoResolver:
@@ -175,12 +192,19 @@ def upsert_entity(conn, idx: DedupIndex, *, name: str, kind: str, source_key: st
                   source_ref: str, website: str | None = None,
                   province_code: str | None = None, municipality_code: str | None = None,
                   address: str | None = None, phone: str | None = None,
-                  email: str | None = None, legal_name: str | None = None):
+                  email: str | None = None, legal_name: str | None = None,
+                  country_code: str = DEFAULT_COUNTRY):
     """Dedup then insert. Returns (cdp_code, status) where status in
-    {'new','dup','skip'}. Always attaches an entity_source row when entity exists."""
+    {'new','dup','skip'}. Always attaches an entity_source row when entity exists.
+
+    COUNTRY-PROOF: country_code (default DEFAULT_COUNTRY='ES') scopes the name+muni
+    / name+prov dedup, feeds the cdp_code country prefix, and is written EXPLICITLY
+    onto entity.country_code — so a POS is never fused onto, nor minted to collide
+    with, an entity of a different country. ES output is byte-identical."""
+    cc = country_code or DEFAULT_COUNTRY
     existing, reason = idx.match(name=name, website=website,
                                  municipality_code=municipality_code,
-                                 province_code=province_code)
+                                 province_code=province_code, country_code=cc)
     cur = conn.cursor()
     host = bare_host(website)
     if existing:
@@ -198,7 +222,8 @@ def upsert_entity(conn, idx: DedupIndex, *, name: str, kind: str, source_key: st
         return None, "skip", "no_province"
 
     code = cdp_code(province_code=province_code, domain=host,
-                    name=name, municipality_code=municipality_code, address=address)
+                    name=name, municipality_code=municipality_code, address=address,
+                    country_code=cc)
     # guard: code might already exist (same canonical key seen this run)
     cur.execute("SELECT entity_ulid FROM entity WHERE cdp_code=%s", (code,))
     row = cur.fetchone()
@@ -207,25 +232,27 @@ def upsert_entity(conn, idx: DedupIndex, *, name: str, kind: str, source_key: st
             "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES (%s,%s,%s) "
             "ON CONFLICT DO NOTHING", (row[0], source_key, source_ref))
         idx.register(cdp=code, name=name, website=website,
-                     municipality_code=municipality_code, province_code=province_code)
+                     municipality_code=municipality_code, province_code=province_code,
+                     country_code=cc)
         cur.close()
         return code, "dup", "cdp_exists"
 
     eulid = ulid()
     cur.execute(
         """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name,
-               province_code, municipality_code, address, phone, email, website,
+               province_code, municipality_code, country_code, address, phone, email, website,
                website_waf, is_tier1, status, first_discovered_source, kind_source,
                source_group, sells_cars)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'none',FALSE,'unverified',%s,'legal_census','association',TRUE)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'none',FALSE,'unverified',%s,'legal_census','association',TRUE)
         """,
         (eulid, code, kind, legal_name or name, name, province_code, municipality_code,
-         address, phone, email, website, source_key))
+         cc, address, phone, email, website, source_key))
     cur.execute(
         "INSERT INTO entity_source (entity_ulid, source_key, source_ref) VALUES (%s,%s,%s) "
         "ON CONFLICT DO NOTHING", (eulid, source_key, source_ref))
     idx.register(cdp=code, name=name, website=website,
-                 municipality_code=municipality_code, province_code=province_code)
+                 municipality_code=municipality_code, province_code=province_code,
+                 country_code=cc)
     cur.close()
     return code, "new", None
 
