@@ -26,7 +26,7 @@ Reanudado a fondo. Relleno 360 de los 283 sub-proyectos en **tandas de etapas** 
 - ✅ **Relleno tanda 3** (`witic28ux`): `06-geo` 1788 ln/203 · `08-serve` 1749/35. **(8/10 en v2 profundo)**
 - ✅ **Relleno tanda 4 — FINAL** (`wlpr93o1z` + recovery `whktsgek0`): `09-orchestrate` 1214 ln/182 · `10-automation` 1720/198. **5 chunks rate-limited (server-side) recuperados** (supervisión activa: leído el `failures`).
 - ✅ **RELLENO COMPLETO — 10/10 etapas en v2 profundo (15.314 líneas, cada faceta = sub-proyecto 360).**
-- 🔄 **Push impecable** a `feature/generic-engine-bible` (solo `docs/generic-engine-bible/`, sin tocar WIP de `web/`).
+- ✅ **Push HECHO**: rama `feature/generic-engine-bible` en GitHub (sublimine/Cardeep), 23 ficheros (SOLO la biblia), WIP del owner intacto. PR: https://github.com/sublimine/Cardeep/pull/new/feature/generic-engine-bible
 - Cierre restante: re-verify de keystones (loop fix→re-verify) + validar a fuente las 94 tools de `NEXT-LEVEL.md` + correr goldens cross-country (DB ya viva).
 - Después: re-verify de keystones (loop fix→re-verify) · verificar a fuente las 94 tools de `NEXT-LEVEL.md` · correr goldens al reiniciar DB.
 ## 🟢 STACK VIVO (restaurado por mí 2026-06-27)
