@@ -38,12 +38,22 @@ import logging
 import os
 import re
 import sys
-import unicodedata
 from collections import defaultdict
 from typing import Any
 
 import psycopg2
 import psycopg2.extras
+
+# Direct-script support: `python pipeline/identity/cluster_dealers.py` puts this
+# file's directory (not the repo root) on sys.path[0], so the `pipeline` package
+# would fail to import. Prepend the repo root when there is no package context.
+# `python -m ...` and pytest already provide it, so this is a no-op there.
+if __package__ in (None, ""):
+    sys.path.insert(
+        0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    )
+
+from pipeline.identity.name_normalize import normalize_name as _normalize_name
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,64 +126,13 @@ def _get_dsn() -> str:
 # ---------------------------------------------------------------------------
 # Normalization helpers
 # ---------------------------------------------------------------------------
+# _normalize_name is imported above from pipeline.identity.name_normalize -- the
+# canonical single source of truth shared with cross_source_dedup.py. It
+# transliterates non-Latin letters (OPEN-C / gap C, project 360-A) instead of
+# erasing them, while staying byte-identical for Latin / Spanish names.
 
-_RE_NON_ALNUM = re.compile(r"[^a-z0-9]")
 _RE_SCHEME = re.compile(r"^https?://", re.IGNORECASE)
 _RE_WWW = re.compile(r"^www\.", re.IGNORECASE)
-
-# Societory suffixes to strip from normalised names (FIX B).
-# Order matters: longer patterns must precede their shorter prefixes.
-_LEGAL_SUFFIXES: tuple[str, ...] = (
-    "sociedadlimitadaunipersonal",
-    "sociedadanonima",
-    "sociedadlimitada",
-    "scoop",
-    "scp",
-    "slu",
-    "sau",
-    "sll",
-    "sl",
-    "sa",
-)
-# Pre-compile a single regex that matches exactly one suffix at the end.
-_RE_LEGAL_SUFFIX = re.compile(
-    r"(" + "|".join(re.escape(s) for s in _LEGAL_SUFFIXES) + r")$"
-)
-# Minimum characters required AFTER stripping the suffix; avoids turning
-# short but valid names into empty strings (e.g. a hypothetical 2-char name).
-_MIN_NAME_LEN_AFTER_STRIP = 3
-
-
-def _normalize_name(name: str | None) -> str | None:
-    """NFKD -> ASCII ignore -> lower -> strip non-[a-z0-9] -> strip legal suffix.
-
-    The legal-suffix strip (FIX B) removes trailing societory forms such as
-    'sa', 'sl', 'slu', 'sau', etc. so that 'AUTOMOCION DEL OESTE, S.A.' and
-    'AUTOMOCION DEL OESTE' produce the same normalised key and are captured
-    by edge 1 (exact name + muni) without needing fuzzy matching.
-
-    A suffix is only removed when the remaining string has at least
-    _MIN_NAME_LEN_AFTER_STRIP characters; otherwise the raw (no-suffix)
-    form is returned unchanged to avoid false positives on very short names.
-
-    Returns None if input is empty or produces an empty string.
-    """
-    if name is None or not isinstance(name, str) or not name.strip():
-        return None
-    nfkd = unicodedata.normalize("NFKD", name)
-    ascii_bytes = nfkd.encode("ascii", "ignore")
-    clean = _RE_NON_ALNUM.sub("", ascii_bytes.decode("ascii").lower())
-    if not clean:
-        return None
-    # Strip up to one legal suffix from the end (greedy: longest match wins
-    # because _LEGAL_SUFFIXES is ordered longest-first and the regex
-    # alternation is tried left-to-right).
-    m = _RE_LEGAL_SUFFIX.search(clean)
-    if m:
-        stripped = clean[: m.start()]
-        if len(stripped) >= _MIN_NAME_LEN_AFTER_STRIP:
-            clean = stripped
-    return clean
 
 
 def _normalize_phone(phone: str | None) -> str | None:

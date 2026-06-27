@@ -16,6 +16,13 @@ rapidfuzz>=3,<4         # pipeline/geo.py Tier-B fuzzy municipality match (WRati
                         # resolution (alt spellings: Orense->Ourense, Palma de Mallorca -> None). Declared
                         # so production geo resolution AND CI keep the fuzzy tier. Was UNDECLARED.
 
+anyascii>=0.3,<0.4     # pipeline/identity/name_normalize.py dealer-name transliteration. The legacy
+                       # NFKD+encode('ascii','ignore') fold ERASED non-Latin scripts (a Greek/Cyrillic
+                       # dealer name -> '' -> dead identity signal). anyascii maps non-Latin letters to
+                       # legible ASCII ('Αθήνα' -> 'athina') so GR/BG/RU tenants get a usable name key.
+                       # ISC-licensed (permissive, NOT GPL like classic Unidecode), pure-Python, no deps.
+                       # Applied per-character ONLY to letters the legacy fold dropped, so ES is byte-identical.
+
 # SU-D2: rate-limiting + response caching (in-memory, zero infra coupling)
 slowapi>=0.1.9          # FastAPI/Starlette rate-limiter (wraps limits library)
 cachetools>=5.3,<6      # TTLCache: bounded in-memory TTL cache, RAM-safe

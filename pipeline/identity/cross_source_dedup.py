@@ -81,13 +81,13 @@ import math
 import os
 import re
 import sys
-import unicodedata
 from collections import defaultdict
 from typing import Any
 
 import psycopg2
 import psycopg2.extras
 
+from pipeline.identity.name_normalize import normalize_name as _normalize_name
 from pipeline.identity.phone_es import phone_match_key
 
 logging.basicConfig(
@@ -186,46 +186,16 @@ SOURCE_GROUP_RANK: dict[str, int] = {
 
 
 # ---------------------------------------------------------------------------
-# Normalisation helpers (mirrors cluster_dealers.py exactly)
+# Normalisation helpers
 # ---------------------------------------------------------------------------
+# _normalize_name is imported above from pipeline.identity.name_normalize -- the
+# canonical single source of truth shared with cluster_dealers.py (this module
+# used to carry a byte-identical copy). It transliterates non-Latin letters
+# (OPEN-C / gap C, project 360-A) instead of erasing them, staying byte-identical
+# for Latin / Spanish names.
 
-_RE_NON_ALNUM = re.compile(r"[^a-z0-9]")
 _RE_SCHEME = re.compile(r"^https?://", re.IGNORECASE)
 _RE_WWW = re.compile(r"^www\.", re.IGNORECASE)
-
-_LEGAL_SUFFIXES: tuple[str, ...] = (
-    "sociedadlimitadaunipersonal",
-    "sociedadanonima",
-    "sociedadlimitada",
-    "scoop",
-    "scp",
-    "slu",
-    "sau",
-    "sll",
-    "sl",
-    "sa",
-)
-_RE_LEGAL_SUFFIX = re.compile(
-    r"(" + "|".join(re.escape(s) for s in _LEGAL_SUFFIXES) + r")$"
-)
-_MIN_NAME_LEN_AFTER_STRIP = 3
-
-
-def _normalize_name(name: str | None) -> str | None:
-    """NFKD -> ASCII ignore -> lower -> strip non-[a-z0-9] -> strip legal suffix."""
-    if name is None or not isinstance(name, str) or not name.strip():
-        return None
-    nfkd = unicodedata.normalize("NFKD", name)
-    ascii_bytes = nfkd.encode("ascii", "ignore")
-    clean = _RE_NON_ALNUM.sub("", ascii_bytes.decode("ascii").lower())
-    if not clean:
-        return None
-    m = _RE_LEGAL_SUFFIX.search(clean)
-    if m:
-        stripped = clean[: m.start()]
-        if len(stripped) >= _MIN_NAME_LEN_AFTER_STRIP:
-            clean = stripped
-    return clean
 
 
 def _normalize_phone(phone: str | None) -> str | None:

@@ -37,12 +37,17 @@ them because '28' is itself a valid ES province):
 THREE genericity gaps CAUGHT here. (A) and (B) -- the geo code WIDTH limits -- are now
 CLOSED by migration 0059_geo_code_width.sql (CHAR(2)/CHAR(5) -> VARCHAR(8)/VARCHAR(16)
 across the geo identity AND every FK-referrer + trigger + 6 dependent views); the two
-tests below now assert the real codes ENTER and the FK chain resolves. (C) remains a
-documented limit (a transliteration swap, outside this test's surgical scope):
+tests below now assert the real codes ENTER and the FK chain resolves. (C) is now CLOSED
+too (task F2): the dealer-name normaliser transliterates non-latin scripts instead of
+erasing them.
   (A) [CLOSED 0059] geo_province.code is now VARCHAR(8) -> stores FR DOM '971' (Guadeloupe).
   (B) [CLOSED 0059] geo_municipality.code is now VARCHAR(16) -> stores IT ISTAT '058091' (Roma).
-  (C) norm_name (NFKD + ascii-fold) erases non-latin scripts: a pure Greek/Cyrillic
-      name normalizes to None -> the name identity signal is DEAD for those tenants.
+  (C) [CLOSED F2] norm_name now transliterates (anyascii, per-character) instead of the
+      NFKD+ascii-fold: a Greek/Cyrillic dealer name yields a live key (the Greek name under
+      test here -> 'athina') instead of None, so non-latin tenants get a usable name
+      identity signal while ES stays byte-identical. See pipeline/identity/name_normalize.py
+      and tests/test_norm_name_translit.py. Country ISOLATION still holds via country_code
+      in every block-key (a transliterated GR name never co-clusters with an ES one).
 
 ISOLATION (inviolable): the DB tests run ONLY against the dry-run DB (:5434). They
 HARD-REFUSE :5433 (live production) two ways -- by DSN string and by asserting the
@@ -490,22 +495,20 @@ _CYRILLIC_NAME = "".join(chr(c) for c in (0x410, 0x432, 0x442, 0x43E))     # 'А
 
 
 @pytest.mark.unit
-def test_nonlatin_name_normalizes_to_none_DOCUMENTED_LIMIT():
-    """DOCUMENTED GAP (C): the shared name normalizer (NFKD + encode('ascii','ignore'))
-    DROPS every non-ASCII codepoint, so a pure Greek or Cyrillic dealer name normalizes
-    to None. The name-based identity signal is therefore DEAD for non-latin-script tenants
-    (no name block-key is emitted; cluster_dealers.py:458 / cross_source_dedup gate on
-    `if nn:`). Fixing it means swapping the ascii-fold for a transliterator across 3+
-    modules and re-proving ES byte-identity -- out of this test's scope; locked here so
-    the degradation is explicit. Country ISOLATION still holds via script-agnostic signals
-    (photo / deep_link / phone) -- see test_greek_tenant_deeplink_cross_country_do_not_merge."""
-    assert cd._normalize_name(_GREEK_NAME) is None, (
-        "expected the Greek-script name to normalize to None (ascii-fold erases it)")
-    assert cd._normalize_name(_CYRILLIC_NAME) is None, (
-        "expected the Cyrillic-script name to normalize to None (ascii-fold erases it)")
-    assert csd._normalize_name(_GREEK_NAME) is None, (
-        "cross_source_dedup normalizer must agree: Greek-script name -> None")
-    # ES control: a latin name still normalizes (no regression to the ES path).
+def test_nonlatin_name_now_transliterates_GAP_C_CLOSED():
+    """GAP (C) CLOSED (task F2): the shared name normalizer now TRANSLITERATES non-latin
+    scripts (anyascii, per-character) instead of erasing them, so a pure Greek or Cyrillic
+    dealer name yields a live, usable identity key instead of None -- the name-based
+    identity signal is ALIVE for non-latin-script tenants. ES stays byte-identical (full
+    proof in tests/test_norm_name_translit.py). Country ISOLATION is unchanged: it rests on
+    country_code in every block-key, not on the (now usable) name."""
+    assert cd._normalize_name(_GREEK_NAME) == "athina", (
+        "Greek-script name must transliterate to a live key (gap C closed by F2)")
+    assert cd._normalize_name(_CYRILLIC_NAME) == "avto", (
+        "Cyrillic-script name must transliterate to a live key (gap C closed by F2)")
+    assert csd._normalize_name(_GREEK_NAME) == "athina", (
+        "cross_source_dedup normalizer must agree (shared canonical module)")
+    # ES control: a latin name still normalizes identically (no regression to the ES path).
     assert cd._normalize_name("talleres garcia") == "talleresgarcia"
 
 
@@ -531,6 +534,52 @@ def test_greek_tenant_deeplink_cross_country_do_not_merge(dry_conn):
 
     assert not _deeplink_merged(mc, "CDP-ES-28-GRDL001", "CDP-GR-28-GRDL002"), (
         "CROSS-BORDER FALSE-MERGE: ES and GR canonicals sharing one deep_link collapsed.")
+
+
+@pytest.mark.integration
+def test_greek_tenant_same_name_now_merges_GAP_C_CLOSED(dry_conn):
+    """GAP (C) CLOSED -- live name signal: two GR dealers sharing one Greek-script
+    trade_name in the same muni now MERGE on the (norm_name, muni, country) edge. RED
+    before F2: the Greek name folded to None, no name block-key was emitted, so the two
+    rows stayed in distinct clusters (the non-latin name identity was dead)."""
+    with dry_conn.cursor() as cur:
+        _seed_geo(cur, "GR", "28", "28079")
+        a = _seed_entity(cur, ulid_tag="GRNMA1", cdp="CDP-GR-28-GRNM001",
+                         name=_GREEK_NAME, country="GR", province="28", muni="28079")
+        b = _seed_entity(cur, ulid_tag="GRNMB2", cdp="CDP-GR-28-GRNM002",
+                         name=_GREEK_NAME, country="GR", province="28", muni="28079")
+
+    canon = _run_dealers(dry_conn)
+
+    assert canon[a] == canon[b], (
+        "GAP C REGRESSION: two GR dealers with an identical Greek-script (norm_name, muni) "
+        "did NOT merge -- the transliterated name signal is not feeding the dealer edge.")
+
+
+@pytest.mark.integration
+def test_greek_transliterated_name_stays_country_isolated_from_es(dry_conn):
+    """The recovered Greek key must NOT leak across the border: a GR dealer whose Greek
+    trade_name transliterates to 'athina' and an ES dealer literally named 'athina', both
+    in the (numerically reused) muni '28079', MUST stay in distinct clusters. Proves the
+    fix yields a live key AND that country_code still isolates it (transliteration opens no
+    new cross-border false-merge surface)."""
+    with dry_conn.cursor() as cur:
+        _seed_geo(cur, "ES", "28", "28079")
+        _seed_geo(cur, "GR", "28", "28079")
+        es = _seed_entity(cur, ulid_tag="GRISES1", cdp="CDP-ES-28-GRIS001",
+                          name="athina", country="ES", province="28", muni="28079")
+        gr = _seed_entity(cur, ulid_tag="GRISGR2", cdp="CDP-GR-28-GRIS002",
+                          name=_GREEK_NAME, country="GR", province="28", muni="28079")
+
+    canon = _run_dealers(dry_conn)
+
+    # The Greek name really did transliterate to the same key as the ES literal ...
+    assert cd._normalize_name(_GREEK_NAME) == cd._normalize_name("athina") == "athina"
+    # ... yet country scope keeps the two tenants in separate clusters.
+    assert canon[es] != canon[gr], (
+        "CROSS-BORDER FALSE-MERGE: a GR dealer (Greek name -> 'athina') and an ES dealer "
+        "named 'athina' sharing muni '28079' collapsed -- country scope must isolate them "
+        "even though the transliterated names now match.")
 
 
 # ===========================================================================
