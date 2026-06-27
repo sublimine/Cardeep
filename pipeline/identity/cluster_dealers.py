@@ -5,15 +5,18 @@ CAMPAIGN dealer-identity-det-v1 -- fully deterministic union-find clustering.
 Replaces both cluster_dealers_run2.py (which depended on the now-deleted
 splink-b13-run1 for edge type 4) and cluster_dealers.py (Splink legacy).
 
-Four edge types, all reproducible from the current DB state:
+Four edge types, all reproducible from the current DB state. EVERY edge is
+scoped by country_code (FIX-C, country-proof) so entities from two countries
+that reuse the same numeric municipality_code can never co-cluster; a
+single-country census is byte-identical to the pre-country behaviour:
 
-  1. normalized_name + municipality_code  (exact, high-certainty)
-  2. phone_digits + municipality_code      (exact, >= 7 digits)
-  3. normalized_website_host + municipality_code
+  1. normalized_name + municipality_code + country_code  (exact, high-certainty)
+  2. phone_digits + municipality_code + country_code      (exact, >= 7 digits)
+  3. normalized_website_host + municipality_code + country_code
                                           (same-muni guard against chain
                                            collapse; NOT cross-municipality)
-  4. SQL levenshtein fuzzy:               SAME municipality_code AND
-                                           levenshtein(normalized_name) <= 2
+  4. SQL levenshtein fuzzy:               SAME municipality_code, SAME country_code
+                                           AND levenshtein(normalized_name) <= 2
                                            ONLY in blocks with <= 500 entities
                                            (pairwise cost guard; large munis
                                            are already covered by edges 1-3)
@@ -55,7 +58,10 @@ log = logging.getLogger(__name__)
 
 RUN_ID = "dealer-identity-det-v1"
 RESOLVER = "union-find-deterministic"
-RESOLVER_VERSION = "2.1.0"  # FIX-A: fuzzy min-len guard; FIX-B: legal-suffix strip
+RESOLVER_VERSION = "2.2.0"  # FIX-A: fuzzy min-len guard; FIX-B: legal-suffix strip;
+# FIX-C (country-proof): country_code in every block-key (edges 1-3 + edge-4 fuzzy)
+# so cross-border entities sharing a municipality_code can never co-cluster.
+# Single-country output is byte-identical to 2.1.0.
 SCOPE_CONDITION = "kind <> 'particular' AND status <> 'closed'"
 SCOPE_SQL = "kind <> 'particular'"  # stored in entity_cluster_run.scope
 
@@ -88,10 +94,13 @@ SOURCE_GROUP_RANK: dict[str, int] = {
 }
 
 BLOCKING_RULES: list[str] = [
-    "normalized_name + municipality_code (exact; legal-suffix stripped via FIX-B)",
-    "phone_digits + municipality_code (exact, >= 7 digits)",
-    "normalized_website_host + municipality_code (exact, same-muni guard)",
+    "normalized_name + municipality_code + country_code "
+    "(exact; legal-suffix stripped via FIX-B)",
+    "phone_digits + municipality_code + country_code (exact, >= 7 digits)",
+    "normalized_website_host + municipality_code + country_code "
+    "(exact, same-muni guard)",
     f"levenshtein(normalized_name) <= {FUZZY_MAX_LEVENSHTEIN} + same municipality_code "
+    f"+ same country_code "
     f"(SQL fuzzy, blocks <= {FUZZY_BLOCK_CAP} entities, "
     f"min_name_len >= {FUZZY_MIN_NAME_LEN} per FIX-A)",
 ]
@@ -242,6 +251,7 @@ def _load_entities(conn: Any) -> list[dict]:
             cdp_code,
             trade_name,
             municipality_code,
+            country_code,
             website,
             phone,
             address,
@@ -291,15 +301,21 @@ def _load_fuzzy_sql_edges(
     )
 
     # Build normalised rows in Python.
-    norm_rows: list[tuple[str, str, str]] = []  # (entity_ulid, muni, norm_name)
+    # (entity_ulid, muni, country, norm_name) -- country_code is carried so the
+    # fuzzy self-join below can require a.country_code = b.country_code, making
+    # the wider levenshtein edge (which unites NON-identical names) country-safe.
+    norm_rows: list[tuple[str, str, str, str]] = []
     for ent in entities:
         uid = ent["entity_ulid"]
         muni = (ent.get("municipality_code") or "").strip() or None
         if muni is None:
             continue
+        country = (ent.get("country_code") or "").strip() or None
+        if country is None:
+            continue
         nn = _normalize_name(ent.get("trade_name"))
         if nn:
-            norm_rows.append((uid, muni, nn))
+            norm_rows.append((uid, muni, country, nn))
 
     log.info("Uploading %d normalised rows to PG temp table ...", len(norm_rows))
 
@@ -313,6 +329,7 @@ def _load_fuzzy_sql_edges(
             CREATE TEMP TABLE _tmp_fuzzy_candidates (
                 entity_ulid  text NOT NULL,
                 muni_code    text NOT NULL,
+                country_code text NOT NULL,
                 norm_name    text NOT NULL
             )
         """)
@@ -320,7 +337,7 @@ def _load_fuzzy_sql_edges(
             cur,
             "INSERT INTO _tmp_fuzzy_candidates VALUES %s",
             norm_rows,
-            template="(%s, %s, %s)",
+            template="(%s, %s, %s, %s)",
             page_size=5000,
         )
         cur.execute(
@@ -358,12 +375,21 @@ def _load_fuzzy_sql_edges(
         # Exclude pairs where norm_name is identical (edge 1 handles those).
         # FIX A: skip fuzzy for short names (len < FUZZY_MIN_NAME_LEN) to
         # avoid merging distinct short-name dealers like 'megar'/'vegar'.
+        # COUNTRY-PROOF: a.country_code = b.country_code makes this wider
+        # (non-identical-name) edge country-safe -- two dealers in the same
+        # municipality_code but DIFFERENT countries are never paired. For a
+        # single-country census every row shares one country_code, so the join
+        # is byte-identical to the pre-country self-join (same-country fuzzy
+        # merging untouched). Block-size eligibility stays keyed on muni_code:
+        # identical for one country, and a strict over-count (=> never fewer
+        # merges than is safe) when several countries share a muni_code.
         cur.execute(f"""
             SELECT a.entity_ulid AS uid_a,
                    b.entity_ulid AS uid_b
             FROM _tmp_fuzzy_candidates a
             JOIN _tmp_fuzzy_candidates b
               ON  a.muni_code = b.muni_code
+              AND a.country_code = b.country_code
               AND a.entity_ulid < b.entity_ulid
               AND a.norm_name <> b.norm_name
             JOIN (
@@ -401,33 +427,44 @@ def _build_deterministic_edges(entities: list[dict]) -> list[tuple[str, str]]:
     """
     Build edge types 1, 2, and 3 in Python using index structures.
 
-    Edge 1: normalized_name + municipality_code (exact)
-    Edge 2: phone_digits + municipality_code    (exact, >= 7 digits)
-    Edge 3: normalized_website_host + municipality_code (same-muni guard)
+    Edge 1: normalized_name + municipality_code + country_code (exact)
+    Edge 2: phone_digits + municipality_code + country_code    (exact, >= 7 digits)
+    Edge 3: normalized_website_host + municipality_code + country_code (same-muni guard)
+
+    COUNTRY-PROOF: country_code is part of every block-key so two entities from
+    different countries can NEVER share a bucket (the cross-border false-merge
+    vector -- a 2nd country reuses the same numeric municipality_code space, e.g.
+    migrations/0053 lets DE province '28' coexist with ES Madrid '28'). For a
+    single-country census (every row country_code='ES') the third key element is
+    a constant, so bucketing -- and therefore clustering -- is BYTE-IDENTICAL to
+    the pre-country behaviour: same-country merging is untouched.
 
     Returns deduplicated (u1, u2) pairs with u1 < u2.
     """
-    idx_name_muni: dict[tuple[str, str], list[str]] = defaultdict(list)
-    idx_phone_muni: dict[tuple[str, str], list[str]] = defaultdict(list)
-    idx_web_muni: dict[tuple[str, str], list[str]] = defaultdict(list)
+    idx_name_muni: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+    idx_phone_muni: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+    idx_web_muni: dict[tuple[str, str, str], list[str]] = defaultdict(list)
 
     for ent in entities:
         uid = ent["entity_ulid"]
         muni = (ent.get("municipality_code") or "").strip() or None
         if muni is None:
             continue
+        country = (ent.get("country_code") or "").strip() or None
+        if country is None:
+            continue
 
         nn = _normalize_name(ent.get("trade_name"))
         if nn:
-            idx_name_muni[(nn, muni)].append(uid)
+            idx_name_muni[(nn, muni, country)].append(uid)
 
         ph = _normalize_phone(ent.get("phone"))
         if ph:
-            idx_phone_muni[(ph, muni)].append(uid)
+            idx_phone_muni[(ph, muni, country)].append(uid)
 
         wh = _normalize_website_host(ent.get("website"))
         if wh:
-            idx_web_muni[(wh, muni)].append(uid)
+            idx_web_muni[(wh, muni, country)].append(uid)
 
     edge_set: set[tuple[str, str]] = set()
 
