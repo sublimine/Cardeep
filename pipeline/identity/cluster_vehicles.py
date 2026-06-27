@@ -8,11 +8,14 @@ Identifies listings that represent the SAME physical car across platforms
 Two edge types, both reproducible from current DB state:
 
   A. photo_url (identical, normalized):
-     Same byte-level photo URL → same physical car.  SUFFICIENT ALONE.
-     False-positive risk: near-zero (platforms use CDN-unique URLs).
+     Same byte-level photo URL → same physical car.  SUFFICIENT ALONE WITHIN ONE
+     COUNTRY.  False-positive risk: near-zero (platforms use CDN-unique URLs).
      GUARD km=0/NULL: disabled for new-car stock (see below).
+     GUARD country (COUNTRY-PROOF vector #2): a shared photo only merges listings
+     of the SAME country_code (reached via entity).  Wholesale/auction/OEM-CDN
+     feeds reuse one photo across borders → distinct physical cars → never merged.
 
-  B. firma (make + model + year + km EXACT + price ±2% + same province_code):
+  B. firma (make + model + year + km EXACT + price ±2% + same country + province):
      Cross-entity duplicate ONLY.  REQUIRES all of:
        1. DIFFERENT entity_ulid (same-entity stock-bulk is NEVER firma-merged).
        2. same normalized title (exact cross-platform corroboration).
@@ -76,7 +79,12 @@ log = logging.getLogger(__name__)
 
 RUN_ID = "vehicle-identity-det-v1"
 RESOLVER = "union-find-deterministic"
-RESOLVER_VERSION = "1.0.0"
+# FIX-C (country-proof, vehicle vector #2): country_code (via entity) scopes both
+# signals — Signal A pairs only within a country, Signal B's firma block-key
+# includes country_code — plus a pre-write BLOCKING country-isolation guard. A
+# single-country census is byte-identical to 1.0.0 (the added key element is a
+# constant), so same-country (ES) clustering is unchanged.
+RESOLVER_VERSION = "1.1.0"
 SCOPE_CONDITION = "status = 'available'"
 
 # Price tolerance for firma-based matching: ±2% of the lower price.
@@ -98,13 +106,14 @@ PHOTO_HIGH_COLLISION_K = 12
 
 # Blocking rules stored for audit / reproducibility.
 BLOCKING_RULES: list[str] = [
-    "photo_url normalized (exact): same CDN photo = same physical car [signal A, sufficient alone]; DISABLED for km=0/NULL unless shared non-null vin_ref",
+    "photo_url normalized (exact) + same country_code (via entity): same CDN photo = same physical car [signal A, sufficient alone WITHIN one country]; DISABLED for km=0/NULL unless shared non-null vin_ref; DISABLED cross-country (COUNTRY-PROOF vector #2)",
     (
-        "firma = exact(make, model, year, km) + price ±2% + same province_code "
+        "firma = exact(make, model, year, km) + price ±2% + same country_code + same province_code "
         "+ DIFFERENT entity_ulid + same normalized_title [signal B, cross-entity only; "
         "same-entity pairs never firma-merged — if same physical car, Signal A (shared photo) catches it]; "
-        "DISABLED for km=0/NULL unless shared non-null vin_ref"
+        "DISABLED for km=0/NULL unless shared non-null vin_ref; country_code (via entity) in block-key blocks cross-border merge (COUNTRY-PROOF vector #2)"
     ),
+    "country-isolation guard [COUNTRY-PROOF vector #2]: pre-write BLOCKING assertion that every canonical cluster has exactly one country_code (via entity); a cross-border cluster aborts the run before write/serve. vehicle has no country_code (mig 0003) — country reached via entity.country_code (mig 0052)",
     "km=0/NULL guard: new/catalogue stock listing treated as distinct unit unless vin_ref matches; declared bias = possible cross-platform over-count of new-car stock",
     (
         f"photo_url high-collision guard [Signal A]: a normalized photo_url shared by "
@@ -237,7 +246,13 @@ class UnionFind:
 
 
 def _load_vehicles(conn: Any) -> list[dict]:
-    """Load all in-scope vehicles with entity province_code via JOIN."""
+    """Load all in-scope vehicles with entity province_code + country_code via JOIN.
+
+    vehicle has no country_code of its own (migrations/0003); the country of a
+    vehicle is the country of its dealer (migrations/0052: entity.country_code,
+    NOT NULL). It is carried here so every block-key/edge below can be country-
+    scoped (COUNTRY-PROOF invariant, vehicle vector #2).
+    """
     log.info("Loading vehicles from PG (status='available') ...")
     query = """
         SELECT
@@ -252,7 +267,8 @@ def _load_vehicles(conn: Any) -> list[dict]:
             v.photo_url,
             v.vin_ref,
             v.first_seen,
-            e.province_code
+            e.province_code,
+            e.country_code
         FROM vehicle v
         LEFT JOIN entity e ON e.entity_ulid = v.entity_ulid
         WHERE v.status = 'available'
@@ -360,6 +376,17 @@ def _build_edges(
             for j in range(i + 1, len(bucket)):
                 va_u, vb_u = bucket[i], bucket[j]
                 va, vb = _v_by_ulid[va_u], _v_by_ulid[vb_u]
+                # COUNTRY-PROOF (vector #2): a shared photo_url is "sufficient alone"
+                # only WITHIN one country. Two listings in different countries that
+                # share a photo (wholesale/auction/OEM-CDN feed reused across borders)
+                # are DISTINCT physical cars and must never merge. The high-collision
+                # guard above stays GLOBAL (a catalogue photo is catalogue regardless
+                # of country); only edge creation is country-scoped. For a single-
+                # country census every pair shares one country_code, so this filter
+                # never fires and Signal A output is byte-identical to the pre-country
+                # behaviour. Country is reached via entity (vehicle has no country_code).
+                if va.get("country_code") != vb.get("country_code"):
+                    continue
                 # km=0/NULL guard: catalogue photos are shared across models/dealers;
                 # only merge if both carry the same non-null VIN.
                 if _is_new_car(va) or _is_new_car(vb):
@@ -381,20 +408,40 @@ def _build_edges(
     # -----------------------------------------------------------------------
     log.info("Building Signal B edges (firma + anti-FP guards) ...")
 
-    # Group by (make, model, year, km, province_code) — the firma block key.
-    # price ±2% is checked pairwise within the block.
+    # Group by (make, model, year, km, country_code, province_code) — the firma
+    # block key. price ±2% is checked pairwise within the block.
+    #
+    # COUNTRY-PROOF (vector #2): country_code is part of the block-key so two
+    # vehicles from different countries can NEVER share a firma bucket — the cross-
+    # border false-merge vector, since a 2nd country reuses the same numeric
+    # province_code space (migrations/0053 lets DE province '28' coexist with ES
+    # Madrid '28'). For a single-country census (every row country_code='ES') the
+    # added key element is a constant, so bucketing — and therefore firma merging —
+    # is BYTE-IDENTICAL to the pre-country behaviour.
     idx_firma: dict[tuple, list[dict]] = defaultdict(list)
     for v in vehicles:
         make = (v.get("make") or "").strip().lower() or None
         model = (v.get("model") or "").strip().lower() or None
         year = v.get("year")
         km = v.get("km")
+        country = v.get("country_code") or None
         province = v.get("province_code") or None
 
+        # province is required (as before); country is NOT added to the required
+        # set. In production province comes from the same entity row as
+        # country_code (NOT NULL, mig 0052), so province-present ⟹ country-present:
+        # requiring country would be redundant. Keeping it out of the guard means a
+        # country-less row (only possible for a non-production fixture, or an orphan
+        # vehicle already dropped by the province guard) still buckets by its other
+        # fields instead of being silently discarded — so existing unit fixtures
+        # that omit country_code are byte-identical, while production stays scoped.
         if not (make and model and year is not None and km is not None and province):
             continue
 
-        block_key = (make, model, year, km, province)
+        # country_code is part of the block-key: 'ES' vs 'DE' never share a bucket
+        # (cross-border firma false-merge blocked); a single-country census has it
+        # constant, so bucketing is byte-identical to the pre-country behaviour.
+        block_key = (make, model, year, km, country, province)
         idx_firma[block_key].append(v)
 
     firma_edges: set[tuple[str, str]] = set()
@@ -560,6 +607,55 @@ def _build_cluster_table(
 
     log.info("Union-find done: %d rows, %d clusters", len(result), n_clusters)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Pre-write country-isolation guard (COUNTRY-PROOF invariant, BLOCKING)
+# ---------------------------------------------------------------------------
+
+
+def _assert_no_cross_country_clusters(
+    cluster_rows: list[dict],
+    vehicle_by_ulid: dict[str, dict],
+) -> None:
+    """BLOCKING country-isolation guard — runs BEFORE the write/commit.
+
+    The PRIMARY prevention is mechanical and lives in the edge keys: Signal A
+    only pairs listings within one country, and Signal B's block-key includes
+    country_code, so a cross-border edge is never generated. This guard is the
+    defense-in-depth mirror of that invariant: it recomputes, per canonical
+    cluster, the set of distinct member country_codes and RAISES if any cluster
+    spans more than one country — aborting the transaction so a cross-border
+    false-merge can never be written or served.
+
+    Unlike the legacy _run_anti_fp_checks Check-1 (which ran POST-commit and only
+    print()ed, and counted province_code — blind to the DE/ES '28' muni/province
+    reuse), this fires pre-write and counts country_code. Country is reached via
+    entity (vehicle has no country_code of its own).
+    """
+    cluster_countries: dict[str, set[str]] = defaultdict(set)
+    for r in cluster_rows:
+        v = vehicle_by_ulid.get(r["vehicle_ulid"], {})
+        cc = v.get("country_code")
+        if cc:
+            cluster_countries[r["canonical_vehicle_ulid"]].add(cc)
+
+    offenders = {
+        canon: sorted(ccs)
+        for canon, ccs in cluster_countries.items()
+        if len(ccs) > 1
+    }
+    if offenders:
+        sample = list(offenders.items())[:5]
+        raise RuntimeError(
+            f"COUNTRY-PROOF VIOLATION: {len(offenders)} vehicle cluster(s) span "
+            f">1 country_code — refusing to write/serve a cross-border false-merge. "
+            f"sample={sample}"
+        )
+    log.info(
+        "Country-isolation guard OK: %d clusters, all single-country.",
+        len(cluster_countries),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -837,6 +933,32 @@ def _run_anti_fp_checks(conn: Any) -> None:
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
 
+        # Check 0: No cross-COUNTRY merges (COUNTRY-PROOF invariant, vehicle vector #2).
+        # vehicle has no country_code; the country is reached via entity (0052). This
+        # is the post-write mirror of the pre-write blocking guard
+        # (_assert_no_cross_country_clusters) and of the served guard on
+        # v_canonical_vehicle. NOTE: this MUST count country_code, not province_code —
+        # DE reuses the ES '28' province space, so a cross-border cluster has a single
+        # DISTINCT province_code and would slip past Check 1 below.
+        cur.execute(
+            """
+            SELECT COUNT(*) AS cross_country_clusters
+            FROM (
+                SELECT vc.canonical_vehicle_ulid
+                FROM vehicle_cluster vc
+                JOIN vehicle v ON v.vehicle_ulid = vc.vehicle_ulid
+                JOIN entity e ON e.entity_ulid = v.entity_ulid
+                WHERE vc.cluster_run_id = %s
+                GROUP BY vc.canonical_vehicle_ulid
+                HAVING COUNT(DISTINCT e.country_code) > 1
+            ) sub
+            """,
+            (RUN_ID,),
+        )
+        r = cur.fetchone()
+        status = "OK (0)" if r["cross_country_clusters"] == 0 else f"FAIL ({r['cross_country_clusters']})"
+        print(f"\n--- CHECK 0: No cross-country merges (COUNTRY-PROOF) ---\n  {status}")
+
         # Check 1: No cross-province merges
         cur.execute(
             """
@@ -856,7 +978,7 @@ def _run_anti_fp_checks(conn: Any) -> None:
         )
         r = cur.fetchone()
         status = "OK (0)" if r["cross_prov_clusters"] == 0 else f"FAIL ({r['cross_prov_clusters']})"
-        print(f"\n--- CHECK 1: No cross-province merges ---\n  {status}")
+        print(f"--- CHECK 1: No cross-province merges ---\n  {status}")
 
         # Check 2: No cluster_size > 20 (pathological chain collapse)
         cur.execute(
@@ -934,6 +1056,11 @@ def main() -> None:
         assert len(cluster_rows) == n_in, (
             f"Row count mismatch: {len(cluster_rows)} != {n_in}"
         )
+
+        # Step 3b: BLOCKING country-isolation guard (pre-write). A cross-border
+        # cluster aborts the run before anything is written or served.
+        vehicle_by_ulid = {v["vehicle_ulid"]: v for v in vehicles}
+        _assert_no_cross_country_clusters(cluster_rows, vehicle_by_ulid)
 
         # Step 4: Write to PG (idempotent)
         _write_to_pg(conn, cluster_rows, n_in, edge_signal_map)
