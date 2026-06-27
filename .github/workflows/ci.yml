@@ -218,3 +218,106 @@ jobs:
 
       - name: Run the pure unit suite (no DB service — proves DB independence)
         run: python -m pytest -m unit -q
+
+  country-proof-invariant:
+    name: Country-proof invariant (cross-border isolation · BLOCKING gate)
+    runs-on: ubuntu-latest
+    # PROJECT 360-D — the mechanical blindaje that makes a cross-country regression IMPOSSIBLE.
+    #
+    # The country-isolation suite is a set of GOLDENS. Each test SEEDS synthetic two-country data
+    # (ES + a second country that deliberately REUSES the same numeric province/municipality code
+    # space — migrations/0053), runs the REAL identity/serving/geo code, asserts NO cross-border
+    # merge/serve/leak, and ROLLS BACK (the dry-run stays byte-identical). They are the binding
+    # guards of docs/generic-engine-bible/COUNTRY-PROOF-INVARIANT.md, plus the meta-guard
+    # test_served_queries_have_country (statically FAILS the build the moment someone adds a served
+    # census query with no country dimension).
+    #
+    # WHY A DEDICATED JOB ON HOST PORT 5434 (and NOT the shared db-tests :5433 service):
+    #   These goldens HARD-REFUSE :5433 — `if "5433" in dsn: pytest.skip("live production")` — and
+    #   also refuse to seed unless `entity` is EMPTY. Aimed at the db-tests :5433 DSN they ALL skip,
+    #   so the invariant would NEVER actually execute in CI (a silent no-op gate). This job gives them
+    #   their own ephemeral Postgres on host port 5434 + a freshly-migrated EMPTY census, so they RUN
+    #   FOR REAL. DO NOT "consolidate" this onto :5433 and DO NOT add a census/geo seed step
+    #   (seed_ci_fixture / load_geo): either change repopulates `entity` or trips the :5433 guard and
+    #   silently turns every golden into a skip. The suite self-seeds its own geo + entities inside
+    #   each rolled-back transaction; `migrate up` (schema to head) is the ONLY setup it needs.
+    #
+    # The final step FAILS the pipeline on any failure, error, SKIP, or if the suite shrinks below its
+    # proven floor (70) — so the gate can never silently degrade into green-washing.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cardeep
+          POSTGRES_PASSWORD: cardeep_dev_only
+          POSTGRES_DB: cardeep
+        ports:
+          # Host 5434 mirrors the local dry-run (cardeep-pg-dryrun) and dodges the :5433 refuse-guard,
+          # so the goldens execute instead of skipping. :5433 (live production) is never touched.
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U cardeep -d cardeep"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      CARDEEP_DSN: postgres://cardeep:cardeep_dev_only@127.0.0.1:5434/cardeep
+      CARDEEP_DB_URL: postgresql+psycopg2://cardeep:cardeep_dev_only@127.0.0.1:5434/cardeep
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (runtime + test — incl. anyascii translit + psycopg2)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Wait for Postgres (host-side TCP — beats the initdb restart race)
+        run: |
+          for i in $(seq 1 40); do
+            if python -c "import asyncio,asyncpg; asyncio.run(asyncpg.connect('${CARDEEP_DSN}', timeout=2))" 2>/dev/null; then
+              echo "postgres reachable after ~${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "postgres never became reachable"; exit 1
+
+      - name: Migrate up (schema to head from empty — incl. 0053 dup-code coexistence, 0058 served country_code, 0059 wide geo codes)
+        run: python scripts/migrate.py up
+
+      - name: Run the country-isolation suite (goldens RUN here — :5434 + empty census, no skips)
+        run: |
+          python -m pytest -p no:cacheprovider -q --junit-xml=country-proof.xml \
+            tests/test_country_isolation_dealer.py \
+            tests/test_country_isolation_vehicle.py \
+            tests/test_country_isolation_dedup.py \
+            tests/test_country_isolation_beta.py \
+            tests/test_country_isolation_serving.py \
+            tests/test_country_isolation_multicountry.py \
+            tests/test_country_proof_guard.py \
+            tests/test_served_queries_have_country.py \
+            tests/test_geo_width_multicountry.py \
+            tests/test_norm_name_translit.py
+
+      - name: Assert the invariant actually executed (no silent all-skip, no shrink)
+        # Anti-green-wash: pytest already fails the job on a real regression (failure/error → non-zero
+        # exit). This adds the two cases pytest exits 0 on but that would make the gate a lie:
+        # ANY skip (the goldens did not run → DSN/DB/census misconfigured) or a suite that shrank below
+        # the proven floor of 70 tests (a golden file was deleted/emptied).
+        run: |
+          python -c "
+          import xml.etree.ElementTree as ET, sys
+          root = ET.parse('country-proof.xml').getroot()
+          suites = root.findall('.//testsuite') or [root]
+          tot = lambda k: sum(int(s.get(k, 0)) for s in suites)
+          tests, failures, errors, skipped = tot('tests'), tot('failures'), tot('errors'), tot('skipped')
+          print('country-proof gate -> tests=%d failures=%d errors=%d skipped=%d' % (tests, failures, errors, skipped))
+          ok = failures == 0 and errors == 0 and skipped == 0 and tests >= 70
+          print('PASS: cross-border isolation mechanically enforced' if ok else 'FAIL: regression, or goldens SKIPPED (silent no-op gate), or suite shrank below floor 70')
+          sys.exit(0 if ok else 1)
+          "
