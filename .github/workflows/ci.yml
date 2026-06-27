@@ -303,13 +303,14 @@ jobs:
             tests/test_country_proof_guard.py \
             tests/test_served_queries_have_country.py \
             tests/test_geo_width_multicountry.py \
-            tests/test_norm_name_translit.py
+            tests/test_norm_name_translit.py \
+            tests/test_analytic_province_width.py
 
       - name: Assert the invariant actually executed (no silent all-skip, no shrink)
         # Anti-green-wash: pytest already fails the job on a real regression (failure/error → non-zero
         # exit). This adds the two cases pytest exits 0 on but that would make the gate a lie:
         # ANY skip (the goldens did not run → DSN/DB/census misconfigured) or a suite that shrank below
-        # the proven floor of 70 tests (a golden file was deleted/emptied).
+        # the proven floor of 74 tests (a golden file was deleted/emptied).
         run: |
           python -c "
           import xml.etree.ElementTree as ET, sys
@@ -318,7 +319,7 @@ jobs:
           tot = lambda k: sum(int(s.get(k, 0)) for s in suites)
           tests, failures, errors, skipped = tot('tests'), tot('failures'), tot('errors'), tot('skipped')
           print('country-proof gate -> tests=%d failures=%d errors=%d skipped=%d' % (tests, failures, errors, skipped))
-          ok = failures == 0 and errors == 0 and skipped == 0 and tests >= 70
-          print('PASS: cross-border isolation mechanically enforced' if ok else 'FAIL: regression, or goldens SKIPPED (silent no-op gate), or suite shrank below floor 70')
+          ok = failures == 0 and errors == 0 and skipped == 0 and tests >= 74
+          print('PASS: cross-border isolation mechanically enforced' if ok else 'FAIL: regression, or goldens SKIPPED (silent no-op gate), or suite shrank below floor 74')
           sys.exit(0 if ok else 1)
           "
