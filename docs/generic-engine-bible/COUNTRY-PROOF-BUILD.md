@@ -1,50 +1,32 @@
 # Country-Proof Build (motor genérico) · rama `feature/country-proof-build`
-> Doc de entrega + resume anchor. Última: 2026-06-27. **Core cerrado + endurecido por red-team adversarial (loop-until-dry, en curso).**
-> **Aislamiento inviolable:** todo construido/probado en `:5434` (dry-run) + esta rama. **`:5433` (prod viva) jamás tocado.** `main` intacto, sin push. Cada estado = verificado por MÍ re-corriendo los goldens.
+> Doc de entrega + resume anchor. Última: 2026-06-28. **Invariante COUNTRY-PROOF del censo servido: CERRADO y ADVERSARIALMENTE SELLADO.**
+> **Aislamiento inviolable:** todo construido/probado en `:5434` (dry-run) + esta rama. **`:5433` (prod viva) jamás tocado.** `main` intacto, sin push. Cada estado verificado por MÍ re-corriendo los goldens.
 
-## Objetivo
-Cerrar la country-blindness del motor → **país nuevo = otra ejecución** (cero false-merge transfronterizo, servido+sellado por país). España preservada: `default 'ES'` ⇒ **byte-idéntico** para el tenant único.
+## Objetivo — ACHIEVED
+Cerrar la country-blindness del motor → **país nuevo = otra ejecución** (cero false-merge transfronterizo, servido+sellado por país). España preservada: `default 'ES'` ⇒ **byte-idéntico** para el tenant único. El red-team independiente confirmó el cierre.
 
-## Lo construido (26 commits, `54d691f..HEAD`) — todo VERIFICADO por mí
-**Vectores de corrupción (false-merge):**
-| # | Vector | Commit |
-|---|---|---|
-| 1 | dealer — `country_code` en las 4 block-keys | `61768a7` |
-| 2 | vehículo Signal A+B — país vía JOIN + guard pre-write | `be77797` |
-| 3 | dedup `deep_link` + `cross_source` | `795c6c9` |
-| 4 | β resolver + guard SQL (`0057` `v_country_proof_violations`) | `f198213` |
-| 5 | serving mint+geo+queries (`0058` + meta-test) | `6cc01d8` |
+## El build (34 commits, `54d691f..HEAD`) — todo VERIFICADO por mí
+**A · 5 vectores de corrupción (false-merge):** dealer 4 block-keys (`61768a7`) · vehículo Signal A+B + guard (`be77797`) · dedup deep_link+cross_source (`795c6c9`) · β resolver + guard SQL `0057` (`f198213`) · serving mint+geo+queries `0058`+meta-test (`6cc01d8`).
+**B · Endurecimiento 360º:** adversarial real FR/IT/PT/GR (`052fa8f`) · ancho geo `VARCHAR` `0059` (`e910cd4`) · transliteración no-latina nombres `9a5559b` + títulos `76ff899` (`anyascii` ISC €0) · seal+exhaustividad por país `0060` (`20e56a3`) · ancho analítico `0061` (`555eb60`) · perf auditado (neutral, índice existe) · retrofit tests · exhaustividad pipeline country-aware (`b36224a`) · CI gate (`7b2b0cd`).
+**C · Campaña RED-TEAM adversarial (loop-until-dry — 11 misses + 2 residuales, TODOS cerrados):**
+- R1 (5): overlays dedup L3/L4 (`ae1ea25`), CHECKs `^CDP-ES-` evict `0062` (`eef9228`), VIN cross-platform (`aa00dd0`), populate G1-mirror.
+- R2 (2): G1 ancho-provincia `{2}→{2,8}` (`4f49137`), trigger comarca `0063`.
+- R3 (3): associations/PA dedup (`f88697f`), seed centroides + denominator (`355673f`).
+- Barrido EXHAUSTIVO (1): `backfill_comarca` (último writer). + self-verify `backfill_municipality_geo`.
+- R-final (confirmación): **CONVERGIDO — SELLO OK** + 2 residuales LOW cerrados: geocoder + `gestion_item` monitoring `0064` (`18b4928`).
 
-**Endurecimiento 360º (cada uno un proyecto):**
-- **360-A** adversarial real FR/IT/PT/GR (`052fa8f`) — cazó+arregló regex mint + G1, y destapó 3 bugs de esquema reales.
-- **F1** ancho geo `CHAR→VARCHAR` + cadena FK (`e910cd4`, `0059`) — FR DOM `971` / IT ISTAT `058091` entran.
-- **F2** transliteración nombres dealer no-latinos (`9a5559b`, `anyascii` ISC €0) — eliminó señal-muerta + sobre-merge griego.
-- **F3** transliteración títulos vehículo no-latinos (`76ff899`) — `_normalize_title` es el único corroborador de Signal B; arreglado under+over-merge.
-- **360-B** seal + exhaustividad por país (`20e56a3`, `0060`).
-- **Ancho analítico** `discovery_capture`/`exhaustiveness_estimate` (`555eb60`, `0061`).
-- **360-C Perf** — auditado: el `country_code` en block-keys es neutral-a-positivo (particiona bloques más pequeños; constante no-op en mono-tenant) y el filtro servido tiene índice (`idx_entity_country`). **Sin migración de índice.**
-- **Retrofit de tests** (`66ca648`) — `test_country_coexistence` aislado a `:5434` + cableado al gate; geo tests honran `CARDEEP_DSN` con skip honesto.
-
-**360-D · CI gate (`7b2b0cd` + `aac3a81` + `66ca648`):** job `country-proof-invariant` corre **13 ficheros / 106 tests** contra `:5434`, con guard anti-greenwash (falla si skip/error/encoge **< floor 101**). Hallazgo: en `db-tests` (:5433) los goldens se saltaban (gate fantasma) → ahora corre de verdad.
-
-## Red-team adversarial (loop-until-dry — nada sellado sin intento de romperlo)
-- **Round 1** cazó 5 misses reales (no en docs): overlays dedup L3/L4 (`build_residual_namemuni`/`build_particular` — false-merge SERVIDO silencioso), CHECKs `^CDP-ES-` de evict (`0033`), VIN cross-platform sin país, `populate_completion` G1-mirror. Arreglados (`ae1ea25`,`eef9228`,`aa00dd0`, populate; `0062`).
-- **Round 2** verificó los 5 + cazó 2: G1 ancho-provincia `{2}`→`{2,8}` (`complete.py`+`populate_completion`, espejo geo VARCHAR(8)/`0062`; + corregí 3 goldens que fosilizaban el `{2}`) y trigger `entity_set_comarca` sin país (`0063`). Arreglados (`4f49137`, `0063`).
-- **Round 3** en curso. Cada fix con golden RED→GREEN + cableado al gate.
-
-## Estado verificado (último barrido propio)
-- **Gate: `160 passed / 0 skip / 0 fail`** — **19 goldens** del job `country-proof-invariant` en `:5434` (head `0063`), floor 155.
-- Migraciones aditivas (`0057`-`0063`, 7): guard · servable país · ancho geo · seal país · ancho analítico · cdp CHECK genérico · trigger comarca. **Byte-idénticas ES.** Prod `:5433` sigue `0055`, intacta.
-- Dep declarada: `anyascii==0.3.3` (ISC, €0).
+## Estado verificado (sello)
+- **Gate: `178 passed / 0 skip / 0 fail`** — **25 goldens** del job `country-proof-invariant` en `:5434` (head `0064`), floor 173.
+- Migraciones aditivas (`0057`-`0064`, 8). **Byte-idénticas ES.** Prod `:5433` sigue `0055`, intacta.
+- Dep: `anyascii==0.3.3` (ISC, €0).
+- **Veredicto red-team:** el universo entero de writers (≈40 connectors + 8 capas de fusión + geo/serving/monitoring) está country-scoped por identidad cdp/ULID, clave con país, o FK compuesto fail-closed — verificado línea-a-línea, no asumido.
 
 ## Cutover — ÚNICO gate del owner (irreversible, prod viva)
-**(1)** aplicar `0057→0063` a `:5433` (ADITIVAS, byte-idénticas ES) **ANTES** que el código · **(2)** merge `feature/country-proof-build` → `main` · **(3)** re-correr el clustering servido en `:5433` · **(4)** job CI `country-proof-invariant` (19 goldens) + Ferrari verdes. **NO ejecutar sin "cutover" del owner.**
+**(1)** aplicar `0057→0064` a `:5433` (ADITIVAS, byte-idénticas ES) **ANTES** que el código · **(2)** merge `feature/country-proof-build` → `main` · **(3)** re-correr el clustering servido en `:5433` · **(4)** job CI `country-proof-invariant` (25 goldens) + Ferrari verdes. **NO ejecutar sin "cutover" del owner.**
 
-## OPEN — deuda DECLARADA (fase onboarding país-#2; NO core de merge, NO atajos)
-- Matriz MSE exhaustividad ciega (`capture.py`/`discovery_capture`/`splink_merge`), `geo_province.ccaa_code`/`geo_comarca.ine_code CHAR(2)`, `ingest.py` gate `01..52`, `product_stats`/`/stats` sin país, `_measure_bound` ES_national, señales degradadas país-2 (NULL-seguras). Documentado en la biblia; se cierra al onboardar el país #2.
-- `test_province_seal_view`/`test_api_*`: census-dependientes → corren en `db-tests` CI (:5433 efímero) + Ferrari. Cubiertos.
-- OPEN-D `cluster_dealers:816-918`: auto-auditoría ES (Megar/Vegar) → N/A no-ES, benigno.
+## OPEN — deuda DECLARADA (fase onboarding país-#2; NO core servido, NO atajos)
+Matriz MSE exhaustividad (`capture.py`/`splink_merge`/`discovery_capture`), `geo_province.ccaa_code`/`geo_comarca.ine_code CHAR(2)`, `ingest.py` gate `01..52`, write-site default-ES de scrapers, `product_stats`/`/stats`, `canonical_key_backfill` (NULL-seguro), `phone_es`, `price_sanity` EUR. Documentado en la biblia; se cierra al onboardar el país #2. Test infra: `test_api_*`/`test_gestionador` hard-pinned a `:5433` → migrar a `CARDEEP_DSN`.
 
 ## Resume
-1. Re-corre el gate: `CARDEEP_DSN=…:5434 pytest` los **19 ficheros** del job `country-proof-invariant` (`ci.yml`) → 160 passed.
-2. El CORE merge/serving/esquema/normalización country-proof está cerrado+gateado+red-teameado. Pendiente: round-N del red-team hasta converger, el **cutover** (owner), y la deuda país-#2. **`:5433` jamás se toca.**
+1. Re-corre el gate: `CARDEEP_DSN=…:5434 pytest` los **25 ficheros** del job `country-proof-invariant` (`ci.yml`) → 178 passed.
+2. El invariante COUNTRY-PROOF del censo servido está **cerrado, gateado y adversarialmente sellado**. Pendiente: el **cutover** (owner) y la deuda país-#2. **`:5433` jamás se toca.**
