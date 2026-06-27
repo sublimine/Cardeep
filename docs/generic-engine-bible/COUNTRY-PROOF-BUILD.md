@@ -17,11 +17,18 @@ Cerrar la country-blindness del motor → **país nuevo = otra ejecución** (cer
 Goldens country-isolation: **33 verdes** en `:5434` (head `0058`). Regresión: `unit` 474 passed. Prod `:5433` intacta (`0055`, sin `0058`).
 
 ## 360º — cada vector elevado a proyecto institucional (EN CURSO, 1 a la vez, verificado)
-- [ ] **360-A · Adversarial multi-país real** — goldens FR (Córcega `2A/2B`, DOM `971-976`), IT (ISTAT con muni >99 → ¿rompe `left(muni,2)=province`?), PT, y un caso no-UE/no-latino. Cada quirk verificado, no inventado.
-- [ ] **360-B · Seal endpoints** — `/geo/seal` + `/geo/exhaustiveness` + vistas-certificado con dimensión país (OPEN declarado de #5).
-- [ ] **360-C · Perf/escala** — `country_code` en block-keys + predicados no degradan a 2M+ filas (EXPLAIN + índices, migración aditiva).
-- [ ] **360-D · CI** — suite country-isolation cableada al CI (`:5434` efímero) → regresión cross-país imposible para siempre.
-- [ ] **360-E · Docs/provenance** — `BLOCKING_RULES`, `RESOLVER_VERSION`, `COUNTRY-PROOF-INVARIANT.md` actualizados al estado real.
+- [x] **360-A · Adversarial multi-país real** (`052fa8f`, 84 passed) — FR/IT/PT/GR con gramática real. Cazó+arregló: regex mint `[0-9A-Z]{2}`, G1 country-scoped. Cazó 3 bugs de esquema → F1/F2/OPEN.
+- [x] **F1 · Ancho geo VARCHAR** (`e910cd4`, 86 passed) — `geo_province CHAR(2)→VARCHAR(8)` + `geo_municipality CHAR(5)→VARCHAR(16)` + cadena FK (mig `0059`). FR DOM `971` / IT ISTAT `058091` entran. ES byte-idéntico.
+- [ ] **F2 · Normalización no-latina** (OPEN-C) — `norm_name` borra griego/cirílico → señal muerta. Transliterar en `cluster_dealers`/`cross_source_dedup`/`cluster_vehicles`. ES byte-idéntico.
+- [ ] **360-B · Seal endpoints** — `/geo/seal` + `/geo/exhaustiveness` + vistas-certificado con dimensión país (OPEN de #5).
+- [ ] **360-C · Perf/escala** — `country_code` en block-keys + predicados no degradan a 2M+ filas (EXPLAIN + índices).
+- [ ] **360-D · CI** — suite country-isolation cableada al CI (`:5434` efímero) → regresión cross-país imposible.
+- [ ] **360-E · Docs/provenance** — `BLOCKING_RULES`, `RESOLVER_VERSION`, `COUNTRY-PROOF-INVARIANT.md` actualizados.
+
+### OPEN menores tracked (no se pierden — cada uno su mini-proyecto)
+- Tests geo antiguos hard-pinned a `:5433` (`test_geo_reverse/fuzzy/upsert_backfill`, `test_country_coexistence`) → retrofit a `CARDEEP_DSN` + seed `:5434`.
+- `discovery_capture.province_code` / `exhaustiveness_estimate.province_code` `CHAR(2)` sin ensanchar (estrato analítico, sin FK) → pasada de ancho analítico.
+- OPEN-D: `cluster_dealers.py:816-950` auditoría ES-hardcoded (diagnóstico, no core).
 
 ## Cutover — ÚNICO gate del owner (irreversible, prod viva)
 Orden de despliegue: **migraciones (`0057`+`0058`+…) ANTES que el código** (el código referencia `country_code`) · merge a `main` · re-correr el clustering servido en `:5433` · Ferrari + CI verdes. **NO ejecutar sin la palabra "cutover" del owner.**
