@@ -297,12 +297,13 @@ class UnionFind:
 
 
 class ConstrainedUnionFind:
-    """Union-find that carries city_set and org_set metadata per component.
+    """Union-find that carries city_set, org_set and country_set per component.
 
     Two components are allowed to merge ONLY if the resulting merged component
     would have:
-      - len(city_set) <= 1  (no two distinct INE-validated city tokens)
-      - len(org_set) <= 1   (no two distinct non-null org_id values)
+      - len(city_set) <= 1     (no two distinct INE-validated city tokens)
+      - len(org_set) <= 1      (no two distinct non-null org_id values)
+      - len(country_set) <= 1  (no two distinct country_code values)
 
     This prevents transitivity from silently uniting entities that cannot be
     co-located (e.g. A—C—B where C lacks a city token but A and B are in
@@ -310,16 +311,25 @@ class ConstrainedUnionFind:
     contains a city token, any future union with a component containing a
     *different* city token is rejected.
 
+    The country_set constraint is the mechanical implementation of the
+    COUNTRY-PROOF invariant ("every canonical cluster has members of exactly one
+    country_code"): a beta or B1 edge that would unite two countries is rejected
+    here transitively, so no resolved dealer can ever span a border. For a
+    single-country census (every member country_code='ES') it is a no-op, so
+    same-country resolution stays byte-identical.
+
     city_set values: accent-folded, lowercased INE municipality names (same
     representation as _city_tokens returns). org_set values: org_id strings.
+    country_set values: CHAR(2) country codes (entity.country_code, mig 0052).
     """
 
     def __init__(self) -> None:
         self._parent: dict[str, str] = {}
         self._rank: dict[str, int] = {}
         # Metadata stored on the *root* node of each component.
-        self._city_set: dict[str, frozenset[str]] = {}  # root -> frozenset of city tokens
-        self._org_set: dict[str, frozenset[str]] = {}   # root -> frozenset of non-null org_ids
+        self._city_set: dict[str, frozenset[str]] = {}     # root -> frozenset of city tokens
+        self._org_set: dict[str, frozenset[str]] = {}      # root -> frozenset of non-null org_ids
+        self._country_set: dict[str, frozenset[str]] = {}  # root -> frozenset of country_codes
         self.n_constrained_rejections: int = 0
 
     def _init(
@@ -327,12 +337,14 @@ class ConstrainedUnionFind:
         x: str,
         city: frozenset[str] = frozenset(),
         org: frozenset[str] = frozenset(),
+        country: frozenset[str] = frozenset(),
     ) -> None:
         if x not in self._parent:
             self._parent[x] = x
             self._rank[x] = 0
             self._city_set[x] = city
             self._org_set[x] = org
+            self._country_set[x] = country
 
     def find(self, x: str) -> str:
         self._init(x)
@@ -347,7 +359,8 @@ class ConstrainedUnionFind:
         Returns True if merged, False if rejected by constraint.
 
         Constraint: merged city_set must have ≤1 distinct city token AND
-        merged org_set must have ≤1 distinct org_id.
+        merged org_set must have ≤1 distinct org_id AND merged country_set must
+        have ≤1 distinct country_code (COUNTRY-PROOF: no cross-border cluster).
         """
         ra, rb = self.find(a), self.find(b)
         if ra == rb:
@@ -355,8 +368,9 @@ class ConstrainedUnionFind:
 
         merged_city = self._city_set[ra] | self._city_set[rb]
         merged_org = self._org_set[ra] | self._org_set[rb]
+        merged_country = self._country_set[ra] | self._country_set[rb]
 
-        if len(merged_city) > 1 or len(merged_org) > 1:
+        if len(merged_city) > 1 or len(merged_org) > 1 or len(merged_country) > 1:
             self.n_constrained_rejections += 1
             return False
 
@@ -370,6 +384,7 @@ class ConstrainedUnionFind:
         # Update root metadata.
         self._city_set[ra] = merged_city
         self._org_set[ra] = merged_org
+        self._country_set[ra] = merged_country
         return True
 
     def components(self) -> dict[str, list[str]]:
@@ -400,6 +415,7 @@ def _load_p_entities(conn: Any) -> list[dict]:
             e.website,
             e.created_at,
             e.org_id,
+            e.country_code,
             ARRAY_AGG(DISTINCT es.source_key ORDER BY es.source_key)
                 FILTER (WHERE es.source_key IS NOT NULL) AS source_keys,
             COUNT(DISTINCT v.vehicle_ulid) AS n_vehicles
@@ -409,7 +425,7 @@ def _load_p_entities(conn: Any) -> list[dict]:
         WHERE e.kind IN ('compraventa', 'concesionario_oficial', 'garaje')
         GROUP BY e.entity_ulid, e.cdp_code, e.trade_name, e.kind,
                  e.province_code, e.municipality_code, e.phone, e.website,
-                 e.created_at, e.org_id
+                 e.created_at, e.org_id, e.country_code
     """
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(query)
@@ -577,6 +593,15 @@ def _build_edges(
         uid: e.get("org_id")
         for uid, e in entity_by_ulid.items()
     }
+    # COUNTRY-PROOF (vector #4): country_code (entity.country_code, mig 0052) is
+    # the cross-border guard. A beta edge is NEVER generated between two distinct
+    # countries — no fingerprint/phone/website signal can override it. For a
+    # single-country census every entity is 'ES', so the guard is inert and
+    # same-country adjudication stays byte-identical.
+    country_map: dict[str, str | None] = {
+        uid: e.get("country_code")
+        for uid, e in entity_by_ulid.items()
+    }
 
     # Phone collision detection: tokens shared by >= MAX_PHONE_COLLISION_K entities
     phone_buckets: dict[str, list[str]] = defaultdict(list)
@@ -669,11 +694,25 @@ def _build_edges(
     n_id_blocked = 0
     n_chain_blocked = 0
     n_city_blocked = 0
+    n_country_blocked = 0
 
     for pair in all_candidates:
         uid_a, uid_b = pair
         ea = entity_by_ulid[uid_a]
         eb = entity_by_ulid[uid_b]
+
+        # ── §COUNTRY-PROOF Guard 0: cross-country → NEVER merge ──────────────
+        # entity.country_code (mig 0052) is the border. Two entities of distinct
+        # countries are never the same physical dealer, regardless of shared
+        # inventory fingerprint, phone or website (a shared canonical set can be
+        # manufactured by an upstream Signal-A photo cross-merge). Hard block,
+        # no exception. NULL country (never in production: NOT NULL DEFAULT 'ES')
+        # is treated as wildcard so it cannot falsely separate same-country pairs.
+        country_a = country_map.get(uid_a)
+        country_b = country_map.get(uid_b)
+        if country_a is not None and country_b is not None and country_a != country_b:
+            n_country_blocked += 1
+            continue
 
         # ── §B Guard 1: chain siblings (same non-null org_id) → NEVER merge ──
         org_a = org_map.get(uid_a)
@@ -806,11 +845,12 @@ def _build_edges(
     )
     log.info(
         "Blocked: cross-province-without-fp=%d  insufficient-signal=%d  "
-        "chain-siblings=%d  city-guard=%d",
+        "chain-siblings=%d  city-guard=%d  country-guard=%d",
         n_fp_blocked,
         n_id_blocked,
         n_chain_blocked,
         n_city_blocked,
+        n_country_blocked,
     )
     return accepted_edges
 
@@ -903,8 +943,14 @@ def _build_resolution_table(
     #   The constrained UF city constraint is a second-line defence against
     #   transitivity, which only makes sense with INE-validated tokens.
     # org_set: singleton {org_id} if org_id is not null, else empty.
+    # country_set: singleton {country_code} (entity.country_code, mig 0052) so the
+    # constrained union-find rejects ANY cross-border merge transitively — both
+    # beta edges and B1 seed edges. Always populated (NOT NULL DEFAULT 'ES'); for a
+    # single-country census it is a singleton everywhere, so the constraint never
+    # fires and same-country resolution stays byte-identical.
     entity_city: dict[str, frozenset[str]] = {}
     entity_org: dict[str, frozenset[str]] = {}
+    entity_country: dict[str, frozenset[str]] = {}
     for e in entities:
         uid = e["entity_ulid"]
         if ine_municipalities is not None:
@@ -913,10 +959,17 @@ def _build_resolution_table(
             entity_city[uid] = frozenset()
         org_id = _org_map.get(uid)
         entity_org[uid] = frozenset([org_id]) if org_id is not None else frozenset()
+        cc = e.get("country_code")
+        entity_country[uid] = frozenset([cc]) if cc is not None else frozenset()
 
     cuf = ConstrainedUnionFind()
     for uid in all_ulids:
-        cuf._init(uid, city=entity_city.get(uid, frozenset()), org=entity_org.get(uid, frozenset()))
+        cuf._init(
+            uid,
+            city=entity_city.get(uid, frozenset()),
+            org=entity_org.get(uid, frozenset()),
+            country=entity_country.get(uid, frozenset()),
+        )
 
     # ── Signal rank for ordering β edges (higher rank → applied first) ────────
     _SIGNAL_RANK: dict[str, int] = {
@@ -946,9 +999,18 @@ def _build_resolution_table(
     # NOTE: B1 is placed AFTER β so that the high-confidence β edges win
     # when there is a conflict with a cross-city B1 edge.
     n_b1_chain_blocked = 0
+    n_b1_country_blocked = 0
     if b1_edges:
         for uid_a, uid_b in b1_edges:
             if uid_a not in all_ulids or uid_b not in all_ulids:
+                continue
+            # Country guard: a B1 (geo-blocking) edge must never cross a border.
+            # The CUF country_set constraint also rejects it, but skipping here
+            # keeps the rejection explicit and out of the city/org reject counter.
+            ca = next(iter(entity_country.get(uid_a, frozenset())), None)
+            cb = next(iter(entity_country.get(uid_b, frozenset())), None)
+            if ca is not None and cb is not None and ca != cb:
+                n_b1_country_blocked += 1
                 continue
             # Chain guard: skip if same non-null org (hard block, not constrained).
             oa = _org_map.get(uid_a)
@@ -959,6 +1021,8 @@ def _build_resolution_table(
             cuf.constrained_union(uid_a, uid_b)
         if n_b1_chain_blocked:
             log.info("B1 edges skipped (chain siblings): %d", n_b1_chain_blocked)
+        if n_b1_country_blocked:
+            log.info("B1 edges skipped (cross-country): %d", n_b1_country_blocked)
 
     n_rejected = cuf.n_constrained_rejections
     log.info(
@@ -1007,6 +1071,53 @@ def _build_resolution_table(
     n_dealers = len({r["resolved_dealer_ulid"] for r in result})
     log.info("Union-find: %d rows, %d resolved dealers", len(result), n_dealers)
     return result, n_rejected
+
+
+# ---------------------------------------------------------------------------
+# Pre-write country-isolation guard (COUNTRY-PROOF invariant, BLOCKING)
+# ---------------------------------------------------------------------------
+
+
+def _assert_no_cross_country_clusters(
+    resolution_rows: list[dict],
+    entity_by_ulid: dict[str, dict],
+) -> None:
+    """BLOCKING country-isolation guard — runs BEFORE the write/commit.
+
+    The PRIMARY prevention is mechanical and lives in the edge keys + the
+    constrained union-find: _build_edges never emits a cross-country edge
+    (Guard 0), and ConstrainedUnionFind rejects any cross-country union
+    transitively (country_set constraint). This guard is the defense-in-depth
+    mirror of cluster_vehicles._assert_no_cross_country_clusters: it recomputes,
+    per resolved dealer, the set of distinct member country_codes and RAISES if
+    any cluster spans more than one country — aborting the transaction so a
+    cross-border false-merge can never be written or served.
+
+    country_code is carried on entity (mig 0052); it is the only border signal.
+    """
+    cluster_countries: dict[str, set[str]] = defaultdict(set)
+    for r in resolution_rows:
+        e = entity_by_ulid.get(r["entity_ulid"], {})
+        cc = e.get("country_code")
+        if cc:
+            cluster_countries[r["resolved_dealer_ulid"]].add(cc)
+
+    offenders = {
+        canon: sorted(ccs)
+        for canon, ccs in cluster_countries.items()
+        if len(ccs) > 1
+    }
+    if offenders:
+        sample = list(offenders.items())[:5]
+        raise RuntimeError(
+            f"COUNTRY-PROOF VIOLATION: {len(offenders)} dealer cluster(s) span "
+            f">1 country_code — refusing to write/serve a cross-border false-merge. "
+            f"sample={sample}"
+        )
+    log.info(
+        "Country-isolation guard OK (beta): %d clusters, all single-country.",
+        len(cluster_countries),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1305,6 +1416,11 @@ def main() -> None:
         assert len(resolution_rows) == n_in, (
             f"Row count mismatch: {len(resolution_rows)} != {n_in}"
         )
+
+        # Step 6b: BLOCKING country-isolation guard (pre-write, COUNTRY-PROOF).
+        # Aborts the run before any write if a resolved dealer spans >1 country.
+        entity_by_ulid = {e["entity_ulid"]: e for e in entities}
+        _assert_no_cross_country_clusters(resolution_rows, entity_by_ulid)
 
         # Step 7: Collect notes for audit
         signal_counts: dict[str, int] = defaultdict(int)
