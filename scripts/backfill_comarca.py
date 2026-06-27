@@ -161,15 +161,19 @@ async def main() -> None:
 
     conn = await asyncpg.connect(DSN)
     try:
-        db_codes = {r["code"] for r in await conn.fetch("SELECT code FROM geo_municipality")}
+        # Comarca is the ES-only INE comarca-agraria layer; scope every write to ES so a
+        # foreign municipality sharing a 5-digit code (0053 dup-code coexistence) never
+        # inherits a Spanish comarca (comarca_id FK is simple → no composite-FK backstop).
+        db_codes = {r["code"] for r in await conn.fetch(
+            "SELECT code FROM geo_municipality WHERE country_code = 'ES'")}
 
         async with conn.transaction():
             # 1. Upsert comarcas, capture id per (province, name).
             cid: dict[tuple[str, str], int] = {}
             for (prov, name), ine in sorted(comarca_code.items()):
                 row = await conn.fetchrow(
-                    """INSERT INTO geo_comarca (province_code, name, ine_code, source)
-                       VALUES ($1, $2, $3, $4)
+                    """INSERT INTO geo_comarca (province_code, name, ine_code, source, country_code)
+                       VALUES ($1, $2, $3, $4, 'ES')
                        ON CONFLICT (province_code, name) DO UPDATE
                          SET ine_code = EXCLUDED.ine_code, source = EXCLUDED.source
                        RETURNING id""",
@@ -183,7 +187,7 @@ async def main() -> None:
                 if code5 in db_codes:
                     muni_to_cid[code5] = cid[(prov, name)]
             await conn.executemany(
-                "UPDATE geo_municipality SET comarca_id = $2 WHERE code = $1",
+                "UPDATE geo_municipality SET comarca_id = $2 WHERE code = $1 AND country_code = 'ES'",
                 list(muni_to_cid.items()),
             )
 
@@ -200,7 +204,7 @@ async def main() -> None:
                 else:
                     still_missing.append(f"{child}<-{parent}(parent uncovered)")
             await conn.executemany(
-                "UPDATE geo_municipality SET comarca_id = $2 WHERE code = $1",
+                "UPDATE geo_municipality SET comarca_id = $2 WHERE code = $1 AND country_code = 'ES'",
                 inherited,
             )
 
@@ -216,7 +220,7 @@ async def main() -> None:
                     direct.append((child, ci))
                     muni_to_cid[child] = ci
             await conn.executemany(
-                "UPDATE geo_municipality SET comarca_id = $2 WHERE code = $1",
+                "UPDATE geo_municipality SET comarca_id = $2 WHERE code = $1 AND country_code = 'ES'",
                 direct,
             )
 
@@ -226,6 +230,7 @@ async def main() -> None:
                      SET comarca_id = m.comarca_id
                     FROM geo_municipality m
                    WHERE e.municipality_code = m.code
+                     AND m.country_code = e.country_code
                      AND m.comarca_id IS NOT NULL"""
             )
 
