@@ -243,7 +243,7 @@ jobs:
     #   each rolled-back transaction; `migrate up` (schema to head) is the ONLY setup it needs.
     #
     # The final step FAILS the pipeline on any failure, error, SKIP, or if the suite shrinks below its
-    # proven floor (101) — so the gate can never silently degrade into green-washing.
+    # proven floor (110) — so the gate can never silently degrade into green-washing.
     services:
       postgres:
         image: postgres:16
@@ -296,6 +296,7 @@ jobs:
             tests/test_country_isolation_dealer.py \
             tests/test_country_isolation_vehicle.py \
             tests/test_country_isolation_dedup.py \
+            tests/test_country_isolation_overlay_dedup.py \
             tests/test_country_isolation_beta.py \
             tests/test_country_isolation_serving.py \
             tests/test_country_isolation_multicountry.py \
@@ -311,7 +312,7 @@ jobs:
         # Anti-green-wash: pytest already fails the job on a real regression (failure/error → non-zero
         # exit). This adds the two cases pytest exits 0 on but that would make the gate a lie:
         # ANY skip (the goldens did not run → DSN/DB/census misconfigured) or a suite that shrank below
-        # the proven floor of 101 tests (a golden file was deleted/emptied).
+        # the proven floor of 110 tests (a golden file was deleted/emptied).
         run: |
           python -c "
           import xml.etree.ElementTree as ET, sys
@@ -320,7 +321,7 @@ jobs:
           tot = lambda k: sum(int(s.get(k, 0)) for s in suites)
           tests, failures, errors, skipped = tot('tests'), tot('failures'), tot('errors'), tot('skipped')
           print('country-proof gate -> tests=%d failures=%d errors=%d skipped=%d' % (tests, failures, errors, skipped))
-          ok = failures == 0 and errors == 0 and skipped == 0 and tests >= 101
-          print('PASS: cross-border isolation mechanically enforced' if ok else 'FAIL: regression, or goldens SKIPPED (silent no-op gate), or suite shrank below floor 101')
+          ok = failures == 0 and errors == 0 and skipped == 0 and tests >= 110
+          print('PASS: cross-border isolation mechanically enforced' if ok else 'FAIL: regression, or goldens SKIPPED (silent no-op gate), or suite shrank below floor 110')
           sys.exit(0 if ok else 1)
           "

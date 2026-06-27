@@ -23,6 +23,12 @@ single-lookup v_dealer_resolved view stays correct.
 
 Safety guards (asserts; fail loudly, never force)
 -------------------------------------------------
+0. COUNTRY-PROOF: the straggler group key carries country_code (see
+   _RESIDUAL_GROUP_SQL + compute_residual_overlay), so two dealers sharing a
+   normalized name in the SAME numeric municipality_code but DIFFERENT countries
+   can never co-fuse (migrations/0053 lets DE province '28' coexist with ES
+   Madrid '28'). A pre-write BLOCKING guard (_assert_no_cross_country_residual)
+   is the defense-in-depth mirror of cluster_vehicles._assert_no_cross_country_clusters.
 1. Same municipality for every member of a group (blocking key).
 2. Same normalized street address OR all-null within a group (no branch merge).
 3. Chain names excluded (flexicar/ocasionplus/clicars/carplus/...): they share
@@ -116,6 +122,206 @@ class UnionFind:
         return dict(g)
 
 
+# ---------------------------------------------------------------------------
+# Residual name+muni+country group SQL + merge core (module scope)
+# ---------------------------------------------------------------------------
+# Extracted to module scope so the country-isolation golden
+# (tests/test_country_isolation_overlay_dedup.py) drives the REAL grouping +
+# classification the build runs, not a copy — mirrors build_canonical_dedup's
+# _DEEPLINK_CANON_SQL + _build_deeplink_merge_graph. build() loads rows via
+# asyncpg; the golden loads the same rows via psycopg2 inside a rolled-back
+# transaction — both feed compute_residual_overlay, the single source of truth
+# for which codes fuse.
+#
+# COUNTRY-PROOF: country_code is part of the straggler group key. The CTE `base`
+# carries e.country_code (cc); `g` GROUPS BY nm, mc, cc and the join re-binds cc,
+# so two dealers sharing a normalized name in the SAME numeric municipality_code
+# but DIFFERENT countries can NEVER share a group — the cross-border false-merge
+# vector (migrations/0053 lets DE province '28' coexist with ES Madrid '28').
+# entity.country_code is CHAR(2) NOT NULL DEFAULT 'ES' (migrations/0052), so for a
+# single-country census cc is a constant key element and the grouping — therefore
+# every fusion — is BYTE-IDENTICAL to the pre-country behaviour.
+_RESIDUAL_GROUP_SQL = """
+    WITH base AS (
+        SELECT lower(regexp_replace(coalesce(e.trade_name,e.legal_name),'[^a-zA-Z0-9]','','g')) nm,
+               e.municipality_code mc, e.country_code cc, e.cdp_code, e.entity_ulid, e.address,
+               COALESCE(vdr.resolved_cdp_code, e.cdp_code) rcode
+        FROM entity e
+        LEFT JOIN v_dealer_resolved vdr ON vdr.entity_ulid = e.entity_ulid
+        WHERE e.kind NOT IN ('particular') AND e.status='active'
+          AND coalesce(e.trade_name,e.legal_name) IS NOT NULL
+          AND e.municipality_code IS NOT NULL ),
+    g AS (SELECT nm, mc, cc FROM base GROUP BY nm, mc, cc HAVING count(DISTINCT rcode) > 1)
+    SELECT b.nm, b.mc, b.cc, b.cdp_code, b.rcode, b.address
+    FROM base b JOIN g ON g.nm=b.nm AND g.mc=b.mc AND g.cc=b.cc
+    ORDER BY b.nm, b.mc, b.cc
+"""
+
+
+def compute_residual_overlay(grp_rows, base_rows, avail):
+    """Pure merge core (no I/O): classify residual (name, muni, country) groups
+    and fold the SAFE ones into the BASE overlay via union-find. Returns the data
+    build() needs to assert + persist. Single source of truth for which codes
+    fuse — drives both build() and the country-isolation golden.
+
+    grp_rows : rows from _RESIDUAL_GROUP_SQL (nm, mc, cc, cdp_code, rcode, address).
+    base_rows: canonical_dedup rows for BASE_RUN (canonical_cdp_code, super_canonical_cdp_code).
+    avail    : {resolved_cdp_code: available_vehicle_count} for representative pick.
+
+    Returns a dict with: groups, new_edges, comps, out, safe_codes,
+    base_super_map, code_country, multi_base, stats.
+    """
+    # base_super: canonical -> stored super in BASE_RUN. base_members: super ->
+    # the full set of base members it aggregates. Used by the bystander-drag
+    # refinement (root fix for the cross-dealer over-merge the safety assert caught).
+    base_super_run = {r["canonical_cdp_code"]: r["super_canonical_cdp_code"] for r in base_rows}
+    base_members: dict[str, set[str]] = defaultdict(set)
+    for r in base_rows:
+        base_members[r["super_canonical_cdp_code"]].add(r["canonical_cdp_code"])
+        base_members[r["super_canonical_cdp_code"]].add(r["super_canonical_cdp_code"])
+
+    def _resolved_base_super(code: str) -> str:
+        """Stored base super-canonical for a resolved code, else the code itself."""
+        return base_super_run.get(code, code)
+
+    # Group members by (nm, mc, cc) — country IS part of the key (COUNTRY-PROOF):
+    # a straggler group never spans a border. code_country maps every group code
+    # (cdp_code + its rcode) to its country, for the blocking guard below.
+    groups: dict[tuple[str, str, str], list] = defaultdict(list)
+    code_country: dict[str, str] = {}
+    for r in grp_rows:
+        groups[(r["nm"], r["mc"], r["cc"])].append(r)
+        code_country[r["cdp_code"]] = r["cc"]
+        code_country[r["rcode"]] = r["cc"]
+
+    # A base super-canonical the group touches that carries a BYSTANDER member
+    # outside the group's own {cdp_code ∪ rcode} would be collaterally dragged by
+    # the name-key edge -> ambiguous cross-dealer fusion. Such groups are excluded.
+    def _is_eligible(members) -> bool:
+        rcodes = {m["rcode"] for m in members}
+        own_codes = {m["cdp_code"] for m in members} | rcodes
+        touched_supers = {_resolved_base_super(rc) for rc in rcodes}
+        for sup in touched_supers:
+            if base_members.get(sup, {sup}) - own_codes:
+                return False
+        return True
+
+    new_edges: list[tuple[str, str]] = []   # (resolved_code_i, representative)
+    safe_groups = excluded_chain = excluded_addr = excluded_ambiguous = 0
+    collapsed_codes = 0
+    for (nm, mc, cc), members in groups.items():
+        if any(tok in nm for tok in CHAIN_TOKENS):
+            excluded_chain += 1
+            continue
+        addrs = {_norm(m["address"]) for m in members if m["address"]}
+        if len(addrs) > 1:                      # distinct street addresses -> possible branches
+            excluded_addr += 1
+            continue
+        rcodes = sorted({m["rcode"] for m in members})
+        if len(rcodes) < 2:
+            continue
+        if not _is_eligible(members):           # bystander drag -> ambiguous cross-dealer fusion
+            excluded_ambiguous += 1
+            print(f"  EXCLUDED ambiguous group nm={nm!r} mc={mc!r} cc={cc!r} rcodes={rcodes} "
+                  f"(name-key edge would fuse >1 distinct base dealer + drag a bystander)")
+            continue
+        # representative = resolved code with most available vehicles; tie-break cdp asc
+        rep = min(rcodes, key=lambda c: (-avail.get(c, 0), c))
+        for ri in rcodes:
+            if ri != rep:
+                new_edges.append((ri, rep))
+                collapsed_codes += 1
+        safe_groups += 1
+
+    # Union-find over base edges + residual edges
+    uf = UnionFind()
+    for r in base_rows:
+        uf.union(r["canonical_cdp_code"], r["super_canonical_cdp_code"])
+    for a, b in new_edges:
+        uf.union(a, b)
+    comps = {root: m for root, m in uf.components().items() if len(m) >= 2}
+
+    # PRESERVE base representatives: an existing component keeps its stored super;
+    # a newly-fused component has exactly one base super present (the dominant's).
+    out: list[tuple[str, str, int, bool]] = []   # (canon, super, comp_size, is_rep)
+    multi_base = 0
+    for _, members in comps.items():
+        present = {base_super_run[m] for m in members if m in base_super_run}
+        if len(present) == 1:
+            rep = next(iter(present))
+        elif len(present) == 0:
+            rep = min(members, key=lambda c: (-avail.get(c, 0), c))
+        else:
+            multi_base += 1                       # would fuse two base components — flagged below
+            rep = min(present, key=lambda c: (-avail.get(c, 0), c))
+        for m in members:
+            out.append((m, rep, len(members), m == rep))
+
+    # safe_codes: codes inside SAFE residual groups (SAME eligibility filters as
+    # above). Whitelists the only canonicals allowed to change representative.
+    safe_codes: set[str] = set()
+    for (nm, mc, cc), members in groups.items():
+        if any(tok in nm for tok in CHAIN_TOKENS):
+            continue
+        if len({_norm(m["address"]) for m in members if m["address"]}) > 1:
+            continue
+        if not _is_eligible(members):
+            continue
+        for m in members:
+            safe_codes.add(m["cdp_code"])
+            safe_codes.add(m["rcode"])
+
+    return {
+        "groups": dict(groups),
+        "new_edges": new_edges,
+        "comps": comps,
+        "out": out,
+        "safe_codes": safe_codes,
+        "base_super_map": base_super_run,
+        "code_country": code_country,
+        "multi_base": multi_base,
+        "stats": {
+            "safe_groups": safe_groups,
+            "excluded_chain": excluded_chain,
+            "excluded_addr": excluded_addr,
+            "excluded_ambiguous": excluded_ambiguous,
+            "collapsed_codes": collapsed_codes,
+        },
+    }
+
+
+def _assert_no_cross_country_residual(out, code_country) -> None:
+    """BLOCKING country-isolation guard — runs BEFORE the write/commit.
+
+    The PRIMARY prevention is mechanical and lives in the group key:
+    _RESIDUAL_GROUP_SQL / compute_residual_overlay key every straggler group by
+    country_code, so a cross-border fusion edge is never generated. This guard is
+    the defense-in-depth mirror of cluster_vehicles._assert_no_cross_country_clusters:
+    it recomputes, per residual super-canonical, the set of distinct member
+    country_codes and RAISES if any fused component spans >1 country — aborting the
+    run (rollback; nothing is written) so a cross-border false-merge can never be
+    written or served. Codes with no known country (base-only nodes) are skipped.
+    """
+    comp_countries: dict[str, set[str]] = defaultdict(set)
+    for (canon, super_, _size, _is_rep) in out:
+        for code in (canon, super_):          # count BOTH endpoints of the fusion
+            cc = code_country.get(code)
+            if cc:
+                comp_countries[super_].add(cc)
+    offenders = {
+        super_: sorted(ccs)
+        for super_, ccs in comp_countries.items()
+        if len(ccs) > 1
+    }
+    if offenders:
+        sample = list(offenders.items())[:5]
+        raise RuntimeError(
+            f"COUNTRY-PROOF VIOLATION: {len(offenders)} residual super-canonical(s) span "
+            f">1 country_code — refusing to write/serve a cross-border false-merge. "
+            f"sample={sample}"
+        )
+
+
 async def build(conn: asyncpg.Connection, commit: bool) -> None:
     # ── 1. Existing served overlay edges (member -> super) from BASE_RUN ──────
     base_rows = await conn.fetch(
@@ -127,41 +333,11 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
         sys.exit(1)
     print(f"[residual-dedup] base={BASE_RUN} rows={len(base_rows)}")
 
-    # base_super: canonical -> its stored super in BASE_RUN. base_members: super ->
-    # the full set of base members it aggregates (incl. the super itself). Used by the
-    # group-eligibility refinement below to detect BYSTANDER drag (root fix for the
-    # cross-dealer over-merge the safety assert caught — see header + step 3).
-    base_super_run = {r["canonical_cdp_code"]: r["super_canonical_cdp_code"] for r in base_rows}
-    base_members: dict[str, set[str]] = defaultdict(set)
-    for r in base_rows:
-        base_members[r["super_canonical_cdp_code"]].add(r["canonical_cdp_code"])
-        base_members[r["super_canonical_cdp_code"]].add(r["super_canonical_cdp_code"])
-
-    def _resolved_base_super(code: str) -> str:
-        """Stored base super-canonical for a resolved code, else the code itself."""
-        return base_super_run.get(code, code)
-
-    # ── 2. Residual name+muni groups still split across >1 resolved code ──────
-    grp_rows = await conn.fetch(
-        """
-        WITH base AS (
-            SELECT lower(regexp_replace(coalesce(e.trade_name,e.legal_name),'[^a-zA-Z0-9]','','g')) nm,
-                   e.municipality_code mc, e.cdp_code, e.entity_ulid, e.address,
-                   COALESCE(vdr.resolved_cdp_code, e.cdp_code) rcode
-            FROM entity e
-            LEFT JOIN v_dealer_resolved vdr ON vdr.entity_ulid = e.entity_ulid
-            WHERE e.kind NOT IN ('particular') AND e.status='active'
-              AND coalesce(e.trade_name,e.legal_name) IS NOT NULL
-              AND e.municipality_code IS NOT NULL ),
-        g AS (SELECT nm, mc FROM base GROUP BY nm, mc HAVING count(DISTINCT rcode) > 1)
-        SELECT b.nm, b.mc, b.cdp_code, b.rcode, b.address
-        FROM base b JOIN g ON g.nm=b.nm AND g.mc=b.mc
-        ORDER BY b.nm, b.mc
-        """
-    )
-    groups: dict[tuple[str, str], list[asyncpg.Record]] = defaultdict(list)
-    for r in grp_rows:
-        groups[(r["nm"], r["mc"])].append(r)
+    # ── 2. Residual name+muni+country groups still split across >1 resolved code
+    # Grouping SQL + classification/union-find live at module scope
+    # (_RESIDUAL_GROUP_SQL + compute_residual_overlay) so the country-isolation
+    # golden drives the EXACT decision logic this build runs, not a copy.
+    grp_rows = await conn.fetch(_RESIDUAL_GROUP_SQL)
 
     # available-count per resolved code (for deterministic representative pick)
     avail = {
@@ -176,109 +352,36 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
         )
     }
 
-    # ── 3. Classify groups; build residual edges for SAFE ones only ──────────
-    #
-    # Group-eligibility refinement (ROOT FIX, not a guard bypass)
-    # ----------------------------------------------------------
-    # A (nm,mc) group qualifies only because its members currently resolve to >1
-    # base super-canonical (that is literally the HAVING clause). For an HONEST
-    # straggler, those base supers are the two endpoints we WANT to merge and they
-    # carry no other members — collapsing them is exactly the intent.
-    #
-    # The over-merge the safety assert caught (aragncar|50297: "Aragón Car" vs
-    # "VenderMiCoche.es Zaragoza") is different: one polluted node (CDP-ES-50-N86NHNVB
-    # "ARAGÓN CAR" mojibake) was previously deep-link/canonical_key-tied into
-    # VenderMiCoche's base component (super NK87HMZV, which ALSO contains the unrelated
-    # CDP-ES-50-RXFCVG3Z "Cars Zaragoza"). The name token "aragncar" then chains the
-    # WHOLE VenderMiCoche component into Aragón Car, dragging "Cars Zaragoza" — a node
-    # that shares NO name+muni key with the group — across two distinct physical dealers.
-    #
-    # The cause is precisely that: a base super-canonical the group touches carries a
-    # BYSTANDER member outside the group's own {cdp_code ∪ rcode} set. The name alone
-    # cannot disambiguate which physical dealer that polluted node belongs to, so the
-    # edge is unsafe. We classify such groups `excluded_ambiguous` and emit no edge.
-    #
-    # Verified live (2026-06-23, BASE=particular-canonkey-v1): this drops the 4 ambiguous groups
-    # (incl. aragncar|50297, whose touched base supers carry a bystander like the VenderMiCoche.es
-    # Zaragoza node) and KEEPS the 19 unambiguous straggler merges (SAFE=19, excl_ambiguous=4,
-    # excl_addr=36, excl_chain=4). After this, the union-find produces multi_base=0 and the
-    # Invariant-2 collateral count is 0 — the asserts pass on merit, NOT by relaxation. A plain
-    # "members span >1 base super" rule would be WRONG (safe groups span >1 base super by
-    # construction); only the bystander-drag (a base member outside the group's own codes) is the
-    # over-merge, which is exactly what _is_eligible() filters.
-    def _is_eligible(members: list[asyncpg.Record]) -> bool:
-        rcodes = {m["rcode"] for m in members}
-        own_codes = {m["cdp_code"] for m in members} | rcodes
-        touched_supers = {_resolved_base_super(rc) for rc in rcodes}
-        for sup in touched_supers:
-            # Any base member outside the group's own codes would be collaterally
-            # dragged by the name-key edge -> ambiguous cross-dealer fusion.
-            if base_members.get(sup, {sup}) - own_codes:
-                return False
-        return True
+    # ── 3. Classify groups + fold into base overlay (pure core) ──────────────
+    res = compute_residual_overlay(grp_rows, base_rows, avail)
+    groups = res["groups"]
+    new_edges = res["new_edges"]
+    comps = res["comps"]
+    out = res["out"]
+    safe_codes = res["safe_codes"]
+    base_super_map = res["base_super_map"]
+    code_country = res["code_country"]
+    multi_base = res["multi_base"]
+    safe_groups = res["stats"]["safe_groups"]
+    excluded_chain = res["stats"]["excluded_chain"]
+    excluded_addr = res["stats"]["excluded_addr"]
+    excluded_ambiguous = res["stats"]["excluded_ambiguous"]
+    collapsed_codes = res["stats"]["collapsed_codes"]
 
-    new_edges: list[tuple[str, str]] = []   # (resolved_code_i, representative)
-    safe_groups = excluded_chain = excluded_addr = excluded_ambiguous = 0
-    collapsed_codes = 0
-    for (nm, mc), members in groups.items():
-        if any(tok in nm for tok in CHAIN_TOKENS):
-            excluded_chain += 1
-            continue
-        addrs = {_norm(m["address"]) for m in members if m["address"]}
-        if len(addrs) > 1:                      # distinct street addresses -> possible branches
-            excluded_addr += 1
-            continue
-        rcodes = sorted({m["rcode"] for m in members})
-        if len(rcodes) < 2:
-            continue
-        if not _is_eligible(members):           # bystander drag -> ambiguous cross-dealer fusion
-            excluded_ambiguous += 1
-            print(f"  EXCLUDED ambiguous group nm={nm!r} mc={mc!r} rcodes={rcodes} "
-                  f"(name-key edge would fuse >1 distinct base dealer + drag a bystander)")
-            continue
-        # representative = resolved code with most available vehicles; tie-break cdp asc
-        rep = min(rcodes, key=lambda c: (-avail.get(c, 0), c))
-        for ri in rcodes:
-            if ri != rep:
-                new_edges.append((ri, rep))
-                collapsed_codes += 1
-        safe_groups += 1
+    # ── 3b. BLOCKING country-isolation guard (pre-write, COUNTRY-PROOF) ───────
+    # Aborts the run (rollback — nothing written) before the write transaction if
+    # any fused residual super-canonical spans >1 country. Mirror of
+    # cluster_vehicles._assert_no_cross_country_clusters; defense-in-depth behind
+    # the country_code group key.
+    _assert_no_cross_country_residual(out, code_country)
 
     print(f"  residual groups total={len(groups)}  SAFE={safe_groups}  "
           f"excl_chain={excluded_chain}  excl_addr={excluded_addr}  "
           f"excl_ambiguous={excluded_ambiguous}")
     print(f"  residual edges (codes collapsed)={collapsed_codes}")
 
-    # ── 4. Union-find over base edges + residual edges ───────────────────────
-    uf = UnionFind()
-    for r in base_rows:
-        uf.union(r["canonical_cdp_code"], r["super_canonical_cdp_code"])
-    for a, b in new_edges:
-        uf.union(a, b)
-    comps = {root: m for root, m in uf.components().items() if len(m) >= 2}
-
-    # PRESERVE base representatives: a component that already existed in BASE keeps
-    # its stored super_canonical (so served cdp_codes for untouched dealers do NOT
-    # churn). A newly-fused component has exactly one base super present (the
-    # dominant's) -> use it. Pure-new components (none) fall back to (-avail, cdp).
-    base_super = {r["canonical_cdp_code"]: r["super_canonical_cdp_code"] for r in base_rows}
-    out: list[tuple[str, str, int, bool]] = []   # (canon, super, comp_size, is_rep)
-    multi_base = 0
-    for _, members in comps.items():
-        present = {base_super[m] for m in members if m in base_super}
-        if len(present) == 1:
-            rep = next(iter(present))
-        elif len(present) == 0:
-            rep = min(members, key=lambda c: (-avail.get(c, 0), c))
-        else:
-            multi_base += 1                       # would fuse two base components — flagged below
-            rep = min(present, key=lambda c: (-avail.get(c, 0), c))
-        for m in members:
-            out.append((m, rep, len(members), m == rep))
-
     # ── 5. Safety asserts vs the base overlay ────────────────────────────────
     m2rep = {row[0]: row[1] for row in out}              # new: member -> final rep
-    base_super_map = {r["canonical_cdp_code"]: r["super_canonical_cdp_code"] for r in base_rows}
 
     def base_rep(c: str) -> str:
         return base_super_map.get(c, c)                   # stored base super, else self
@@ -293,21 +396,7 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
     broken = [rp for rp in base_reps if new_rep(rp) != rp and rp not in intentional]
 
     # Invariant 2: the ONLY canonicals whose representative changed are inside the
-    # SAFE residual groups. No collateral movement anywhere else. The safe_codes set
-    # MUST use the SAME eligibility filters as step 3 (chain, addr, AND the bystander
-    # ambiguity filter) — otherwise an excluded_ambiguous group's codes would be
-    # whitelisted here and mask the very collateral the guard exists to catch.
-    safe_codes: set[str] = set()
-    for (nm, mc), members in groups.items():
-        if any(tok in nm for tok in CHAIN_TOKENS):
-            continue
-        if len({_norm(m["address"]) for m in members if m["address"]}) > 1:
-            continue
-        if not _is_eligible(members):
-            continue
-        for m in members:
-            safe_codes.add(m["cdp_code"])
-            safe_codes.add(m["rcode"])
+    # SAFE residual groups (safe_codes uses the same eligibility filters as step 3).
     all_nodes = {c for row in out for c in (row[0], row[1])} | set(base_super_map)
     changed = [c for c in all_nodes if base_rep(c) != new_rep(c)]
     collateral = [c for c in changed if c not in safe_codes]
