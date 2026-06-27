@@ -40,7 +40,7 @@ SELECT entity_ulid, province_code, lat, lon, postcode
 async def main(apply: bool) -> None:
     conn = await asyncpg.connect(DSN)
     try:
-        geo = await MunicipalityGeocoder.load(conn)
+        geo = await MunicipalityGeocoder.load(conn, country_code="ES")
         cp = PostcodeIndex.load()
         # Valid municipality codes (for the self-verify gate) — pull once.
         valid = {r["code"] for r in await conn.fetch("SELECT code FROM geo_municipality")}

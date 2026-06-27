@@ -189,7 +189,7 @@ async def main(dry_run: bool, sample: int | None) -> None:
 
         # ---- Load geocoders ----
         print("Loading MunicipalityGeocoder from geo_municipality centroids...")
-        muni_geocoder = await MunicipalityGeocoder.load(conn)
+        muni_geocoder = await MunicipalityGeocoder.load(conn, country_code="ES")
         print(
             f"  Loaded {muni_geocoder.centroid_count()} centroids "
             f"across {muni_geocoder.province_count()} provinces."

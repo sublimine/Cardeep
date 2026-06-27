@@ -127,13 +127,26 @@ class MunicipalityGeocoder:
         self._index = index
 
     @classmethod
-    async def load(cls, conn: asyncpg.Connection) -> "MunicipalityGeocoder":
-        """Build the in-memory KNN index from geo_municipality centroids."""
+    async def load(
+        cls, conn: asyncpg.Connection, country_code: str = "ES"
+    ) -> "MunicipalityGeocoder":
+        """Build the in-memory KNN index from geo_municipality centroids for ONE tenant.
+
+        ``country_code`` scopes the centroid load so the reverse-geocoder never folds a
+        foreign country's centroid into a province bucket. geo_municipality's PK is the
+        composite ``(country_code, code)`` since migration 0053, and a DE province '28'
+        deliberately coexists with ES Madrid '28' — without this filter both countries'
+        centroids landed in the same ``province_code`` bucket and a query in one country
+        could match the other's centroid. Mirrors ``GeoResolver.load(conn, country_code)``
+        (pipeline/geo.py). Defaults to 'ES' so every existing caller stays byte-identical
+        until a second country is onboarded (today all geo rows are ES).
+        """
         rows = await conn.fetch(
             "SELECT code, province_code, lat, lon "
             "FROM geo_municipality "
-            "WHERE lat IS NOT NULL AND lon IS NOT NULL "
-            "ORDER BY province_code, code"
+            "WHERE country_code = $1 AND lat IS NOT NULL AND lon IS NOT NULL "
+            "ORDER BY province_code, code",
+            country_code,
         )
         # Group by province
         prov_data: dict[str, list[tuple[float, float, str]]] = {}

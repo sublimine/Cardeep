@@ -116,11 +116,11 @@ async def open_or_refresh(
         INSERT INTO gestion_item
             (detector, subject_type, subject_key, severity, score,
              measured, baseline, lane, state, quarantines,
-             opened_at, sla_due, dedupe_key)
+             opened_at, sla_due, dedupe_key, country_code)
         VALUES
             ($1, $2, $3, $4, $5,
              $6::jsonb, $7::jsonb, $8, 'OPEN', $9,
-             now(), $10, $11)
+             now(), $10, $11, $12)
         ON CONFLICT (dedupe_key) DO UPDATE
             SET
                 measured   = EXCLUDED.measured,
@@ -155,6 +155,7 @@ async def open_or_refresh(
         anomaly.quarantines,
         sla_due,      # datetime | None — asyncpg encodes as TIMESTAMPTZ natively
         anomaly.dedupe_key,
+        anomaly.country_code,
     )
 
     item_id = row["id"]

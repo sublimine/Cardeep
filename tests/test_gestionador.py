@@ -286,7 +286,7 @@ class TestStaleness:
     def test_fresh_entity_no_item(self):
         """Entity 1 day old with 3-day TTL (ratio=0.33) → no item."""
         rows = [{"cdp_code": "CDP-ES-28-FRESH", "kind": "compraventa",
-                 "last_seen": None, "age_seconds": 86400}]
+                 "last_seen": None, "age_seconds": 86400, "country_code": "ES"}]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_staleness(conn))
         assert results == []
@@ -294,7 +294,7 @@ class TestStaleness:
     def test_warning_ratio_between_1_and_3(self):
         """Compraventa 7 days old (ratio=7/3=2.33 → warning, AUTO_FIX, no quarantine."""
         rows = [{"cdp_code": "CDP-ES-28-STALE", "kind": "compraventa",
-                 "last_seen": None, "age_seconds": 7 * 86400}]
+                 "last_seen": None, "age_seconds": 7 * 86400, "country_code": "ES"}]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_staleness(conn))
         assert len(results) == 1
@@ -306,7 +306,7 @@ class TestStaleness:
     def test_critical_ratio_over_3(self):
         """Compraventa 11 days old (ratio=11/3=3.67 → critical, quarantines."""
         rows = [{"cdp_code": "CDP-ES-28-CRIT", "kind": "compraventa",
-                 "last_seen": None, "age_seconds": 11 * 86400}]
+                 "last_seen": None, "age_seconds": 11 * 86400, "country_code": "ES"}]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_staleness(conn))
         assert len(results) == 1
@@ -318,7 +318,7 @@ class TestStaleness:
         """More than 200 entities stale → one source-level item, no per-entity spam."""
         rows = [
             {"cdp_code": f"CDP-ES-08-{i:04d}", "kind": "compraventa",
-             "last_seen": None, "age_seconds": 30 * 86400}
+             "last_seen": None, "age_seconds": 30 * 86400, "country_code": "ES"}
             for i in range(250)
         ]
         conn = _make_conn(fetch_result=rows)
@@ -392,7 +392,7 @@ class TestFabrication:
 class TestCoverageGap:
     def test_desguace_at_anchor_no_item(self):
         """Desguace at anchor floor (1292) → no item (relgap=0)."""
-        rows = [{"kind": "desguace", "covered": 1292}]
+        rows = [{"country_code": "ES", "kind": "desguace", "covered": 1292}]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_coverage_gap(conn))
         # relgap = 0 < 0.10 → no item
@@ -403,7 +403,7 @@ class TestCoverageGap:
         """Garaje: covered=7220, anchor=29955.
         Since covered < anchor (hard floor breach), severity = critical per V4 §3.6.
         The anchor is the PA floor minimum; being below it is an anchor breach."""
-        rows = [{"kind": "garaje", "covered": 7220}]
+        rows = [{"country_code": "ES", "kind": "garaje", "covered": 7220}]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_coverage_gap(conn))
         garaje_items = [r for r in results if r.subject_key == "garaje"]
@@ -419,7 +419,7 @@ class TestCoverageGap:
         Simulate a covered that is above the floor but below a higher estimate:
         covered=2500, anchor=2018 → covered >= anchor, no anchor breach.
         relgap = 0 (no gap below floor) → no item."""
-        rows = [{"kind": "concesionario_oficial", "covered": 2500}]
+        rows = [{"country_code": "ES", "kind": "concesionario_oficial", "covered": 2500}]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_coverage_gap(conn))
         oficial_items = [r for r in results if r.subject_key == "concesionario_oficial"]
@@ -428,7 +428,7 @@ class TestCoverageGap:
 
     def test_anchor_breach_critical(self):
         """Covered < anchor floor (desguace=1000 < 1292) → critical."""
-        rows = [{"kind": "desguace", "covered": 1000}]
+        rows = [{"country_code": "ES", "kind": "desguace", "covered": 1000}]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_coverage_gap(conn))
         desguace_items = [r for r in results if r.subject_key == "desguace"]
@@ -437,7 +437,8 @@ class TestCoverageGap:
 
     def test_coverage_gap_never_quarantines(self):
         """coverage_gap items must never have quarantines=True."""
-        rows = [{"kind": kind, "covered": 1} for kind in COVERAGE_ANCHORS]
+        rows = [{"country_code": country, "kind": kind, "covered": 1}
+                for (country, kind) in COVERAGE_ANCHORS]
         conn = _make_conn(fetch_result=rows)
         results = run(detect_coverage_gap(conn))
         assert all(not r.quarantines for r in results)

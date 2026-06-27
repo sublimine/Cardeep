@@ -75,11 +75,16 @@ FAB_COLLAPSE_KAPPA = 1.10     # >10% of distinct sources fused
 FAB_CV_DEGENERATE = 0.01      # coefficient of variation < 1% = degenerate
 
 # 3.6 coverage_gap — anchor floors (V4 §1 VERIFIED sources)
-COVERAGE_ANCHORS: dict[str, int] = {
-    "desguace":             1_292,   # DGT official CAT registry (exact)
-    "concesionario_oficial": 2_018,  # FACONAUTO franchised
-    "compraventa":          1_662,   # Paginas Amarillas floor
-    "garaje":              29_955,   # Paginas Amarillas
+# Keyed by (country_code, kind): coverage floors are country-specific national registries (the
+# values below are the Spanish DGT / FACONAUTO / Páginas Amarillas figures). A second country
+# onboards by ADDING its own ('XX', kind) rows; coverage_gap then evaluates each country against its
+# OWN floor and dedupes per country. ES is byte-identical (same four floors, and in the single-tenant
+# census the per-(country,kind) covered count equals the old per-kind count).
+COVERAGE_ANCHORS: dict[tuple[str, str], int] = {
+    ("ES", "desguace"):              1_292,   # DGT official CAT registry (exact)
+    ("ES", "concesionario_oficial"): 2_018,   # FACONAUTO franchised
+    ("ES", "compraventa"):           1_662,   # Paginas Amarillas floor
+    ("ES", "garaje"):               29_955,   # Paginas Amarillas
 }
 COVERAGE_RELGAP_INFO = 0.10
 COVERAGE_RELGAP_WARN = 0.40
@@ -124,6 +129,12 @@ class AnomalyResult:
     lane: str                   # AUTO_FIX | RESEARCH | QUARANTINE | ESCALATE_*
     quarantines: bool
     dedupe_key: str             # detector|subject_key|bucket — idempotency
+    country_code: str = "ES"    # tenant scope. Threaded into the dedupe_key of BY-KIND aggregated
+                                # detectors (staleness storm, coverage_gap) so an ES and a DE alert of
+                                # the same kind/bucket do NOT collapse, and written to
+                                # gestion_item.country_code (migration 0064). Defaults 'ES' so every
+                                # per-subject detector (cdp_code/vehicle_ulid keyed, already
+                                # country-safe) stays byte-identical in the single-tenant census.
 
 
 def _rel(a: float, b: float) -> float:
@@ -448,6 +459,7 @@ async def detect_staleness(conn: asyncpg.Connection) -> list[AnomalyResult]:
         SELECT
             e.cdp_code,
             e.kind,
+            e.country_code,
             e.last_seen,
             extract(epoch FROM (now() - e.last_seen)) AS age_seconds
         FROM entity e
@@ -458,11 +470,13 @@ async def detect_staleness(conn: asyncpg.Connection) -> list[AnomalyResult]:
     results: list[AnomalyResult] = []
     bucket = _daily_bucket()
 
-    # Group by kind for storm suppression
-    stale_by_kind: dict[str, list[dict]] = {}
+    # Group by (country, kind) for storm suppression. A storm is per-country: an ES garaje storm and
+    # a DE garaje storm are distinct source-level items and never share a dedupe_key (red-team final).
+    stale_by_group: dict[tuple[str, str], list[dict]] = {}
 
     for row in rows:
         kind = row["kind"]
+        country = row["country_code"]
         ttl = STALENESS_TTL.get(kind, STALENESS_TTL["garaje"])
         age = float(row["age_seconds"])
         ratio = age / ttl
@@ -472,13 +486,14 @@ async def detect_staleness(conn: asyncpg.Connection) -> list[AnomalyResult]:
         entry = {
             "cdp_code": row["cdp_code"],
             "kind": kind,
+            "country_code": country,
             "age_seconds": age,
             "ttl": ttl,
             "ratio": ratio,
         }
-        stale_by_kind.setdefault(kind, []).append(entry)
+        stale_by_group.setdefault((country, kind), []).append(entry)
 
-    for kind, stale_list in stale_by_kind.items():
+    for (country, kind), stale_list in stale_by_group.items():
         # Storm suppression: collapse if too many
         if len(stale_list) > STALENESS_STORM_THRESHOLD:
             results.append(AnomalyResult(
@@ -495,7 +510,8 @@ async def detect_staleness(conn: asyncpg.Connection) -> list[AnomalyResult]:
                           "ttl_seconds": STALENESS_TTL.get(kind)},
                 lane="ESCALATE_GASTO",
                 quarantines=False,
-                dedupe_key=f"staleness|kind:{kind}|{bucket}",
+                dedupe_key=f"staleness|{country}|kind:{kind}|{bucket}",
+                country_code=country,
             ))
             continue
 
@@ -518,6 +534,7 @@ async def detect_staleness(conn: asyncpg.Connection) -> list[AnomalyResult]:
                 lane="AUTO_FIX",
                 quarantines=quarantines,
                 dedupe_key=f"staleness|{cdp_code}|{bucket}",
+                country_code=entry["country_code"],
             ))
 
     return results
@@ -702,21 +719,25 @@ async def detect_coverage_gap(conn: asyncpg.Connection) -> list[AnomalyResult]:
     Uses the VERIFIED anchor floors from V4 §1 (DGT for desguace,
     FACONAUTO for concesionario_oficial, PA floor for compraventa/garaje).
     """
-    # Covered count per kind (active entities only)
+    # Covered count per (country, kind) (active entities only). Grouping by country keeps each
+    # country's coverage compared to its OWN anchor floor (and dedupes the alert per country) — a
+    # 2nd country's rows never inflate the ES count nor collide on the dedupe_key (red-team final).
     covered_sql = """
-        SELECT kind, count(*) AS covered
+        SELECT country_code, kind, count(*) AS covered
         FROM entity
         WHERE status = 'active'
-        GROUP BY kind
+        GROUP BY country_code, kind
     """
     covered_rows = await conn.fetch(covered_sql)
-    covered: dict[str, int] = {r["kind"]: int(r["covered"]) for r in covered_rows}
+    covered: dict[tuple[str, str], int] = {
+        (r["country_code"], r["kind"]): int(r["covered"]) for r in covered_rows
+    }
 
     results: list[AnomalyResult] = []
     bucket = _daily_bucket()
 
-    for kind, anchor in COVERAGE_ANCHORS.items():
-        c = covered.get(kind, 0)
+    for (country, kind), anchor in COVERAGE_ANCHORS.items():
+        c = covered.get((country, kind), 0)
         gap = max(0, anchor - c)
         relgap = gap / max(anchor, 1)
 
@@ -742,7 +763,8 @@ async def detect_coverage_gap(conn: asyncpg.Connection) -> list[AnomalyResult]:
                       "relgap_warn": COVERAGE_RELGAP_WARN},
             lane="RESEARCH",
             quarantines=False,  # coverage_gap never quarantines (V4 §3.10)
-            dedupe_key=f"coverage_gap|{kind}|{bucket}",
+            dedupe_key=f"coverage_gap|{country}|{kind}|{bucket}",
+            country_code=country,
         ))
 
     return results
