@@ -4,8 +4,11 @@ Fills entity_completion for ALL served dealers (kind <> 'particular' with >= 1
 available vehicle) using a single INSERT … SELECT that mirrors the gate logic
 in pipeline/complete.py exactly:
 
-    G1  entity exists ∧ province_code ~ '^(0[1-9]|[1-4][0-9]|5[0-2])$'
-        ∧ cdp_code ~ '^CDP-ES-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$'
+    G1  entity exists ∧ cdp_code ~ '^CDP-[A-Z]{2}-([0-9A-Z]{2})-[0-9A-HJKMNP-TV-Z]{8}$'
+        ∧ province_code valid for the entity's country (ES: '^(0[1-9]|[1-4][0-9]|5[0-2])$'
+        01-52 grid, byte-identical; non-ES: '^[0-9A-Z]{2}$' generic geo_province.code shape)
+        OR a NATIONAL kind with NULL province. Country-scoped exactly like check_g1 in
+        complete.py (commit 052fa8f) and migration 0053's country-guarded geo CHECKs.
     G2  (count deep_link NOT NULL / count available) >= 0.98
         computed purely from the vehicle table (same numerator/denominator
         as check_g2 in complete.py).
@@ -57,11 +60,27 @@ import psycopg2.extras
 # ---------------------------------------------------------------------------
 
 # Gate patterns (mirrors pipeline/complete.py constants exactly)
+# Valid province codes for Spain: 01-52 (as zero-padded 2-char strings).
 _PROVINCE_PATTERN = r"^(0[1-9]|[1-4][0-9]|5[0-2])$"
+# Non-ES tenants do not follow the Spanish 01-52 grid: France's Corsica departments
+# are '2A'/'2B' and Paris is '75' (outside 01-52), Italy's provinces are 2-letter
+# ('RM'/'MI'). For a second country the only province invariant the identity gate can
+# assert generically is the geo_province.code shape itself -- exactly 2 alphanumeric
+# chars. ES keeps the strict 01-52 path so its G1 verdicts stay byte-identical. Mirrors
+# _NON_ES_PROVINCE_RE in pipeline/complete.py (commit 052fa8f) and migration 0053's
+# country-guarded geo CHECKs.
+_NON_ES_PROVINCE_PATTERN = r"^[0-9A-Z]{2}$"
 # National kinds carry a NULL province by design (mirrors _NATIONAL_KINDS in
 # complete.py); for them a NULL province is the correct geo, not an identity gap.
 _NATIONAL_KINDS_SQL = "'subasta','plataforma','oem_vo_portal','importador'"
-_CDP_CODE_PATTERN = r"^CDP-ES-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$"
+# cdp_code format: CDP-{CC}-{PP}-{8x Crockford-base32}. CC is the ISO-3166 alpha-2 tenant
+# minted by services/api/codes.py; PP is the 2-char province segment (ALPHANUMERIC, not
+# numeric-only: FR Corsica '2A'/'2B', IT 'RM'/'MI'). The historical ES output is
+# byte-identical ('ES' matches [A-Z]{2}, '01'-'52' match [0-9A-Z]{2}), but the set-based
+# G1 gate must validate EVERY tenant's code, not only Spain -- a country-blind ^CDP-ES-
+# with a numeric-only [0-9]{2} province wrongly failed identity for any second-country
+# entity. Mirrors _CDP_CODE_RE in pipeline/complete.py (commit 052fa8f).
+_CDP_CODE_PATTERN = r"^CDP-[A-Z]{2}-([0-9A-Z]{2})-[0-9A-HJKMNP-TV-Z]{8}$"
 _FIELD_INTEGRITY_FLOOR = 0.98
 
 # The main INSERT … SELECT.
@@ -86,13 +105,21 @@ served_dealers AS (
 ),
 
 -- ---------------------------------------------------------------------------
--- G1: identity check (mirrors check_g1 in complete.py)
+-- G1: identity check (mirrors check_g1 in complete.py, country-scoped)
 --   PASS iff:
 --     - entity row exists for cdp_code (guaranteed by universe CTE above)
---     - cdp_code ~ CDP-ES-NN-XXXXXXXX format, AND
---     - province_code ~ valid 2-digit Spanish province (01-52), OR the entity is a
---       NATIONAL kind (subasta/plataforma/oem_vo_portal/importador) with NULL province
---       (that NULL is its correct geo — §Deuda B2 closed 2026-06-15, ~100 entities).
+--     - cdp_code ~ CDP-CC-PP-XXXXXXXX format (CC = ISO-3166 alpha-2 tenant, PP = 2-char
+--       alphanumeric province segment — not ES-only), AND
+--     - province_code is valid FOR THE ENTITY'S COUNTRY: ES keeps the 01-52 grid
+--       (byte-identical to the historical gate); a non-ES tenant validates the generic
+--       2-char geo_province.code shape, so FR Corsica '2A'/Paris '75' and IT 'RM' are
+--       not wrongly rejected. OR the entity is a NATIONAL kind
+--       (subasta/plataforma/oem_vo_portal/importador) with NULL province (that NULL is
+--       its correct geo — §Deuda B2 closed 2026-06-15, ~100 entities).
+--   country_code is NOT NULL DEFAULT 'ES' (migration 0052), so COALESCE only guards the
+--   theoretical NULL → defaults to ES (fail-closed to the strict grid), mirroring
+--   complete.py's `country = row.get("country_code") or "ES"`. Country-guarded exactly
+--   like migration 0053's geo CHECKs (`country_code <> 'ES' OR <ES predicate>`).
 -- ---------------------------------------------------------------------------
 g1_check AS (
     SELECT
@@ -100,7 +127,15 @@ g1_check AS (
         (
             e.cdp_code ~ '{_CDP_CODE_PATTERN}'
             AND (
-                (e.province_code IS NOT NULL AND e.province_code ~ '{_PROVINCE_PATTERN}')
+                (
+                    e.province_code IS NOT NULL
+                    AND (
+                        (COALESCE(e.country_code, 'ES') = 'ES'
+                         AND e.province_code ~ '{_PROVINCE_PATTERN}')
+                        OR (COALESCE(e.country_code, 'ES') <> 'ES'
+                            AND e.province_code ~ '{_NON_ES_PROVINCE_PATTERN}')
+                    )
+                )
                 OR (e.kind::text IN ({_NATIONAL_KINDS_SQL}) AND e.province_code IS NULL)
             )
         ) AS g1_identity
@@ -270,13 +305,18 @@ GROUP BY verdict
 ORDER BY dealers DESC
 """
 
-# G1 failure breakdown
-_G1_FAIL_SQL = """
+# G1 failure breakdown (country-scoped to match the g1_check CTE: ES validates the 01-52
+# grid, a non-ES tenant the generic 2-char geo_province.code shape; cdp shape generalised
+# to CDP-CC-PP-). Diagnostic only — informs the populate report, never the g1_identity write.
+_G1_FAIL_SQL = f"""
 SELECT
     CASE
         WHEN province_code IS NULL THEN 'province_null'
-        WHEN province_code !~ '^(0[1-9]|[1-4][0-9]|5[0-2])$' THEN 'province_invalid:' || province_code
-        WHEN cdp_code !~ '^CDP-ES-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$' THEN 'cdp_format_invalid'
+        WHEN COALESCE(country_code, 'ES') = 'ES'
+             AND province_code !~ '{_PROVINCE_PATTERN}' THEN 'province_invalid:' || province_code
+        WHEN COALESCE(country_code, 'ES') <> 'ES'
+             AND province_code !~ '{_NON_ES_PROVINCE_PATTERN}' THEN 'province_invalid:' || province_code
+        WHEN cdp_code !~ '{_CDP_CODE_PATTERN}' THEN 'cdp_format_invalid'
         ELSE 'unknown'
     END AS reason,
     count(*) AS n
