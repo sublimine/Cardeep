@@ -376,6 +376,7 @@ def _load_entities(conn: Any, province_codes: list[str] | None) -> list[Entity]:
             e.trade_name,
             e.municipality_code,
             e.province_code,
+            e.country_code,
             e.website,
             e.phone,
             e.address,
@@ -390,7 +391,7 @@ def _load_entities(conn: Any, province_codes: list[str] | None) -> list[Entity]:
         WHERE {scope}
         GROUP BY
             e.entity_ulid, e.cdp_code, e.trade_name, e.municipality_code,
-            e.province_code, e.website, e.phone, e.address, e.lat, e.lon,
+            e.province_code, e.country_code, e.website, e.phone, e.address, e.lat, e.lon,
             e.cif, e.source_group, e.created_at
     """
     params = tuple(province_codes) if province_codes else ()
@@ -451,13 +452,20 @@ def _build_cross_source_edges(entities: list[Entity]) -> list[MatchPair]:
         if muni:
             by_muni[muni].append(ent)
 
-    # Build fast lookup indices keyed by (signal_value, municipality)
-    # phone_idx[(phone9, muni)] -> list of entity_ulid
-    phone_idx: dict[tuple[str, str], list[str]] = defaultdict(list)
-    # web_idx[(domain, muni)] -> list of entity_ulid
-    web_idx: dict[tuple[str, str], list[str]] = defaultdict(list)
-    # name_idx[(norm_name, muni)] -> list of entity_ulid
-    name_idx: dict[tuple[str, str], list[str]] = defaultdict(list)
+    # Build fast lookup indices keyed by (signal_value, municipality, country).
+    # COUNTRY-PROOF: country_code joins every block-key so two entities from
+    # different countries can NEVER share a bucket (the cross-border false-merge
+    # vector — a 2nd country reuses the same numeric municipality_code space, e.g.
+    # migrations/0053 lets DE province '28' coexist with ES Madrid '28').
+    # entity.country_code is CHAR(2) NOT NULL DEFAULT 'ES' (migrations/0052), so
+    # for a single-country census the third key element is constant and bucketing
+    # — therefore clustering — is BYTE-IDENTICAL to the pre-country behaviour.
+    # phone_idx[(phone9, muni, country)] -> list of entity_ulid
+    phone_idx: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+    # web_idx[(domain, muni, country)] -> list of entity_ulid
+    web_idx: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+    # name_idx[(norm_name, muni, country)] -> list of entity_ulid
+    name_idx: dict[tuple[str, str, str], list[str]] = defaultdict(list)
 
     entity_by_ulid: dict[str, Entity] = {}
     for ent in entities:
@@ -466,18 +474,21 @@ def _build_cross_source_edges(entities: list[Entity]) -> list[MatchPair]:
         muni = (ent.get("municipality_code") or "").strip()
         if not muni:
             continue
+        country = (ent.get("country_code") or "").strip() or None
+        if country is None:
+            continue
 
         ph = _normalize_phone(ent.get("phone"))
         if ph:
-            phone_idx[(ph, muni)].append(uid)
+            phone_idx[(ph, muni, country)].append(uid)
 
         wh = _normalize_website_host(ent.get("website"))
         if wh:
-            web_idx[(wh, muni)].append(uid)
+            web_idx[(wh, muni, country)].append(uid)
 
         nn = _normalize_name(ent.get("trade_name"))
         if nn:
-            name_idx[(nn, muni)].append(uid)
+            name_idx[(nn, muni, country)].append(uid)
 
     pairs: dict[tuple[str, str], MatchPair] = {}  # dedup by (min,max) ulid
 
@@ -508,7 +519,7 @@ def _build_cross_source_edges(entities: list[Entity]) -> list[MatchPair]:
     # --- Signal 1: Phone match ---
     log.info("Building phone cross-source edges ...")
     phone_edges = 0
-    for (ph, muni), bucket in phone_idx.items():
+    for (ph, muni, _country), bucket in phone_idx.items():
         if len(bucket) < 2:
             continue
         for i in range(len(bucket)):
@@ -542,7 +553,7 @@ def _build_cross_source_edges(entities: list[Entity]) -> list[MatchPair]:
     # --- Signal 2: Website domain match ---
     log.info("Building website cross-source edges ...")
     web_edges = 0
-    for (domain, muni), bucket in web_idx.items():
+    for (domain, muni, _country), bucket in web_idx.items():
         if len(bucket) < 2:
             continue
         for i in range(len(bucket)):
@@ -565,7 +576,7 @@ def _build_cross_source_edges(entities: list[Entity]) -> list[MatchPair]:
     # --- Signal 3: Exact normalized name match (cross-source only) ---
     log.info("Building name cross-source edges ...")
     name_edges = 0
-    for (nn, muni), bucket in name_idx.items():
+    for (nn, muni, _country), bucket in name_idx.items():
         if len(bucket) < 2:
             continue
         for i in range(len(bucket)):

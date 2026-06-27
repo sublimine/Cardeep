@@ -149,6 +149,99 @@ class UnionFind:
 
 
 # ---------------------------------------------------------------------------
+# Deep-link → canonical loader + merge-graph core
+# ---------------------------------------------------------------------------
+# Extracted to module scope so the country-isolation golden
+# (tests/test_country_isolation_dedup.py) exercises the REAL merge logic the
+# build runs, not a copy. build() loads rows via asyncpg; the golden loads the
+# same rows via psycopg2 inside a rolled-back transaction — both feed
+# _build_deeplink_merge_graph, the single source of truth for which canonicals
+# fuse.
+_DEEPLINK_CANON_SQL = """
+    SELECT
+        v.deep_link,
+        e.country_code,
+        COALESCE(vc.canonical_cdp_code, e.cdp_code) AS canon
+    FROM vehicle v
+    JOIN entity e ON e.entity_ulid = v.entity_ulid
+    LEFT JOIN v_canonical vc ON vc.entity_ulid = v.entity_ulid
+    WHERE v.deep_link IS NOT NULL
+      AND v.deep_link <> ''
+      -- EXCLUDE kind='particular': private-seller aggregates (e.g. the 52 provincial
+      -- "Particulares coches.net <Province>") are NOT real dealers and are deduped
+      -- separately by build_particular_dedup (canonical_key). They enter here only via
+      -- COALESCE-to-self (they are excluded from B1/v_canonical), and a relisted private
+      -- car shared across two provincial aggregates would chain them into a spurious
+      -- mega-cluster (113k-car over-merge). The deep-link layer is for REAL dealers that
+      -- share identical listings (proving a B1 split of one physical dealer).
+      AND e.kind <> 'particular'
+"""
+
+
+def _build_deeplink_merge_graph(rows):
+    """Build the super-canonical merge graph from deep_link-sharing canonicals.
+
+    ``rows``: iterable of mappings exposing ``deep_link``, ``country_code`` and
+    ``canon`` (the resolved canonical cdp_code). Returns
+    ``(merge_components, pair_evidence, n_deep_links_used, n_deep_links_excl)``
+    where ``merge_components`` maps a union-find root to its >= 2 members and
+    ``pair_evidence`` maps a canonical pair to one evidence deep_link.
+
+    COUNTRY-PROOF: deep_links are grouped per ``(country_code, deep_link)`` so two
+    canonicals in different countries that happen to share a listing URL can never
+    land in the same union-find component (the cross-border false-merge vector — a
+    2nd country reuses the same numeric municipality_code/canonical space, e.g.
+    migrations/0053 lets DE province '28' coexist with ES Madrid '28'). entity
+    .country_code is CHAR(2) NOT NULL DEFAULT 'ES' (migrations/0052), so for a
+    single-country census the country key element is constant and the grouping —
+    therefore the whole graph — is BYTE-IDENTICAL to the pre-country behaviour:
+    same-country deep_link merging is untouched.
+    """
+    # Build (country, deep_link) → set of canonicals
+    dl_to_canons: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for row in rows:
+        country = (row["country_code"] or "").strip() or None
+        if country is None:
+            continue
+        dl_to_canons[(country, row["deep_link"])].add(row["canon"])
+
+    # Anti-hub guard — exclude deep_links shared by >= K canonicals
+    dl_pair: dict[tuple[str, str], set[str]] = {}
+    dl_excl: list[tuple[str, str]] = []
+    for key, canons in dl_to_canons.items():
+        if len(canons) < 2:
+            continue  # single-canonical deep_link — no merge edge
+        if len(canons) >= ANTI_HUB_K:
+            dl_excl.append(key)
+        else:
+            dl_pair[key] = canons  # exactly 2 canonicals
+
+    # Build edges: one evidence_deep_link per canonical pair. Keep the first one
+    # encountered (determinism: sort keys so identical data → identical evidence).
+    pair_evidence: dict[tuple[str, str], str] = {}
+    for key in sorted(dl_pair):
+        deep_link = key[1]  # key == (country_code, deep_link)
+        canons_sorted = sorted(dl_pair[key])
+        pair = (canons_sorted[0], canons_sorted[1])
+        if pair not in pair_evidence:
+            pair_evidence[pair] = deep_link
+
+    # Union-find → connected components
+    uf = UnionFind()
+    for (a, b) in pair_evidence:
+        uf.union(a, b)
+    components = uf.components()
+
+    # Only keep components with >= 2 members (actual merges)
+    merge_components: dict[str, list[str]] = {
+        root: members
+        for root, members in components.items()
+        if len(members) >= 2
+    }
+    return merge_components, pair_evidence, len(dl_pair), len(dl_excl)
+
+
+# ---------------------------------------------------------------------------
 # Main logic
 # ---------------------------------------------------------------------------
 async def build(conn: asyncpg.Connection) -> None:
@@ -171,76 +264,24 @@ async def build(conn: asyncpg.Connection) -> None:
     #   - If the entity is in v_canonical (B1 cluster), use canonical_cdp_code.
     #   - Otherwise, the entity IS its own canonical: use entity.cdp_code.
     print("  Loading deep_link -> canonical mapping from vehicle table...")
-    rows = await conn.fetch(
-        """
-        SELECT
-            v.deep_link,
-            COALESCE(vc.canonical_cdp_code, e.cdp_code) AS canon
-        FROM vehicle v
-        JOIN entity e ON e.entity_ulid = v.entity_ulid
-        LEFT JOIN v_canonical vc ON vc.entity_ulid = v.entity_ulid
-        WHERE v.deep_link IS NOT NULL
-          AND v.deep_link <> ''
-          -- EXCLUDE kind='particular': private-seller aggregates (e.g. the 52 provincial
-          -- "Particulares coches.net <Province>") are NOT real dealers and are deduped
-          -- separately by build_particular_dedup (canonical_key). They enter here only via
-          -- COALESCE-to-self (they are excluded from B1/v_canonical), and a relisted private
-          -- car shared across two provincial aggregates would chain them into a spurious
-          -- mega-cluster (113k-car over-merge). The deep-link layer is for REAL dealers that
-          -- share identical listings (proving a B1 split of one physical dealer).
-          AND e.kind <> 'particular'
-        """
-    )
+    rows = await conn.fetch(_DEEPLINK_CANON_SQL)
     print(f"  Vehicle rows with deep_link: {len(rows)}")
 
-    # Build deep_link → set of canonicals
-    dl_to_canons: dict[str, set[str]] = defaultdict(set)
-    for row in rows:
-        dl_to_canons[row["deep_link"]].add(row["canon"])
-
-    # ── Step 3: anti-hub guard — exclude deep_links shared by >= K canonicals
-    dl_pair: dict[str, set[str]] = {}   # dl -> {canonA, canonB} (exactly 2)
-    dl_excl: list[str] = []             # dl shared by >= K canonicals (excluded)
-
-    for dl, canons in dl_to_canons.items():
-        if len(canons) < 2:
-            continue  # single-canonical deep_link — no merge edge
-        if len(canons) >= ANTI_HUB_K:
-            dl_excl.append(dl)
-        else:
-            dl_pair[dl] = canons  # exactly 2 canonicals
-
-    n_deep_links_used = len(dl_pair)
-    n_deep_links_excl = len(dl_excl)
+    # ── Step 3-5: country-scoped deep_link union-find ────────────────────────
+    # All grouping / anti-hub / edge / union-find logic lives in
+    # _build_deeplink_merge_graph (module scope) so the country-isolation golden
+    # drives the exact code path this build runs.
+    (
+        merge_components,
+        pair_evidence,
+        n_deep_links_used,
+        n_deep_links_excl,
+    ) = _build_deeplink_merge_graph(rows)
     print(f"  deep_links forming pair edges (n=2): {n_deep_links_used}")
     print(f"  deep_links excluded by anti-hub (n>={ANTI_HUB_K}): {n_deep_links_excl}")
 
-    # ── Step 4: build edges (canonA, canonB, evidence_deep_link) ────────────
-    # One evidence_deep_link per pair. We keep the first one encountered
-    # (determinism: sort deep_links so identical data → identical evidence).
-    pair_evidence: dict[tuple[str, str], str] = {}
-    for dl in sorted(dl_pair):
-        canons_sorted = sorted(dl_pair[dl])
-        pair = (canons_sorted[0], canons_sorted[1])
-        if pair not in pair_evidence:
-            pair_evidence[pair] = dl
-
     n_edges = len(pair_evidence)
     print(f"  Canonical pair edges: {n_edges}")
-
-    # ── Step 5: union-find → connected components ────────────────────────────
-    uf = UnionFind()
-    for (a, b), _ in pair_evidence.items():
-        uf.union(a, b)
-
-    components = uf.components()  # root -> [members]
-
-    # Only keep components with >= 2 members (actual merges)
-    merge_components: dict[str, list[str]] = {
-        root: members
-        for root, members in components.items()
-        if len(members) >= 2
-    }
 
     n_super_canonicals = len(merge_components)
     all_members = [m for members in merge_components.values() for m in members]
