@@ -24,15 +24,20 @@ asyncio.run() multiple times inside a pytest test).
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 
 import pytest
 
 # ---------------------------------------------------------------------------
-# DB availability guard (identical pattern to test_geo_fuzzy.py)
+# DB availability guard (honors CARDEEP_DSN; defaults to the :5434 dry-run so a
+# bare local run never touches :5433 live production). The DB tests self-seed the
+# ES '28' geo backbone (composite FK entity -> geo_municipality) inside each
+# rolled-back transaction, so they are green against an empty migrated census.
 # ---------------------------------------------------------------------------
 
-DSN = "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
+_DRYRUN_DSN = "postgres://cardeep:cardeep_dev_only@localhost:5434/cardeep"
+DSN = os.environ.get("CARDEEP_DSN", _DRYRUN_DSN)
 
 
 def _db_available() -> bool:
@@ -54,7 +59,7 @@ def _db_available() -> bool:
 
 _DB_SKIP = pytest.mark.skipif(
     not _db_available(),
-    reason="cardeep-pg not reachable on localhost:5433",
+    reason=f"cardeep-pg not reachable at {DSN}",
 )
 
 # ---------------------------------------------------------------------------
@@ -86,9 +91,28 @@ def _fresh_ulid() -> str:
     return ulid()
 
 
+async def _seed_geo(conn, prov: str = "28", muni: str | None = None) -> None:
+    """Seed the ES (prov[, muni]) geo backbone so the composite FK
+    entity(country_code, province_code/municipality_code) -> geo resolves on the
+    empty dry-run. Idempotent (ON CONFLICT DO NOTHING); the muni '28xxx' satisfies
+    the ES prefix CHECK left(code,2)=province_code. Caller seeds inside the txn that
+    is rolled back, so nothing persists."""
+    await conn.execute(
+        "INSERT INTO geo_province (code, name, ccaa_code, ccaa_name, country_code) "
+        "VALUES ($1, $2, '13', 'ccaa-ES', 'ES') ON CONFLICT DO NOTHING",
+        prov, f"prov-{prov}")
+    if muni is not None:
+        await conn.execute(
+            "INSERT INTO geo_municipality "
+            "(code, name, province_code, comarca_id, country_code) "
+            "VALUES ($1, $2, $3, NULL, 'ES') ON CONFLICT DO NOTHING",
+            muni, f"muni-{muni}", prov)
+
+
 async def _mn_upsert_particular(conn, cdp: str, entity_ulid: str,
                                 muni: str | None, prov: str = "28") -> None:
     """Execute the MN particular bulk upsert for a single row."""
+    await _seed_geo(conn, prov, muni)
     await conn.execute(
         MN_UPSERT_PARTICULARS,
         [entity_ulid],          # $1 :: text[]
@@ -105,6 +129,7 @@ async def _wp_upsert_particular(conn, cdp: str, entity_ulid: str,
                                 muni: str | None, lat: float | None,
                                 lon: float | None, prov: str = "28") -> None:
     """Execute the WP particular bulk upsert for a single row."""
+    await _seed_geo(conn, prov, muni)
     await conn.execute(
         WP_UPSERT_PARTICULARS,
         "wallapop_wholesale",   # $1 scalar
@@ -209,6 +234,7 @@ class TestMilanunciosParticularsCoalesce:
                 async with conn.transaction():
                     dealer_cdp = _fresh_cdp()
                     dealer_uid = _fresh_ulid()
+                    await _seed_geo(conn, "28", "28013")
                     await conn.execute(
                         MN_UPSERT_DEALERS,
                         [dealer_uid],
@@ -377,6 +403,7 @@ class TestWallapopParticularsCoalesce:
                 async with conn.transaction():
                     dealer_cdp = _fresh_cdp()
                     dealer_uid = _fresh_ulid()
+                    await _seed_geo(conn, "28", "28006")
                     await conn.execute(
                         WP_UPSERT_DEALERS,
                         "wallapop_wholesale",

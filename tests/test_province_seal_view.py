@@ -15,16 +15,25 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-DSN = "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep"
+# Census validator: reads the live v_province_seal (per-province DIRCE denominators
+# + served canonical dealers). Honors CARDEEP_DSN but DEFAULTS to :5433 (its
+# populated census home for the local Ferrari run). It is OPEN against the empty
+# :5434 dry-run — the seal view has no rows there (no DIRCE/served data) — so it
+# skips cleanly when the view is empty rather than failing on a 0-province seal.
+_DEFAULT_DSN = "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep"
+DSN = os.environ.get("CARDEEP_DSN", _DEFAULT_DSN)
 
 
-def _db_available() -> bool:
+def _seal_view_populated() -> bool:
     async def _ping() -> bool:
         try:
             import asyncpg
             conn = await asyncpg.connect(DSN, timeout=3)
-            await conn.close()
-            return True
+            try:
+                n = await conn.fetchval("SELECT count(*) FROM v_province_seal")
+                return (n or 0) > 0
+            finally:
+                await conn.close()
         except Exception:
             return False
     try:
@@ -33,7 +42,7 @@ def _db_available() -> bool:
         return False
 
 
-DB_AVAILABLE = _db_available()
+DB_AVAILABLE = _seal_view_populated()
 _VALID_VERDICTS = {"SELLADO", "PARCIAL", "GAP", "NO_DENOM"}
 
 
@@ -54,7 +63,10 @@ def _by_segment(seg: str):
     return [r for r in _rows() if r["segment"] == seg]
 
 
-@pytest.mark.skipif(not DB_AVAILABLE, reason="cardeep-pg not reachable at 127.0.0.1:5433")
+@pytest.mark.skipif(
+    not DB_AVAILABLE,
+    reason=f"v_province_seal empty/unreachable at {DSN} (needs the populated "
+    "DIRCE/served census; OPEN against the empty :5434 dry-run)")
 class TestProvinceSealView:
     def test_both_segments_cover_52_provinces(self) -> None:
         for seg in ("venta", "desguace"):

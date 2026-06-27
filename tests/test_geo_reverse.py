@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import os
 
 import numpy as np
 import pytest
@@ -32,21 +33,32 @@ from pipeline.geocode import (
 
 
 # ---------------------------------------------------------------------------
-# DB availability guard
+# DB connection (honors CARDEEP_DSN; defaults to the :5434 dry-run so a bare local
+# run never touches :5433 live production). The integration class needs the real
+# seeded centroids (scripts/seed_geo_centroides); against the empty dry-run it skips
+# cleanly instead of failing on 0 centroids. The unit classes are DB-free.
 # ---------------------------------------------------------------------------
 
-def _db_available() -> bool:
+_DRYRUN_DSN = "postgres://cardeep:cardeep_dev_only@localhost:5434/cardeep"
+DSN = os.environ.get("CARDEEP_DSN", _DRYRUN_DSN)
+
+
+def _centroids_seeded() -> bool:
+    """True iff the DB is reachable AND geo_municipality holds seeded centroids."""
     try:
         import asyncpg
 
         async def _check() -> bool:
             try:
-                conn = await asyncpg.connect(
-                    "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep",
-                    timeout=3,
-                )
-                await conn.close()
-                return True
+                conn = await asyncpg.connect(DSN, timeout=3)
+                try:
+                    n = await conn.fetchval(
+                        "SELECT count(*) FROM geo_municipality "
+                        "WHERE lat IS NOT NULL AND lon IS NOT NULL"
+                    )
+                    return (n or 0) > 0
+                finally:
+                    await conn.close()
             except Exception:
                 return False
 
@@ -55,14 +67,10 @@ def _db_available() -> bool:
         return False
 
 
-_DB_SKIP = pytest.mark.skipif(
-    not _db_available(),
-    reason="cardeep-pg not reachable on localhost:5433",
-)
-
 _CENTROIDS_SEEDED_SKIP = pytest.mark.skipif(
-    not _db_available(),
-    reason="cardeep-pg not reachable or centroids not seeded (run seed_geo_centroides.py)",
+    not _centroids_seeded(),
+    reason=f"geo_municipality centroids not seeded at {DSN} "
+    "(empty dry-run, or run scripts/seed_geo_centroides.py)",
 )
 
 
@@ -76,9 +84,7 @@ def muni_geocoder():
     import asyncpg
 
     async def _load():
-        conn = await asyncpg.connect(
-            "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
-        )
+        conn = await asyncpg.connect(DSN)
         try:
             return await MunicipalityGeocoder.load(conn)
         finally:

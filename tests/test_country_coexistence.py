@@ -17,21 +17,26 @@ Four guarantees, in order of the mandate:
   (c) [DB] With migration 0053 applied (composite geo PK ``(country_code,code)``)
       a DE province ``'28'`` COEXISTS with ES province ``'28'`` with no PK
       violation, and the DE municipality's FK resolves to the DE province, NOT
-      ES Madrid. Self-contained + reversible: seeds the minimal DE rows inside a
-      transaction and ROLLS BACK, so it needs no pre-existing pilot rows and
-      leaves zero residue. If 0053 is not applied (single-column PK still live),
-      it SKIPS gracefully.
-  (d) [DB] ES entity/geo counts are UNCHANGED by DE coexistence — both as a
-      live read-only baseline assertion and as a before/after proof across an
-      in-transaction DE insert that is rolled back.
+      ES Madrid. Self-contained + reversible: seeds BOTH the minimal ES ``'28'``
+      backbone and the synthetic DE rows inside a transaction and ROLLS BACK, so
+      it needs no pre-existing census and leaves zero residue.
+  (d) [DB] ES entity/geo counts are UNCHANGED by DE coexistence — a before/after
+      proof that seeds the ES ``'28'`` backbone, snapshots the ES geo/entity
+      counts, inserts the synthetic DE rows, and asserts the ES counts did not
+      move (no DE row bled into the ``country_code='ES'`` slice), then rolls back.
 
-The DB parts skip cleanly when the cardeep-pg is unreachable OR when 0053 has
-not been applied, so this file is green on a stock Fase-0 schema and turns into
-a binding coexistence proof the instant 0053 lands.
+ISOLATION (inviolable): the DB parts run ONLY against the dry-run (:5434). They
+honor ``CARDEEP_DSN`` (default :5434), HARD-REFUSE :5433 (live production) by DSN
+string, and refuse to seed unless ``entity`` is EMPTY — so a mis-pointed DSN can
+never mutate real data. They self-seed both countries inside a rolled-back
+transaction, needing nothing but a reachable :5434 with the schema at head
+(>= 0053 composite geo PK). This makes them binding goldens of the country-proof
+gate on an empty migrated census, with zero dependence on a populated :5433.
 """
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 from pathlib import Path
 
@@ -72,13 +77,20 @@ _ES_GOLDEN: list[tuple[dict, str, str]] = [
      "name:garajey|p28", "CDP-ES-28-T0ZNP4ZQ"),
 ]
 
-# --- Live ES baselines (verified 2026-06-23 against cardeep-pg) --------------
-# Used by the DB read-only assertions. entity ES drifts upward with live cosecha,
-# so it is asserted as a FLOOR (>= baseline), never as an equality that a healthy
-# harvest would break. geo counts are stable reference tables -> exact equality.
-_ES_GEO_PROVINCE_COUNT = 52
-_ES_GEO_MUNICIPALITY_COUNT = 8132
-_ES_ENTITY_COUNT_BASELINE = 431215
+# --- Synthetic ES '28' backbone (minimal Madrid seed for the dry-run) --------
+# The DB goldens self-seed this ES side so the coexistence proof has an ES '28' to
+# coexist with on the empty :5434 census — no dependence on a populated :5433. The
+# muni '28079' satisfies the ES prefix CHECK left(code,2)=province_code.
+_ES_PROVINCE_CODE = "28"
+_ES_PROVINCE_NAME = "Madrid"
+_ES_CCAA_CODE = "13"
+_ES_CCAA_NAME = "Comunidad de Madrid"
+_ES_MUNI_CODE = "28079"
+_ES_MUNI_NAME = "Madrid"
+_ES_DOMAIN = "ford.es"
+# 26-char Crockford ULID (shape ^[0-9A-HJKMNP-TV-Z]{26}$ — no I/L/O/U), distinct
+# from the DE ULID below so an ES and a DE entity coexist in one transaction.
+_ES_ENTITY_ULID = "01C0EXSTES0000000000PYRES0"
 
 # Synthetic DE pilot fixtures (NO real DE data — minimal coexistence proof).
 # Province code '28' DELIBERATELY collides with ES Madrid to prove the composite
@@ -96,7 +108,17 @@ _DE_DOMAIN = "example-haendler.de"
 # against entity.entity_ulid_shape live.
 _DE_ENTITY_ULID = "01C0EXSTDE0000000000PYRDE0"
 
-DSN = "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
+# Dry-run DSN (:5434). The mandate: NEVER touch :5433 (live production). The suite
+# honors CARDEEP_DSN so the country-proof CI job (host :5434, empty migrated census)
+# and a local dev both aim it at the dry-run; it defaults to the local :5434.
+_DRYRUN_DSN = "postgres://cardeep:cardeep_dev_only@localhost:5434/cardeep"
+
+
+def _target_dsn() -> str:
+    return os.environ.get("CARDEEP_DSN", _DRYRUN_DSN)
+
+
+DSN = _target_dsn()
 
 
 # ===========================================================================
@@ -233,8 +255,14 @@ def _db_available() -> bool:
 
 DB_AVAILABLE = _db_available()
 
-_DB_SKIP = pytest.mark.skipif(
-    not DB_AVAILABLE, reason="cardeep-pg not reachable on localhost:5433")
+# Golden isolation guard (mirrors test_country_isolation_*.py): the DB coexistence
+# proofs run ONLY against the dry-run. They self-seed BOTH the ES and the DE side
+# inside a rolled-back transaction, so they need nothing but a reachable :5434 with
+# the schema at head (>= 0053 composite geo PK). They HARD-REFUSE :5433 by DSN.
+_DB_GATE = pytest.mark.skipif(
+    (not DB_AVAILABLE) or ("5433" in DSN),
+    reason="dry-run cardeep-pg not reachable, or refusing :5433 (live production); "
+           "point CARDEEP_DSN at the :5434 dry-run")
 
 
 async def _geo_province_pk_is_composite(conn) -> bool:
@@ -247,13 +275,6 @@ async def _geo_province_pk_is_composite(conn) -> bool:
         "SELECT pg_get_constraintdef(oid) FROM pg_constraint "
         "WHERE contype='p' AND conrelid='geo_province'::regclass")
     return bool(definition) and "country_code" in definition
-
-
-async def _de_pilot_rows_present(conn) -> bool:
-    """True iff a non-ES (DE) geo_province row already exists (pilot seeded)."""
-    n = await conn.fetchval(
-        "SELECT count(*) FROM geo_province WHERE country_code='DE'")
-    return (n or 0) > 0
 
 
 async def _seed_de_rows(conn) -> None:
@@ -285,34 +306,91 @@ async def _seed_de_rows(conn) -> None:
     return de_cdp
 
 
+async def _guard_dryrun(conn) -> None:
+    """Refuse to seed unless the target ``entity`` table is EMPTY.
+
+    Defense-in-depth (on top of the :5433 DSN-string refusal in ``_DB_GATE``): the
+    dry-run is entity=0; production holds ~452k. A mis-pointed CARDEEP_DSN at any
+    populated census is skipped here BEFORE a single INSERT runs.
+    """
+    n = await conn.fetchval("SELECT count(*) FROM entity")
+    if n != 0:
+        pytest.skip(
+            f"target DB has {n} entities -- not the empty dry-run; refusing to "
+            "seed/coexist against a populated census")
+
+
+async def _seed_es_28(conn) -> None:
+    """INSERT the minimal ES Madrid backbone: province '28' + muni '28079'.
+
+    Caller MUST run this inside a transaction that is rolled back. ON CONFLICT
+    DO NOTHING keeps it idempotent within the txn. Supplies ccaa_code/ccaa_name
+    (NOT NULL on geo_province). Muni '28079' satisfies the ES prefix CHECK
+    left(code,2)=province_code.
+    """
+    await conn.execute(
+        "INSERT INTO geo_province (code, name, ccaa_code, ccaa_name, country_code) "
+        "VALUES ($1, $2, $3, $4, 'ES') ON CONFLICT DO NOTHING",
+        _ES_PROVINCE_CODE, _ES_PROVINCE_NAME, _ES_CCAA_CODE, _ES_CCAA_NAME)
+    await conn.execute(
+        "INSERT INTO geo_municipality (code, name, province_code, comarca_id, country_code) "
+        "VALUES ($1, $2, $3, NULL, 'ES') ON CONFLICT DO NOTHING",
+        _ES_MUNI_CODE, _ES_MUNI_NAME, _ES_PROVINCE_CODE)
+
+
+async def _seed_es_entity(conn) -> str:
+    """INSERT one synthetic ES dealer on the seeded ES '28' backbone; return its
+    cdp_code. Uses the real cdp_pair so the code is the genuine CDP-ES-28-* code.
+    The ES '28' geo backbone (``_seed_es_28``) MUST already be seeded in the txn.
+    """
+    es_key, es_cdp = cdp_pair(
+        province_code=_ES_PROVINCE_CODE, domain=_ES_DOMAIN, country_code="ES")
+    await conn.execute(
+        "INSERT INTO entity "
+        "(entity_ulid, cdp_code, kind, country_code, province_code, municipality_code, "
+        " canonical_key, status, kind_source) "
+        "VALUES ($1, $2, 'compraventa', 'ES', $3, $4, $5, 'active', 'manual')",
+        _ES_ENTITY_ULID, es_cdp, _ES_PROVINCE_CODE, _ES_MUNI_CODE, es_key)
+    return es_cdp
+
+
 # ===========================================================================
 # (c) DB COEXISTENCE — DE '28' coexists with ES '28' (composite PK, reversible)
 # ===========================================================================
-@_DB_SKIP
+@_DB_GATE
 @pytest.mark.integration
 class TestDbProvinceCoexistence:
-    """Post-0053: (DE,'28') and (ES,'28') coexist; DE muni FK resolves to DE."""
+    """(DE,'28') and (ES,'28') coexist on the composite geo PK; the DE muni FK
+    resolves to the DE province, never ES Madrid. Self-seeds BOTH countries."""
 
-    def test_es_28_exists_today(self):
-        # Sanity floor: ES Madrid province '28' is present regardless of 0053.
+    def test_es_28_present_after_seed(self):
+        """The ES '28' backbone seeds cleanly as the coexistence anchor (rolled back)."""
         async def _go():
             import asyncpg
             conn = await asyncpg.connect(DSN)
             try:
-                return await conn.fetchval(
-                    "SELECT count(*) FROM geo_province "
-                    "WHERE country_code='ES' AND code='28'")
+                tx = conn.transaction()
+                await tx.start()
+                try:
+                    await _guard_dryrun(conn)
+                    await _seed_es_28(conn)
+                    n = await conn.fetchval(
+                        "SELECT count(*) FROM geo_province "
+                        "WHERE country_code='ES' AND code='28'")
+                    assert n == 1, "ES province '28' (Madrid) seed did not land"
+                finally:
+                    await tx.rollback()
             finally:
                 await conn.close()
-        assert _run(_go()) == 1, "ES province '28' (Madrid) missing — bad baseline"
+        _run(_go())
 
     def test_de_28_coexists_with_es_28(self):
-        """Seed DE '28' in a rolled-back txn and prove no PK collision with ES '28'.
-
-        If 0053 is NOT applied (single-column PK on code), the INSERT of a second
-        '28' would raise on geo_province_pkey — we SKIP in that case (the proof is
-        only meaningful once the composite PK lands). The whole scenario runs in
-        ONE transaction that is rolled back, so the DB is byte-identical after.
+        """Seed ES '28' + DE '28' in one rolled-back txn and prove no PK collision:
+        both provinces named '28' coexist (distinguished by country), the DE
+        municipality's composite FK resolves to the DE province (NOT ES Madrid),
+        and the synthetic DE dealer carries its real CDP-DE-28-* code. The whole
+        scenario runs in ONE transaction that is rolled back, so the dry-run is
+        byte-identical after.
         """
         async def _go():
             import asyncpg
@@ -321,11 +399,12 @@ class TestDbProvinceCoexistence:
                 tx = conn.transaction()
                 await tx.start()
                 try:
-                    if not await _geo_province_pk_is_composite(conn):
-                        pytest.skip(
-                            "migration 0053 not applied (geo_province PK is still "
-                            "single-column (code)); DE '28' would collide on the PK. "
-                            "Coexistence proof deferred until 0053 lands.")
+                    await _guard_dryrun(conn)
+                    assert await _geo_province_pk_is_composite(conn), (
+                        "geo_province PK is not composite (country_code, code); the "
+                        "schema is below migration 0053 — DE '28' would collide with "
+                        "ES '28' on the single-column PK and coexistence is impossible")
+                    await _seed_es_28(conn)
                     de_cdp = await _seed_de_rows(conn)
 
                     # (a) BOTH provinces named '28' coexist, distinguished by country.
@@ -336,6 +415,7 @@ class TestDbProvinceCoexistence:
                     assert "ES" in by_cc and "DE" in by_cc, (
                         f"expected both ES and DE province '28', got {by_cc}")
                     assert by_cc["DE"] == _DE_PROVINCE_NAME
+                    assert by_cc["ES"] == _ES_PROVINCE_NAME
                     # ES Madrid name is NOT overwritten by the DE row.
                     assert by_cc["ES"] != _DE_PROVINCE_NAME
 
@@ -372,53 +452,15 @@ class TestDbProvinceCoexistence:
 # ===========================================================================
 # (d) DB ES-IMMUTABILITY — ES counts unchanged by DE coexistence
 # ===========================================================================
-@_DB_SKIP
+@_DB_GATE
 @pytest.mark.integration
 class TestDbEsCountsUnchanged:
-    """ES geo/entity counts are not mutated by DE coexistence (read + txn proof)."""
+    """ES geo/entity counts are not mutated by DE coexistence (self-seeded before/
+    after proofs on the empty dry-run — every test rolls back)."""
 
-    def test_es_geo_baselines_live(self):
-        # Stable reference tables -> exact equality. A change means an ES geo row
-        # was added/removed (NOT something coexistence should ever do).
-        async def _go():
-            import asyncpg
-            conn = await asyncpg.connect(DSN)
-            try:
-                prov = await conn.fetchval(
-                    "SELECT count(*) FROM geo_province WHERE country_code='ES'")
-                muni = await conn.fetchval(
-                    "SELECT count(*) FROM geo_municipality WHERE country_code='ES'")
-                return prov, muni
-            finally:
-                await conn.close()
-        prov, muni = _run(_go())
-        assert prov == _ES_GEO_PROVINCE_COUNT, (
-            f"ES geo_province count drifted: {prov} != {_ES_GEO_PROVINCE_COUNT}")
-        assert muni == _ES_GEO_MUNICIPALITY_COUNT, (
-            f"ES geo_municipality count drifted: {muni} != {_ES_GEO_MUNICIPALITY_COUNT}")
-
-    def test_es_entity_count_at_or_above_baseline(self):
-        # entity ES grows with live cosecha -> assert a FLOOR, never an equality a
-        # healthy harvest would break. A DROP below baseline would be the alarm.
-        async def _go():
-            import asyncpg
-            conn = await asyncpg.connect(DSN)
-            try:
-                return await conn.fetchval(
-                    "SELECT count(*) FROM entity WHERE country_code='ES'")
-            finally:
-                await conn.close()
-        n = _run(_go())
-        assert n >= _ES_ENTITY_COUNT_BASELINE, (
-            f"ES entity count {n} fell below baseline {_ES_ENTITY_COUNT_BASELINE} "
-            "— ES rows were deleted")
-
-    def test_inserting_de_rows_does_not_change_es_counts(self):
-        """Before/after proof: seed DE rows in a txn; ES counts identical; rollback.
-
-        Skips if 0053 is not applied (the DE province INSERT would collide on the
-        single-column PK before we could measure anything).
-        """
+    def test_es_geo_not_mutated_by_de_coexistence(self):
+        """Seed ES '28', snapshot the country_code='ES' geo slice, seed the DE side,
+        and assert the ES geo counts did not move — no DE row bled into the ES slice."""
         async def _go():
             import asyncpg
             conn = await asyncpg.connect(DSN)
@@ -426,10 +468,75 @@ class TestDbEsCountsUnchanged:
                 tx = conn.transaction()
                 await tx.start()
                 try:
-                    if not await _geo_province_pk_is_composite(conn):
-                        pytest.skip(
-                            "migration 0053 not applied; DE seed would collide on "
-                            "the single-column geo PK before measurement.")
+                    await _guard_dryrun(conn)
+                    await _seed_es_28(conn)
+
+                    async def _es_geo():
+                        return (
+                            await conn.fetchval(
+                                "SELECT count(*) FROM geo_province WHERE country_code='ES'"),
+                            await conn.fetchval(
+                                "SELECT count(*) FROM geo_municipality WHERE country_code='ES'"),
+                        )
+
+                    before = await _es_geo()
+                    assert before == (1, 1), f"ES backbone seed wrong: {before}"
+                    await _seed_de_rows(conn)
+                    after = await _es_geo()
+                    assert before == after, (
+                        f"ES geo counts changed by DE coexistence: {before} -> {after}")
+                finally:
+                    await tx.rollback()
+            finally:
+                await conn.close()
+        _run(_go())
+
+    def test_es_entity_not_reduced_by_de_coexistence(self):
+        """Seed one ES dealer, snapshot the ES entity count, seed the DE dealer, and
+        assert the country_code='ES' entity count is unchanged and the ES dealer is
+        still present (DE coexistence neither deletes nor re-keys ES entities)."""
+        async def _go():
+            import asyncpg
+            conn = await asyncpg.connect(DSN)
+            try:
+                tx = conn.transaction()
+                await tx.start()
+                try:
+                    await _guard_dryrun(conn)
+                    await _seed_es_28(conn)
+                    es_cdp = await _seed_es_entity(conn)
+                    before = await conn.fetchval(
+                        "SELECT count(*) FROM entity WHERE country_code='ES'")
+                    assert before == 1, f"ES entity seed wrong: {before}"
+                    await _seed_de_rows(conn)
+                    after = await conn.fetchval(
+                        "SELECT count(*) FROM entity WHERE country_code='ES'")
+                    assert before == after == 1, (
+                        f"ES entity count changed by DE coexistence: {before} -> {after}")
+                    still = await conn.fetchrow(
+                        "SELECT cdp_code FROM entity WHERE entity_ulid=$1", _ES_ENTITY_ULID)
+                    assert still is not None and still["cdp_code"] == es_cdp, (
+                        "ES dealer vanished or was re-keyed by DE coexistence")
+                finally:
+                    await tx.rollback()
+            finally:
+                await conn.close()
+        _run(_go())
+
+    def test_inserting_de_rows_does_not_change_es_counts(self):
+        """Before/after proof on a seeded ES baseline: snapshot ES geo+entity counts,
+        insert the synthetic DE rows, assert the ES counts are identical, and confirm
+        the DE rows DID land (the insert was real, not a no-op). All rolled back."""
+        async def _go():
+            import asyncpg
+            conn = await asyncpg.connect(DSN)
+            try:
+                tx = conn.transaction()
+                await tx.start()
+                try:
+                    await _guard_dryrun(conn)
+                    await _seed_es_28(conn)
+                    await _seed_es_entity(conn)
 
                     async def _es_counts():
                         return (
@@ -450,7 +557,9 @@ class TestDbEsCountsUnchanged:
                     # And the DE rows DID land (the insert was real, not a no-op).
                     de_prov = await conn.fetchval(
                         "SELECT count(*) FROM geo_province WHERE country_code='DE'")
-                    assert de_prov >= 1, "DE province insert was a no-op"
+                    de_ent = await conn.fetchval(
+                        "SELECT count(*) FROM entity WHERE country_code='DE'")
+                    assert de_prov >= 1 and de_ent >= 1, "DE insert was a no-op"
                 finally:
                     await tx.rollback()
             finally:
@@ -461,39 +570,41 @@ class TestDbEsCountsUnchanged:
 # ===========================================================================
 # Read-only coexistence check against ALREADY-SEEDED pilot rows (if present)
 # ===========================================================================
-@_DB_SKIP
+@_DB_GATE
 @pytest.mark.integration
-class TestDbPilotRowsCoexistenceIfPresent:
-    """If scripts/pilot_de.py --seed has already run, verify the live DE rows
-    coexist with ES without touching anything (pure read)."""
+class TestDbSeededDeResolvesToDe:
+    """A seeded DE municipality resolves to its DE province via the composite FK,
+    with no bleed to a non-DE province — the pilot-shaped coexistence read, made
+    self-contained (seeds ES + DE, asserts, rolls back)."""
 
-    def test_seeded_pilot_de_resolves_to_de_not_es(self):
+    def test_seeded_de_muni_resolves_to_de_not_es(self):
         async def _go():
             import asyncpg
             conn = await asyncpg.connect(DSN)
             try:
-                if not await _geo_province_pk_is_composite(conn):
-                    pytest.skip("0053 not applied; no DE pilot rows possible.")
-                if not await _de_pilot_rows_present(conn):
-                    pytest.skip(
-                        "no live DE pilot rows (scripts/pilot_de.py --seed not run); "
-                        "self-contained coexistence covered by "
-                        "TestDbProvinceCoexistence.")
-                # ES '28' still present and distinct from any DE '28'.
-                es28 = await conn.fetchval(
-                    "SELECT count(*) FROM geo_province "
-                    "WHERE country_code='ES' AND code='28'")
-                assert es28 == 1, "ES province '28' missing while DE pilot present"
-                # Every seeded DE municipality resolves to a DE province via the
-                # composite FK (no ES bleed).
-                bleed = await conn.fetchval(
-                    "SELECT count(*) "
-                    "FROM geo_municipality m "
-                    "JOIN geo_province p "
-                    "  ON p.country_code = m.country_code AND p.code = m.province_code "
-                    "WHERE m.country_code='DE' AND p.country_code <> 'DE'")
-                assert bleed == 0, (
-                    "a DE municipality resolved to a non-DE province — ES bleed")
+                tx = conn.transaction()
+                await tx.start()
+                try:
+                    await _guard_dryrun(conn)
+                    await _seed_es_28(conn)
+                    await _seed_de_rows(conn)
+                    # ES '28' still present and distinct from the DE '28'.
+                    es28 = await conn.fetchval(
+                        "SELECT count(*) FROM geo_province "
+                        "WHERE country_code='ES' AND code='28'")
+                    assert es28 == 1, "ES province '28' missing while DE rows present"
+                    # Every seeded DE municipality resolves to a DE province via the
+                    # composite FK (no ES bleed).
+                    bleed = await conn.fetchval(
+                        "SELECT count(*) "
+                        "FROM geo_municipality m "
+                        "JOIN geo_province p "
+                        "  ON p.country_code = m.country_code AND p.code = m.province_code "
+                        "WHERE m.country_code='DE' AND p.country_code <> 'DE'")
+                    assert bleed == 0, (
+                        "a DE municipality resolved to a non-DE province — ES bleed")
+                finally:
+                    await tx.rollback()
             finally:
                 await conn.close()
         _run(_go())

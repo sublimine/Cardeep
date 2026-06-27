@@ -17,26 +17,36 @@ All DB tests are guarded with @pytest.mark.skipif when the DB is unreachable.
 from __future__ import annotations
 
 import asyncio
+import os
 
 import pytest
 
 
 # ---------------------------------------------------------------------------
-# DB availability guard
+# DB connection (honors CARDEEP_DSN; defaults to the :5434 dry-run so a bare local
+# run never touches :5433 live production). The fuzzy resolver needs the real INE
+# municipalities loaded into geo_municipality; against the empty dry-run the DB
+# classes skip cleanly. The unit + gazetteer classes load from the in-repo CSV and
+# are DB-free (they always run).
 # ---------------------------------------------------------------------------
 
-def _db_available() -> bool:
+_DRYRUN_DSN = "postgres://cardeep:cardeep_dev_only@localhost:5434/cardeep"
+DSN = os.environ.get("CARDEEP_DSN", _DRYRUN_DSN)
+
+
+def _municipalities_seeded() -> bool:
+    """True iff the DB is reachable AND geo_municipality is populated."""
     try:
         import asyncpg
 
         async def _check() -> bool:
             try:
-                conn = await asyncpg.connect(
-                    "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep",
-                    timeout=3,
-                )
-                await conn.close()
-                return True
+                conn = await asyncpg.connect(DSN, timeout=3)
+                try:
+                    n = await conn.fetchval("SELECT count(*) FROM geo_municipality")
+                    return (n or 0) > 0
+                finally:
+                    await conn.close()
             except Exception:
                 return False
 
@@ -46,8 +56,9 @@ def _db_available() -> bool:
 
 
 _DB_SKIP = pytest.mark.skipif(
-    not _db_available(),
-    reason="cardeep-pg not reachable on localhost:5433",
+    not _municipalities_seeded(),
+    reason=f"geo_municipality not seeded at {DSN} "
+    "(empty dry-run, or run scripts/load_geo.py)",
 )
 
 
@@ -62,9 +73,7 @@ def geo_resolver():
     from pipeline.geo import GeoResolver
 
     async def _load():
-        conn = await asyncpg.connect(
-            "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
-        )
+        conn = await asyncpg.connect(DSN)
         try:
             return await GeoResolver.load(conn)
         finally:
