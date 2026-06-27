@@ -43,7 +43,10 @@ async def main(apply: bool) -> None:
         geo = await MunicipalityGeocoder.load(conn, country_code="ES")
         cp = PostcodeIndex.load()
         # Valid municipality codes (for the self-verify gate) — pull once.
-        valid = {r["code"] for r in await conn.fetch("SELECT code FROM geo_municipality")}
+        # ES-only backfill: scope the validity set to ES so a foreign municipality sharing a
+        # 5-digit code (0053 dup-code coexistence) is not silently treated as a valid ES target.
+        valid = {r["code"] for r in await conn.fetch(
+            "SELECT code FROM geo_municipality WHERE country_code = 'ES'")}
 
         rows = await conn.fetch(_SELECT)
         updates: list[tuple[str, str]] = []
