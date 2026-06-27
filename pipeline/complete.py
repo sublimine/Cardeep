@@ -84,9 +84,13 @@ _NATIONAL_KINDS: frozenset[str] = frozenset(
     {"subasta", "plataforma", "oem_vo_portal", "importador"}
 )
 
-# cdp_code format: CDP-ES-{NN}-{8×Crockford-base32}
+# cdp_code format: CDP-{CC}-{NN}-{8×Crockford-base32}
+# CC is the ISO-3166 alpha-2 tenant minted by services/api/codes.py. The historical ES
+# output is byte-identical ('ES' matches the generic [A-Z]{2}), but the G1 identity gate
+# must now validate EVERY tenant's code (CDP-DE-…, CDP-FR-…), not only Spain — a
+# country-blind ^CDP-ES- wrongly failed identity for any second-country entity.
 # Crockford alphabet: digits + uppercase excluding I, L, O, U
-_CDP_CODE_RE = re.compile(r"^CDP-ES-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$")
+_CDP_CODE_RE = re.compile(r"^CDP-[A-Z]{2}-([0-9]{2})-[0-9A-HJKMNP-TV-Z]{8}$")
 
 # Field-integrity floor (V2 §3.B): fraction of landed rows that are valid
 _FIELD_INTEGRITY_FLOOR: float = 0.98
@@ -114,7 +118,9 @@ async def check_g1(conn: asyncpg.Connection, cdp_code: str) -> tuple[bool, str]:
         is a NATIONAL kind (subasta/plataforma/oem_vo_portal/importador) carrying
         the '00' sentinel — for those, '00' is the correct geo, not a gap (§Deuda
         B2 closed 2026-06-15: ~130 national entities were wrongly failing identity).
-      - cdp_code matches the CDP-ES-NN-XXXXXXXX pattern (Crockford base32)
+      - cdp_code matches the CDP-CC-NN-XXXXXXXX pattern (CC = ISO-3166 alpha-2
+        tenant, Crockford base32 tail) — generalised from the ES-only validator so
+        a second country's codes pass identity (the mint already emits them)
 
     lat/lon are NOT checked: the geo gap (6,601 dealers without geo signal) is
     a declared SU-A6 data gap, not an identity failure. Identity = entity exists

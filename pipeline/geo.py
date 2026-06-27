@@ -148,13 +148,28 @@ class GeoResolver:
                 self._prov.setdefault(p, code)
 
     @classmethod
-    async def load(cls, conn: asyncpg.Connection) -> "GeoResolver":
+    async def load(cls, conn: asyncpg.Connection, country_code: str = "ES") -> "GeoResolver":
+        """Build the geo index for ONE tenant.
+
+        ``country_code`` scopes the backbone load so the resolver never bridges a city/province
+        name across borders (the geo PK is composite ``(country_code, code)`` since migration
+        0053, and DE province '28' deliberately coexists with ES Madrid '28'). Defaults to 'ES'
+        so every existing caller — discover/ingest/harvest and the ~6 platform wholesalers — stays
+        byte-identical until a second country is onboarded (today all geo rows are ES). The curated
+        ``_PROVINCE_ALIASES`` are ES-specific island/variant bridges and are loaded only for ES.
+        """
         self = cls()
-        for r in await conn.fetch("SELECT code, name FROM geo_province"):
+        for r in await conn.fetch(
+            "SELECT code, name FROM geo_province WHERE country_code = $1", country_code
+        ):
             self._index_prov(r["name"], r["code"])
-        for k, v in _PROVINCE_ALIASES.items():
-            self._prov.setdefault(k, v)
-        for r in await conn.fetch("SELECT code, name, province_code FROM geo_municipality"):
+        if country_code == "ES":
+            for k, v in _PROVINCE_ALIASES.items():
+                self._prov.setdefault(k, v)
+        for r in await conn.fetch(
+            "SELECT code, name, province_code FROM geo_municipality WHERE country_code = $1",
+            country_code,
+        ):
             d = self._muni.setdefault(r["province_code"], {})
             keys: set[str] = {_norm(r["name"]), _sorted_key(r["name"])}
             for part in re.split(r"[/,]", r["name"]):

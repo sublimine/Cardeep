@@ -33,11 +33,16 @@ router = APIRouter()
 @limiter.limit(RATE_EXPENSIVE)
 async def geo_completeness(
     request: Request,
+    country: str = Query(default="ES", description="ISO-3166 alpha-2 tenant (default ES)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """National geo-completeness report.
+    """National geo-completeness report for one tenant.
 
-    SU-D2: cached (7 sequential COUNT(*) queries; stable between harvests).
+    Every count is scoped by ``country_code = $1`` (``country`` query param, default 'ES') so the
+    coverage report belongs to ONE country, never a country-blind sum. With the default it is
+    byte-identical to the historical report (today entity non-ES = 0).
+
+    SU-D2: cached (sequential COUNT(*) queries; stable between harvests).
     """
     cached = try_cache_get(request)
     if cached is not None:
@@ -48,29 +53,37 @@ async def geo_completeness(
         # C2C inventory, not geo-located points of sale (and mostly lack geo by nature — the
         # SU-A6 gap). Scoping to kind<>'particular' makes full_pct reflect real dealer coverage,
         # consistent with /geo/{prov}/entities and /geo/{prov}/tree.
-        e_total = await c.fetchval("SELECT count(*) FROM entity WHERE kind <> 'particular'")
+        e_total = await c.fetchval(
+            "SELECT count(*) FROM entity WHERE kind <> 'particular' AND country_code = $1", country)
         e_full = await c.fetchval(
             "SELECT count(*) FROM entity WHERE kind <> 'particular' AND province_code IS NOT NULL "
-            "AND municipality_code IS NOT NULL AND comarca_id IS NOT NULL")
+            "AND municipality_code IS NOT NULL AND comarca_id IS NOT NULL AND country_code = $1", country)
         e_no_comarca_city = await c.fetchval(
             "SELECT count(*) FROM entity WHERE kind <> 'particular' "
-            "AND municipality_code IS NOT NULL AND comarca_id IS NULL")
+            "AND municipality_code IS NOT NULL AND comarca_id IS NULL AND country_code = $1", country)
         e_prov_only = await c.fetchval(
             "SELECT count(*) FROM entity WHERE kind <> 'particular' "
-            "AND province_code IS NOT NULL AND municipality_code IS NULL")
+            "AND province_code IS NOT NULL AND municipality_code IS NULL AND country_code = $1", country)
         e_no_geo = await c.fetchval(
-            "SELECT count(*) FROM entity WHERE kind <> 'particular' AND province_code IS NULL")
-        v_total = await c.fetchval("SELECT count(*) FROM vehicle")
+            "SELECT count(*) FROM entity WHERE kind <> 'particular' AND province_code IS NULL "
+            "AND country_code = $1", country)
+        v_total = await c.fetchval(
+            "SELECT count(*) FROM vehicle v JOIN entity e ON e.entity_ulid=v.entity_ulid "
+            "WHERE e.country_code = $1", country)
         v_full = await c.fetchval(
             "SELECT count(*) FROM vehicle v JOIN entity e ON e.entity_ulid=v.entity_ulid "
             "WHERE e.province_code IS NOT NULL AND e.municipality_code IS NOT NULL "
-            "AND e.comarca_id IS NOT NULL")
+            "AND e.comarca_id IS NOT NULL AND e.country_code = $1", country)
         geo = {
-            "provinces": await c.fetchval("SELECT count(*) FROM geo_province"),
-            "comarcas": await c.fetchval("SELECT count(*) FROM geo_comarca"),
-            "municipalities": await c.fetchval("SELECT count(*) FROM geo_municipality"),
+            "provinces": await c.fetchval(
+                "SELECT count(*) FROM geo_province WHERE country_code = $1", country),
+            "comarcas": await c.fetchval(
+                "SELECT count(*) FROM geo_comarca WHERE country_code = $1", country),
+            "municipalities": await c.fetchval(
+                "SELECT count(*) FROM geo_municipality WHERE country_code = $1", country),
             "municipalities_with_comarca": await c.fetchval(
-                "SELECT count(*) FROM geo_municipality WHERE comarca_id IS NOT NULL"),
+                "SELECT count(*) FROM geo_municipality WHERE comarca_id IS NOT NULL "
+                "AND country_code = $1", country),
         }
         response = ok({
             "geo_grid": geo,
@@ -231,15 +244,20 @@ async def geo_exhaustiveness(
 async def entities_by_province(
     province_code: str,
     request: Request,
+    country: str = Query(default="ES", description="ISO-3166 alpha-2 tenant (default ES)"),
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """List active non-particular entities for a province.
+    """List active non-particular entities for a province within one tenant.
 
     GAP-1 fix: adds WHERE status='active' AND kind <> 'particular'.
     Excludes C2C sellers and unverified entities — only trade point-of-sale
     dealers are returned.
+
+    Country-scope (vector #5): WHERE se.country_code = $2 (``country`` query param,
+    default 'ES') so a province query for one tenant never serves a same-numbered
+    province in another (DE '28' coexists with ES Madrid '28' — migration 0053).
 
     Pagination (B3.1): accepts ``page``/``size``.
 
@@ -266,14 +284,16 @@ async def entities_by_province(
                   FROM servable_entity se
                   JOIN v_dealer_resolved vdr ON vdr.entity_ulid = se.entity_ulid
                  WHERE se.province_code = $1
+                   AND se.country_code = $2
                    AND se.status = 'active'
                    AND se.kind <> 'particular'
                  ORDER BY vdr.resolved_cdp_code, se.trade_name NULLS LAST, se.cdp_code
             ) q
             ORDER BY q.trade_name NULLS LAST, q.cdp_code
-            LIMIT $2 OFFSET $3
+            LIMIT $3 OFFSET $4
             """,
             province_code,
+            country,
             size + 1,
             offset,
         )
@@ -285,6 +305,7 @@ async def entities_by_province(
             returned=len(rows),
             has_more=has_more,
             province=province_code,
+            country=country,
         )
     return cache_set(request, response)
 
@@ -295,15 +316,19 @@ async def entities_by_municipality(
     province_code: str,
     muni_code: str,
     request: Request,
+    country: str = Query(default="ES", description="ISO-3166 alpha-2 tenant (default ES)"),
     page: int = Query(default=1, ge=1, description="Page number (1-based)"),
     size: int = Query(default=50, ge=1, le=200, description="Items per page (1-200)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """GAP-3: List active non-particular dealers in a specific municipality.
+    """GAP-3: List active non-particular dealers in a specific municipality of one tenant.
 
     Scopes to province_code + municipality_code so callers can drill
     country → province → municipality without fetching the full province dump.
     Applies the same active/non-particular filter as /geo/{province}/entities.
+
+    Country-scope (vector #5): WHERE country_code = $3 (``country`` query param,
+    default 'ES') — a municipality_code is only unique within a tenant (0053).
 
     Pagination (B3.1): accepts ``page``/``size``.
 
@@ -322,13 +347,15 @@ async def entities_by_municipality(
               FROM servable_entity
              WHERE province_code = $1
                AND municipality_code = $2
+               AND country_code = $3
                AND status = 'active'
                AND kind <> 'particular'
              ORDER BY trade_name, cdp_code
-             LIMIT $3 OFFSET $4
+             LIMIT $4 OFFSET $5
             """,
             province_code,
             muni_code,
+            country,
             size + 1,
             offset,
         )
@@ -341,6 +368,7 @@ async def entities_by_municipality(
             has_more=has_more,
             province=province_code,
             municipality=muni_code,
+            country=country,
         )
     return cache_set(request, response)
 
@@ -354,9 +382,15 @@ async def entities_by_municipality(
 async def province_inventory_tree(
     province_code: str,
     request: Request,
+    country: str = Query(default="ES", description="ISO-3166 alpha-2 tenant (default ES)"),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
-    """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad.
+    """Province inventory grouped pais -> PROVINCIA -> COMARCA -> ciudad, for one tenant.
+
+    Country-scope (vector #5): every read is scoped by ``country_code = $2`` (``country``
+    query param, default 'ES'). The geo_municipality join is matched on BOTH code AND
+    country_code (the geo PK is composite since 0053) so the tree never folds a same-numbered
+    foreign municipality into a Spanish province.
 
     SU-D2: cached (GROUP BY over 50k+ entity rows; stable within a harvest
     window; tree structure changes only when new dealers are ingested).
@@ -367,8 +401,9 @@ async def province_inventory_tree(
 
     async with request.app.state.pool.acquire() as c:
         prov = await c.fetchrow(
-            "SELECT code, name, ccaa_code, ccaa_name FROM geo_province WHERE code=$1",
-            province_code)
+            "SELECT code, name, ccaa_code, ccaa_name FROM geo_province "
+            "WHERE code=$1 AND country_code=$2",
+            province_code, country)
         if prov is None:
             return err(f"province {province_code} not found")
         rows = await c.fetch(
@@ -386,13 +421,14 @@ async def province_inventory_tree(
                       count(*) FILTER (WHERE e.kind='rent_a_car_vo')        AS rent_a_car_vo
                  FROM servable_entity e
                  JOIN geo_municipality m ON m.code = e.municipality_code
+                                        AND m.country_code = e.country_code
                  JOIN geo_comarca      co ON co.id = m.comarca_id
-                WHERE e.province_code = $1 AND e.comarca_id IS NOT NULL
+                WHERE e.province_code = $1 AND e.country_code = $2 AND e.comarca_id IS NOT NULL
                   AND e.kind <> 'particular'
                 GROUP BY co.id, co.name, co.ine_code, m.code, m.name
                 HAVING count(e.entity_ulid) > 0
                 ORDER BY co.ine_code, entities DESC, m.name""",
-            province_code)
+            province_code, country)
         comarcas: dict[int, dict[str, Any]] = {}
         prov_total = 0
         for r in rows:
@@ -413,8 +449,8 @@ async def province_inventory_tree(
         # summary count silently included C2C particulares + unverified rows the tree excludes.
         province_only = await c.fetchval(
             "SELECT count(*) FROM servable_entity WHERE province_code=$1 AND municipality_code IS NULL "
-            "AND kind <> 'particular' AND status = 'active'",
-            province_code)
+            "AND kind <> 'particular' AND status = 'active' AND country_code=$2",
+            province_code, country)
         tree = {
             "province": {"code": prov["code"], "name": prov["name"],
                          "ccaa_code": prov["ccaa_code"], "ccaa_name": prov["ccaa_name"]},
@@ -422,5 +458,5 @@ async def province_inventory_tree(
             "entities_geo_clean": prov_total,
             "entities_province_only_no_municipality": province_only,
         }
-        response = ok(tree, comarca_count=len(comarcas), province=province_code)
+        response = ok(tree, comarca_count=len(comarcas), province=province_code, country=country)
     return cache_set(request, response)
