@@ -34,11 +34,13 @@ them because '28' is itself a valid ES province):
       Italy ('RM') wrongly FAILED identity. Now country-scoped: ES keeps 01-52
       byte-identical; a non-ES tenant validates the generic 2-char geo_province.code shape.
 
-THREE genericity gaps CAUGHT and DOCUMENTED (not fixed here -- each is a large
-geo-backbone migration or a transliteration swap, outside this test's surgical scope;
-locked below as guards so the limit is EXPLICIT and regression-tracked, never silent):
-  (A) geo_province.code CHAR(2) cannot store FR DOM '971'   -> "value too long".
-  (B) geo_municipality.code CHAR(5) cannot store IT '058091' -> "value too long".
+THREE genericity gaps CAUGHT here. (A) and (B) -- the geo code WIDTH limits -- are now
+CLOSED by migration 0059_geo_code_width.sql (CHAR(2)/CHAR(5) -> VARCHAR(8)/VARCHAR(16)
+across the geo identity AND every FK-referrer + trigger + 6 dependent views); the two
+tests below now assert the real codes ENTER and the FK chain resolves. (C) remains a
+documented limit (a transliteration swap, outside this test's surgical scope):
+  (A) [CLOSED 0059] geo_province.code is now VARCHAR(8) -> stores FR DOM '971' (Guadeloupe).
+  (B) [CLOSED 0059] geo_municipality.code is now VARCHAR(16) -> stores IT ISTAT '058091' (Roma).
   (C) norm_name (NFKD + ascii-fold) erases non-latin scripts: a pure Greek/Cyrillic
       name normalizes to None -> the name identity signal is DEAD for those tenants.
 
@@ -296,20 +298,29 @@ def test_fr_corsica_nonnumeric_province_accepted(dry_conn):
 
 
 @pytest.mark.integration
-def test_fr_overseas_dom_province_exceeds_char2_DOCUMENTED_LIMIT(dry_conn):
-    """DOCUMENTED GAP (A): geo_province.code CHAR(2) cannot store France's 3-digit
-    overseas department codes (DOM '971' Guadeloupe .. '976' Mayotte). The INSERT is
-    rejected by PostgreSQL with 'value too long for type character(2)'. Metropolitan FR
-    (01-95) + Corsica (2A/2B) fit; the DOM/TOM tail does NOT. Fixing it is a geo-backbone
-    width migration (CHAR(2)->wider) touching the composite PK + 6 FKs -- out of this
-    test's surgical scope; locked here so the limit is explicit and regression-tracked."""
+def test_fr_overseas_dom_province_971_enters(dry_conn):
+    """CLOSED gap (A) [migration 0059]: geo_province.code is now VARCHAR(8), so France's
+    3-digit overseas department codes (DOM '971' Guadeloupe .. '976' Mayotte) seed cleanly
+    under country='FR'. The whole province FK chain resolves with the 3-char code: a DOM
+    commune '97101' (FK -> geo_province(FR,'971')) and an entity (province '971',
+    muni '97101') both store. RED before 0059 ('value too long for type character(2)')."""
     with dry_conn.cursor() as cur:
-        with pytest.raises(psycopg2.DataError) as excinfo:
-            cur.execute(
-                "INSERT INTO geo_province (code, name, ccaa_code, ccaa_name, country_code) "
-                "VALUES ('971', 'Guadeloupe', '97', 'DOM', 'FR')")
-        assert "too long" in str(excinfo.value), (
-            "expected a CHAR(2) width rejection for FR DOM province '971'")
+        _seed_geo(cur, "FR", "971", "97101")  # 3-digit province + DOM commune
+        ent = _seed_entity(cur, ulid_tag="FRDOM1", cdp="CDP-FR-971-FRDOM01",
+                           name="auto guadeloupe", country="FR",
+                           province="971", muni="97101")
+        cur.execute(
+            "SELECT code, length(code) FROM geo_province "
+            "WHERE country_code='FR' AND code='971'")
+        gp = cur.fetchone()
+        cur.execute(
+            "SELECT province_code, municipality_code FROM entity WHERE entity_ulid=%s",
+            (ent,))
+        ent_row = cur.fetchone()
+    assert gp == ("971", 3), f"FR DOM province '971' not stored as VARCHAR: {gp!r}"
+    assert ent_row == ("971", "97101"), (
+        f"FR DOM province FK chain did not resolve: entity stored {ent_row!r}, expected "
+        "('971','97101') -- gap (A) should be closed by 0059")
 
 
 # ===========================================================================
@@ -384,22 +395,29 @@ def test_it_cadastral_comune_non_prefix_accepted(dry_conn):
 
 
 @pytest.mark.integration
-def test_it_istat_comune_exceeds_char5_DOCUMENTED_LIMIT(dry_conn):
-    """DOCUMENTED GAP (B): geo_municipality.code CHAR(5) cannot store Italy's 6-digit
-    ISTAT comune codes (Roma '058091', Milano '015146'). The INSERT is rejected with
-    'value too long for type character(5)'. A <=5-char scheme (cadastral Belfiore 'H501')
-    is the only representable option, which is a data-modeling compromise. Widening CHAR(5)
-    is a geo-backbone migration -- out of this test's scope; locked here as the explicit limit."""
+def test_it_istat_comune_058091_enters(dry_conn):
+    """CLOSED gap (B) [migration 0059]: geo_municipality.code is now VARCHAR(16), so Italy's
+    6-digit ISTAT comune codes (Roma '058091', Milano '015146') seed cleanly under
+    country='IT' (province 'RM'). entity.municipality_code (also VARCHAR(16)) holds the
+    6-digit code and its composite FK resolves. The muni prefix CHECK stays ES-guarded, so
+    left('058091',2)='05' != 'RM' is accepted for IT. RED before 0059 ('value too long for
+    type character(5)')."""
     with dry_conn.cursor() as cur:
+        _seed_geo(cur, "IT", "RM", "058091")  # 2-letter province + 6-digit ISTAT comune
+        ent = _seed_entity(cur, ulid_tag="ITRM1", cdp="CDP-IT-RM-ITRM001",
+                           name="concessionaria roma", country="IT",
+                           province="RM", muni="058091")
         cur.execute(
-            "INSERT INTO geo_province (code, name, ccaa_code, ccaa_name, country_code) "
-            "VALUES ('RM', 'Roma', '12', 'Lazio', 'IT')")
-        with pytest.raises(psycopg2.DataError) as excinfo:
-            cur.execute(
-                "INSERT INTO geo_municipality (code, name, province_code, comarca_id, country_code) "
-                "VALUES ('058091', 'Roma', 'RM', NULL, 'IT')")
-        assert "too long" in str(excinfo.value), (
-            "expected a CHAR(5) width rejection for IT ISTAT comune '058091'")
+            "SELECT code, length(code) FROM geo_municipality "
+            "WHERE country_code='IT' AND code='058091'")
+        gm = cur.fetchone()
+        cur.execute(
+            "SELECT municipality_code FROM entity WHERE entity_ulid=%s", (ent,))
+        em = cur.fetchone()[0]
+    assert gm == ("058091", 6), f"IT ISTAT comune '058091' not stored as VARCHAR: {gm!r}"
+    assert em == "058091", (
+        f"entity.municipality_code did not hold the ISTAT comune: {em!r} -- gap (B) "
+        "should be closed by 0059")
 
 
 # ===========================================================================
