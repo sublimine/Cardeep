@@ -26,3 +26,11 @@ scratch/
 scripts/_*.py
 scratch_*.py
 .runlogs/
+
+# Dev clutter (scratch/audit one-offs, screenshots) - limpieza 2026-06-27
+/scratch_*.py
+/audit_*.py
+/cardeep-*.png
+/_audit_*.json
+/ent*.json
+/liveseal.json
