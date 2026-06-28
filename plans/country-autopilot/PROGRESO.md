@@ -35,8 +35,10 @@ La BIBLIA ya diseñó esto a fondo en `docs/generic-engine-bible/`:
 - [x] **E2 · loop + E2E DEMOSTRADO** `7787d58` (13/13): `pipeline/ops/autopilot.py` `run_campaign('XX')` recorre REGISTERED→…→SEALED, mintea `CDP-XX-`, **violations=0**, puertas vivas APARCAN PENDIENTE-OWNER (`dry_run=False`→parkea en BOOTSTRAPPED, jamás auto-go-live), revierte limpio. **Verificado entero: 206 goldens + 60 no-regresión.**
 
 ### RESTA (queued, dry-run €0, no bloquea el loop demostrado)
-- [ ] **A** · OI-7 (numerador único v_servable_dealer), OI-8 (pHash write-path, egress-gated), OI-10 (source_health/lease country_code + **zombie silence O5**), 32º mint residual.
-- [ ] **C** · auto-source-finder (clasificar fuentes país→buckets; juicio→auditor) + peldaños receta css/llm_local (extruct+Ollama local).
+- [x] **C source-finder** `6a7e25b` (12/12) — `pipeline/autopilot/source_finder.py` clasifica fuentes→7 buckets, `needs_audit=True` siempre + `CONFIDENCE_CAP=0.9<1.0` (incapaz de certificar) + contenido-vence-origen. Auto-pack COMPLETO (geo+denom+fuentes).
+- [x] **A OI-10** `57466ab` (63 passed) — zombie silence O5 ARREGLADO RAÍZ (`resolve_recovered_silence_alerts`) + country_code en source_health/harvest_run/scheduler_lease (mig **0068**) + scope per-país. Aplicar 0068 a :5433 = gate OPERACIONAL owner.
+- [ ] **A** · OI-7 (numerador único v_servable_dealer), OI-8 (pHash write-path, egress-gated), 32º mint residual `cage_autorola`.
+- [ ] **C** · peldaños receta css/llm_local (extruct+Ollama local).
 - [ ] **D** · council N2 adversarial (hoy stub) + persistencia `country_pack_audit_verdict`.
 - [ ] **E3** · supervisor salud per-país (lee 0057/0058/0060/0064) + wiring al scheduler real.
 - [ ] **MERGE** `feature/country-2-readiness` (spine de-cegado) → para cosecha REAL E2E (resolver detect.py).
