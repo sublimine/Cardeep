@@ -75,9 +75,9 @@ def compute(
                       for today's sole tenant.
     """
     if external_census is None:
-        external_census = triangulation.load_external_census()
+        external_census = triangulation.load_external_census(country_code=country_code)
     patterns, buckets = capture.read_patterns(
-        build_run_id, dsn=dsn, include_mkt=include_mkt
+        build_run_id, dsn=dsn, include_mkt=include_mkt, country_code=country_code
     )
     seals: list[StratumSeal] = []
     for (prov, seg), freqs in sorted(
