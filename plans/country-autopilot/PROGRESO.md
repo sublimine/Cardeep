@@ -39,8 +39,11 @@ La BIBLIA ya diseñó esto a fondo en `docs/generic-engine-bible/`:
 - [x] **A OI-10** `57466ab` (63 passed) — zombie silence O5 ARREGLADO RAÍZ (`resolve_recovered_silence_alerts`) + country_code en source_health/harvest_run/scheduler_lease (mig **0068**) + scope per-país. Aplicar 0068 a :5433 = gate OPERACIONAL owner.
 - [ ] **A** · OI-7 (numerador único v_servable_dealer), OI-8 (pHash write-path, egress-gated), 32º mint residual `cage_autorola`.
 - [ ] **C** · peldaños receta css/llm_local (extruct+Ollama local).
-- [ ] **D** · council N2 adversarial (hoy stub) + persistencia `country_pack_audit_verdict`.
-- [ ] **E3** · supervisor salud per-país (lee 0057/0058/0060/0064) + wiring al scheduler real.
+- [x] **D persistencia** `f38f342` (10/10) — mig `0069` `country_pack_audit_verdict` append-only + `persist_verdict` (N0-N4+OVERALL), lógica auditor intacta.
+- [x] **E3 supervisor** `2b1059d` (97 passed) — `pipeline/autopilot/supervisor.py` `health_rollup` per-país (5 superficies country-aware aisladas XX↔ES, reusa predicado watchdog). **Suite autopilot COMPLETA: 235 goldens, :5434 head 0069.**
+- [ ] **D** · council N2 adversarial (en vuelo) — perspectivas D≥2; N2 SIGUE escalando lo irreducible (enriquece, no auto-aprueba).
+- [ ] **Resto reversible marginal/gated**: peldaño receta css (schema.org ya cubre el caso común) · llm_local (Ollama runtime) · pHash write-path (población=egress-gated) · OI-7 numerador (DECISIÓN-OWNER: qué numerador) · OI-8 · merge country-2-readiness (para cosecha REAL = puertas operacionales).
+- [ ] **PUERTAS OPERACIONALES OWNER** (no código, el techo honesto): datos DE reales (geo/denominador descargables €0 pero el cross-walk/split = checkpoint), recetas scraping DE, decisión legal/ToS, gasto €>0 (GPU/IA-local). Per doctrina: NO declaro 100% con residual gated; las puertas quedan PENDIENTE-OWNER, no detienen.
 - [ ] **MERGE** `feature/country-2-readiness` (spine de-cegado) → para cosecha REAL E2E (resolver detect.py).
 - [ ] **PUERTAS OWNER** (no código): datos/scraping/legal de país real.
 - [ ] **E2E** — onboard país sintético "XX" en :5434 por el loop completo; golden country-proof-invariant verde + byte-identidad ES.
