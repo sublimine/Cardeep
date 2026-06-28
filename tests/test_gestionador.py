@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import os
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -663,7 +664,10 @@ class TestSLAConfig:
 # regression cannot recur silently.  Pattern mirrors test_inquisition_schedule.py.
 # ---------------------------------------------------------------------------
 
-_DSN = "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5433/cardeep"
+# ISOLATION: honor CARDEEP_DSN (default :5434 dry-run) and HARD-REFUSE live :5433 — the
+# real-DB binds below must never touch production, even read-only. Mirrors the
+# tests/test_gestion_item_country.py convention.
+_DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localhost:5434/cardeep")
 
 
 async def _ping_db() -> bool:
@@ -677,6 +681,8 @@ async def _ping_db() -> bool:
 
 
 def _db_available() -> bool:
+    if "5433" in _DSN:
+        return False  # never connect to live prod (:5433), even read-only
     try:
         import asyncpg  # noqa: F401
         return asyncio.run(_ping_db())
@@ -691,7 +697,7 @@ class _Rollback(Exception):
     """Sentinel that forces transaction rollback without persisting any state."""
 
 
-@pytest.mark.skipif(not _DB_AVAILABLE, reason="cardeep-pg not reachable at 127.0.0.1:5433")
+@pytest.mark.skipif(not _DB_AVAILABLE, reason="cardeep dry-run DB not reachable (CARDEEP_DSN, default :5434)")
 class TestOpenOrRefreshRealDB:
     """Bind open_or_refresh through real asyncpg (rolled back) — guards the
     sla_due encoding path that mocked tests cannot see."""

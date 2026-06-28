@@ -21,7 +21,9 @@ All thresholds are module-level constants (never magic numbers in logic).
 """
 from __future__ import annotations
 
+import json
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -163,6 +165,24 @@ def _daily_bucket(conn_or_today: str | None = None) -> str:
     return date.today().isoformat()
 
 
+def _as_evidence_dict(raw: Any) -> dict | None:
+    """Decode a verification_verdict.independent_values cell into an evidence dict.
+
+    asyncpg returns JSONB as a str (no codec registered) -> json.loads; unit-test
+    mocks pass a dict directly. The column is a generic JSONB that, for some
+    verdicts, holds a JSON array (or scalar) rather than an object — a payload that
+    carries no source_declared/harvested/db_available evidence. Any non-object payload
+    returns None so the caller skips it exactly like incomplete evidence, instead of
+    crashing on ``list.get`` (the production "'list' object has no attribute 'get'").
+    """
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (ValueError, TypeError):
+            return None
+    return dict(raw) if isinstance(raw, Mapping) else None
+
+
 # ---------------------------------------------------------------------------
 # 3.1 — count_inflation
 # ---------------------------------------------------------------------------
@@ -191,10 +211,12 @@ async def detect_count_inflation(conn: asyncpg.Connection) -> list[AnomalyResult
     bucket = _daily_bucket()
 
     for row in rows:
-        # independent_values may come back as str (asyncpg JSONB) or dict (mocks)
-        raw_iv = row["independent_values"]
-        import json as _json
-        iv: dict = _json.loads(raw_iv) if isinstance(raw_iv, str) else dict(raw_iv)
+        # independent_values is a generic JSONB: an object for entity_inventory verdicts,
+        # but a JSON array/scalar for other shapes -> skip non-objects instead of crashing
+        # on list.get (the prod "'list' object has no attribute 'get'" error).
+        iv = _as_evidence_dict(row["independent_values"])
+        if iv is None:
+            continue
 
         d = iv.get("source_declared")
         h = iv.get("harvested")
@@ -302,9 +324,9 @@ async def detect_silent_cap(conn: asyncpg.Connection) -> list[AnomalyResult]:
     bucket = _daily_bucket()
 
     for row in rows:
-        import json as _json
-        raw_iv = row["independent_values"]
-        iv: dict = _json.loads(raw_iv) if isinstance(raw_iv, str) else dict(raw_iv)
+        iv = _as_evidence_dict(row["independent_values"])
+        if iv is None:
+            continue
         d = iv.get("source_declared")
         h = iv.get("harvested")
         if d is None or h is None:
@@ -806,7 +828,7 @@ async def detect_price_trap(conn: asyncpg.Connection) -> list[AnomalyResult]:
                    percentile_cont(0.5) WITHIN GROUP (ORDER BY price) AS med_price
               FROM base
              GROUP BY make, model, year
-            HAVING count(*) >= CASE WHEN model IS NOT NULL THEN $1 ELSE $2 END
+            HAVING count(*) >= CASE WHEN model IS NOT NULL THEN $1::int ELSE $2::int END
         ),
         mad AS (
             SELECT * FROM (

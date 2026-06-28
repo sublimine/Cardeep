@@ -49,12 +49,34 @@ from pipeline.config_guard import require_prod_secrets
 
 # ---------------------------------------------------------------------------
 # Logging
+#
+# Force the scheduler's OWN stdout to UTF-8 (with a non-raising backslashreplace
+# fallback) BEFORE wiring the StreamHandler. gestionador transition/error messages
+# can carry non-ASCII (e.g. a U+2192 arrow in a state-machine error, accented
+# Spanish notes); a Windows cp1252 ('charmap') stream would otherwise raise
+# UnicodeEncodeError on emit and MASK the real error. PYTHONIOENCODING=utf-8 is
+# already injected into child connectors (_run_source); this is the same guard for
+# the scheduler process itself.
 # ---------------------------------------------------------------------------
+
+def _utf8_safe_stream(stream):
+    """Best-effort reconfigure a text stream to UTF-8 with a non-raising fallback.
+
+    Returns the same stream. No-op if it cannot be reconfigured (e.g. a stream
+    already wrapped by a test capture, which exposes no ``reconfigure``).
+    """
+    try:
+        stream.reconfigure(encoding="utf-8", errors="backslashreplace")
+    except (AttributeError, ValueError):
+        pass
+    return stream
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [scheduler] %(levelname)s %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
-    stream=sys.stdout,
+    stream=_utf8_safe_stream(sys.stdout),
 )
 log = logging.getLogger("cardeep.scheduler")
 

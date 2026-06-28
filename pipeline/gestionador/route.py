@@ -75,7 +75,7 @@ def assert_valid_transition(from_state: str | None, to_state: str) -> None:
     allowed = VALID_TRANSITIONS[from_state]
     if to_state not in allowed:
         raise ValueError(
-            f"Illegal transition {from_state!r} → {to_state!r}. "
+            f"Illegal transition {from_state!r} -> {to_state!r}. "
             f"Allowed from {from_state!r}: {sorted(allowed)}"
         )
 
@@ -307,11 +307,14 @@ async def route_anomalies(
         current = state_row["state"] if state_row else "OPEN"
         if current == "OPEN":
             target = _routing_lane_to_first_state(anomaly.lane, anomaly.quarantines)
-            await transition(
-                conn, item_id, target,
-                actor=actor,
-                note=f"Auto-routed to {anomaly.lane} by routing function",
-            )
+            note = f"Auto-routed to {anomaly.lane} by routing function"
+            # ESCALATED is NOT reachable directly from OPEN (state machine: OPEN ->
+            # {ROUTED, QUARANTINED, WONT_FIX}); an escalation lane therefore bridges
+            # OPEN -> ROUTED -> ESCALATED, the legal path. QUARANTINED/ROUTED are a
+            # single legal hop, so the bridge fires only when the target needs it.
+            if target not in VALID_TRANSITIONS["OPEN"]:
+                await transition(conn, item_id, "ROUTED", actor=actor, note=note)
+            await transition(conn, item_id, target, actor=actor, note=note)
         item_ids.append(item_id)
     return item_ids
 
