@@ -90,6 +90,36 @@ class CountryProfile:
         return cls._from_manifest(cc, data, path)
 
     @classmethod
+    def load_dir(cls, pack_dir: "Path | str") -> "CountryProfile":
+        """Load a pack manifest from an ARBITRARY directory (``pack_dir/country.toml``).
+
+        Unlike :meth:`load`, this does NOT hard-code the canonical ``countries/<CC>/`` location:
+        it validates whatever pack lives at ``pack_dir`` and derives the ``country_code`` from the
+        manifest itself. This is the loader the country-autopilot auditor (Fase D) uses to lint a
+        PROPOSED or staged pack — including synthetic packs under a temp dir — before it is blessed
+        into the repo. ``load`` is left untouched, so ES stays byte-identical.
+
+        Raises
+        ------
+        FileNotFoundError
+            If ``pack_dir/country.toml`` does not exist.
+        ValueError
+            If the manifest's ``country_code`` is not ISO-3166 alpha-2 shaped, or the manifest is
+            malformed (missing/invalid ``[subdivision].regex``, bad ``[kinds].national``).
+        """
+        path = Path(pack_dir) / "country.toml"
+        if not path.is_file():
+            raise FileNotFoundError(f"country pack manifest not found: {path}")
+        with path.open("rb") as fh:
+            data: dict[str, Any] = tomllib.load(fh)
+        declared = data.get("country_code")
+        if not isinstance(declared, str) or not _CC_RE.match(declared):
+            raise ValueError(
+                f"{path}: country_code must match ^[A-Z]{{2}}$, got {declared!r}"
+            )
+        return cls._from_manifest(declared, data, path)
+
+    @classmethod
     def _from_manifest(
         cls, cc: str, data: Mapping[str, Any], path: Path
     ) -> "CountryProfile":
