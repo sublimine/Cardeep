@@ -41,9 +41,13 @@ import math
 import warnings
 from collections import Counter
 from dataclasses import dataclass, field
+from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
+
+if TYPE_CHECKING:  # asyncpg is only needed for the optional persistence writer's type hint —
+    import asyncpg  # the auditor's logic stays pure (no hard asyncpg dependency at import time).
 
 from pipeline.country_profile import CountryProfile
 from pipeline.exhaustiveness.estimators import estimate_stratum
@@ -461,3 +465,71 @@ def audit_pack(country_code: str, pack_dir: Path | str, plan: CountryPlan) -> Pa
         levels=levels,
         live_gate=n2.decision,
     )
+
+
+# ---------------------------------------------------------------------------
+# Persistence (Fase D increment) — the append-only country_pack_audit_verdict
+# ledger (migration 0069). OPTIONAL by design: audit_pack stays a PURE function;
+# the caller decides whether to persist. This writer NEVER mutates the verdict and
+# NEVER changes a ruling — it only appends the computed sub-verdicts to the ledger.
+# ---------------------------------------------------------------------------
+
+_PERSIST_VERDICT_SQL = """
+    INSERT INTO country_pack_audit_verdict
+        (country_code, level, sub_verdict, score, reason_code, decision)
+    VALUES ($1, $2, $3, $4, $5, $6)
+"""
+
+# Sentinel level name for the pack-level summary row (the per-level rows use 'N0'..'N4').
+_OVERALL_LEVEL = "OVERALL"
+
+
+def _normalize_cc(country_code: str) -> str:
+    """ISO alpha-2, stripped + upper-cased (CHAR(2) in the schema). Mirrors state._normalize_cc;
+    inlined to keep the auditor self-contained (state.py is owned by another increment)."""
+    cc = (country_code or "").strip().upper()
+    if len(cc) != 2:
+        raise ValueError(f"country_code must be 2 chars (ISO), got {country_code!r}")
+    return cc
+
+
+async def persist_verdict(
+    conn: asyncpg.Connection,
+    country_code: str,
+    verdict: PackAuditVerdict,
+) -> int:
+    """Append the auditor's sub-verdicts (one row per level N0..N4) + one OVERALL summary row to the
+    ``country_pack_audit_verdict`` ledger (migration 0069), and return the number of rows written
+    (== ``len(verdict.levels) + 1``).
+
+    This is the OPTIONAL persistence half of Fase D and a PURE SIDE-EFFECT: it does NOT mutate the
+    verdict and does NOT touch :func:`audit_pack`'s logic — the caller decides whether to persist.
+
+    Append-only (the history IS the proof, mirroring ``country_campaign_transition`` and
+    ``inquisition_verdict``): every call INSERTs a fresh batch, so re-auditing the same country ADDS
+    rows and never overwrites. The caller owns the asyncpg transaction boundary (exactly like
+    ``state.register`` / ``state.transition``), so a dry-run can roll the whole batch back.
+
+    Column mapping (see migration 0069 header): each level row carries its own ``sub_verdict`` /
+    ``score`` / ``reason_code``; the OVERALL row carries the pack ``decision`` / ``confidence`` /
+    ``reason_code``; and the pack's overall ``decision`` is denormalised onto EVERY row of the run.
+    ``score`` is bound as :class:`~decimal.Decimal` because asyncpg requires it for a NUMERIC column.
+    """
+    cc = _normalize_cc(country_code)
+    overall_decision = verdict.decision.value
+
+    written = 0
+    for lv in verdict.levels:
+        await conn.execute(
+            _PERSIST_VERDICT_SQL,
+            cc, lv.level, lv.decision.value, Decimal(str(lv.score)), lv.reason_code, overall_decision,
+        )
+        written += 1
+
+    await conn.execute(
+        _PERSIST_VERDICT_SQL,
+        cc, _OVERALL_LEVEL, overall_decision, Decimal(str(verdict.confidence)),
+        verdict.reason_code, overall_decision,
+    )
+    written += 1
+    return written
