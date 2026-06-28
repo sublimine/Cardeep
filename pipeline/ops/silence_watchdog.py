@@ -7,13 +7,20 @@ INVISIBLE to the passive S-HEALTH system because they never call record_run
 
 Public API
 ----------
-find_silent_sources(conn) -> list[dict]
-    Pure read: returns every silent source from source_health.
+find_silent_sources(conn, countries=None) -> list[dict]
+    Pure read: returns every silent source from source_health, scoped to the
+    active tenants (country_code = ANY; defaults to active_countries() == ['ES']).
 
-run_silence_watchdog(conn) -> list[str]
-    Calls find_silent_sources, then fires one alert per silent source via the
-    same dedup logic as health.fire_alert (SELECT + UPDATE or INSERT).
-    Returns the list of source_keys that triggered an alert.
+resolve_recovered_silence_alerts(conn, countries=None) -> list[str]
+    OI-10 zombie fix: closes every open ``<src>:silence`` alert whose source is no
+    longer silent (it ran again). record_run only ever resolved scrape/discover
+    origins, so silence alerts were zombies — this sweep, run every cycle, ties
+    resolution to the exact inverse of the firing predicate.
+
+run_silence_watchdog(conn, countries=None) -> list[str]
+    Resolves recovered silence alerts, then calls find_silent_sources and fires one
+    alert per silent source via the same dedup logic as health.fire_alert (SELECT +
+    UPDATE or INSERT). Returns the list of source_keys that triggered an alert.
 
 fire_silence_alert_sync(conn, source_key, hours_silent, interval_h, is_tier1)
     Internal: write the dedup-aware alert using psycopg2 (sync). Mirrors the
@@ -51,20 +58,44 @@ _SEV_WARNING = "warning"
 
 
 # ---------------------------------------------------------------------------
+# Tenant scope (OI-10 de-blinding). The orchestration tables carry country_code since
+# migration 0068; the producer queries are scoped to the active tenants. A deferred import
+# keeps this module free of an import-time dependency on the registry package, and with
+# active_countries() == ['ES'] the scope is ['ES'] so every query is byte-identical over the
+# all-ES census.
+# ---------------------------------------------------------------------------
+
+def _resolve_countries(countries: list[str] | None) -> list[str]:
+    """Default the producer scope to the active tenants (foundation: active_countries())."""
+    if countries is not None:
+        return countries
+    from pipeline.ops.registry import active_countries
+    return active_countries()
+
+
+# ---------------------------------------------------------------------------
 # Silence detection (pure read, psycopg2)
 # ---------------------------------------------------------------------------
 
-def find_silent_sources(conn: "psycopg2.extensions.connection") -> list[dict[str, Any]]:
-    """Return every source in source_health that is SILENT.
+def find_silent_sources(
+    conn: "psycopg2.extensions.connection",
+    countries: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Return every source in source_health that is SILENT, scoped to the active tenants.
 
     A source is silent when:
         now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
             > SILENCE_MULTIPLIER * harvest_interval_hours * interval '1 hour'
 
+    Scoped to ``country_code = ANY(countries)`` (OI-10); ``countries`` defaults to
+    active_countries() == ['ES'], so for the single ES tenant the result set is byte-identical
+    to the pre-scope query (every existing row is ES).
+
     Returns a list of dicts with keys:
         source_key, last_ok, last_fail, harvest_interval_hours, is_tier1,
         hours_silent   (float — fractional hours since the last event)
     """
+    countries = _resolve_countries(countries)
     sql = """
         SELECT
             source_key,
@@ -77,12 +108,13 @@ def find_silent_sources(conn: "psycopg2.extensions.connection") -> list[dict[str
             )) / 3600.0  AS hours_silent
         FROM source_health
         WHERE
-            now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
+            country_code = ANY(%(countries)s)
+            AND now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
                 > %(multiplier)s * harvest_interval_hours * interval '1 hour'
         ORDER BY hours_silent DESC
     """
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-        cur.execute(sql, {"multiplier": SILENCE_MULTIPLIER})
+        cur.execute(sql, {"multiplier": SILENCE_MULTIPLIER, "countries": countries})
         rows = cur.fetchall()
 
     result: list[dict[str, Any]] = []
@@ -168,17 +200,83 @@ def fire_silence_alert_sync(
 
 
 # ---------------------------------------------------------------------------
+# Silence recovery (OI-10 zombie fix — the missing resolve path)
+# ---------------------------------------------------------------------------
+
+def resolve_recovered_silence_alerts(
+    conn: "psycopg2.extensions.connection",
+    countries: list[str] | None = None,
+) -> list[str]:
+    """Close every open ``<src>:silence`` alert whose source is NO LONGER silent.
+
+    THE ZOMBIE (COUNTRY-PACK-CONTRACT.md §6 OI-10): this watchdog FIRES
+    ``<source_key>:silence`` alerts, but nothing ever resolved them. ``health.record_run`` on
+    success only closes the ``:scrape``/``:discover`` origins for its phase (``build_origin``),
+    so a source that recovered left its silence alert OPEN forever — ~7 prod zombies,
+    observability broken in every country. This sweep is the missing resolve path: run every
+    cycle, it ties resolution to the EXACT inverse of the firing predicate — an open
+    ``<src>:silence`` alert is resolved the moment source_health shows ``<src>`` is within 2×
+    its cadence again (i.e. it ran). The reconstructed origin (``sh.source_key || ':silence'``)
+    matches at most one source (source_key is the PK) and never touches a ``:scrape``/
+    ``:discover`` alert.
+
+    Scoped to ``country_code = ANY(countries)`` (defaults to active_countries() == ['ES']) so
+    one tenant's sweep never resolves another tenant's alerts. Returns the source_keys whose
+    silence alert was resolved. Commits — mirrors fire_silence_alert_sync's self-contained
+    write contract, so the live watchdog cycle persists the resolution without a second commit.
+    """
+    countries = _resolve_countries(countries)
+    sql = """
+        WITH recovered AS (
+            UPDATE alert a
+               SET resolved_at = now()
+              FROM source_health sh
+             WHERE a.resolved_at IS NULL
+               AND a.origin = sh.source_key || ':silence'
+               AND sh.country_code = ANY(%(countries)s)
+               AND now() - COALESCE(sh.last_ok, sh.last_fail, '1970-01-01'::timestamptz)
+                   <= %(multiplier)s * sh.harvest_interval_hours * interval '1 hour'
+            RETURNING sh.source_key AS source_key
+        )
+        SELECT source_key FROM recovered ORDER BY source_key
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, {"multiplier": SILENCE_MULTIPLIER, "countries": countries})
+        resolved = [row[0] for row in cur.fetchall()]
+    conn.commit()
+    return resolved
+
+
+# ---------------------------------------------------------------------------
 # Watchdog runner
 # ---------------------------------------------------------------------------
 
-def run_silence_watchdog(conn: "psycopg2.extensions.connection") -> list[str]:
-    """Detect silent sources and fire one dedup-aware alert per source.
+def run_silence_watchdog(
+    conn: "psycopg2.extensions.connection",
+    countries: list[str] | None = None,
+) -> list[str]:
+    """Resolve recovered silence alerts, then detect silent sources and fire one dedup-aware
+    alert per source.
 
-    Returns the list of source_keys for which an alert was fired (or updated).
-    Does NOT raise — individual alert failures are logged and skipped so one
-    broken alert does not abort the rest of the watchdog cycle.
+    Returns the list of source_keys for which an alert was fired (or updated). Does NOT raise —
+    the recovery sweep and individual alert failures are logged and skipped so one broken step
+    does not abort the rest of the watchdog cycle.
     """
-    silent = find_silent_sources(conn)
+    countries = _resolve_countries(countries)
+
+    # OI-10: close the alerts of sources that came BACK first. A recovered source's :silence
+    # alert is a zombie (record_run never reaches it) until this sweep resolves it.
+    try:
+        recovered = resolve_recovered_silence_alerts(conn, countries)
+        if recovered:
+            log.info(
+                "silence_watchdog: resolved %d recovered silence alert(s): %s",
+                len(recovered), recovered,
+            )
+    except Exception as exc:  # noqa: BLE001
+        log.error("silence_watchdog: failed to resolve recovered silence alerts: %s", exc)
+
+    silent = find_silent_sources(conn, countries)
     if not silent:
         log.info("silence_watchdog: no silent sources detected")
         return []

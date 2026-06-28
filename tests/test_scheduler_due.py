@@ -26,6 +26,7 @@ from pipeline.ops.scheduler import (
     _due_sources,
     _gap_report,
 )
+from pipeline.ops.registry import active_countries
 
 
 # ---------------------------------------------------------------------------
@@ -262,16 +263,44 @@ class TestGapReport:
 
 
 # ---------------------------------------------------------------------------
-# Live DB integration test (skipped if DB is unreachable)
+# Country scope (OI-10): _due_sources is scoped to the active tenants
 # ---------------------------------------------------------------------------
+
+class TestDueSourcesCountryScope:
+    """_due_sources scopes the DUE query to country_code = ANY(countries); the default is
+    active_countries() == ['ES'] so the due set is byte-identical for the single ES tenant."""
+
+    def test_default_scope_is_active_countries(self) -> None:
+        conn = _fake_conn([])
+        _due_sources(conn)
+        cur = conn.cursor.return_value
+        sql, params = cur.execute.call_args.args[0], cur.execute.call_args.args[1]
+        assert params["countries"] == ["ES"] == active_countries()
+        assert "country_code = ANY" in sql
+
+    def test_explicit_countries_forwarded(self) -> None:
+        conn = _fake_conn([])
+        _due_sources(conn, countries=["ES", "DE"])
+        cur = conn.cursor.return_value
+        assert cur.execute.call_args.args[1]["countries"] == ["ES", "DE"]
+
+
+# ---------------------------------------------------------------------------
+# Live DB integration test (skipped if DB is unreachable)
+#
+# Targets the dry-run via CARDEEP_DSN (default :5434), the project's test-DB convention
+# (mandate: DB tests run on :5434, never :5433/prod). After OI-10 _due_sources filters on
+# country_code, so this read requires a DB migrated to >= 0068 (the dry-run is).
+# ---------------------------------------------------------------------------
+
+_LIVE_DSN = os.environ.get(
+    "CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5434/cardeep")
+
 
 def _db_available() -> bool:
     try:
         import psycopg2
-        conn = psycopg2.connect(
-            "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only",
-            connect_timeout=3,
-        )
+        conn = psycopg2.connect(_LIVE_DSN, connect_timeout=3)
         conn.close()
         return True
     except Exception:
@@ -288,9 +317,7 @@ class TestDueSourcesLiveDB:
 
     def test_due_sources_returns_list(self) -> None:
         import psycopg2
-        conn = psycopg2.connect(
-            "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only"
-        )
+        conn = psycopg2.connect(_LIVE_DSN)
         try:
             due = _due_sources(conn)
             assert isinstance(due, list)
@@ -307,9 +334,7 @@ class TestDueSourcesLiveDB:
     def test_registry_covers_live_source_health(self) -> None:
         """Verify the gap report against the live DB and report unmapped keys."""
         import psycopg2
-        conn = psycopg2.connect(
-            "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only"
-        )
+        conn = psycopg2.connect(_LIVE_DSN)
         try:
             with conn.cursor() as cur:
                 cur.execute("SELECT source_key FROM source_health ORDER BY source_key")

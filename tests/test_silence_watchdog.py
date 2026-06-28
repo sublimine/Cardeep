@@ -25,8 +25,10 @@ from pipeline.ops.silence_watchdog import (
     _build_origin,
     find_silent_sources,
     fire_silence_alert_sync,
+    resolve_recovered_silence_alerts,
     run_silence_watchdog,
 )
+from pipeline.ops.registry import active_countries
 
 
 # ---------------------------------------------------------------------------
@@ -296,9 +298,15 @@ class TestFireSilenceAlertSync:
 class TestRunSilenceWatchdog:
     def test_returns_empty_when_no_silent_sources(self) -> None:
         """When no sources are silent, no alerts are fired and empty list is returned."""
-        with patch(
-            "pipeline.ops.silence_watchdog.find_silent_sources",
-            return_value=[],
+        with (
+            patch(
+                "pipeline.ops.silence_watchdog.resolve_recovered_silence_alerts",
+                return_value=[],
+            ),
+            patch(
+                "pipeline.ops.silence_watchdog.find_silent_sources",
+                return_value=[],
+            ),
         ):
             conn = MagicMock()
             result = run_silence_watchdog(conn)
@@ -325,6 +333,10 @@ class TestRunSilenceWatchdog:
             },
         ]
         with (
+            patch(
+                "pipeline.ops.silence_watchdog.resolve_recovered_silence_alerts",
+                return_value=[],
+            ),
             patch(
                 "pipeline.ops.silence_watchdog.find_silent_sources",
                 return_value=silent_sources,
@@ -373,6 +385,10 @@ class TestRunSilenceWatchdog:
 
         with (
             patch(
+                "pipeline.ops.silence_watchdog.resolve_recovered_silence_alerts",
+                return_value=[],
+            ),
+            patch(
                 "pipeline.ops.silence_watchdog.find_silent_sources",
                 return_value=silent_sources,
             ),
@@ -402,6 +418,10 @@ class TestRunSilenceWatchdog:
         ]
         with (
             patch(
+                "pipeline.ops.silence_watchdog.resolve_recovered_silence_alerts",
+                return_value=[],
+            ),
+            patch(
                 "pipeline.ops.silence_watchdog.find_silent_sources",
                 return_value=silent_sources,
             ),
@@ -422,16 +442,134 @@ class TestRunSilenceWatchdog:
 
 
 # ---------------------------------------------------------------------------
-# Live DB integration (skipped if DB unreachable)
+# resolve_recovered_silence_alerts — OI-10 zombie fix (mock psycopg2)
 # ---------------------------------------------------------------------------
+
+def _fake_resolve_conn(resolved_keys: list[str]) -> MagicMock:
+    """Fake psycopg2 conn whose plain cursor().fetchall() returns one (source_key,) row
+    per recovered source — the shape resolve_recovered_silence_alerts reads."""
+    cur_mock = MagicMock()
+    cur_mock.__enter__ = lambda s: s
+    cur_mock.__exit__ = MagicMock(return_value=False)
+    cur_mock.fetchall.return_value = [(k,) for k in resolved_keys]
+
+    conn_mock = MagicMock()
+    conn_mock.cursor.return_value = cur_mock
+    return conn_mock
+
+
+class TestResolveRecoveredSilenceAlerts:
+    """The missing resolve path: closes <src>:silence alerts of recovered sources, commits,
+    and is scoped to the active tenants by default (byte-identical for the single ES tenant)."""
+
+    def test_returns_resolved_source_keys_and_commits(self) -> None:
+        conn = _fake_resolve_conn(["autocasion_wholesale", "renew_wholesale"])
+        result = resolve_recovered_silence_alerts(conn)
+        assert result == ["autocasion_wholesale", "renew_wholesale"]
+        conn.commit.assert_called_once()
+
+    def test_empty_when_nothing_recovered(self) -> None:
+        conn = _fake_resolve_conn([])
+        assert resolve_recovered_silence_alerts(conn) == []
+        conn.commit.assert_called_once()
+
+    def test_default_scope_is_active_countries_es(self) -> None:
+        """Default tenant scope is active_countries() == ['ES'] and the UPDATE targets only
+        ':silence' origins via the reconstructed sh.source_key || ':silence' join."""
+        conn = _fake_resolve_conn([])
+        resolve_recovered_silence_alerts(conn)
+        cur = conn.cursor.return_value
+        sql, params = cur.execute.call_args.args[0], cur.execute.call_args.args[1]
+        assert params["countries"] == ["ES"] == active_countries()
+        assert "country_code = ANY" in sql
+        assert ":silence" in sql
+
+    def test_explicit_countries_forwarded(self) -> None:
+        conn = _fake_resolve_conn([])
+        resolve_recovered_silence_alerts(conn, countries=["ES", "DE"])
+        cur = conn.cursor.return_value
+        assert cur.execute.call_args.args[1]["countries"] == ["ES", "DE"]
+
+
+class TestRunSilenceWatchdogResolvesRecovered:
+    """run_silence_watchdog runs the recovery sweep EVERY cycle, and a failing sweep never
+    aborts the firing path (OI-10: resolution is additive to detection)."""
+
+    def test_resolve_called_each_cycle_with_conn(self) -> None:
+        with (
+            patch(
+                "pipeline.ops.silence_watchdog.resolve_recovered_silence_alerts",
+                return_value=["autocasion_wholesale"],
+            ) as mock_resolve,
+            patch(
+                "pipeline.ops.silence_watchdog.find_silent_sources",
+                return_value=[],
+            ),
+        ):
+            conn = MagicMock()
+            run_silence_watchdog(conn)
+        mock_resolve.assert_called_once()
+        assert mock_resolve.call_args.args[0] is conn
+
+    def test_resolve_failure_does_not_abort_firing(self) -> None:
+        silent_sources = [{
+            "source_key": "renew_wholesale", "last_ok": None, "last_fail": None,
+            "harvest_interval_hours": 168, "is_tier1": False, "hours_silent": 400.0,
+        }]
+        with (
+            patch(
+                "pipeline.ops.silence_watchdog.resolve_recovered_silence_alerts",
+                side_effect=RuntimeError("resolve DB error"),
+            ),
+            patch(
+                "pipeline.ops.silence_watchdog.find_silent_sources",
+                return_value=silent_sources,
+            ),
+            patch(
+                "pipeline.ops.silence_watchdog.fire_silence_alert_sync",
+                return_value=1,
+            ),
+        ):
+            conn = MagicMock()
+            result = run_silence_watchdog(conn)
+        assert "renew_wholesale" in result, "a failed recovery sweep must not abort firing"
+
+
+class TestFindSilentSourcesCountryScope:
+    """find_silent_sources is country-scoped; the default scope is active_countries() == ['ES']
+    so the silent set is byte-identical to the pre-OI-10 unscoped query."""
+
+    def test_default_scope_is_active_countries(self) -> None:
+        conn = _fake_select_conn([])
+        find_silent_sources(conn)
+        cur = conn.cursor.return_value
+        sql, params = cur.execute.call_args.args[0], cur.execute.call_args.args[1]
+        assert params["countries"] == ["ES"] == active_countries()
+        assert "country_code = ANY" in sql
+
+    def test_explicit_countries_forwarded(self) -> None:
+        conn = _fake_select_conn([])
+        find_silent_sources(conn, countries=["ES", "DE"])
+        cur = conn.cursor.return_value
+        assert cur.execute.call_args.args[1]["countries"] == ["ES", "DE"]
+
+
+# ---------------------------------------------------------------------------
+# Live DB integration (skipped if DB unreachable)
+#
+# Targets the dry-run via CARDEEP_DSN (default :5434), the project's test-DB convention
+# (mandate: DB tests run on :5434, never :5433/prod). After OI-10 the read exercises the
+# country_code-scoped query, so it requires a DB migrated to >= 0068 (the dry-run is).
+# ---------------------------------------------------------------------------
+
+_LIVE_DSN = os.environ.get(
+    "CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@127.0.0.1:5434/cardeep")
+
 
 def _db_available() -> bool:
     try:
         import psycopg2
-        conn = psycopg2.connect(
-            "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only",
-            connect_timeout=3,
-        )
+        conn = psycopg2.connect(_LIVE_DSN, connect_timeout=3)
         conn.close()
         return True
     except Exception:
@@ -445,9 +583,7 @@ class TestFindSilentSourcesLiveDB:
     def test_find_silent_sources_returns_list(self) -> None:
         """find_silent_sources must return a list without crashing."""
         import psycopg2
-        conn = psycopg2.connect(
-            "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only"
-        )
+        conn = psycopg2.connect(_LIVE_DSN)
         try:
             result = find_silent_sources(conn)
             assert isinstance(result, list)
@@ -468,9 +604,7 @@ class TestFindSilentSourcesLiveDB:
     def test_silent_sources_have_valid_schema(self) -> None:
         """Each silent source dict must have all required keys with correct types."""
         import psycopg2
-        conn = psycopg2.connect(
-            "host=127.0.0.1 port=5433 dbname=cardeep user=cardeep password=cardeep_dev_only"
-        )
+        conn = psycopg2.connect(_LIVE_DSN)
         try:
             result = find_silent_sources(conn)
             for rec in result:

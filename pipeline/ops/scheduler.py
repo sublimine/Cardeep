@@ -188,7 +188,10 @@ UNMAPPED_KEYS: frozenset[str] = frozenset()  # populated dynamically in _gap_rep
 # DB query helpers (synchronous psycopg2 — scheduler context is sync)
 # ---------------------------------------------------------------------------
 
-def _due_sources(conn: "psycopg2.connection") -> list[tuple[str, int, datetime | None, datetime | None]]:
+def _due_sources(
+    conn: "psycopg2.connection",
+    countries: list[str] | None = None,
+) -> list[tuple[str, int, datetime | None, datetime | None]]:
     """Return (source_key, harvest_interval_hours, last_ok, last_fail) for sources that are
     DUE for harvesting, ordered by most-overdue first.
 
@@ -196,10 +199,16 @@ def _due_sources(conn: "psycopg2.connection") -> list[tuple[str, int, datetime |
       now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
         >= harvest_interval_hours * interval '1 hour'
 
+    Scoped to ``country_code = ANY(countries)`` (OI-10); ``countries`` defaults to
+    active_countries() == ['ES'], so for the single ES tenant the due set is byte-identical to
+    the pre-scope query (every existing source_health row is ES).
+
     Sources with open circuit breakers (consecutive_fails >= BREAKER_TRIP_AT)
     are excluded — the breaker check is done here to avoid the extra round-trip
     to source_breaker (consecutive_fails mirrors the streak in source_health).
     """
+    if countries is None:
+        countries = active_countries()
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -211,11 +220,13 @@ def _due_sources(conn: "psycopg2.connection") -> list[tuple[str, int, datetime |
                 consecutive_fails
             FROM source_health
             WHERE
-                now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
+                country_code = ANY(%(countries)s)
+                AND now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
                     >= harvest_interval_hours * interval '1 hour'
             ORDER BY
                 now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz) DESC
-            """
+            """,
+            {"countries": countries},
         )
         rows = cur.fetchall()
 
