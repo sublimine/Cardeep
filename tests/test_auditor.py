@@ -9,7 +9,8 @@ What each level REUSES (all VERIFIED first-hand this session):
   N0  CountryProfile.load_dir  (pipeline/country_profile.py — additive loader for an arbitrary dir)
   N1  lists.bucket_for / ORTHOGONAL_LISTS  (pipeline/exhaustiveness/lists.py:65,49)
       verify._path_family       (pipeline/verify.py:31 — family/origin independence signal)
-  N2  ALWAYS escalates (legal + denominator-authority); council = declared stub
+  N2  ALWAYS escalates (legal + denominator-authority); council = adversarial D≥2 perspectives
+      (see tests/test_council.py — the council ENRICHES the escalation, never auto-approves it)
   N3  quorum.decide + router._lookup_route + verify._path_family
       (pipeline/inquisition/quorum.py:159 / router.py:103 / verify.py:31)
   N4  estimators.estimate_stratum (pipeline/exhaustiveness/estimators.py:321 — projection mode)
@@ -283,10 +284,20 @@ class TestN2Credibility:
         # The live gate mirrors N2 and is ALWAYS escalated, whatever the build decision.
         assert v.live_gate is Decision.ESCALA
 
-    def test_council_hook_is_declared_stub(self, tmp_path: Path) -> None:
+    def test_council_is_wired_and_escalates(self, tmp_path: Path) -> None:
+        """The council is no longer a stub: N2 runs the adversarial D≥2 perspectives and the live
+        gate still escalates the irreducible (legal + denominator-authority). Full council coverage
+        lives in tests/test_council.py."""
         pack = _write_pack(tmp_path)
         v = audit_pack(CC, pack, _plan())
-        assert v.level("N2").detail.get("council") == "stub"
+        council = v.level("N2").detail.get("council")
+        assert isinstance(council, dict)                          # structured review, not "stub"
+        assert council["decision"] == "ESCALATE"                  # escalates by doctrine
+        assert "legal" in council["irreducible_escalated"]
+        assert "denominator_credibility" in council["irreducible_escalated"]
+        # The N2 decision + score invariants are unchanged (the live-gate sentinel).
+        assert v.level("N2").decision is Decision.ESCALA
+        assert v.level("N2").score == 1.0
 
 
 # ===========================================================================

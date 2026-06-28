@@ -16,8 +16,10 @@ The levels (each reuses already-built machinery — nothing is re-implemented):
     no source falling to the ``MKT`` default → APRUEBA. A source the taxonomy cannot classify
     (``MKT`` default) is classification-uncertain → ESCALA. <3 orthogonal lists → RECHAZA.
   * **N2 Credibilidad** — ALWAYS ESCALA: legal/ToS and denominator-authority are structurally owner
-    decisions (a wrong denominator silently biases the whole census). The adversarial council is a
-    DECLARED STUB (the agent is a later increment). N2 is the live-gate sentinel.
+    decisions (a wrong denominator silently biases the whole census). The adversarial council
+    (``council.convene`` — D≥2 orthogonal perspectives, weakest-link) ENRICHES the escalation with
+    its reasoning but never changes the doctrine (Law I — a council "approve" over a live country is
+    invalid). N2 is the live-gate sentinel.
   * **N3 VAM-quórum** — reuses the Inquisition engine: ``quorum.decide`` (quorum ≥2) over the PLAN's
     numbers, with ``verify._path_family`` defining the orthogonal voices and ``router._lookup_route``
     mapping the verdict to a lane. It can only OVER-REFUTE — it never fabricates TRUSTWORTHY.
@@ -49,6 +51,7 @@ from typing import TYPE_CHECKING, Any, Mapping, Sequence
 if TYPE_CHECKING:  # asyncpg is only needed for the optional persistence writer's type hint —
     import asyncpg  # the auditor's logic stays pure (no hard asyncpg dependency at import time).
 
+from pipeline.autopilot.council import ReviewerFn, convene, default_reviewer
 from pipeline.country_profile import CountryProfile
 from pipeline.exhaustiveness.estimators import estimate_stratum
 from pipeline.exhaustiveness.lists import ORTHOGONAL_LISTS, bucket_for
@@ -255,20 +258,23 @@ def _audit_n1_orthogonality(plan: CountryPlan) -> LevelVerdict:
 # N2 — Credibility (ALWAYS escalates — the live-gate sentinel)
 # ---------------------------------------------------------------------------
 
-def _council_review_stub(plan: CountryPlan) -> str:
-    """Adversarial council hook (D≥2 agents) — DECLARED STUB. The agent is a later increment;
-    today it cannot clear legal/ToS or denominator-authority, so the level escalates by doctrine."""
-    return "stub"
+def _audit_n2_credibility(plan: CountryPlan, *, reviewer_fn: ReviewerFn | None = None) -> LevelVerdict:
+    """SIEMPRE ESCALA — the live-gate sentinel. Legal/ToS and denominator-authority are irreducible
+    owner decisions. The adversarial council (``council.convene``) ENRICHES this escalation with the
+    D≥2 perspective reasoning, but it NEVER changes the doctrine: a council "approve" over a live
+    country is structurally invalid (Law I), so the level decision is pinned to ESCALA and surfaces
+    the council's full finding — including any fail-closed REJECT — to the owner rather than
+    auto-resolving the live gate.
 
-
-def _audit_n2_credibility(plan: CountryPlan) -> LevelVerdict:
-    """SIEMPRE ESCALA. Legal/ToS and denominator-authority are owner decisions. The score is 1.0:
-    the level is fully CERTAIN it must escalate (the escalation is correct), so it never spuriously
-    drags the weakest-link confidence — it is a doctrine decision, not a build-quality signal."""
+    The score is 1.0: the level is fully CERTAIN it must escalate (the escalation is correct), so it
+    never spuriously drags the weakest-link confidence — a doctrine decision, not a build-quality
+    signal. The council's own weakest-link confidence lives in the detail. ``reviewer_fn`` is the
+    injection point for the real LLM-runtime reviewer (default: the €0 no-network ``default_reviewer``)."""
+    council = convene(plan, reviewer_fn=reviewer_fn or default_reviewer)
     return LevelVerdict(
         "N2", "Credibilidad", Decision.ESCALA, 1.0, "OWNER_LEGAL_AND_DENOMINATOR_AUTHORITY",
         {
-            "council": _council_review_stub(plan),
+            "council": council.as_detail(),
             "owner_gates": ("LEGAL_TOS", "DENOMINATOR_AUTHORITY", "SPEND", "PROD_CUTOVER", "LIVE_COUNTS"),
         },
     )
