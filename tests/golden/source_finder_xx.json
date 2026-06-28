@@ -1,0 +1,138 @@
+[
+  {
+    "domain": "transportes.gob.xx",
+    "bucket": "DGT",
+    "confidence": 0.9,
+    "needs_audit": true,
+    "origin_bucket": "DGT",
+    "query": "official register authorised vehicle dealers XX",
+    "evidence": "Registro oficial de centros autorizados - Ministerio de Transportes - Listado oficial de talleres y concesionarios autorizados del gobierno",
+    "proposed_config": {
+      "source_key": "dgt_transportes_gob_xx",
+      "bucket": "DGT",
+      "kind": "",
+      "adapter": "registry_list",
+      "base_url": "https://transportes.gob.xx",
+      "notes": "PROPOSAL (DGT/registry_list); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  },
+  {
+    "domain": "rmc.xx",
+    "bucket": "REG",
+    "confidence": 0.9,
+    "needs_audit": true,
+    "origin_bucket": "REG",
+    "query": "mercantile registry company automotive XX",
+    "evidence": "Registro Mercantil Central - sociedades - company register / CNAE 4511 comercio de automoviles",
+    "proposed_config": {
+      "source_key": "reg_rmc_xx",
+      "bucket": "REG",
+      "kind": "",
+      "adapter": "registry_api",
+      "base_url": "https://rmc.xx",
+      "notes": "PROPOSAL (REG/registry_api); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  },
+  {
+    "domain": "anc.xx",
+    "bucket": "ASSOC",
+    "confidence": 0.9,
+    "needs_audit": true,
+    "origin_bucket": "ASSOC",
+    "query": "national association car dealers XX",
+    "evidence": "Asociacion Nacional de Concesionarios de Automocion - federacion de miembros y asociados del sector de automocion",
+    "proposed_config": {
+      "source_key": "assoc_anc_xx",
+      "bucket": "ASSOC",
+      "kind": "",
+      "adapter": "css_roster",
+      "base_url": "https://anc.xx",
+      "notes": "PROPOSAL (ASSOC/css_roster); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  },
+  {
+    "domain": "mercedes.xx",
+    "bucket": "OEM",
+    "confidence": 0.9,
+    "needs_audit": true,
+    "origin_bucket": "OEM",
+    "query": "official dealer network locator XX",
+    "evidence": "Concesionarios oficiales Mercedes-Benz XX - Red de concesionarios oficiales - encuentra tu dealer locator",
+    "proposed_config": {
+      "source_key": "mercedes_xx",
+      "bucket": "OEM",
+      "kind": "concesionario_oficial",
+      "adapter": "dealer_locator",
+      "base_url": "https://mercedes.xx",
+      "notes": "PROPOSAL (OEM/dealer_locator); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  },
+  {
+    "domain": "cochesxx.xx",
+    "bucket": "CENSUS",
+    "confidence": 0.9,
+    "needs_audit": true,
+    "origin_bucket": "CENSUS",
+    "query": "buy used cars XX marketplace",
+    "evidence": "CochesXX - anuncios clasificados de coches usados - marketplace lider de compraventa y vehiculos de ocasion",
+    "proposed_config": {
+      "source_key": "census_cochesxx_xx",
+      "bucket": "CENSUS",
+      "kind": "compraventa",
+      "adapter": "census_facet",
+      "base_url": "https://cochesxx.xx",
+      "notes": "PROPOSAL (CENSUS/census_facet); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  },
+  {
+    "domain": "autoplaza.xx",
+    "bucket": "CENSUS",
+    "confidence": 0.66,
+    "needs_audit": true,
+    "origin_bucket": "DGT",
+    "query": "official register authorised vehicle dealers XX",
+    "evidence": "AutoPlaza - compraventa de coches de ocasion - marketplace de vehiculos de segunda mano y ocasion",
+    "proposed_config": {
+      "source_key": "census_autoplaza_xx",
+      "bucket": "CENSUS",
+      "kind": "compraventa",
+      "adapter": "census_facet",
+      "base_url": "https://autoplaza.xx",
+      "notes": "PROPOSAL (CENSUS/census_facet); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  },
+  {
+    "domain": "mapa.xx",
+    "bucket": "GEO",
+    "confidence": 0.9,
+    "needs_audit": true,
+    "origin_bucket": "GEO",
+    "query": "openstreetmap car dealership XX",
+    "evidence": "Directorio en mapa - OpenStreetMap de talleres - places / points of interest del sector del automovil",
+    "proposed_config": {
+      "source_key": "geo_mapa_xx",
+      "bucket": "GEO",
+      "kind": "",
+      "adapter": "geo_overlay",
+      "base_url": "https://mapa.xx",
+      "notes": "PROPOSAL (GEO/geo_overlay); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  },
+  {
+    "domain": "autoslopez.xx",
+    "bucket": "DORK",
+    "confidence": 0.9,
+    "needs_audit": true,
+    "origin_bucket": "DORK",
+    "query": "concesionario coches XX",
+    "evidence": "Autos Lopez - concesionario y taller en Villa XX - venta de automoviles y servicio post-venta",
+    "proposed_config": {
+      "source_key": "dork_autoslopez_xx",
+      "bucket": "DORK",
+      "kind": "compraventa",
+      "adapter": "dork_municipal",
+      "base_url": "https://autoslopez.xx",
+      "notes": "PROPOSAL (DORK/dork_municipal); recipe rung defaults css->llm_local; authority+orthogonality gated by auditor N1/N2 (needs_audit)."
+    }
+  }
+]
