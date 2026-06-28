@@ -1,0 +1,12 @@
+1001	Norland	Norland		10.00000	10.00000	A	ADM1	XX		01				500000		0	XX/Capital	2024-01-01
+1002	Sudland	Sudland		20.00000	20.00000	A	ADM1	XX		02				300000		0	XX/Capital	2024-01-01
+2001	Northport Province	Northport Province		11.00000	11.00000	A	ADM2	XX		01	A1			200000		0	XX/Capital	2024-01-01
+2002	Eastfield Province	Eastfield Province		12.00000	12.00000	A	ADM2	XX		01	A2			150000		0	XX/Capital	2024-01-01
+2003	Southbay Province	Southbay Province		21.00000	21.00000	A	ADM2	XX		02	B1			120000		0	XX/Capital	2024-01-01
+3001	Northport City	Northport City		11.10000	11.10000	P	PPLA	XX		01	A1			90000		0	XX/Capital	2024-01-01
+3002	Harborville	Harborville		11.20000	11.25000	P	PPL	XX		01	A1			20000		0	XX/Capital	2024-01-01
+3003	Eastfield Town	Eastfield Town		12.10000	12.15000	P	PPLA	XX		01	A2			40000		0	XX/Capital	2024-01-01
+3004	Southbay Village	Southbay Village		21.10000	21.12000	P	PPL	XX		02	B1			15000		0	XX/Capital	2024-01-01
+3005	Capeside	Capeside		21.30000	21.35000	P	PPL	XX		02				8000		0	XX/Capital	2024-01-01
+3006	Old Harbor Ruins	Old Harbor Ruins		11.99000	11.99000	P	PPLX	XX		01	A1			0		0	XX/Capital	2024-01-01
+4001	Mount Nor	Mount Nor		10.50000	10.50000	T	MT	XX		01	A1			0		0	XX/Capital	2024-01-01
