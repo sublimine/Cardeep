@@ -186,6 +186,34 @@ def default_ladder() -> list[Rung]:
 
 
 # ---------------------------------------------------------------------------
+# The §02 new rungs (css cost 4, llm_local cost 7) wired into the registry. Each factory imports its
+# heavy module LAZILY (lxml + the css derivation / llm-selector stack), so importing the cracker — or
+# running the pure suite with an explicit fixture ladder — never pays that cost; only assembling
+# default_ladder() / build_ladder() does. Both extractors implement the harness Extractor protocol,
+# so the existing :class:`LegacyRung` adapter (Extractor -> Rung) wires them with no new machinery;
+# their injectable transport is baked at construction (real engine here, a fixture in tests).
+def _make_css_rung() -> Rung:
+    """Factory for rung 4 (engine='css'): the adaptive CSS-selector extractor."""
+    from pipeline.recipe_extract_css import CssAdaptiveExtractor
+    return LegacyRung(CssAdaptiveExtractor(), cost=4)
+
+
+def _make_llm_rung() -> Rung:
+    """Factory for rung 7 (engine='llm_local'): the LLM-selector extractor, wired to the real €0
+    LOCAL Ollama field-map inference (OWNER-GATED at runtime — needs a running Ollama daemon; the
+    pure suite injects a mock instead). Constructing it does NOT call the model; only a real crack
+    does, behind the egress/spend gate."""
+    from pipeline.recipe_extract_llm import LlmFieldMapExtractor, ollama_field_map_fn
+    return LegacyRung(LlmFieldMapExtractor(llm_fn=ollama_field_map_fn), cost=7)
+
+
+# Adding a tool == one register_rung line; the orchestrator is never edited. default_ladder() now
+# yields, sorted cheap->expensive: legacy 0-3 + css(4) + llm_local(7).
+register_rung("css", _make_css_rung, cost=4)
+register_rung("llm_local", _make_llm_rung, cost=7)
+
+
+# ---------------------------------------------------------------------------
 # §9.4 ranking feedback — read the winning rung a prior run recorded.
 # ---------------------------------------------------------------------------
 def winning_rung_of(recipe_dict: dict | None) -> int | None:
