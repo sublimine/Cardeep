@@ -1,0 +1,25 @@
+# Cardeep country pack manifest — COUNTRY-PACK-CONTRACT.md §4 (countries/<CC>/country.toml).
+# PIECE 1 (country_code) + PIECE 8 (CDP-{CC}- prefix derivation) + PIECE 2 (subdivision validator).
+#
+# ES is the FIRST EXPLICIT PACK, not a special case (contract §7 "byte-identidad ES"). Every value
+# here is extracted VERBATIM from the live engine, so when a later phase rewires the engine to
+# consume this profile (OI-5) it is a no-op for ES:
+#   subdivision.regex  <- pipeline/complete.py:_PROVINCE_RE   (INE province grid 01-52)
+#   kinds.national     <- pipeline/complete.py:_NATIONAL_KINDS
+
+country_code = "ES"
+
+[subdivision]
+# First-level subdivision validator that will replace complete.py:_PROVINCE_RE (OI-5).
+# ES = INE province grid 01-52, zero-padded 2-char.
+regex = "^(0[1-9]|[1-4][0-9]|5[0-2])$"
+
+[kinds]
+# National kinds operate country-wide and carry a NULL province_code by design (the '00' lives
+# only in the CDP-ES-00-* code, never in the province_code column). Override of
+# complete.py:_NATIONAL_KINDS.
+national = ["subasta", "plataforma", "oem_vo_portal", "importador"]
+
+# Optional [geo] / [census] reference sections (PIECE 2 / PIECE 5) are omitted for ES: today the
+# ES geo backbone + census live in the DB and in pipeline scripts, not under countries/ES/. They
+# are added here when those packs are physically extracted — the loader treats both as optional.
