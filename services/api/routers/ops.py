@@ -7,14 +7,13 @@ SU-D2 additions:
 """
 from __future__ import annotations
 
-import asyncpg
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, page_slice, require_api_key
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, RATE_HEALTH, limiter
-from services.api.stats import STAT_KEYS, compute_counts
+from services.api.stats import DEFAULT_COUNTRY, fetch_stats
 
 router = APIRouter()
 
@@ -50,11 +49,17 @@ async def health(request: Request) -> JSONResponse:
 @limiter.limit(RATE_EXPENSIVE)
 async def stats(
     request: Request,
+    country: str = Query(
+        default=DEFAULT_COUNTRY, min_length=2, max_length=2,
+        description="ISO-3166 alpha-2 tenant whose product counts to report (default 'ES')."),
     _: None = Depends(require_api_key),
 ) -> JSONResponse:
     """Sealed product counts — AUTHENTICATED (competitive coverage signal).
 
     Moved off /health (audit): anonymous callers must not learn coverage scale.
+
+    Per-country (0066): ``?country`` selects the tenant (default 'ES'); the counts are scoped to that
+    one country, never a country-blind sum. The default 'ES' is byte-identical to the historical /stats.
 
     dealers        — REAL car sales points ("Puntos de venta"): resolved-distinct,
                      kind NOT IN (particular, desguace), with >=1 servable vehicle.
@@ -76,25 +81,16 @@ async def stats(
         return cached
 
     async with request.app.state.pool.acquire() as c:
-        # Fast path: the precomputed product_stats row (refreshed off-request by the scheduler) — one
-        # single-row read instead of 5 COUNT(DISTINCT)/JOIN over millions (~83s cold). Falls back to a
-        # live compute when the row/table is absent (pre-migration 0055 / pre-first-refresh), so the
-        # endpoint always returns the EXACT counts — just instantly once warmed. computed_at is exposed
-        # so the (bounded) cache age is explicit, never a silent stale value.
-        row = None
-        try:
-            row = await c.fetchrow(
-                "SELECT dealers, vehicles_unique_available, events, provinces, municipalities, "
-                "computed_at FROM product_stats WHERE id = 1"
-            )
-        except asyncpg.exceptions.UndefinedTableError:
-            row = None
-        if row is not None:
-            counts = {k: row[k] for k in STAT_KEYS}
-            response = ok({"counts": counts}, computed_at=str(row["computed_at"]), source="precomputed")
-        else:
-            counts = await compute_counts(c)
-            response = ok({"counts": counts}, source="live")
+        # Fast path: the precomputed product_stats row for `country` (one row per tenant since 0066,
+        # refreshed off-request by the scheduler) — a single-row read instead of 5 COUNT(DISTINCT)/JOIN
+        # over millions (~83s cold). fetch_stats falls back to a live compute when the row/table/column
+        # is absent (pre-migration / pre-first-refresh / a tenant not yet refreshed), so the endpoint
+        # always returns the EXACT counts. computed_at is exposed so the (bounded) cache age is explicit.
+        counts, computed_at = await fetch_stats(c, country.upper())
+    if computed_at is not None:
+        response = ok({"counts": counts}, computed_at=str(computed_at), source="precomputed")
+    else:
+        response = ok({"counts": counts}, source="live")
     return cache_set(request, response)
 
 

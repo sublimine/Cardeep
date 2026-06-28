@@ -88,7 +88,7 @@ import psycopg2
 import psycopg2.extras
 
 from pipeline.identity.name_normalize import normalize_name as _normalize_name
-from pipeline.identity.phone_es import phone_match_key
+from pipeline.identity.phone import phone_match_key
 
 logging.basicConfig(
     level=logging.INFO,
@@ -198,16 +198,18 @@ _RE_SCHEME = re.compile(r"^https?://", re.IGNORECASE)
 _RE_WWW = re.compile(r"^www\.", re.IGNORECASE)
 
 
-def _normalize_phone(phone: str | None) -> str | None:
-    """Validated Spanish phone match key (P06 CAPA-0): the 9-digit national number iff the input is a
-    real Spanish number, else None. Delegates to pipeline.identity.phone_es (the single authority).
+def _normalize_phone(phone: str | None, country_code: str = "ES") -> str | None:
+    """Validated cross-source phone match key, COUNTRY-AWARE. Delegates to pipeline.identity.phone (the
+    single authority): ES (the default) → the 9-digit Spanish national number iff valid, else None
+    (byte-identical to the prior phone_es-only behaviour); non-ES → a generic E.164 key so a second
+    tenant's phone is a usable hard key and two calling codes never collide.
 
-    The old 'last 9 digits of anything' produced fragile keys (extensions, malformed
-    lengths, non-Spanish leading digits) that could false-merge two distinct dealers. The validated
-    key is a STRICT SUBSET of the old one — identical when the number is well-formed, None when the
-    old code would have keyed off garbage — so it removes spurious phone edges without inventing new
-    ones (a genuine Spanish phone is always 9 national digits starting 6/7/8/9, never dropped)."""
-    return phone_match_key(phone)
+    The old 'last 9 digits of anything' produced fragile keys (extensions, malformed lengths,
+    non-Spanish leading digits) that could false-merge two distinct dealers. The ES key is a STRICT
+    SUBSET of the old one — identical when the number is well-formed, None when the old code would have
+    keyed off garbage. The phone index buckets by (key, muni, country_code), so a country-specific key
+    only ADDS edges within a country; it can never merge across borders."""
+    return phone_match_key(phone, country_code)
 
 
 def _normalize_website_host(website: str | None) -> str | None:
@@ -448,7 +450,7 @@ def _build_cross_source_edges(entities: list[Entity]) -> list[MatchPair]:
         if country is None:
             continue
 
-        ph = _normalize_phone(ent.get("phone"))
+        ph = _normalize_phone(ent.get("phone"), country)
         if ph:
             phone_idx[(ph, muni, country)].append(uid)
 
