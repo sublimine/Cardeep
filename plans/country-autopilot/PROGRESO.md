@@ -30,9 +30,17 @@ La BIBLIA ya diseñó esto a fondo en `docs/generic-engine-bible/`:
 - [x] **B · fundación** — `1d20ba4` VERIFICADO: split registry motor↔pack (`pipeline/ops/registry/{__init__,es}.py`, `get_harvest_registry`/`active_countries`==['ES'], byte-idéntico 50 entradas) + `CountryProfile`/`country.toml` (`pipeline/country_profile.py` + `countries/ES/country.toml`). 34+114 passed.
 - [x] **C · extractores** — geo `2120cbd` (13/13; GeoNames+cross-walk; divergió a provincia←ADM2 por verdad-código ES) + denominador `93e1421` (12/12; cifra nacional [MEDIDO]; split-segmento=CHECKPOINT, NO fabricado). Ambos €0, fixtures, ES intacto. **Pendiente C**: auto-source-finder + peldaños receta css/llm_local.
 - [x] **D · auto-auditor** `f984d1e` (35/35) — `pipeline/autopilot/auditor.py` N0-N4 sobre Inquisición/seal; **2 ejes** (decision build APRUEBA + `live_gate` N2 SIEMPRE ESCALA); MIN weakest-link. Council N2 = stub declarado. **Ola C+D verificada combinada 94 passed, :5433 0064 intacta.**
-- [ ] **E1 · espina orquestador** (en vuelo `a311c251417514620`): state machine cover(CC) + `country_campaign` (mig **0067**) + gate registry GASTO/PROD/LEGAL (aparca-no-detiene).
-- [ ] **A · OI-2 platform mints** (en vuelo `a9ff1c1c37621052b`): verificar+enrutar por `mint_code`, byte-idéntico ES (o no-op si ya cerrado). Resto A: OI-7/8/10.
-- [ ] **E2 · loop + E2E** (próxima): `pipeline/ops/autopilot.py` une B+C+D+E1 (research→propose→audit→gate→execute→supervise→seal); MERGE `feature/country-2-readiness` (resolver detect.py P3↔gestionador-fix) para el harvest sintético E2E. Migraciones autopilot 0067+.
+- [x] **E1 · espina orquestador** `b358c7c` (36/36): state machine cover(CC) + `country_campaign` (mig **0067**) + gate registry GASTO/PROD/LEGAL (aparca sin lanzar, probado vs config_guard).
+- [x] **A · OI-2 platform mints** `980eea9` (95 passed): OI-2 estaba ABIERTO — **31 connectors** enrutados por `mint_code(country_code=…)`, byte-idéntico ES por-connector + costura DE. Residual: 32º mint en `scripts/cage_autorola…` (fuera del contrato OI-2, owner-triage).
+- [x] **E2 · loop + E2E DEMOSTRADO** `7787d58` (13/13): `pipeline/ops/autopilot.py` `run_campaign('XX')` recorre REGISTERED→…→SEALED, mintea `CDP-XX-`, **violations=0**, puertas vivas APARCAN PENDIENTE-OWNER (`dry_run=False`→parkea en BOOTSTRAPPED, jamás auto-go-live), revierte limpio. **Verificado entero: 206 goldens + 60 no-regresión.**
+
+### RESTA (queued, dry-run €0, no bloquea el loop demostrado)
+- [ ] **A** · OI-7 (numerador único v_servable_dealer), OI-8 (pHash write-path, egress-gated), OI-10 (source_health/lease country_code + **zombie silence O5**), 32º mint residual.
+- [ ] **C** · auto-source-finder (clasificar fuentes país→buckets; juicio→auditor) + peldaños receta css/llm_local (extruct+Ollama local).
+- [ ] **D** · council N2 adversarial (hoy stub) + persistencia `country_pack_audit_verdict`.
+- [ ] **E3** · supervisor salud per-país (lee 0057/0058/0060/0064) + wiring al scheduler real.
+- [ ] **MERGE** `feature/country-2-readiness` (spine de-cegado) → para cosecha REAL E2E (resolver detect.py).
+- [ ] **PUERTAS OWNER** (no código): datos/scraping/legal de país real.
 - [ ] **E2E** — onboard país sintético "XX" en :5434 por el loop completo; golden country-proof-invariant verde + byte-identidad ES.
 
 ## DÓNDE RETOMAR (si se corta el contexto)
