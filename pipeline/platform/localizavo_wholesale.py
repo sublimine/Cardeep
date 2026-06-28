@@ -115,7 +115,7 @@ from pipeline.delta_guard import should_emit_gone
 from pipeline.ops.health import auto_repair, build_origin, fire_alert, is_open, record_run, resolve_alerts
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
-from services.api.codes import _base32, cdp_code
+from services.api.codes import DEFAULT_COUNTRY, cdp_code, mint_code
 
 DSN = "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
 DSN = os.environ.get("CARDEEP_DSN", DSN)
@@ -211,12 +211,12 @@ def _clean_fuel(v) -> str | None:
     return _FUEL_LABEL.get(v.strip().lower(), v.strip()) or None
 
 
-def localizavo_platform_cdp_code() -> str:
+def localizavo_platform_cdp_code(country_code: str = DEFAULT_COUNTRY) -> str:
     """The LocalizaVO platform's immutable cdp_code: domain identity, national province '00'. Mirrors
     subastacar_platform_cdp_code()/ayvens_platform_cdp_code() so every platform mints codes the same way."""
     key = f"domain:{LV_DOMAIN}"
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return f"CDP-ES-{NATIONAL_PROVINCE_SENTINEL}-{_base32(digest)}"
+    return mint_code(province_code=NATIONAL_PROVINCE_SENTINEL, digest=digest, country_code=country_code)
 
 
 def localizavo_sale_cdp_code(sale_id: str) -> str:

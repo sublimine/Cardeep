@@ -103,7 +103,7 @@ from pipeline.ids import ulid
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
-from services.api.codes import _base32, cdp_code
+from services.api.codes import DEFAULT_COUNTRY, cdp_code, mint_code
 
 DSN = os.environ.get("CARDEEP_DSN",
                      "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep")
@@ -214,13 +214,13 @@ FLEXI_HEADERS = {
 # fuel/transmission already arrive as clean ES labels (Gasolina/Diésel/Híbrido, Manual/Automático).
 
 
-def chain_cdp_code(domain: str) -> str:
+def chain_cdp_code(domain: str, country_code: str = DEFAULT_COUNTRY) -> str:
     """A chain's immutable cdp_code, built from the bare domain identity
     (canonical_key 'domain:<domain>') with the national province segment '00'. Mirrors
     coches_platform_cdp_code() so every chain mints codes the same way."""
     key = f"domain:{domain}"
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return f"CDP-ES-{PLATFORM_PROVINCE_SENTINEL}-{_base32(digest)}"
+    return mint_code(province_code=PLATFORM_PROVINCE_SENTINEL, digest=digest, country_code=country_code)
 
 
 def parse_flexicar_branches(next_data: dict, geo: GeoResolver) -> dict[str, Branch]:

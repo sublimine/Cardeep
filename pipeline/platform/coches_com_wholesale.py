@@ -76,7 +76,7 @@ from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.util.encoding import force_utf8_stdout
 from pipeline.verify import record_count_verdict
-from services.api.codes import _base32, cdp_code
+from services.api.codes import DEFAULT_COUNTRY, cdp_code, mint_code
 
 DSN = "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
 import os
@@ -196,13 +196,13 @@ _NEXT_DATA_RE = re.compile(
     r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', re.S)
 
 
-def coches_platform_cdp_code() -> str:
+def coches_platform_cdp_code(country_code: str = DEFAULT_COUNTRY) -> str:
     """The coches.com platform's immutable cdp_code. Built from the bare domain identity
     (canonical_key 'domain:coches.com'), province segment '00' (national). Mirrors
     coches_net_platform_cdp_code() so every platform mints codes the same way."""
     key = f"domain:{COCHES_DOMAIN}"
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return f"CDP-ES-{PLATFORM_PROVINCE_SENTINEL}-{_base32(digest)}"
+    return mint_code(province_code=PLATFORM_PROVINCE_SENTINEL, digest=digest, country_code=country_code)
 
 
 # ---------------------------------------------------------------------------

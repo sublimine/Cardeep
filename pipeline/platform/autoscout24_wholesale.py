@@ -53,7 +53,7 @@ from pipeline.sources.autoscout24 import (
     parse_listing_vehicle,
 )
 from pipeline.verify import record_count_verdict
-from services.api.codes import _base32  # reuse the canonical Crockford-base32 encoder
+from services.api.codes import DEFAULT_COUNTRY, mint_code
 
 DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep")
 
@@ -77,14 +77,14 @@ PAGE_SIZE = 20
 SORT = "age"
 
 
-def as24_platform_cdp_code() -> str:
+def as24_platform_cdp_code(country_code: str = DEFAULT_COUNTRY) -> str:
     """The AS24 platform's immutable cdp_code. Built from the bare domain identity
     (canonical_key 'domain:autoscout24.es'), province segment '00' (national)."""
     import hashlib
 
     key = f"domain:{AS24_DOMAIN}"
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return f"CDP-ES-{PLATFORM_PROVINCE_SENTINEL}-{_base32(digest)}"
+    return mint_code(province_code=PLATFORM_PROVINCE_SENTINEL, digest=digest, country_code=country_code)
 
 
 @dataclass

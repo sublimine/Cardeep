@@ -72,7 +72,7 @@ from pipeline.platform._core.persistence import (
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
-from services.api.codes import _base32, cdp_code
+from services.api.codes import DEFAULT_COUNTRY, cdp_code, mint_code
 
 DSN = "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
 import os
@@ -134,13 +134,13 @@ _FUEL = {
 _TRANSMISSION = {"manual": "Manual", "automatic": "Automático", "auto": "Automático"}
 
 
-def cc_platform_cdp_code() -> str:
+def cc_platform_cdp_code(country_code: str = DEFAULT_COUNTRY) -> str:
     """The Car & Classic platform's immutable cdp_code. Built from the bare domain
     identity (canonical_key 'domain:carandclassic.com'), province segment '00' (national).
     Mirrors coches_platform_cdp_code() so every platform mints codes the same way."""
     key = f"domain:{CC_DOMAIN}"
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return f"CDP-ES-{PLATFORM_PROVINCE_SENTINEL}-{_base32(digest)}"
+    return mint_code(province_code=PLATFORM_PROVINCE_SENTINEL, digest=digest, country_code=country_code)
 
 
 # ---------------------------------------------------------------------------

@@ -76,7 +76,7 @@ from pipeline.ids import ulid
 from pipeline.ops.health import auto_repair, is_open, record_run
 from pipeline.recipe import write_recipe
 from pipeline.verify import record_count_verdict
-from services.api.codes import _base32
+from services.api.codes import DEFAULT_COUNTRY, mint_code
 
 DSN = "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
 DSN = os.environ.get("CARDEEP_DSN", DSN)
@@ -795,12 +795,12 @@ MEMBERS: dict[str, Member] = {
 }
 
 
-def member_cdp_code(m: Member) -> str:
+def member_cdp_code(m: Member, country_code: str = DEFAULT_COUNTRY) -> str:
     """The member company's immutable cdp_code: canonical_key 'domain:<domain>' + HQ province
     segment. Mirrors ok_platform_cdp_code() so every selling point mints codes the same way."""
     key = f"domain:{m.domain}"
     digest = hashlib.sha256(key.encode("utf-8")).digest()
-    return f"CDP-ES-{m.hq_province}-{_base32(digest)}"
+    return mint_code(province_code=m.hq_province, digest=digest, country_code=country_code)
 
 
 # ---------------------------------------------------------------------------
