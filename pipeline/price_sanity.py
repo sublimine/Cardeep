@@ -46,22 +46,33 @@ from datetime import datetime
 
 # Verified ceiling: real used-market max ~€3.6M (Bugatti Chiron); >€5M is unambiguously a sentinel/
 # parse error (Qashqai @ €10M, trucks @ €9,999,999). €5M keeps every real hypercar, kills the sentinels.
+# This is the EUR/ES band; a second tenant's currency/market has a DIFFERENT real ceiling, so the
+# threshold is a per-country hook (default ES = €5M, byte-identical). OPS onboards a country by adding
+# its ceiling to _PRICE_MAX_BY_COUNTRY; an unlisted country falls back to the EUR/ES default.
 PRICE_MAX = 5_000_000
+_PRICE_MAX_BY_COUNTRY: dict[str, int] = {"ES": PRICE_MAX}
+
+
+def price_max_for(country_code: str = "ES") -> int:
+    """The unambiguous-junk price ceiling for *country_code* (default EUR/ES = €5M)."""
+    return _PRICE_MAX_BY_COUNTRY.get(country_code, PRICE_MAX)
 # A car above ~1.5M km is a digit-concatenation artifact (legit high-mileage commercials stay under ~1M).
 KM_MAX = 1_500_000
 # Genuine vehicles start ~1900; future years beyond next model-year are parse artifacts.
 YEAR_MIN = 1900
 
 
-def sanitize_price(price):
-    """Return *price* unchanged, or None if it is unambiguous junk (<=0 or > €5M)."""
+def sanitize_price(price, country_code: str = "ES"):
+    """Return *price* unchanged, or None if it is unambiguous junk (<=0 or > the country's ceiling).
+
+    *country_code* selects the ceiling via ``price_max_for`` (default EUR/ES = €5M, byte-identical)."""
     if price is None:
         return None
     try:
         p = float(price)
     except (TypeError, ValueError):
         return None
-    if p <= 0 or p > PRICE_MAX:
+    if p <= 0 or p > price_max_for(country_code):
         return None
     return price
 

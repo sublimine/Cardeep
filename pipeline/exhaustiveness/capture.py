@@ -10,11 +10,16 @@ Strata: province_code x segment (4 broad dealer types) ~ 52 x 4.
 
 from __future__ import annotations
 
+import os
+
 import psycopg2
 
 from pipeline.exhaustiveness.lists import bucket_for, orthogonal_buckets
 
-DSN = "postgresql://cardeep:cardeep_dev_only@localhost:5433/cardeep"
+# Module DSN derives from CARDEEP_DSN (same contract as scripts/migrate.py), so a test/dry-run run
+# points at :5434 by exporting the env — never the hard-coded :5433 PRODUCTION constant. The default
+# (env unset) is byte-identical to the previous literal, so live behaviour is unchanged.
+DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@localhost:5433/cardeep")
 
 DEALER_KINDS = (
     "compraventa",

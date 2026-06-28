@@ -163,6 +163,18 @@ def _daily_bucket(conn_or_today: str | None = None) -> str:
     return date.today().isoformat()
 
 
+def _row_country(row) -> str:
+    """The row's country_code (asyncpg Record OR dict), else the 'ES' default.
+
+    Per-subject detectors stamp this so a DE subject's gestion_item is tagged DE; a legacy row or a
+    mock without the column defaults to 'ES' — byte-identical for the single-tenant census."""
+    try:
+        c = row["country_code"]
+    except (KeyError, IndexError, TypeError):
+        return "ES"
+    return c or "ES"
+
+
 # ---------------------------------------------------------------------------
 # 3.1 — count_inflation
 # ---------------------------------------------------------------------------
@@ -342,32 +354,40 @@ async def detect_silent_cap(conn: asyncpg.Connection) -> list[AnomalyResult]:
 # ---------------------------------------------------------------------------
 
 async def detect_field_loss(conn: asyncpg.Connection) -> list[AnomalyResult]:
-    """Detect null-rate spikes in high-value fields vs global baseline.
+    """Detect null-rate spikes in high-value fields vs the PER-COUNTRY global baseline.
 
-    Uses a two-proportion z-test (V4 §3.3): baseline is computed from ALL
-    available vehicles (the rolling global estimate n0/x0); per-source
-    current rates are computed from vehicles harvested in the last 7 days.
+    Two-proportion z-test (V4 §3.3) where the baseline is computed per country: an ES source's recent
+    null rate must be judged against the ES null-rate, NEVER a pooled ES+DE one (a degenerate second
+    tenant would otherwise mask or invent ES spikes). Each source is matched to ITS country's baseline.
+    ES is byte-identical: the single-tenant census yields one baseline whose counts equal the old global
+    figures (vehicle.entity_ulid is a NOT NULL FK, so the entity join drops nothing) and every source
+    is ES, so the same spikes fire with the same dedupe_keys.
     """
-    # Compute global baseline null rates.
-    # Aliases use exact field names so src_row[f"{fname}_null"] works uniformly.
+    # Per-country global baseline null rates. entity carries country_code; vehicle derives it via the
+    # NOT NULL entity_ulid FK, so the join cannot change the population for the single ES tenant.
     baseline_sql = """
         SELECT
+            e.country_code,
             count(*)                                       AS total,
-            count(*) FILTER (WHERE price IS NULL)          AS price_null,
-            count(*) FILTER (WHERE year IS NULL)           AS year_null,
-            count(*) FILTER (WHERE km IS NULL)             AS km_null,
-            count(*) FILTER (WHERE photo_url IS NULL)      AS photo_url_null
-        FROM vehicle WHERE status = 'available'
+            count(*) FILTER (WHERE v.price IS NULL)        AS price_null,
+            count(*) FILTER (WHERE v.year IS NULL)         AS year_null,
+            count(*) FILTER (WHERE v.km IS NULL)           AS km_null,
+            count(*) FILTER (WHERE v.photo_url IS NULL)    AS photo_url_null
+        FROM vehicle v
+        JOIN entity e ON e.entity_ulid = v.entity_ulid
+        WHERE v.status = 'available'
+        GROUP BY e.country_code
     """
-    b = await conn.fetchrow(baseline_sql)
-    n0 = int(b["total"])
-    if n0 == 0:
+    baseline_rows = await conn.fetch(baseline_sql)
+    baselines = {r["country_code"]: r for r in baseline_rows}
+    if not baselines:
         return []
 
-    # Per-source recent harvest null rates (last 7 days, min 10 vehicles).
+    # Per-(country, source) recent harvest null rates (last 7 days, min 10 vehicles).
     # Aliases match {fname}_null pattern for consistent lookup below.
     recent_sql = """
         SELECT
+            e.country_code,
             es.source_key,
             count(*)                                       AS n,
             count(*) FILTER (WHERE v.price IS NULL)        AS price_null,
@@ -376,27 +396,32 @@ async def detect_field_loss(conn: asyncpg.Connection) -> list[AnomalyResult]:
             count(*) FILTER (WHERE v.photo_url IS NULL)    AS photo_url_null
         FROM vehicle v
         JOIN entity_source es ON es.entity_ulid = v.entity_ulid
+        JOIN entity e         ON e.entity_ulid = v.entity_ulid
         WHERE v.status = 'available'
           AND v.last_seen >= now() - interval '7 days'
-        GROUP BY es.source_key
+        GROUP BY e.country_code, es.source_key
         HAVING count(*) >= 10
     """
     source_rows = await conn.fetch(recent_sql)
     results: list[AnomalyResult] = []
     bucket = _daily_bucket()
 
-    fields = [
-        ("price",     int(b["price_null"]),     "critical"),
-        ("year",      int(b["year_null"]),      "warning"),
-        ("km",        int(b["km_null"]),        "warning"),
-        ("photo_url", int(b["photo_url_null"]), "info"),
-    ]
+    # (field, severity-hint). Severity is recomputed below; the hint documents intent.
+    fields = [("price", "critical"), ("year", "warning"), ("km", "warning"), ("photo_url", "info")]
 
     for src_row in source_rows:
+        country = src_row["country_code"]
+        b = baselines.get(country)
+        if b is None:
+            continue
+        n0 = int(b["total"])
+        if n0 == 0:
+            continue
         source_key = src_row["source_key"]
         n1 = int(src_row["n"])
 
-        for fname, x0_global, default_severity in fields:
+        for fname, _severity_hint in fields:
+            x0_global = int(b[f"{fname}_null"])
             x1 = int(src_row[f"{fname}_null"])
             p0 = x0_global / n0
             p1 = x1 / n1
@@ -440,6 +465,7 @@ async def detect_field_loss(conn: asyncpg.Connection) -> list[AnomalyResult]:
                 lane=lane,
                 quarantines=quarantines,
                 dedupe_key=f"field_loss|{source_key}:{fname}|{bucket}",
+                country_code=country,
             ))
 
     return results
@@ -575,7 +601,7 @@ async def detect_fabrication(conn: asyncpg.Connection) -> list[AnomalyResult]:
     """
     oob_rows = await conn.fetch(
         """
-        SELECT v.vehicle_ulid, e.cdp_code, v.price, v.year, v.km
+        SELECT v.vehicle_ulid, e.cdp_code, v.price, v.year, v.km, e.country_code
         FROM vehicle v
         JOIN entity e ON e.entity_ulid = v.entity_ulid
         WHERE v.status = 'available'
@@ -616,6 +642,7 @@ async def detect_fabrication(conn: asyncpg.Connection) -> list[AnomalyResult]:
             lane="AUTO_FIX",
             quarantines=True,
             dedupe_key=f"fabrication|{vid}|{bucket}",
+            country_code=_row_country(row),
         ))
 
     # (b) Distinct-row-collapse: entities where DB rows per cdp << source refs
@@ -671,6 +698,7 @@ async def detect_fabrication(conn: asyncpg.Connection) -> list[AnomalyResult]:
     degen_sql = """
         SELECT
             e.cdp_code,
+            e.country_code,
             count(*)                   AS n,
             avg(v.price)               AS avg_price,
             stddev(v.price)            AS std_price
@@ -679,7 +707,7 @@ async def detect_fabrication(conn: asyncpg.Connection) -> list[AnomalyResult]:
         WHERE v.status = 'available'
           AND v.price IS NOT NULL
           AND v.price > 0
-        GROUP BY e.cdp_code
+        GROUP BY e.cdp_code, e.country_code
         HAVING count(*) >= 20
            AND avg(v.price) > 0
            AND (stddev(v.price) / NULLIF(avg(v.price), 0)) < $1
@@ -704,6 +732,7 @@ async def detect_fabrication(conn: asyncpg.Connection) -> list[AnomalyResult]:
             lane="RESEARCH",
             quarantines=False,
             dedupe_key=f"fabrication|{cdp}:degen|{bucket}",
+            country_code=_row_country(row),
         ))
 
     return results
@@ -792,41 +821,52 @@ async def detect_price_trap(conn: asyncpg.Connection) -> list[AnomalyResult]:
     """
     # One cohort pass. NULL-safe join (IS NOT DISTINCT FROM) so the Tier-B model-NULL group joins
     # back to itself. Tier min-size is chosen per-row in the HAVING (model present -> A, else B).
+    # The cohort is keyed by (country_code, make, model, year): a "VW Golf 2020" in ES and one in DE
+    # must NOT pool into one median/MAD (a second tenant's price distribution would shift the ES cohort
+    # statistic and flag/clear ES cars wrongly). The base joins entity ONLY for country_code (kind is
+    # still resolved later for the few flagged rows). ES is byte-identical: a single tenant means the
+    # country column is constant, so the cohorts and statistics are exactly the previous ones.
     sql = """
         WITH base AS (
-            SELECT vehicle_ulid, price::float8 AS price, ln(price::float8) AS lp,
-                   make, model, year
-              FROM vehicle
-             WHERE status = 'available' AND price IS NOT NULL AND price > 0
-               AND make IS NOT NULL AND year IS NOT NULL
+            SELECT v.vehicle_ulid, v.price::float8 AS price, ln(v.price::float8) AS lp,
+                   v.make, v.model, v.year, e.country_code
+              FROM vehicle v
+              JOIN entity e ON e.entity_ulid = v.entity_ulid
+             WHERE v.status = 'available' AND v.price IS NOT NULL AND v.price > 0
+               AND v.make IS NOT NULL AND v.year IS NOT NULL
         ),
         med AS (
-            SELECT make, model, year, count(*) AS n,
+            SELECT country_code, make, model, year, count(*) AS n,
                    percentile_cont(0.5) WITHIN GROUP (ORDER BY lp)    AS med_lp,
                    percentile_cont(0.5) WITHIN GROUP (ORDER BY price) AS med_price
               FROM base
-             GROUP BY make, model, year
-            HAVING count(*) >= CASE WHEN model IS NOT NULL THEN $1 ELSE $2 END
+             GROUP BY country_code, make, model, year
+            -- $1/$2 cast to int: in a CASE both untyped params resolve to `text`, so `count(*) >= ...`
+            -- raised `bigint >= text` and the whole detector errored on prepare (PG16/asyncpg) — a
+            -- pre-existing latent bug surfaced when validating this SQL against the dry-run. The cast
+            -- is behaviour-preserving (the params are ints).
+            HAVING count(*) >= CASE WHEN model IS NOT NULL THEN $1::int ELSE $2::int END
         ),
         mad AS (
             SELECT * FROM (
-                SELECT b.make, b.model, b.year, m.n, m.med_lp, m.med_price,
+                SELECT b.country_code, b.make, b.model, b.year, m.n, m.med_lp, m.med_price,
                        percentile_cont(0.5) WITHIN GROUP (ORDER BY abs(b.lp - m.med_lp)) AS mad_lp
                   FROM base b
-                  JOIN med m ON b.make = m.make AND b.year = m.year
+                  JOIN med m ON b.country_code = m.country_code AND b.make = m.make AND b.year = m.year
                             AND COALESCE(b.model, '§§NULL§§') = COALESCE(m.model, '§§NULL§§')
-                 GROUP BY b.make, b.model, b.year, m.n, m.med_lp, m.med_price
+                 GROUP BY b.country_code, b.make, b.model, b.year, m.n, m.med_lp, m.med_price
             ) q WHERE mad_lp >= $3
         ),
         scored AS (
-            SELECT b.vehicle_ulid, b.price, b.make, b.model, b.year, mad.n, mad.med_price,
+            SELECT b.vehicle_ulid, b.price, b.make, b.model, b.year, b.country_code,
+                   mad.n, mad.med_price,
                    (b.lp - mad.med_lp) / (1.4826 * mad.mad_lp) AS z,
                    (mad.model IS NULL) AS tier_b
               FROM base b
-              JOIN mad ON b.make = mad.make AND b.year = mad.year
+              JOIN mad ON b.country_code = mad.country_code AND b.make = mad.make AND b.year = mad.year
                       AND COALESCE(b.model, '§§NULL§§') = COALESCE(mad.model, '§§NULL§§')
         )
-        SELECT vehicle_ulid, price, make, model, year, n, med_price, z, tier_b,
+        SELECT vehicle_ulid, price, make, model, year, country_code, n, med_price, z, tier_b,
                CASE WHEN z >=  $4 AND price >= $5            THEN 'high'
                     WHEN z <= -$4 AND price <  $6 * med_price THEN 'low' END AS side
           FROM scored
@@ -844,8 +884,9 @@ async def detect_price_trap(conn: asyncpg.Connection) -> list[AnomalyResult]:
     if not rows:
         return []
 
-    # Resolve kind for ONLY the flagged rows (<=MAX_ROWS, indexed lookup) so the cohort scan above
-    # stays a single lean pass over vehicle without an entity join on 1.27M rows.
+    # Resolve kind for ONLY the flagged rows (<=MAX_ROWS, indexed lookup): the cohort scan above joins
+    # entity solely for country_code, so KIND is not dragged through the percentile aggregates over the
+    # full base — it is looked up here for the handful of flagged vehicles instead.
     vids = [str(r["vehicle_ulid"]) for r in rows]
     kind_rows = await conn.fetch(
         "SELECT v.vehicle_ulid, e.kind FROM vehicle v "
@@ -897,6 +938,7 @@ async def detect_price_trap(conn: asyncpg.Connection) -> list[AnomalyResult]:
             lane="QUARANTINE",
             quarantines=True,
             dedupe_key=f"price_trap|{vid}|{bucket}",
+            country_code=_row_country(row),
         ))
     return results
 
