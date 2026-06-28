@@ -65,6 +65,8 @@ from typing import Any
 
 import asyncpg
 
+from pipeline.paths import country_of_cdp
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -323,20 +325,26 @@ async def check_g3(
 def _resolve_recipe_path(cdp_code: str, root: Path) -> Path | None:
     """Locate the recipe file for cdp_code under root, supporting both layouts.
 
+    The country is derived from the cdp_code (CDP-XX-...) via country_of_cdp, mirroring
+    recipe.py which writes under countries/<country>/recipes — so a second-country recipe
+    (CDP-DE-..., CDP-FR-...) is found instead of being looked up under countries/ES and
+    missed. Every CDP-ES- code resolves to countries/ES, byte-identical to the old literal.
+
     Search order (first match wins):
-      1. New geo layout : countries/ES/**/<cdp_code>/recipe.yaml  (post SU-E2)
-      2. Legacy flat    : countries/ES/recipes/<cdp_code>.yaml    (pre SU-E2)
+      1. New geo layout : countries/<country>/**/<cdp_code>/recipe.yaml  (post SU-E2)
+      2. Legacy flat    : countries/<country>/recipes/<cdp_code>.yaml    (pre SU-E2)
 
     Returns the resolved absolute Path, or None if not found in either layout.
     Transition-safe: works before, during, and after the SU-E2 reshape move.
     """
-    # New layout: glob under countries/ES (excludes the flat recipes/ dir on
+    country = country_of_cdp(cdp_code)
+    # New layout: glob under countries/<country> (excludes the flat recipes/ dir on
     # purpose — the flat path below handles that case explicitly).
-    for candidate in (root / "countries" / "ES").glob(f"**/{cdp_code}/recipe.yaml"):
+    for candidate in (root / "countries" / country).glob(f"**/{cdp_code}/recipe.yaml"):
         return candidate
 
     # Legacy flat layout fallback
-    flat = root / "countries" / "ES" / "recipes" / f"{cdp_code}.yaml"
+    flat = root / "countries" / country / "recipes" / f"{cdp_code}.yaml"
     if flat.exists():
         return flat
 
