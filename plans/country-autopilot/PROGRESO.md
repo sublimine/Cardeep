@@ -41,7 +41,9 @@ La BIBLIA ya diseñó esto a fondo en `docs/generic-engine-bible/`:
 - [ ] **C** · peldaños receta css/llm_local (extruct+Ollama local).
 - [x] **D persistencia** `f38f342` (10/10) — mig `0069` `country_pack_audit_verdict` append-only + `persist_verdict` (N0-N4+OVERALL), lógica auditor intacta.
 - [x] **E3 supervisor** `2b1059d` (97 passed) — `pipeline/autopilot/supervisor.py` `health_rollup` per-país (5 superficies country-aware aisladas XX↔ES, reusa predicado watchdog). **Suite autopilot COMPLETA: 235 goldens, :5434 head 0069.**
-- [ ] **D** · council N2 adversarial (en vuelo) — perspectivas D≥2; N2 SIGUE escalando lo irreducible (enriquece, no auto-aprueba).
+- [x] **D council N2 adversarial** `ff2a7f5` (81 passed) — `pipeline/autopilot/council.py` 4 perspectivas D≥2 (reusa `indep_distance`) + weakest-link; legal/autoridad-denominador SIGUEN escalando aunque reviewers aprueben (Law I). **NÚCLEO AUTÓNOMO CERRADO: 19 commits, pusheado a GitHub.**
+
+### ⇒ NÚCLEO AUTÓNOMO COMPLETO (auto-pack + auto-audit + loop + supervisor + de-cegado). Lo que resta es GATED/MARGINAL/OWNER (NO declaro 100%, doctrina):
 - [ ] **Resto reversible marginal/gated**: peldaño receta css (schema.org ya cubre el caso común) · llm_local (Ollama runtime) · pHash write-path (población=egress-gated) · OI-7 numerador (DECISIÓN-OWNER: qué numerador) · OI-8 · merge country-2-readiness (para cosecha REAL = puertas operacionales).
 - [ ] **PUERTAS OPERACIONALES OWNER** (no código, el techo honesto): datos DE reales (geo/denominador descargables €0 pero el cross-walk/split = checkpoint), recetas scraping DE, decisión legal/ToS, gasto €>0 (GPU/IA-local). Per doctrina: NO declaro 100% con residual gated; las puertas quedan PENDIENTE-OWNER, no detienen.
 - [ ] **MERGE** `feature/country-2-readiness` (spine de-cegado) → para cosecha REAL E2E (resolver detect.py).
