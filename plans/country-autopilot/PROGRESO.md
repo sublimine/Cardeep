@@ -26,8 +26,13 @@ La BIBLIA ya diseñó esto a fondo en `docs/generic-engine-bible/`:
 - [ ] decomponer en sub-proyectos buildables + orden + criterios de aceptación
 - [ ] fijar la frontera: qué se construye+valida en DRY-RUN/sintético vs qué es PUERTA
 
-## Fase 2 — BUILD STAGED (tras diseño, TDD + orquestado)
-- [ ] (se decompone tras Fase 1)
+## Fase 2 — BUILD STAGED (TDD + orquestado, dry-run :5434, ES byte-idéntico)
+- [x] **B · fundación** — `1d20ba4` VERIFICADO: split registry motor↔pack (`pipeline/ops/registry/{__init__,es}.py`, `get_harvest_registry`/`active_countries`==['ES'], byte-idéntico 50 entradas) + `CountryProfile`/`country.toml` (`pipeline/country_profile.py` + `countries/ES/country.toml`). 34+114 passed.
+- [ ] **C · extractores** (en vuelo): geo GeoNames+Eurostat-LAU `a4d9304dc693c5c88` · denominador SBS+GLEIF `a2d4e097db079b455` (módulos `pipeline/autopilot/extract_{geo,denom}.py`, TDD fixtures, fetch real = función mockeada; cross-walk/split = CHECKPOINT).
+- [ ] **D · auto-auditor** (en vuelo): `a276db0d596d6a1ed` — `pipeline/autopilot/auditor.py` 5 niveles N0-N4 sobre Inquisición/seal, MIN weakest-link, sin migración (Verdict objeto).
+- [ ] **A · de-cegado restante** (próxima ola): OI-2 platform mints, OI-7 numerador, OI-8 pHash(egress-gated), OI-10 orquestación country_code + zombie silence O5.
+- [ ] **E · orquestador + supervisión** (última): `pipeline/ops/autopilot.py` loop sobre state machine cover(CC) + supervisor per-país + gate registry; MERGE de `feature/country-2-readiness` aquí (resolver detect.py P3↔gestionador-fix) para el harvest E2E. Migraciones autopilot empiezan en **0067** (0065/0066 reservadas a country-2-readiness).
+- [ ] **E2E** — onboard país sintético "XX" en :5434 por el loop completo; golden country-proof-invariant verde + byte-identidad ES.
 
 ## DÓNDE RETOMAR (si se corta el contexto)
 - Rama `feature/country-autopilot`. `plans/country-autopilot/00-DESIGN.md` = esqueleto.
