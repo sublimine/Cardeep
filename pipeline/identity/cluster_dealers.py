@@ -68,10 +68,13 @@ log = logging.getLogger(__name__)
 
 RUN_ID = "dealer-identity-det-v1"
 RESOLVER = "union-find-deterministic"
-RESOLVER_VERSION = "2.2.0"  # FIX-A: fuzzy min-len guard; FIX-B: legal-suffix strip;
+RESOLVER_VERSION = "2.3.0"  # FIX-A: fuzzy min-len guard; FIX-B: legal-suffix strip;
 # FIX-C (country-proof): country_code in every block-key (edges 1-3 + edge-4 fuzzy)
 # so cross-border entities sharing a municipality_code can never co-cluster.
-# Single-country output is byte-identical to 2.1.0.
+# FIX-D (T2.1): CIF exact edge — the legal fiscal id merges branches of one company across
+# municipalities (strongest, over-merge-safe identity signal; placeholders rejected). This CHANGES
+# the clustering vs 2.2.0 (adds CIF merges) -> a re-cluster with 2.3.0 is a SERVING mutation: run
+# ONLY via dry-run :5434 -> golden cdp -> Ferrari (re-cluster lesson), never blind on :5433.
 SCOPE_CONDITION = "kind <> 'particular' AND status <> 'closed'"
 SCOPE_SQL = "kind <> 'particular'"  # stored in entity_cluster_run.scope
 
@@ -104,6 +107,7 @@ SOURCE_GROUP_RANK: dict[str, int] = {
 }
 
 BLOCKING_RULES: list[str] = [
+    "cif + country_code (exact legal fiscal id, cross-municipality; placeholders rejected) [FIX-D]",
     "normalized_name + municipality_code + country_code "
     "(exact; legal-suffix stripped via FIX-B)",
     "phone_digits + municipality_code + country_code (exact, >= 7 digits)",
@@ -152,6 +156,22 @@ def _normalize_website_host(website: str | None) -> str | None:
     host = _RE_WWW.sub("", host)
     host = host.split("/")[0].split("?")[0].strip()
     return host if host else None
+
+
+def _normalize_cif(cif: str | None) -> str | None:
+    """Normalise a Spanish fiscal id (CIF/NIF) to its 9-char canonical form, or None if it is not a
+    plausible id — so placeholders/garbage can never fuse distinct dealers. Upper + alphanumeric-only;
+    requires exactly 9 alnum chars (the ES CIF/NIF length) and rejects all-same-char placeholders
+    ('000000000', 'XXXXXXXXX'). Exact-match on this value is the strongest, over-merge-safe identity:
+    an identical valid CIF is, by construction, the same legal company."""
+    if not cif or not isinstance(cif, str):
+        return None
+    c = re.sub(r"[^A-Z0-9]", "", cif.upper())
+    if len(c) != 9:
+        return None
+    if len(set(c)) == 1:  # '000000000' / 'AAAAAAAAA' placeholder
+        return None
+    return c
 
 
 # ---------------------------------------------------------------------------
@@ -403,14 +423,25 @@ def _build_deterministic_edges(entities: list[dict]) -> list[tuple[str, str]]:
     idx_name_muni: dict[tuple[str, str, str], list[str]] = defaultdict(list)
     idx_phone_muni: dict[tuple[str, str, str], list[str]] = defaultdict(list)
     idx_web_muni: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+    idx_cif: dict[tuple[str, str], list[str]] = defaultdict(list)  # CIF edge (cross-municipality)
 
     for ent in entities:
         uid = ent["entity_ulid"]
-        muni = (ent.get("municipality_code") or "").strip() or None
-        if muni is None:
-            continue
         country = (ent.get("country_code") or "").strip() or None
         if country is None:
+            continue
+
+        # CIF edge: a fiscal id is nation-wide, so it is indexed by (cif, country) WITHOUT a
+        # municipality — it merges branches of one legal company across municipalities. Indexed
+        # BEFORE the muni guard so an entity with a CIF but no municipality still contributes.
+        # country_code stays in the key (country-proof): an identical CIF string under two
+        # countries never co-clusters.
+        cf = _normalize_cif(ent.get("cif"))
+        if cf:
+            idx_cif[(cf, country)].append(uid)
+
+        muni = (ent.get("municipality_code") or "").strip() or None
+        if muni is None:
             continue
 
         nn = _normalize_name(ent.get("trade_name"))
@@ -454,7 +485,14 @@ def _build_deterministic_edges(entities: list[dict]) -> list[tuple[str, str]]:
             _add_bucket(bucket)
     log.info("  buckets > 1: %d", n3)
 
-    log.info("Deterministic edges (1+2+3): %d unique pairs", len(edge_set))
+    log.info("Building edge type CIF (fiscal id, cross-municipality, country-scoped) ...")
+    n_cif = sum(1 for b in idx_cif.values() if len(b) > 1)
+    for bucket in idx_cif.values():
+        if len(bucket) > 1:
+            _add_bucket(bucket)
+    log.info("  buckets > 1: %d", n_cif)
+
+    log.info("Deterministic edges (name+phone+web+cif): %d unique pairs", len(edge_set))
     return list(edge_set)
 
 
