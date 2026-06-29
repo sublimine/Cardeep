@@ -57,6 +57,14 @@
 - **[#15] `name_normalize` properties** — la transliteración country-proof (anyascii) probada sobre TODO el espacio (5 tests, mutation-probado: deshabilitar anyascii tumba el test no-latino): el key de identidad nunca filtra no-ASCII y los nombres no-latinos se TRANSLITERAN (no se borran → sin over-merge cross-tenant). Invariante de identidad core.
 ⇒ La LÓGICA de los bloques DB-gated de máxima palanca (vam_verified, re-cluster CIF, country-belt) + los invariantes de identidad/corrección core están VERIFICADOS sin stack. Lo único que resta con DB es el CABLEADO SQL (que el trigger dispara / que el INSERT se rechaza) — el paso de aplicación, no la lógica.
 
+**COBERTURA PROPERTY-TEST DEL NÚCLEO (sobre TODO el espacio de entrada, cada una mutation-probada):**
+- Identidad: cdp_code (country∉canonical_key), name_normalize (transliteración no-borra), CIF edge, country-belt ×2 clusterers, re-cluster CIF E2E.
+- Delta (tiempo real): diff_vehicle (cero falsos positivos), should_emit_gone (no borrar inventario que existe), offline_verdict (no certificar cero).
+- Cobertura: Chao (robusto), orthogonal-lists (anti dominant-list-bias).
+- Serving: vam_gate (TRUSTWORTHY∧quorum≥2), meta-guard country dinámico, price_sanity (publish-gate).
+- State machine: cover(CC) (validador==grafo, lineal, terminal).
+⇒ **Invariantes de corrección/honestidad PUROS del núcleo AGOTADOS con calidad.** 18 bloques, ~21 commits, pusheados. Restante puro de valor: inquisition quorum (complejo) + DB/red/producto/owner.
+
 **Frente sin-DB agotado AMPLIADO (14 commits):** todo lo verificable sin PG —código + lógica de lo DB-gated— está hecho. Lo restante con-DB es solo la APLICACIÓN (aplicar migraciones/triggers + correr el re-cluster contra PG, dry-run→golden→Ferrari) y red/producto/owner (auto-API, LLM, landing/CRM, supervisores, egress). El **13/10 requiere arrancar el stack** (`! docker compose up -d cardeep-pg`) para la aplicación verificada — NO a ciegas (serving-safety). Estado 100% retomable: PROGRESO + 14 commits + blueprints 01/02.
 - **T2.1 LÓGICA ✅** `cluster_dealers.py` — CIF/NIF como **arista de dedup** (la señal más fuerte, estaba cargada y SIN USAR). `_normalize_cif` (9 alnum, no all-same → rechaza placeholders) + `idx_cif` keyed `(cif, country)` SIN muni (un CIF es nacional → fusiona sucursales de una empresa across municipios) + bucket en `_build_deterministic_edges`. Over-merge-safe (CIF idéntico válido = misma empresa legal; a diferencia del geo-match revertido). country-proof (country en la key). RESOLVER 2.2.0→2.3.0. tests/test_cif_dedup_edge.py 4 tests PUROS RED→GREEN (lógica en memoria: same-cif merge cross-muni / distinct no / cross-country no / placeholder no). **El RE-CLUSTER que lo aplica al serving es DB-gated** (dry-run :5434→golden→Ferrari, lección re-cluster) → NO ejecutado a ciegas; documentado en el comment de RESOLVER_VERSION. Bloques puros del lote: 23/23 verdes.
 **RESTA, por gate:**
