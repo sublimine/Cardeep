@@ -15,8 +15,8 @@
 | T0.1 neutralizar bomba RIVR | ✅ HECHO | stash@{0} (preservado, recuperable; no destructivo) |
 | T0.2 endurecer guardrail anti-fabricación | ✅ HECHO | 4 guards activos (vocab-DeFi + $abrev, RED→GREEN) + 1 skip-doc T5 |
 | T0.3 higiene (purgar basura untracked) | ✅ HECHO | 3 recipes-basura + 4 .pyc huérfanos borrados; fixture autouse aísla escritura |
-| T1.3 property-based invariantes (PURO) | ⏳ SIGUIENTE | — |
-| T4.3 VAM real cracker (parcial-PURO) | ⬜ | — |
+| T1.3 property-based invariantes (PURO) | ✅ HECHO | 10 properties; no-vacuidad por mutación (2 mutantes cazados) |
+| T4.3 VAM real cracker (parcial-PURO) | ⏳ SIGUIENTE | — |
 | T1.1 mecanizar vam_verified | ⬜ [DB] | construir+test, verif PENDIENTE-infra |
 | T1.2 country-proof constraint | ⬜ [DB] | idem |
 | T2.1 CIF arista dedup | ⬜ [DB] | idem |
@@ -31,3 +31,4 @@
   - HALLAZGO PROFUNDO (gana el código): el frontend ENTERO es un scaffold demo/marketing — la landing CARDEEP de HEAD tiene cifras del censo FABRICADAS (1_550_000 "vehículos", 28_000 "dealers" vs /stats real ~1.84M/19.144) + el CRM scaffold (Dashboard/Market) tiene UI mock (2_140_000...). NINGUNA página consume el censo vivo (cardeep.ts = 0 imports). El check viejo `test_no_unexplained_big_underscore_numerics` escaneaba todo web/src → **el CI unit de esta feature YA estaba rojo** por este demo data. Convertido a **skip documentado con roadmap T5** (re-activa al cablear páginas a /stats): rojo-silencioso → deuda trazada. NO debilita la defensa anti-bomba (los 2 checks nuevos quedan vivos).
   - T0.3: borrados countries/ES/recipes/{r1,r3,llm_local}__d.yaml (test pollution, declared:47 fabricado) + 4 .pyc huérfanos test_country2_*. Causa raíz: fixture autouse `_isolate_recipe_writes` monkeypatcha recipe.ROOT→tmp en TODOS los tests del cracker (ningún test futuro puede contaminar el árbol real). 16 passed, árbol limpio verificado.
 - **PENDIENTE-OWNER / T5 (reportado):** rehacer la landing+CRM consumiendo la API viva (cardeep.ts) y eliminar TODO dato fabricado del censo; re-activar el guard underscore. Es producto (T5), requiere API viva (stack caído) + decisiones de diseño. RIVR preservado en stash@{0} como referencia de composición.
+- **T1.3 ✅** tests/test_property_invariants.py — Hypothesis 6.x (añadido a requirements-dev). 10 properties PURAS sobre 2 invariantes: (a) state machine COVER(CC) — validador==grafo ∀ par, lifecycle lineal forward, SEALED terminal, unknown rechaza, initial→REGISTERED; (b) cdp_code — determinismo, formato país-paramétrico ^CDP-[A-Z]{2}-, identidades distintas→códigos distintos, ES byte-idéntico, y EL invariante country-proof: country_code NUNCA entra en canonical_key. **No-vacuidad PROBADA por mutación** (oráculos independientes del código): mutar VALID_TRANSITIONS (KNOW_COUNTRY→IN_COVERAGE) tumba `test_lifecycle`; filtrar country en canonical_key tumba `test_country_never`; ambos revertidos con git, verde final 10/10. Es el movimiento #1 del arquitecto (goldens-ejemplo → propiedades).

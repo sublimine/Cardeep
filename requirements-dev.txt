@@ -17,3 +17,6 @@ statsmodels>=0.14,<0.15    # pipeline/exhaustiveness/estimators.py uses it (lazy
                            # tests/test_exhaustiveness.py. Pulls pandas transitively; the R-bridge tests
                            # in that file skip cleanly without R.
 httpx>=0.27,<0.29          # starlette.testclient (FastAPI TestClient) needs httpx — API tests only
+hypothesis>=6,<7           # property-based invariants (tests/test_property_invariants.py, T1.3):
+                           # state-machine graph agreement + cdp_code country-proof identity over the
+                           # whole input space. Pure/@unit, runs in the CI unit job.
