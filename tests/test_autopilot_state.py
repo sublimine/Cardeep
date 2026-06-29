@@ -39,6 +39,7 @@ from pipeline.autopilot.state import (
     next_state,
     pending_owner_gates,
     register,
+    register_sealed_incumbent,
     transition,
 )
 
@@ -259,6 +260,35 @@ class TestCampaignProgressionOnDryRun:
                     # Empty list CLEARS the mark (no longer waiting on the owner).
                     await mark_pending_gates(conn, _SYNTHETIC_CC, [])
                     assert _SYNTHETIC_CC not in await pending_owner_gates(conn)
+                    raise _Rollback()
+        finally:
+            await conn.close()
+
+    # --- 1.3: an incumbent (ES) backfills directly into SEALED (autonomy-e2e) ----------
+    def test_incumbent_backfilled_directly_in_sealed(self) -> None:
+        asyncio.run(self._run_incumbent())
+
+    async def _run_incumbent(self) -> None:
+        import asyncpg
+
+        dsn = _target_dsn()
+        assert "5433" not in dsn
+        conn = await asyncpg.connect(dsn)
+        try:
+            with pytest.raises(_Rollback):
+                async with conn.transaction():
+                    assert await current_state(conn, "ES") is None
+                    s = await register_sealed_incumbent(
+                        conn, "ES", detail={"note": "hand-built census"})
+                    assert s == SEALED
+                    assert await current_state(conn, "ES") == SEALED
+                    # idempotent: a second call neither errors nor double-writes the ledger.
+                    assert await register_sealed_incumbent(conn, "ES") == SEALED
+                    rows = await conn.fetch(
+                        "SELECT from_state, to_state FROM country_campaign_transition "
+                        "WHERE country_code = 'ES' ORDER BY id")
+                    assert len(rows) == 1
+                    assert rows[0]["from_state"] is None and rows[0]["to_state"] == SEALED
                     raise _Rollback()
         finally:
             await conn.close()

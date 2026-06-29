@@ -259,6 +259,45 @@ async def pending_owner_gates(conn: asyncpg.Connection) -> "dict[str, list[str]]
     return out
 
 
+async def register_sealed_incumbent(
+    conn: asyncpg.Connection,
+    country_code: str,
+    *,
+    actor: str = "owner",
+    detail: dict[str, Any] | None = None,
+) -> str:
+    """Backfill an ALREADY-COVERED incumbent country directly in SEALED (autonomy-e2e 1.3).
+
+    ES is the hand-built census — it never walked the onboarding loop, so it cannot be ``register``-ed
+    (REGISTERED) and then ``transition``-ed (the state machine would force the full forward path). This
+    stamps the campaign row straight in SEALED with a declared ``None -> SEALED`` 'incumbent backfill'
+    audit row, idempotent (``ON CONFLICT DO NOTHING`` — re-running neither errors nor double-writes the
+    ledger). ES byte-identical: ``country_campaign`` is a NEW table; no census row is read or written.
+    Returns the campaign's current state (SEALED on create; the existing state if already present).
+    """
+    cc = _normalize_cc(country_code)
+    base_detail = {"incumbent": True, **(detail or {})}
+    row = await conn.fetchrow(
+        """
+        INSERT INTO country_campaign (country_code, state, detail)
+        VALUES ($1, $2, $3::jsonb)
+        ON CONFLICT (country_code) DO NOTHING
+        RETURNING state
+        """,
+        cc, SEALED, json.dumps(base_detail),
+    )
+    if row is not None:
+        await _append_transition(
+            conn, cc, from_state=None, to_state=SEALED, actor=actor,
+            note="incumbent backfill (already-covered census; did not walk the onboarding loop)",
+            detail=base_detail,
+        )
+        return SEALED
+    return await conn.fetchval(
+        "SELECT state FROM country_campaign WHERE country_code = $1", cc
+    )
+
+
 async def _append_transition(
     conn: asyncpg.Connection,
     country_code: str,

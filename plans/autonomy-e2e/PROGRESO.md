@@ -10,7 +10,7 @@ Infra viva: `:5433` prod (HEAD 0072), `:5434` dry-run (`cardeep-pg-r13`). Push v
 - [x] **0 · PLAN + PROGRESO** — roadmap institucional verificado contra código (run_campaign / gates / supervisor / compose). Pusheado.
 - [x] **1.1 · `health_rollup` → SUPERVISA de `run_campaign`** — el loop usaba `_supervise_proof` (proof global); ahora `health_rollup(conn,cc)` → `CountryHealth` (violations por-tenant + servable + seal + sources) reportado en checkpoints; `contaminated` preserva el fail-closed; huérfano eliminado. `test_supervisa_reports_full_health_rollup` + 14 loop E2E verdes vs :5434 limpio. **Pusheado.**
 - [x] **1.2 · persistencia consultable de gates PENDIENTE-OWNER** — `state.mark_pending_gates` + `state.pending_owner_gates` (estado en `country_campaign.detail['pending_owner_gates']`, desacoplado de gates.py vía tuplas); `run_campaign` las persiste al parquear (dry-run y país-real). `test_pending_gates_persisted_and_queryable` (persiste→consulta→limpia) + 38 state/loop verdes vs :5434. **Pusheado.**
-- [ ] 1.3 · ES registrada `SEALED` en `country_campaign`
+- [x] **1.3 · ES registrada `SEALED` en `country_campaign`** — `state.register_sealed_incumbent` (backfill directo None→SEALED, idempotente, ES byte-identical; un incumbente no camina el loop). `test_incumbent_backfilled_directly_in_sealed` (25 state verdes vs :5434) + **aplicado a :5433: ES None→SEALED** (additive, `country_campaign=[(ES,SEALED)]`). **Pusheado.** ⇒ **PUNTO 1 (cerebro) COMPLETO.**
 - [ ] 2.1 · `scheduler` due-sources → harvest (ciclo invocable)
 - [ ] 2.2 · `lock_heartbeat` + `scheduler_lease` (single-producer)
 - [ ] 2.3 · `silence_watchdog` → gestion_item
