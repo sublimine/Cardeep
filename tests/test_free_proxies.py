@@ -42,9 +42,9 @@ def test_fetch_candidates_parses_and_dedups(monkeypatch):
 
 
 def test_harvest_alive_sorts_by_score(monkeypatch):
-    monkeypatch.setattr(fp, "fetch_candidates", lambda: ["http://a", "http://b", "http://c"])
+    monkeypatch.setattr(fp, "fetch_candidates", lambda **_kw: ["http://a", "http://b", "http://c"])
 
-    def fake_health(proxy, *, timeout=8.0, tier1_url=None):
+    def fake_health(proxy, *, timeout=8.0, tier1_url=None, **_kw):
         table = {
             "http://a": fp.ProxyHealth("http://a", True, 4000, "1.1.1.1", False),
             "http://b": fp.ProxyHealth("http://b", True, 500, "2.2.2.2", True),  # tier1 ok
