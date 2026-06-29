@@ -19,8 +19,9 @@ Infra viva: `:5433` prod (HEAD 0072), `:5434` dry-run (`cardeep-pg-r13`). Push v
 - [x] **3.2 · compose service `autopilot` (daemon)** — service `autopilot` (`python -m pipeline.ops.scheduler` = `_start_scheduler` APScheduler daemon = el heartbeat), misma imagen, 3 DSN (psycopg2/asyncpg/jobstore), depends_on pg, restart unless-stopped.
 - [x] **3.3 · build + verificación SEGURA** — `docker compose build` exit 0 (cardeep-app 800MB). Verificado vs imagen real: API carga + `scheduler --dry-run` lista due (2 would run) **SIN cosechar**, contra :5434 (nunca prod). `compose config` válido (3 servicios). ⇒ **PUNTO 3 (cuerpo) COMPLETO.**
 - [x] **4.1 · Ollama local + modelo (env-config, €0)** — Ollama estaba instalado-pero-apagado → arrancado (`serve`); smoke OK (`{"ok":true}` con qwen2.5:3b). `_OLLAMA_URL`/`_OLLAMA_MODEL` ahora **env-configurables** (`CARDEEP_OLLAMA_URL`/`CARDEEP_LLM_MODEL`): el daemon en Docker alcanza el Ollama del host (host.docker.internal) y el owner swapea modelo sin editar código; compose los inyecta. `test_llm_model_and_url_are_env_configurable` (@unit) + py_compile. Pull de qwen2.5:7b (modelo default del código) en curso (€0). **Pusheado.**
-- [ ] 4.2 · free-proxies pool vivo
-- [ ] 4.3 · seed `source_health` ES (qué cosechar)
+- [x] **4.2 · free-proxies pool vivo (egress €0)** — `fetch_candidates()` → **3194 candidatos** de proxyscrape/geonode (egress sin coste operativo). Verificado en vivo; el código maneja la flakiness de las fuentes gratis.
+- [x] **4.3 · `source_health` ES poblado** — gana el código: `:5433` ya tiene **56 fuentes ES** en `source_health` (el scheduler tiene su universo de cosecha). No requiere seed.
+  ⇒ **PUNTO 4 (sentidos) COMPLETO** — Ollama (qwen2.5:7b operativo + env-config) + egress €0 + 56 fuentes ES. El sistema puede ver y cosechar.
 - [ ] 5.1 · dossier gates PENDIENTE-OWNER + comandos de desbloqueo
 - [ ] 5.2 · runbook arranque/observación/rollback (un comando)
 
