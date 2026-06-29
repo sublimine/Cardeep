@@ -293,6 +293,67 @@ def dependence_robust_bound(freqs: dict[tuple[int, ...], int]) -> tuple[float, f
 
 
 # ---------------------------------------------------------------------------
+# Chao (1987) non-parametric lower bound
+# ---------------------------------------------------------------------------
+def chao_lower(freqs: dict[tuple[int, ...], int]) -> Estimate:
+    """Chao (1987) non-parametric LOWER-BOUND estimator of N, robust to capture heterogeneity.
+
+    ``N̂ = S_obs + f1²/(2·f2)`` (bias-corrected to ``S_obs + f1·(f1-1)/2`` when ``f2 == 0``), where
+    ``f1``/``f2`` are the singletons/doubletons — entities captured by EXACTLY one / exactly two
+    lists. Unlike :func:`loglinear_mse` it assumes NEITHER list independence NOR capture homogeneity,
+    so it is the honest floor for sparse, heterogeneous strata where the log-linear N̂ explodes (the
+    Mh failure mode the §2.3 review flagged). The CI is the Chao (1987) log-normal interval on the
+    unseen count ``f0``; with ``f2 == 0`` no reliable parametric variance exists, so the point doubles
+    as the (weak) ceiling and the estimate stays ``confidence='low'``.
+
+    This is a PURE estimator alongside the others; it is intentionally NOT wired into
+    :func:`estimate_stratum` (the served-seal path) — that requires the DB dry-run+golden lane.
+    """
+    if not freqs:
+        raise ValueError("empty stratum")
+    k = len(next(iter(freqs)))
+    if (0,) * k in freqs:
+        raise ValueError("all-zero pattern must not be supplied")
+    s_obs = int(sum(freqs.values()))
+    f1 = int(sum(f for p, f in freqs.items() if sum(p) == 1))
+    f2 = int(sum(f for p, f in freqs.items() if sum(p) == 2))
+    k_present = len([j for j in range(k) if any(p[j] for p in freqs)])
+
+    if f2 > 0:
+        f0 = (f1 * f1) / (2.0 * f2)
+        method = "chao1"
+        r = f1 / f2
+        # Chao (1987) variance of the unseen count f0 (the SpadeR/iNEXT closed form).
+        var_f0 = f2 * (0.5 * r**2 + r**3 + 0.25 * r**4)
+    else:
+        f0 = f1 * (f1 - 1) / 2.0
+        method = "chao1_bias_corrected"
+        var_f0 = 0.0  # no reliable parametric variance at f2 == 0
+
+    n_hat = s_obs + f0
+    if f0 > 0 and var_f0 > 0:
+        # Chao (1987) log-normal CI on f0: [f0/C, f0·C], C = exp(1.96·sqrt(ln(1 + var/f0²))).
+        c = math.exp(1.96 * math.sqrt(math.log(1.0 + var_f0 / (f0 * f0))))
+        ci_low = s_obs + f0 / c
+        ci_high = s_obs + f0 * c
+    else:
+        ci_low = float(s_obs)
+        ci_high = float(n_hat)  # point is the only (weak) ceiling when no CI is reliable
+    ci_low = max(float(s_obs), ci_low)
+    ci_high = max(ci_low, ci_high)
+    return Estimate(
+        n_obs=s_obs,
+        n_hat=float(n_hat),
+        ci_low=float(ci_low),
+        ci_high=float(ci_high),
+        method=method,
+        k_lists=k_present,
+        confidence="low",
+        diagnostics={"f1": f1, "f2": f2, "f0_unseen": f0, "var_f0": var_f0},
+    )
+
+
+# ---------------------------------------------------------------------------
 # Stratum dispatcher
 # ---------------------------------------------------------------------------
 # A stratum estimate is "identified" only if the overlap pins N̂ down. With very
