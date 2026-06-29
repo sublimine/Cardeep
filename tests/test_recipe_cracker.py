@@ -37,6 +37,17 @@ from pipeline.recipe_schema import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_recipe_writes(tmp_path, monkeypatch):
+    """Gate (T0.3): every cracker test writes recipes into a tmp tree, NEVER the real
+    countries/ES/recipes/. Without this, a VERIFIED crack with no ``persist_fn`` falls through to
+    ``write_recipe()`` on the real tree — the r1__d.yaml / r3__d.yaml / llm_local__d.yaml pollution
+    (fabricated declared:47 fixtures committed by accident). Structural + autouse, so no present or
+    future cracker test can ever pollute the production recipe tree."""
+    import pipeline.recipe as recipe_mod
+    monkeypatch.setattr(recipe_mod, "ROOT", tmp_path)
+
+
 # --- deterministic fakes ---------------------------------------------------
 @dataclass
 class _Canned:
