@@ -17,7 +17,7 @@
 | T0.3 higiene (purgar basura untracked) | ✅ HECHO | 3 recipes-basura + 4 .pyc huérfanos borrados; fixture autouse aísla escritura |
 | T1.3 property-based invariantes (PURO) | ✅ HECHO | 10 properties; no-vacuidad por mutación (2 mutantes cazados) |
 | T4.3 VAM real cracker (parcial-PURO) | ⏳ SIGUIENTE | — |
-| T1.1 mecanizar vam_verified | ⬜ [DB] | construir+test, verif PENDIENTE-infra |
+| T1.1 mecanizar vam_verified | 📐 BLUEPRINT | 01-T1.1-vam-verified-blueprint.md; ejecutable con stack (DB) arriba |
 | T1.2 country-proof constraint | ⬜ [DB] | idem |
 | T2.1 CIF arista dedup | ⬜ [DB] | idem |
 | T2.3 Chao puro-Python | ✅ HECHO | chao_lower, 5 tests valores-textbook; NO cableado al sello (DB-gated) |
@@ -40,6 +40,8 @@
 ## ESTADO DEL LOTE (2026-06-29)
 **8 bloques cerrados + verificados + commiteados** (todos €0, sin DB, causa-raíz, TDD, RED→GREEN o mutation-probado): T4.1 (ladder blindado), T0.1/0.2/0.3 (bomba RIVR neutralizada + guardrail clase + higiene), T1.3 (property invariants), T4.3 (VAM offline cero), T2.3 (Chao), T1.2-adj (meta-guard dinámico). **Auditoría del lote: `pytest -m unit` = 741 passed / 0 failed / 3 skipped.**
 **MURO REAL = la DB (docker daemon OFF).** Los siguientes bloques de máxima palanca (T1.1 mecanizar vam_verified, T1.2 country-proof constraint, T2.1 CIF) tocan el SERVING/datos-servidos → exigen dry-run+golden+DB; construirlos a ciegas violaría la lección grabada ("no mutar datos servidos sin plan verificado"). Quedan PENDIENTE-OWNER (arrancar el stack desbloquea su verificación; el CI db-tests/country-proof también los verificaría al pushear). NO se declaran hechos sin probar.
+**T1.1 BLUEPRINT ejecutable listo** (`01-T1.1-vam-verified-blueprint.md`): problema verificado file:line + diseño (clon del trigger 0036) + SQL borrador (en doc, NO migración aplicable-a-ciegas) + plan de verificación dry-run :5434→golden→Ferrari + manejo de las filas grandfathered. Se ejecuta en cuanto arranque `docker compose up -d cardeep-pg`. Lo mismo procede para T1.2/T2.1 (blueprintear o ejecutar directo con DB).
+**DESBLOQUEO:** owner arranca el stack (`! docker compose up -d cardeep-pg`) → ejecuto T1.1/T1.2/T2.1 con verificación real (dry-run, sin tocar :5433).
 **RESTA, por gate:**
 - **[DB] (docker daemon OFF)** — construibles STAGED (migración+test) pero NO verificables aquí: T1.1 mecanizar vam_verified (hallazgo #1 escéptico), T1.2 country-proof constraint, T2.1 CIF arista, T2.2 Splink, T2.4 jerárquico, T4.5 loop cracker, T5.5 buscador.
 - **[infra-owner]** — T3.2 instalar supervisores (NSSM/systemd), T3.1 backups (necesita PG), T4.6 egress residencial.
