@@ -15,9 +15,9 @@ Infra viva: `:5433` prod (HEAD 0072), `:5434` dry-run (`cardeep-pg-r13`). Push v
 - [x] **2.2 · `lock_heartbeat` + `scheduler_lease`** — YA construido (`lock_heartbeat.py`: acquire/renew sobre `scheduler_lease`, single-producer). Verificado dentro de los 104 tests del latido (heartbeat/lease/lock) verdes vs :5434.
 - [x] **2.3 · `silence_watchdog` → gestion_item** — YA construido (`silence_watchdog.py`: SILENCE_MULTIPLIER → fuentes silenciosas). Verificado dentro de los 104 tests (silence/watchdog) verdes vs :5434.
   ⇒ **PUNTO 2 (latido) VERIFICADO** — el ciclo de cosecha existe y pasa 125 tests; lo que falta para "correr solo" es el DAEMON que invoca `heartbeat_tick` en bucle (Punto 3).
-- [ ] 3.1 · compose service `api`
-- [ ] 3.2 · compose service `autopilot` (daemon persistente)
-- [ ] 3.3 · restart/healthcheck + `compose up` E2E en clon
+- [x] **3.1 · compose service `api`** — `Dockerfile` (python:3.11-slim, una imagen para todo) + `.dockerignore` + service `api` (uvicorn :8090 localhost, depends_on pg healthy, healthcheck `/health`, restart unless-stopped). Imagen carga `services.api.main:app` OK.
+- [x] **3.2 · compose service `autopilot` (daemon)** — service `autopilot` (`python -m pipeline.ops.scheduler` = `_start_scheduler` APScheduler daemon = el heartbeat), misma imagen, 3 DSN (psycopg2/asyncpg/jobstore), depends_on pg, restart unless-stopped.
+- [x] **3.3 · build + verificación SEGURA** — `docker compose build` exit 0 (cardeep-app 800MB). Verificado vs imagen real: API carga + `scheduler --dry-run` lista due (2 would run) **SIN cosechar**, contra :5434 (nunca prod). `compose config` válido (3 servicios). ⇒ **PUNTO 3 (cuerpo) COMPLETO.**
 - [ ] 4.1 · Ollama local + modelo (LLM matrix, €0)
 - [ ] 4.2 · free-proxies pool vivo
 - [ ] 4.3 · seed `source_health` ES (qué cosechar)

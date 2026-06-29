@@ -31,6 +31,41 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Application services (autonomy-e2e Punto 3): API + autopilot daemon share one image ------
+  # Both wait for a HEALTHY pg, carry the three DSN forms the code reads (psycopg2-keyword /
+  # asyncpg-URL / SQLAlchemy-jobstore-URL), and restart-unless-stopped so the system stays up.
+  api:
+    build: .
+    image: cardeep-app:latest
+    container_name: cardeep-api
+    command: ["uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8090"]
+    environment: &app_env
+      CARDEEP_DSN: "host=cardeep-pg port=5432 dbname=${CARDEEP_DB_NAME:-cardeep} user=${CARDEEP_DB_USER:-cardeep} password=${CARDEEP_DB_PASSWORD:-cardeep_dev_only}"
+      CARDEEP_ASYNCPG_DSN: "postgresql://${CARDEEP_DB_USER:-cardeep}:${CARDEEP_DB_PASSWORD:-cardeep_dev_only}@cardeep-pg:5432/${CARDEEP_DB_NAME:-cardeep}"
+      CARDEEP_DB_URL: "postgresql+psycopg2://${CARDEEP_DB_USER:-cardeep}:${CARDEEP_DB_PASSWORD:-cardeep_dev_only}@cardeep-pg:5432/${CARDEEP_DB_NAME:-cardeep}"
+    ports:
+      - "127.0.0.1:8090:8090"   # localhost-only, like the DB
+    depends_on:
+      cardeep-pg:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8090/health').status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  autopilot:
+    build: .
+    image: cardeep-app:latest
+    container_name: cardeep-autopilot
+    command: ["python", "-m", "pipeline.ops.scheduler"]   # _start_scheduler: APScheduler daemon (the heartbeat)
+    environment: *app_env
+    depends_on:
+      cardeep-pg:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   cardeep_pg_data:
     name: cardeep_pg_data        # exact name → adopts the existing live volume, no prefix

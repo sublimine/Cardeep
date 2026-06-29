@@ -1,0 +1,22 @@
+# Keep the build context (and image) lean and the build reproducible.
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+venv/
+node_modules/
+web/node_modules/
+web/dist/
+# Local PG dumps / backups must never enter the image.
+*.sql
+cutover_r13_backup_*.sql
+# Build-time-only material (image runs API + scheduler; these are not needed at runtime).
+tests/
+.github/
+*.md
