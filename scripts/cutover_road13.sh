@@ -54,7 +54,7 @@ N_TRIG="$(psql_prod "SELECT count(*) FROM pg_trigger WHERE tgname IN ('trg_canon
 [ "${N_TRIG}" = "3" ] || { echo "ABORT: expected 3 triggers, found ${N_TRIG}. Check migrate output."; exit 1; }
 VIOL="$(psql_prod "SELECT count(*) FROM v_country_proof_violations")"
 SERVED_AFTER="$(psql_prod "SELECT count(DISTINCT resolved_cdp_code) FROM v_dealer_resolved")"
-echo "   triggers present: ${N_TRIG}/2 | country-proof violations: ${VIOL} | served: ${SERVED_BEFORE} -> ${SERVED_AFTER}"
+echo "   triggers present: ${N_TRIG}/3 | country-proof violations: ${VIOL} | served: ${SERVED_BEFORE} -> ${SERVED_AFTER}"
 [ "${VIOL}" = "0" ] || echo "   WARN: ${VIOL} country-proof violation(s) — pre-existing data, review (trigger blocks only NEW ones)."
 [ "${SERVED_AFTER}" = "${SERVED_BEFORE}" ] || echo "   WARN: served count moved — triggers are additive and should NOT change it; review."
 
