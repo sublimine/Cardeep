@@ -312,24 +312,36 @@ async def crack_recipe(
     attempts: list[RungAttempt] = []
     for idx in order:
         rung = rungs[idx]
-        sample = rung.extract(target, fetch_fn)
+        try:
+            sample = rung.extract(target, fetch_fn)
 
-        # VERIFY (VAM quorum over the sample's declared/fetched/parsed paths).
-        paths = sample_paths(sample)
-        if conn is not None:
-            verdict = await record_count_verdict(
-                conn, subject_type="recipe_sample",
-                subject_key=f"{rung.source}:{target}",
-                claim="recipe sample parses without loss (fetched == parsed)",
-                paths=paths, tolerance=0.0, claim_kind="count")
-        else:
-            verdict = RecipeHarness._offline_verdict(paths)
+            # VERIFY (VAM quorum over the sample's declared/fetched/parsed paths).
+            paths = sample_paths(sample)
+            if conn is not None:
+                verdict = await record_count_verdict(
+                    conn, subject_type="recipe_sample",
+                    subject_key=f"{rung.source}:{target}",
+                    claim="recipe sample parses without loss (fetched == parsed)",
+                    paths=paths, tolerance=0.0, claim_kind="count")
+            else:
+                verdict = RecipeHarness._offline_verdict(paths)
 
-        status, reason = decide_status(sample, k, verdict)
+            status, reason = decide_status(sample, k, verdict)
 
-        # Capture the arithmetic, then DELETE the crude before moving to the next rung.
-        declared, fetched, parsed_n = sample.declared, sample.fetched, len(sample.parsed)
-        sample.parsed.clear()
+            # Capture the arithmetic, then DELETE the crude before moving to the next rung.
+            declared, fetched, parsed_n = sample.declared, sample.fetched, len(sample.parsed)
+            sample.parsed.clear()
+        except Exception as exc:  # noqa: BLE001 — a raising rung must escalate, never abort the crack
+            # A rung's transport can RAISE against a live target (a WAF block surfaces as FetchError,
+            # a malformed page as a parse crash). The whole point of the ladder is that one rung's
+            # failure ROUTES to the next; an uncaught raise here would abort the entire crack mid-walk
+            # (the dry-run never hits this because fixtures return, they don't raise). Record it as a
+            # non-silent FAILED attempt and escalate.
+            attempts.append(RungAttempt(
+                rung=idx, source=rung.source, status=STATUS_FAILED,
+                reason=f"rung raised: {type(exc).__name__}: {exc}",
+                declared=None, fetched=0, parsed=0, verdict="ERROR"))
+            continue
 
         attempts.append(RungAttempt(
             rung=idx, source=rung.source, status=status, reason=reason,

@@ -257,3 +257,54 @@ def test_crack_runs_over_a_registry_built_ladder(clean_registry):
     assert res.status == STATUS_VERIFIED
     assert res.winning_source == "llm_local"
     assert res.winning_rung == 1   # index within the cost-sorted ladder
+
+
+# --- (7) a rung that RAISES (live WAF block / FetchError) is caught and escalated ----
+@pytest.mark.unit
+def test_rung_that_raises_is_recorded_failed_and_escalates(tmp_path, monkeypatch):
+    """A live rung's extract can RAISE (FetchError against a WAF, a parse crash). That is a FAILED
+    attempt to be RECORDED and ESCALATED past — never an abort of the whole crack. Against fixtures
+    the cracker looks robust; against a live target the cheap rungs raise, so this is the path that
+    decides whether the cracker survives the real world."""
+    import pipeline.recipe as recipe_mod
+    monkeypatch.setattr(recipe_mod, "ROOT", tmp_path)
+
+    r0 = _FakeRung("r0", cost=0)   # raises (simulated WAF block / FetchError)
+    r1 = _FakeRung("r1", cost=1)   # cracks
+
+    def fetch(source: str, target: str):
+        if source == "r0":
+            raise RuntimeError("WAF blocked the request (simulated FetchError)")
+        return _CRACK
+
+    res = asyncio.run(crack_recipe("d", fetch_fn=fetch, ladder=[r0, r1],
+                                   now_iso="2026-06-29T00:00:00Z"))
+
+    assert res.status == STATUS_VERIFIED
+    assert res.winning_rung == 1
+    assert res.winning_source == "r1"
+    # the raising rung is a non-silent FAILED attempt, not a crash; the walk escalated to r1.
+    assert len(res.attempts) == 2
+    assert res.attempts[0].rung == 0 and res.attempts[0].source == "r0"
+    assert res.attempts[0].status == STATUS_FAILED
+    assert "WAF blocked" in res.attempts[0].reason
+    assert res.attempts[1].status == STATUS_VERIFIED
+
+
+# --- (8) every rung raises: FAILED with a per-rung reason, never an uncaught crash ----
+@pytest.mark.unit
+def test_all_rungs_raising_yields_failed_not_crash():
+    r0 = _FakeRung("r0", cost=0)
+    r1 = _FakeRung("r1", cost=1)
+
+    def fetch(source: str, target: str):
+        raise RuntimeError(f"{source} blocked")
+
+    res = asyncio.run(crack_recipe("d", fetch_fn=fetch, ladder=[r0, r1]))
+
+    assert res.status == STATUS_FAILED
+    assert res.winning_rung is None
+    assert len(res.attempts) == 2
+    assert all(a.status == STATUS_FAILED for a in res.attempts)
+    # the per-rung reason names every rung that was tried (no silent failure).
+    assert "r0" in res.reason and "r1" in res.reason
