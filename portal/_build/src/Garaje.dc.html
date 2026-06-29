@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'General Sans','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div id="cd-root" style="--bg:#EAECEF;--panel:#FFFFFF;--panel2:#F2F4F7;--ink:#13161B;--ink2:rgba(19,22,27,.56);--ink3:rgba(19,22,27,.34);--line:rgba(20,28,40,.09);--shadow-sm:0 14px 34px -18px rgba(38,46,62,.22);--mint:#3B82F6;--mint2:#E8F0FE;--amber:#C9821F;--amber2:#F6ECDA;--red:#D2624F;--red2:#F7E7E3;--blue:#3B72E8;--ctl:#111827;--ctl-ink:#FFFFFF;min-height:100vh;background:var(--bg);color:var(--ink);transition:background .4s ease,color .4s ease">
+
+  <!-- NAV -->
+  <nav style="position:sticky;top:16px;z-index:60;width:min(1280px,calc(100% - 28px));margin:16px auto 0;display:flex;align-items:center;gap:16px;padding:9px 9px 9px 18px;border-radius:999px;background:rgba(255,255,255,.66);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border:1px solid rgba(255,255,255,.8);box-shadow:var(--shadow-sm)">
+    <a href="Dashboard.dc.html" style="display:flex;align-items:center;gap:10px"><img src="assets/cd-icon.png" alt="" style="height:24px;width:auto;display:block"/><span style="font-weight:700;font-size:19px;letter-spacing:-.03em">cardeep</span></a>
+    <div style="display:flex;gap:2px;margin-left:8px;font-size:14px;color:var(--ink2)">
+      <a href="Dashboard.dc.html" style="padding:8px 13px;border-radius:999px">Resumen</a>
+      <a href="#" style="padding:8px 13px;border-radius:999px;background:var(--panel2);color:var(--ink);font-weight:600">Garaje 360°</a>
+      <a href="Plano.dc.html" style="padding:8px 13px;border-radius:999px">Plano</a>
+      <a href="Inteligencia.dc.html" style="padding:8px 13px;border-radius:999px">Inteligencia</a>
+      <a href="Finanzas.dc.html" style="padding:8px 13px;border-radius:999px">Finanzas</a>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <button id="cd-theme" aria-label="Tema" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0"><svg id="cd-theme-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg></button>
+      <a href="Marketplace.dc.html" style="font-size:14px;font-weight:600;color:var(--ctl-ink);background:var(--ctl);padding:11px 18px;border-radius:999px">+ Importar stock</a>
+    </div>
+  </nav>
+
+  <main style="width:min(1280px,calc(100% - 28px));margin:30px auto 60px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink3)">84 vehículos · 1,46 M€ en stock</div>
+        <h1 style="font-weight:600;font-size:clamp(26px,3vw,38px);letter-spacing:-.035em;margin:8px 0 0">Garaje 360°</h1>
+      </div>
+      <div style="display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;box-shadow:var(--shadow-sm)">
+        <button class="cd-view" data-view="tabla" style="cursor:pointer;border:0;background:var(--ctl);color:var(--ctl-ink);font-weight:600;font-size:13px;padding:9px 16px;border-radius:9px">Tabla</button>
+        <button class="cd-view" data-view="lienzo" style="cursor:pointer;border:0;background:transparent;color:var(--ink2);font-weight:600;font-size:13px;padding:9px 16px;border-radius:9px">Lienzo</button>
+        <a href="Plano.dc.html" style="display:flex;align-items:center;gap:5px;color:var(--ink2);font-weight:600;font-size:13px;padding:9px 16px;border-radius:9px">Plano <span style="color:var(--mint)">→</span></a>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 280px;gap:18px;margin-top:20px;align-items:start">
+      <!-- left: table / canvas -->
+      <div>
+        <!-- TABLE -->
+        <div id="cd-tabla" style="background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow-sm)">
+          <div style="display:grid;grid-template-columns:1.6fr .9fr .6fr .8fr .9fr;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.06em;color:var(--ink3)"><span>VEHÍCULO</span><span>ESTADO</span><span>DÍAS</span><span>PRECIO</span><span>SWEET‑SPOT</span></div>
+          <div id="cd-rows"></div>
+        </div>
+        <!-- CANVAS -->
+        <div id="cd-lienzo" style="display:none;background:var(--panel);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow-sm)">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:14px">Lienzo de inventario</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3)">arrastra las fichas para agrupar</div></div>
+          <div id="cd-canvas" style="position:relative;height:420px;background-image:radial-gradient(circle,var(--line) 1px,transparent 1px);background-size:26px 26px;background-position:13px 13px;touch-action:none"></div>
+        </div>
+      </div>
+      <!-- right: simulation -->
+      <div style="background:var(--ctl);color:var(--ctl-ink);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm);position:sticky;top:90px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;opacity:.55">SIMULACIÓN DE PRECIO</div>
+        <div style="font-weight:600;font-size:17px;margin-top:10px">Audi Q3 35 TDI</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;opacity:.6;margin-top:2px">112 días en stock · 24.900 €</div>
+        <div style="margin-top:18px;font-size:13px;opacity:.7">Si bajas el precio</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+          <button id="cd-minus" style="cursor:pointer;width:34px;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:inherit;font-size:18px">−</button>
+          <div id="cd-cut" style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;min-width:84px;text-align:center">−500 €</div>
+          <button id="cd-plus" style="cursor:pointer;width:34px;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:inherit;font-size:18px">+</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:11px;margin-top:20px;font-family:'JetBrains Mono',monospace;font-size:13px">
+          <div style="display:flex;justify-content:space-between"><span style="opacity:.6">Demanda</span><span id="cd-dem" style="color:#93B9FB">+34%</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="opacity:.6">Días estimados</span><span id="cd-days">112 → 61</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="opacity:.6">Margen</span><span id="cd-marg" style="color:#E0A33A">12,4 → 10,1%</span></div>
+        </div>
+        <button style="width:100%;margin-top:20px;cursor:pointer;border:0;background:var(--mint);color:#06140d;font-weight:600;font-size:14px;padding:13px;border-radius:13px">Aplicar reprecio</button>
+      </div>
+    </div>
+  </main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount(){
+    const root=document.getElementById('cd-root');if(!root)return;
+    const LIGHT={'--bg':'#EAECEF','--panel':'#FFFFFF','--panel2':'#F2F4F7','--ink':'#13161B','--ink2':'rgba(19,22,27,.56)','--ink3':'rgba(19,22,27,.34)','--line':'rgba(20,28,40,.09)','--shadow-sm':'0 14px 34px -18px rgba(38,46,62,.22)','--mint':'#3B82F6','--mint2':'#E8F0FE','--amber':'#C9821F','--amber2':'#F6ECDA','--red':'#D2624F','--red2':'#F7E7E3','--blue':'#3B72E8','--ctl':'#111827','--ctl-ink':'#FFFFFF'};
+    const DARK={'--bg':'#0B0D11','--panel':'#15181F','--panel2':'#1C2129','--ink':'#F3F2EC','--ink2':'rgba(243,242,236,.6)','--ink3':'rgba(243,242,236,.4)','--line':'rgba(255,255,255,.08)','--shadow-sm':'0 14px 34px -18px rgba(0,0,0,.6)','--mint':'#5B96F8','--mint2':'rgba(59,130,246,.18)','--amber':'#E0A33A','--amber2':'rgba(224,163,58,.16)','--red':'#E2776B','--red2':'rgba(226,119,107,.16)','--blue':'#5B8BF5','--ctl':'#F3F2EC','--ctl-ink':'#111827'};
+    const sun='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/>';
+    const moon='<path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>';
+    let dark=false;
+    const apply=(t)=>{dark=t==='dark';const v=dark?DARK:LIGHT;for(const k in v)root.style.setProperty(k,v[k]);const ic=document.getElementById('cd-theme-icon');if(ic)ic.innerHTML=dark?moon:sun;try{localStorage.setItem('cardeep-theme',t);}catch(e){}};
+    let th='light';try{th=localStorage.getItem('cardeep-theme')||'light';}catch(e){}
+    apply(th);
+    const tb=document.getElementById('cd-theme');if(tb)tb.addEventListener('click',()=>apply(dark?'light':'dark'));
+
+    const fmt=(n)=>n.toLocaleString('es-ES');
+    const ST={pub:{t:'Publicado',c:'var(--mint)'},res:{t:'Reservado',c:'var(--blue)'},prep:{t:'En prep.',c:'var(--amber)'},vend:{t:'Vendido',c:'var(--ink3)'}};
+    const rows=[
+      {n:'Audi Q3 35 TDI',st:'pub',d:112,p:24900,ss:'alto',ssc:'var(--red)'},
+      {n:'Seat León FR',st:'res',d:78,p:21300,ss:'óptimo',ssc:'var(--mint)'},
+      {n:'VW Golf 1.5 TSI',st:'prep',d:23,p:18450,ss:'óptimo',ssc:'var(--mint)'},
+      {n:'BMW 320d Touring',st:'pub',d:41,p:27750,ss:'bajo',ssc:'var(--amber)'},
+      {n:'Peugeot 3008 BlueHDi',st:'pub',d:34,p:23400,ss:'óptimo',ssc:'var(--mint)'},
+      {n:'Kia Sportage T-GDi',st:'res',d:56,p:21900,ss:'bajo',ssc:'var(--amber)'},
+      {n:'Renault Clio TCe',st:'vend',d:0,p:13200,ss:'—',ssc:'var(--ink3)'}
+    ];
+    const rowsEl=document.getElementById('cd-rows');
+    rows.forEach((r,i)=>{
+      const s=ST[r.st];
+      const div=document.createElement('div');
+      div.style.cssText='display:grid;grid-template-columns:1.6fr .9fr .6fr .8fr .9fr;gap:10px;padding:14px 18px;align-items:center;font-family:\'JetBrains Mono\',monospace;font-size:13px;'+(i?'border-top:1px solid var(--line);':'');
+      div.innerHTML='<span style="font-family:General Sans,sans-serif;font-weight:600;font-size:14px;color:var(--ink)">'+r.n+'</span>'
+        +'<span><span style="font-size:11px;font-weight:600;color:'+s.c+'">● '+s.t+'</span></span>'
+        +'<span style="color:'+(r.d>90?'var(--red)':r.d>60?'var(--amber)':'var(--ink2)')+'">'+(r.d||'—')+'</span>'
+        +'<span style="color:var(--ink)">'+fmt(r.p)+' €</span>'
+        +'<span style="color:'+r.ssc+';font-weight:600">'+r.ss+'</span>';
+      rowsEl.appendChild(div);
+    });
+
+    // view toggle
+    const tabla=document.getElementById('cd-tabla'),lienzo=document.getElementById('cd-lienzo');
+    let canvasBuilt=false;
+    document.querySelectorAll('.cd-view').forEach(b=>b.addEventListener('click',()=>{
+      document.querySelectorAll('.cd-view').forEach(x=>{x.style.background='transparent';x.style.color='var(--ink2)';});
+      b.style.background='var(--ctl)';b.style.color='var(--ctl-ink)';
+      const v=b.dataset.view;
+      tabla.style.display=v==='tabla'?'block':'none';
+      lienzo.style.display=v==='lienzo'?'block':'none';
+      if(v==='lienzo'&&!canvasBuilt){buildCanvas();canvasBuilt=true;}
+    }));
+
+    function buildCanvas(){
+      const cv=document.getElementById('cd-canvas');
+      const tiles=[{n:'Audi Q3 35 TDI',s:'reprecio',c:'var(--red)',x:24,y:26},{n:'Seat León FR',s:'reservado',c:'var(--blue)',x:250,y:70},{n:'VW Golf 1.5 TSI',s:'óptimo',c:'var(--mint)',x:120,y:180},{n:'BMW 320d Touring',s:'publicado',c:'var(--mint)',x:380,y:150},{n:'Peugeot 3008',s:'óptimo',c:'var(--mint)',x:470,y:36},{n:'Kia Sportage',s:'bajo',c:'var(--amber)',x:300,y:270}];
+      tiles.forEach((t,i)=>{
+        const el=document.createElement('div');
+        el.style.cssText='position:absolute;left:'+t.x+'px;top:'+t.y+'px;width:184px;background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:13px 15px;box-shadow:var(--shadow-sm);cursor:grab;user-select:none;touch-action:none;transition:box-shadow .2s';
+        el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-weight:600;font-size:13.5px">'+t.n+'</span><span style="width:8px;height:8px;border-radius:50%;background:'+t.c+'"></span></div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:9px"><span style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:'+t.c+'">'+t.s+'</span><span style="font-family:\'JetBrains Mono\',monospace;font-size:9px;color:var(--ink3)">CDX‑'+(28079+i)+'</span></div>';
+        cv.appendChild(el);
+        let ox,oy,drag=false;
+        const down=(e)=>{drag=true;el.style.cursor='grabbing';el.style.zIndex=10;el.style.boxShadow='0 26px 50px -18px rgba(38,46,62,.4)';const p=e.touches?e.touches[0]:e;const r=el.getBoundingClientRect();ox=p.clientX-r.left;oy=p.clientY-r.top;e.preventDefault();};
+        const move=(e)=>{if(!drag)return;const p=e.touches?e.touches[0]:e;const cr=cv.getBoundingClientRect();let nx=p.clientX-cr.left-ox,ny=p.clientY-cr.top-oy;nx=Math.max(0,Math.min(cr.width-el.offsetWidth,nx));ny=Math.max(0,Math.min(cr.height-el.offsetHeight,ny));el.style.left=nx+'px';el.style.top=ny+'px';};
+        const up=()=>{if(!drag)return;drag=false;el.style.cursor='grab';el.style.zIndex='';el.style.boxShadow='var(--shadow-sm)';};
+        el.addEventListener('mousedown',down);el.addEventListener('touchstart',down,{passive:false});
+        window.addEventListener('mousemove',move);window.addEventListener('touchmove',move,{passive:false});
+        window.addEventListener('mouseup',up);window.addEventListener('touchend',up);
+      });
+    }
+
+    // simulation
+    let cut=500;
+    const cutEl=document.getElementById('cd-cut'),dem=document.getElementById('cd-dem'),days=document.getElementById('cd-days'),marg=document.getElementById('cd-marg');
+    const upd=()=>{cutEl.textContent='−'+fmt(cut)+' €';const dpct=Math.round(cut/500*34);dem.textContent='+'+dpct+'%';const nd=Math.max(20,Math.round(112-cut/500*51));days.textContent='112 → '+nd;const m=(12.4-cut/500*2.3).toFixed(1).replace('.',',');marg.textContent='12,4 → '+m+'%';};
+    document.getElementById('cd-minus').addEventListener('click',()=>{cut=Math.max(500,cut-500);upd();});
+    document.getElementById('cd-plus').addEventListener('click',()=>{cut=Math.min(3000,cut+500);upd();});
+    upd();
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>

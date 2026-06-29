@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inteligencia · cardeep</title>
+<link rel="icon" href="assets/cd-icon.png">
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'General Sans','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  a{color:inherit;text-decoration:none}
+  select{font-family:inherit}
+</style>
+</head>
+<body>
+<!-- Ported from Claude Design "inteligencia.html" by _build/strip_dc.py.
+     Standalone: no React, no support.js. The DCLogic class runs on DOMContentLoaded. -->
+<div id="cd-root" style="--bg:#EAECEF;--panel:#FFFFFF;--panel2:#F2F4F7;--ink:#13161B;--ink2:rgba(19,22,27,.56);--ink3:rgba(19,22,27,.34);--line:rgba(20,28,40,.09);--shadow-sm:0 14px 34px -18px rgba(38,46,62,.22);--mint:#3B82F6;--mint2:#E8F0FE;--amber:#C9821F;--red:#D2624F;--blue:#3B72E8;--ctl:#111827;--ctl-ink:#FFFFFF;min-height:100vh;background:var(--bg);color:var(--ink);transition:background .4s ease,color .4s ease">
+
+  <nav style="position:sticky;top:16px;z-index:60;width:min(1200px,calc(100% - 28px));margin:16px auto 0;display:flex;align-items:center;gap:16px;padding:9px 9px 9px 18px;border-radius:999px;background:rgba(255,255,255,.66);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border:1px solid rgba(255,255,255,.8);box-shadow:var(--shadow-sm)">
+    <a href="dashboard.html" style="display:flex;align-items:center;gap:10px"><img src="assets/cd-icon.png" alt="" style="height:24px;width:auto;display:block"/><span style="font-weight:700;font-size:19px;letter-spacing:-.03em">cardeep</span></a>
+    <div style="display:flex;gap:2px;margin-left:8px;font-size:14px;color:var(--ink2)">
+      <a href="dashboard.html" style="padding:8px 13px;border-radius:999px">Resumen</a>
+      <a href="garaje.html" style="padding:8px 13px;border-radius:999px">Garaje 360°</a>
+      <a href="#" style="padding:8px 13px;border-radius:999px;background:var(--panel2);color:var(--ink);font-weight:600">Inteligencia</a>
+      <a href="finanzas.html" style="padding:8px 13px;border-radius:999px">Finanzas</a>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <button id="cd-theme" aria-label="Tema" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0"><svg id="cd-theme-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg></button>
+    </div>
+  </nav>
+
+  <main style="width:min(1200px,calc(100% - 28px));margin:30px auto 60px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink3)">Inteligencia europea · 27 mercados</div>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:10px">
+      <h1 style="font-weight:600;font-size:clamp(26px,3vw,38px);letter-spacing:-.035em;margin:0">Inteligencia de mercado</h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="cd-model" style="cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;box-shadow:var(--shadow-sm)"><option>Audi Q3 35 TDI</option><option>VW Golf 1.5 TSI</option><option>Peugeot 3008</option></select>
+        <select style="cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;box-shadow:var(--shadow-sm)"><option>España vs UE</option><option>Solo España</option></select>
+      </div>
+    </div>
+
+    <!-- KPI band -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:22px">
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">Precio óptimo</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;margin-top:6px">18.450 €</div></div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">vs media UE</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;margin-top:6px;color:var(--mint)">−4,2%</div></div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">Días en stock</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;margin-top:6px">39 <span style="font-size:14px;color:var(--ink3)">med.</span></div></div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">Demanda</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:500;margin-top:6px;color:var(--mint)">Alta</div></div>
+    </div>
+
+    <!-- charts grid -->
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:16px">
+      <!-- residual value -->
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-weight:600;font-size:15px">Valor residual</div><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3)">— España &nbsp; ┄ media UE</div></div>
+        <svg width="100%" height="200" viewBox="0 0 560 200" preserveAspectRatio="none" style="margin-top:14px;display:block">
+          <line x1="0" y1="50" x2="560" y2="50" stroke="var(--line)"/><line x1="0" y1="110" x2="560" y2="110" stroke="var(--line)"/><line x1="0" y1="170" x2="560" y2="170" stroke="var(--line)"/>
+          <path d="M0 24 C90 38 130 78 210 96 C300 116 340 140 420 152 C490 162 530 170 560 174" stroke="var(--ink2)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M0 30 C90 50 130 92 210 112 C300 132 340 154 420 164 C490 172 530 180 560 184" stroke="var(--mint)" stroke-width="2" stroke-dasharray="5 6" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin-top:6px"><span>0</span><span>1 año</span><span>2 años</span><span>3 años</span><span>4 años</span></div>
+      </div>
+      <!-- sweet spot -->
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="font-weight:600;font-size:15px">Sweet‑spot de precio</div>
+        <div style="margin-top:34px;position:relative;height:14px;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--amber),var(--mint),var(--amber),var(--red))"><span style="position:absolute;left:47%;top:-7px;width:4px;height:28px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 3px var(--panel)"></span></div>
+        <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:12px"><span style="color:var(--ink3)">17.800</span><span style="color:var(--mint);font-weight:600">óptimo 18.450 €</span><span style="color:var(--ink3)">19.500</span></div>
+        <p style="font-size:13px;line-height:1.5;color:var(--ink2);margin:22px 0 0">A 18.450 € el coche se mueve en ~23 días con margen óptimo. Por encima de 19.100 € la demanda cae un 38%.</p>
+      </div>
+      <!-- days vs market -->
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="font-weight:600;font-size:15px">Días en stock vs mercado</div>
+        <div style="display:flex;align-items:flex-end;gap:8px;height:90px;margin-top:18px">
+          <div style="flex:1;height:50%;background:var(--panel2);border-radius:4px;border:1px solid var(--line)"></div><div style="flex:1;height:64%;background:var(--mint);border-radius:4px"></div><div style="flex:1;height:44%;background:var(--panel2);border-radius:4px;border:1px solid var(--line)"></div><div style="flex:1;height:72%;background:var(--panel2);border-radius:4px;border:1px solid var(--line)"></div><div style="flex:1;height:38%;background:var(--panel2);border-radius:4px;border:1px solid var(--line)"></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink3);margin-top:12px">tu media <span style="color:var(--ink)">47 d</span> · mercado <span style="color:var(--mint)">39 d</span></div>
+      </div>
+      <!-- regional demand -->
+      <div style="background:var(--ctl);color:var(--ctl-ink);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="font-weight:600;font-size:15px">Demanda por región</div>
+        <div style="position:relative;height:96px;margin-top:16px;border-radius:14px;background:rgba(255,255,255,.04);overflow:hidden">
+          <span style="position:absolute;left:20%;top:30%;width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 5px rgba(59,130,246,.18)"></span>
+          <span style="position:absolute;left:54%;top:56%;width:13px;height:13px;border-radius:50%;background:#93B9FB;box-shadow:0 0 0 7px rgba(59,130,246,.2)"></span>
+          <span style="position:absolute;left:74%;top:34%;width:7px;height:7px;border-radius:50%;background:#9fb6f0"></span>
+          <span style="position:absolute;left:38%;top:70%;width:6px;height:6px;border-radius:50%;background:rgba(243,245,248,.4)"></span>
+          <span style="position:absolute;left:82%;top:64%;width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px rgba(59,130,246,.16)"></span>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;opacity:.6;margin-top:12px">Madrid y Levante concentran el 54% de la demanda</div>
+      </div>
+    </div>
+  </main>
+
+</div>
+<script>class DCLogic{constructor(){}renderVals(){return {};}}</script>
+<script>
+class Component extends DCLogic {
+  componentDidMount(){
+    const root=document.getElementById('cd-root');if(!root)return;
+    const LIGHT={'--bg':'#EAECEF','--panel':'#FFFFFF','--panel2':'#F2F4F7','--ink':'#13161B','--ink2':'rgba(19,22,27,.56)','--ink3':'rgba(19,22,27,.34)','--line':'rgba(20,28,40,.09)','--shadow-sm':'0 14px 34px -18px rgba(38,46,62,.22)','--mint':'#3B82F6','--mint2':'#E8F0FE','--amber':'#C9821F','--red':'#D2624F','--blue':'#3B72E8','--ctl':'#111827','--ctl-ink':'#FFFFFF'};
+    const DARK={'--bg':'#0B0D11','--panel':'#15181F','--panel2':'#1C2129','--ink':'#F3F2EC','--ink2':'rgba(243,242,236,.6)','--ink3':'rgba(243,242,236,.4)','--line':'rgba(255,255,255,.08)','--shadow-sm':'0 14px 34px -18px rgba(0,0,0,.6)','--mint':'#5B96F8','--mint2':'rgba(59,130,246,.18)','--amber':'#E0A33A','--red':'#E2776B','--blue':'#5B8BF5','--ctl':'#06080C','--ctl-ink':'#F3F5F8'};
+    const sun='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/>';
+    const moon='<path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>';
+    let dark=false;
+    const apply=(t)=>{dark=t==='dark';const v=dark?DARK:LIGHT;for(const k in v)root.style.setProperty(k,v[k]);const ic=document.getElementById('cd-theme-icon');if(ic)ic.innerHTML=dark?moon:sun;try{localStorage.setItem('cardeep-theme',t);}catch(e){}};
+    let th='light';try{th=localStorage.getItem('cardeep-theme')||'light';}catch(e){}
+    apply(th);
+    const tb=document.getElementById('cd-theme');if(tb)tb.addEventListener('click',()=>apply(dark?'light':'dark'));
+  }
+  renderVals(){ return {}; }
+}
+</script>
+<script>document.addEventListener("DOMContentLoaded",function(){try{new Component().componentDidMount();}catch(e){console.error("[cardeep portal] init error:",e);}});</script>
+</body>
+</html>

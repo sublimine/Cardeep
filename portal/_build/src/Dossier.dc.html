@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'General Sans','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  a{color:inherit;text-decoration:none}
+  input{font-family:inherit}
+  #cd-car-gl{display:block;width:100%;height:100%;cursor:grab}
+  #cd-car-gl:active{cursor:grabbing}
+  .cd-act{transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s,border-color .2s}
+  .cd-act:hover{transform:translateY(-3px);box-shadow:var(--shadow-sm);border-color:var(--mint)}
+  .cd-sw{transition:transform .18s cubic-bezier(.16,1,.3,1)}
+  .cd-sw:hover{transform:scale(1.12)}
+</style>
+</helmet>
+<div id="cd-root" style="--bg:#E7E9ED;--panel:#FFFFFF;--panel2:#F1F3F6;--glass:rgba(255,255,255,.58);--glass-brd:rgba(255,255,255,.9);--ink:#13161B;--ink2:rgba(19,22,27,.56);--ink3:rgba(19,22,27,.34);--line:rgba(20,28,40,.09);--shadow-sm:0 14px 34px -18px rgba(38,46,62,.22);--shadow:0 44px 96px -40px rgba(38,46,62,.46);--mint:#3B82F6;--mint2:#E8F0FE;--ctl:#111827;--ctl-ink:#FFFFFF;min-height:100vh;background:var(--bg);color:var(--ink);transition:background .4s ease,color .4s ease">
+
+  <!-- NAV -->
+  <nav style="width:min(1320px,calc(100% - 36px));margin:0 auto;display:flex;align-items:center;gap:16px;padding:22px 0 6px">
+    <a href="Marketplace.dc.html" style="display:flex;align-items:center;gap:10px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10.5" stroke="var(--ink3)" stroke-width="1"/><circle cx="12" cy="12" r="6.4" stroke="var(--ink3)" stroke-width="1"/><circle cx="12" cy="12" r="2.6" fill="var(--mint)"/></svg><span style="font-weight:700;font-size:19px;letter-spacing:-.03em">cardeep</span></a>
+    <div style="margin:0 auto;display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px;box-shadow:var(--shadow-sm)">
+      <span style="font-size:13.5px;font-weight:600;padding:9px 20px;border-radius:999px;background:var(--ctl);color:var(--ctl-ink)">Comprar</span>
+      <a href="Marketplace.dc.html" style="font-size:13.5px;font-weight:500;padding:9px 20px;border-radius:999px;color:var(--ink2)">Vender</a>
+      <a href="Inteligencia.dc.html" style="font-size:13.5px;font-weight:500;padding:9px 20px;border-radius:999px;color:var(--ink2)">Tasar</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:9px 14px;box-shadow:var(--shadow-sm)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="2.5"/></svg>Madrid</div>
+      <button id="cd-theme" aria-label="Tema" style="width:40px;height:40px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0;box-shadow:var(--shadow-sm)"><svg id="cd-theme-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg></button>
+    </div>
+  </nav>
+
+  <main style="width:min(1320px,calc(100% - 36px));margin:8px auto 50px">
+    <div style="display:grid;grid-template-columns:1.62fr 1fr;gap:18px;align-items:stretch">
+      <!-- STAGE: real 3D car -->
+      <section style="position:relative;border-radius:28px;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;height:482px">
+        <canvas id="cd-car-gl"></canvas>
+        <!-- title -->
+        <div style="position:absolute;left:28px;top:26px;z-index:3;pointer-events:none">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--ink3)">CDX‑ES‑28‑079‑0413</div>
+          <h1 id="cd-name" style="font-weight:600;font-size:clamp(30px,3.3vw,44px);letter-spacing:-.035em;line-height:1;margin:8px 0 0;color:var(--ink)">Peugeot 3008</h1>
+          <div id="cd-sub" style="font-size:15px;color:var(--ink2);margin-top:6px">SUV · BlueHDi 130 · 2022 · 41.800 km</div>
+        </div>
+        <!-- verdict pill -->
+        <div style="position:absolute;right:24px;top:24px;z-index:3;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#fff;background:var(--mint);padding:8px 14px;border-radius:999px;box-shadow:0 10px 24px -8px rgba(59,130,246,.6)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Buen precio</div>
+        <!-- swatches -->
+        <div id="cd-swatches" style="position:absolute;left:28px;bottom:24px;z-index:3;display:flex;align-items:center;gap:11px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink3);margin-right:2px">COLOR</span>
+        </div>
+        <!-- hint + stats -->
+        <div style="position:absolute;right:24px;bottom:24px;z-index:3;display:flex;align-items:flex-end;gap:22px">
+          <div style="text-align:right"><div style="font-size:11px;color:var(--ink3)">Potencia</div><div id="cd-st2" style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600">130 CV</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--ink3)">Cambio</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600">Manual</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--ink3)">Plazas</div><div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600">5</div></div>
+        </div>
+      </section>
+
+      <!-- ASSISTANT -->
+      <aside style="border-radius:28px;background:var(--glass);backdrop-filter:blur(28px) saturate(150%);-webkit-backdrop-filter:blur(28px) saturate(150%);border:1px solid var(--glass-brd);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(0,0,0,.05);padding:22px;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="width:38px;height:38px;border-radius:12px;background:var(--mint);display:grid;place-items:center;box-shadow:0 8px 18px -6px rgba(59,130,246,.6)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#06140d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.2 6.6H21l-5.4 4 2.1 6.6L12 15.8 6.3 19.2l2.1-6.6L3 8.6h6.8z"/></svg></div>
+          <div style="flex:1"><div style="font-weight:600;font-size:16px">Asistente Cardeep</div><div style="font-size:12.5px;color:var(--ink2)">Pregúntame lo que quieras de este coche</div></div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mint);background:var(--mint2);padding:5px 9px;border-radius:8px">IA</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:18px">
+          <div class="cd-act" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg><div style="font-weight:600;font-size:13.5px;margin-top:10px">Tasar coche</div><div style="font-size:11.5px;color:var(--ink3)">precio justo · 30 s</div></div>
+          <div class="cd-act" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div style="font-weight:600;font-size:13.5px;margin-top:10px">Historial</div><div style="font-size:11.5px;color:var(--ink3)">km · siniestros</div></div>
+          <div class="cd-act" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><div style="font-weight:600;font-size:13.5px;margin-top:10px">Reservar cita</div><div style="font-size:11.5px;color:var(--ink3)">en concesionario</div></div>
+          <div class="cd-act" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;cursor:pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><div style="font-weight:600;font-size:13.5px;margin-top:10px">Financiación</div><div style="font-size:11.5px;color:var(--ink3)">calcular cuota</div></div>
+        </div>
+        <!-- suggestion chip -->
+        <div style="margin-top:16px;display:flex;align-items:center;gap:9px;background:var(--mint2);border-radius:13px;padding:12px 14px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2zM9 21h6M10 17v4M14 17v4"/></svg>
+          <div style="font-size:12.5px;color:var(--ink);line-height:1.4">Está <strong>4,2% por debajo</strong> de la media europea. Buen momento para reservar.</div>
+        </div>
+        <div style="margin-top:auto;padding-top:16px">
+          <div style="display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 6px 6px 14px;box-shadow:var(--shadow-sm)">
+            <input placeholder="Resérvame una cita el lunes a las 9:00…" style="flex:1;border:0;outline:none;background:transparent;color:var(--ink);font-size:13.5px;padding:10px 0"/>
+            <button style="cursor:pointer;border:0;background:var(--mint);color:#06140d;font-weight:600;font-size:13px;padding:11px 16px;border-radius:11px;display:flex;align-items:center;gap:6px">Enviar<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- bottom cards -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:18px">
+      <div style="border-radius:22px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-sm);overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px"><div><div style="font-size:11px;color:var(--ink3)">Concesionario</div><div style="font-weight:600;font-size:14.5px;margin-top:2px">AutoMadrid Norte</div></div><span style="width:30px;height:30px;border-radius:9px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg></span></div>
+        <div style="position:relative;height:96px;background:repeating-linear-gradient(90deg,var(--panel2) 0 26px,transparent 26px 28px),repeating-linear-gradient(0deg,var(--panel2) 0 26px,transparent 26px 28px);background-color:var(--panel)"><span style="position:absolute;left:46%;top:42%;width:16px;height:16px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 5px var(--mint2)"></span></div>
+      </div>
+      <div style="border-radius:22px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow-sm);padding:16px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;color:var(--ink3)">Tu cita</div><span id="cd-dd" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink2)">20 jul · 10:25</span></div>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <div style="flex:1;background:var(--panel2);border-radius:14px;padding:10px;display:flex;align-items:center;justify-content:space-between"><button id="cd-dprev" style="cursor:pointer;border:0;background:transparent;color:var(--mint);font-size:16px">‹</button><div style="text-align:center"><div id="cd-day" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;line-height:1">20</div><div id="cd-mon" style="font-size:10px;color:var(--ink3)">Jul</div></div><button id="cd-dnext" style="cursor:pointer;border:0;background:transparent;color:var(--mint);font-size:16px">›</button></div>
+          <div style="flex:1;background:var(--panel2);border-radius:14px;padding:10px;display:flex;align-items:center;justify-content:space-between"><button id="cd-tprev" style="cursor:pointer;border:0;background:transparent;color:var(--mint);font-size:16px">‹</button><div style="text-align:center"><div id="cd-time" style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;line-height:1">10:25</div><div style="font-size:10px;color:var(--ink3)">cita</div></div><button id="cd-tnext" style="cursor:pointer;border:0;background:transparent;color:var(--mint);font-size:16px">›</button></div>
+        </div>
+      </div>
+      <div style="border-radius:22px;background:var(--ctl);color:var(--ctl-ink);box-shadow:var(--shadow-sm);padding:16px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-size:11px;opacity:.6">Precio índice</div><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#93B9FB">▼ 4,2% UE</span></div>
+        <div id="cd-price" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600;letter-spacing:-.02em;margin-top:6px">23.400 €</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:12.5px"><span style="opacity:.7">Financiación desde</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600">312 €/mes</span></div>
+        <a href="#" style="display:block;text-align:center;margin-top:14px;background:var(--mint);color:#06140d;font-weight:600;font-size:13.5px;padding:12px;border-radius:13px">Reservar este coche</a>
+      </div>
+    </div>
+  </main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount(){
+    const root=document.getElementById('cd-root');if(!root)return;
+    const LIGHT={'--bg':'#E7E9ED','--panel':'#FFFFFF','--panel2':'#F1F3F6','--glass':'rgba(255,255,255,.58)','--glass-brd':'rgba(255,255,255,.9)','--ink':'#13161B','--ink2':'rgba(19,22,27,.56)','--ink3':'rgba(19,22,27,.34)','--line':'rgba(20,28,40,.09)','--shadow-sm':'0 14px 34px -18px rgba(38,46,62,.22)','--shadow':'0 44px 96px -40px rgba(38,46,62,.46)','--mint':'#3B82F6','--mint2':'#E8F0FE','--ctl':'#111827','--ctl-ink':'#FFFFFF'};
+    const DARK={'--bg':'#0B0D11','--panel':'#15181F','--panel2':'#1C2129','--glass':'rgba(22,26,33,.55)','--glass-brd':'rgba(255,255,255,.1)','--ink':'#F3F2EC','--ink2':'rgba(243,242,236,.6)','--ink3':'rgba(243,242,236,.4)','--line':'rgba(255,255,255,.08)','--shadow-sm':'0 14px 34px -18px rgba(0,0,0,.6)','--shadow':'0 44px 96px -36px rgba(0,0,0,.74)','--mint':'#5B96F8','--mint2':'rgba(59,130,246,.18)','--ctl':'#F3F2EC','--ctl-ink':'#111827'};
+    const sun='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/>';
+    const moon='<path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>';
+    let dark=false;
+    const apply=(t)=>{dark=t==='dark';const v=dark?DARK:LIGHT;for(const k in v)root.style.setProperty(k,v[k]);const ic=document.getElementById('cd-theme-icon');if(ic)ic.innerHTML=dark?moon:sun;try{localStorage.setItem('cardeep-theme',t);}catch(e){} if(this._scene)this._scene(dark);};
+    let th='light';try{th=localStorage.getItem('cardeep-theme')||'light';}catch(e){}
+    const tb=document.getElementById('cd-theme');if(tb)tb.addEventListener('click',()=>apply(dark?'light':'dark'));
+
+    // ---- car catalogue: swatch -> paint + meta ----
+    const cars=[
+      {label:'Gris Platino',hex:0xC9CDD4,met:0.85,name:'Peugeot 3008',sub:'SUV · BlueHDi 130 · 2022 · 41.800 km',price:'23.400 €',pot:'130 CV'},
+      {label:'Blanco Nacarado',hex:0xEDEFF2,met:0.6,name:'Peugeot 3008',sub:'SUV · BlueHDi 130 · 2022 · 41.800 km',price:'23.400 €',pot:'130 CV'},
+      {label:'Negro Perla',hex:0x14171C,met:0.9,name:'Peugeot 3008',sub:'SUV · BlueHDi 130 · 2022 · 41.800 km',price:'23.400 €',pot:'130 CV'},
+      {label:'Azul Magnético',hex:0x223A66,met:0.92,name:'Peugeot 3008',sub:'SUV · BlueHDi 130 · 2022 · 41.800 km',price:'23.400 €',pot:'130 CV'},
+      {label:'Rojo Ultimate',hex:0x8E1B22,met:0.9,name:'Peugeot 3008',sub:'SUV · BlueHDi 130 · 2022 · 41.800 km',price:'23.400 €',pot:'130 CV'}
+    ];
+    const sw=document.getElementById('cd-swatches');
+    cars.forEach((c,i)=>{const b=document.createElement('button');b.className='cd-sw';b.title=c.label;b.style.cssText='cursor:pointer;width:28px;height:28px;border-radius:50%;border:2px solid '+(i===0?'var(--mint)':'transparent')+';background:#'+c.hex.toString(16).padStart(6,'0')+';box-shadow:0 4px 10px -3px rgba(0,0,0,.4),inset 0 1px 2px rgba(255,255,255,.4);padding:0';b.addEventListener('click',()=>setCar(i));sw.appendChild(b);});
+
+    const setCar=(i)=>{const c=cars[i];document.getElementById('cd-name').textContent=c.name;document.getElementById('cd-sub').textContent=c.sub;document.getElementById('cd-price').textContent=c.price;document.getElementById('cd-st2').textContent=c.pot;document.querySelectorAll('#cd-swatches .cd-sw').forEach((b,j)=>b.style.borderColor=j===i?'var(--mint)':'transparent');if(this._paint)this._paint(c.hex,c.met);};
+    this._setCar=setCar;
+
+    // date/time stepper
+    const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    let day=20,mon=6,hh=10,mm=25;const pad=(n)=>String(n).padStart(2,'0');
+    const upd=()=>{document.getElementById('cd-day').textContent=day;document.getElementById('cd-mon').textContent=months[mon].replace(/^./,c=>c.toUpperCase());document.getElementById('cd-time').textContent=hh+':'+pad(mm);document.getElementById('cd-dd').textContent=day+' '+months[mon]+' · '+hh+':'+pad(mm);};
+    document.getElementById('cd-dprev').addEventListener('click',()=>{day=day>1?day-1:28;upd();});
+    document.getElementById('cd-dnext').addEventListener('click',()=>{day=day<28?day+1:1;upd();});
+    document.getElementById('cd-tprev').addEventListener('click',()=>{mm-=15;if(mm<0){mm=45;hh=hh>8?hh-1:8;}upd();});
+    document.getElementById('cd-tnext').addEventListener('click',()=>{mm+=15;if(mm>=60){mm=0;hh=hh<13?hh+1:13;}upd();});
+    upd();
+
+    let tries=0;const boot=()=>{ if(window.THREE){ this.initCar(window.THREE, th); apply(th);} else if(tries++<150){setTimeout(boot,50);} };
+    boot();
+  }
+
+  initCar(THREE, initialTheme){
+    const canvas=document.getElementById('cd-car-gl');if(!canvas)return;
+    const wrap=canvas.parentElement;
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+    renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+    renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    if(THREE.sRGBEncoding)renderer.outputEncoding=THREE.sRGBEncoding;
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(34,1,0.1,100);
+    const size=()=>{const w=wrap.clientWidth,h=wrap.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();};
+
+    // ---- gradient studio environment (for glossy reflections) ----
+    const envCanvas=document.createElement('canvas');envCanvas.width=16;envCanvas.height=256;
+    const ex=envCanvas.getContext('2d');const grd=ex.createLinearGradient(0,0,0,256);
+    grd.addColorStop(0,'#ffffff');grd.addColorStop(0.45,'#d7dbe2');grd.addColorStop(0.7,'#9aa0ab');grd.addColorStop(1,'#5c606a');
+    ex.fillStyle=grd;ex.fillRect(0,0,16,256);
+    const envTex=new THREE.CanvasTexture(envCanvas);envTex.mapping=THREE.EquirectangularReflectionMapping;
+    const pmrem=new THREE.PMREMGenerator(renderer);const envRT=pmrem.fromEquirectangular(envTex);
+    scene.environment=envRT.texture;
+
+    // ---- lights ----
+    const hemi=new THREE.HemisphereLight(0xffffff,0xb6bcc6,0.55);scene.add(hemi);
+    const key=new THREE.DirectionalLight(0xffffff,1.5);key.position.set(5,9,5);key.castShadow=true;
+    key.shadow.mapSize.set(2048,2048);key.shadow.camera.near=1;key.shadow.camera.far=30;key.shadow.camera.left=-7;key.shadow.camera.right=7;key.shadow.camera.top=7;key.shadow.camera.bottom=-7;key.shadow.bias=-0.0004;key.shadow.radius=6;scene.add(key);
+    const rim=new THREE.DirectionalLight(0xdfe8ff,0.8);rim.position.set(-6,4,-5);scene.add(rim);
+
+    // ---- floor (subtle reflection via mirrored car) ----
+    const floorMat=new THREE.MeshStandardMaterial({color:0xeceef1,roughness:.5,metalness:.1});
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),floorMat);floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+
+    // ---- build car via extruded side profile ----
+    const paint=new THREE.MeshStandardMaterial({color:0xC9CDD4,metalness:.85,roughness:.32});
+    const buildBody=()=>{
+      const s=new THREE.Shape();
+      s.moveTo(-2.15,0.46);
+      s.bezierCurveTo(-2.24,0.95,-1.95,1.0,-1.55,1.0);      // front bumper/hood
+      s.bezierCurveTo(-1.2,1.0,-1.12,1.02,-0.95,1.06);       // hood to windshield base
+      s.bezierCurveTo(-0.55,1.12,-0.5,1.52,-0.05,1.55);      // windshield up to roof
+      s.lineTo(0.72,1.56);                                    // roof
+      s.bezierCurveTo(1.2,1.55,1.2,1.2,1.5,1.12);            // rear window down
+      s.bezierCurveTo(1.78,1.06,1.95,1.04,2.06,1.0);         // trunk
+      s.bezierCurveTo(2.24,0.95,2.2,0.6,2.15,0.46);          // rear bumper
+      s.lineTo(-2.15,0.46);
+      const geo=new THREE.ExtrudeGeometry(s,{depth:1.86,bevelEnabled:true,bevelThickness:0.16,bevelSize:0.16,bevelSegments:5,steps:1});
+      geo.translate(0,0,-0.93);geo.computeVertexNormals();
+      const m=new THREE.Mesh(geo,paint);m.castShadow=true;m.receiveShadow=true;return m;
+    };
+    const carGroup=new THREE.Group();
+    const body=buildBody();carGroup.add(body);
+    // skirt/underbody
+    const skirt=new THREE.Mesh(new THREE.BoxGeometry(4.0,0.34,1.74),new THREE.MeshStandardMaterial({color:0x15171c,roughness:.7,metalness:.2}));skirt.position.y=0.38;skirt.castShadow=true;carGroup.add(skirt);
+    // greenhouse glass
+    const glass=new THREE.MeshStandardMaterial({color:0x10141c,metalness:.5,roughness:.08});
+    const gh=new THREE.Mesh(new THREE.BoxGeometry(1.46,0.46,1.62),glass);gh.position.set(0.1,1.27,0);carGroup.add(gh);
+    // headlights / taillights
+    const hl=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.2,0.5),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff2d8,emissiveIntensity:1.3,roughness:.25}));
+    [[-2.16,0.8,0.62],[-2.16,0.8,-0.62]].forEach(p=>{const l=hl.clone();l.position.set(p[0],p[1],p[2]);carGroup.add(l);});
+    const tl=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.16,0.56),new THREE.MeshStandardMaterial({color:0x2a0000,emissive:0xff3b30,emissiveIntensity:1.0,roughness:.35}));
+    [[2.16,0.86,0.58],[2.16,0.86,-0.58]].forEach(p=>{const l=tl.clone();l.position.set(p[0],p[1],p[2]);carGroup.add(l);});
+    // wheels
+    const tyreMat=new THREE.MeshStandardMaterial({color:0x0c0d10,roughness:.85,metalness:.05});
+    const rimMat=new THREE.MeshStandardMaterial({color:0xced3da,metalness:.95,roughness:.22});
+    const tyreGeo=new THREE.CylinderGeometry(0.5,0.5,0.34,30);
+    const rimGeo=new THREE.CylinderGeometry(0.28,0.28,0.36,7);
+    const archMat=new THREE.MeshStandardMaterial({color:0x111317,roughness:.8,metalness:.1});
+    [[-1.32,0.5,0.9],[1.32,0.5,0.9],[-1.32,0.5,-0.9],[1.32,0.5,-0.9]].forEach(p=>{
+      const t=new THREE.Mesh(tyreGeo,tyreMat);t.rotation.x=Math.PI/2;t.position.set(p[0],p[1],p[2]);t.castShadow=true;carGroup.add(t);
+      const r=new THREE.Mesh(rimGeo,rimMat);r.rotation.x=Math.PI/2;r.position.set(p[0],p[1],p[2]+ (p[2]>0?0.01:-0.01));carGroup.add(r);
+    });
+    scene.add(carGroup);
+
+    // mirrored reflection
+    const refl=carGroup.clone();refl.scale.y=-1;refl.position.y=0;refl.traverse(o=>{if(o.isMesh){o.castShadow=false;o.material=o.material.clone();o.material.transparent=true;o.material.opacity=0.16;o.material.depthWrite=false;}});scene.add(refl);
+    const fadePlane=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshBasicMaterial({color:0xeceef1,transparent:true,opacity:0.86}));fadePlane.rotation.x=-Math.PI/2;fadePlane.position.y=-0.001;scene.add(fadePlane);
+    floor.position.y=-0.002;
+
+    // contact shadow blob
+    const blob=new THREE.Mesh(new THREE.CircleGeometry(2.5,48),new THREE.MeshBasicMaterial({color:0x0a0d12,transparent:true,opacity:.22}));blob.rotation.x=-Math.PI/2;blob.position.y=0.005;blob.scale.set(1,0.5,1);scene.add(blob);
+
+    this._paint=(hex,met)=>{paint.color.setHex(hex);paint.metalness=met;refl.traverse(o=>{if(o.isMesh&&o.material&&o.material.color&&o.material.metalness!==undefined){}});};
+
+    this._scene=(d)=>{
+      scene.background=null;
+      floorMat.color.set(d?0x0f1218:0xeceef1);
+      fadePlane.material.color.set(d?0x0f1218:0xeceef1);
+      fadePlane.material.opacity=d?0.9:0.86;
+      hemi.groundColor.set(d?0x05070a:0xb6bcc6);
+      hemi.intensity=d?0.4:0.55;
+      blob.material.opacity=d?0.34:0.22;
+    };
+    this._scene(initialTheme==='dark');
+
+    // ---- camera orbit ----
+    let drag=false,px=0,py=0,az=0.78,tAz=0.78,el=0.42,tEl=0.42;
+    canvas.addEventListener('pointerdown',(e)=>{drag=true;px=e.clientX;py=e.clientY;canvas.setPointerCapture(e.pointerId);});
+    canvas.addEventListener('pointermove',(e)=>{if(!drag)return;tAz-=(e.clientX-px)*0.007;tEl-=(e.clientY-py)*0.005;tEl=Math.max(0.12,Math.min(0.85,tEl));px=e.clientX;py=e.clientY;});
+    canvas.addEventListener('pointerup',()=>{drag=false;});
+    canvas.addEventListener('pointerleave',()=>{drag=false;});
+
+    size();window.addEventListener('resize',size,{passive:true});
+    const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const R=8.4;const clock=new THREE.Clock();
+    const animate=()=>{
+      const dt=clock.getDelta();
+      if(!drag&&!reduce)tAz+=dt*0.12;
+      az+=(tAz-az)*0.08;el+=(tEl-el)*0.08;
+      camera.position.set(Math.sin(az)*R*Math.cos(el),1.4+Math.sin(el)*R*0.62,Math.cos(az)*R*Math.cos(el));
+      camera.lookAt(0,0.85,0);
+      renderer.render(scene,camera);requestAnimationFrame(animate);
+    };
+    animate();
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>

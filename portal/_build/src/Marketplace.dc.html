@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:'General Sans','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  a{color:inherit;text-decoration:none}
+  input,select,button{font-family:inherit}
+  ::placeholder{color:var(--ink3)}
+  @media (prefers-reduced-motion: no-preference){
+    @keyframes cdCardIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  }
+</style>
+</helmet>
+<div id="cd-root" style="--bg:#EAECEF;--panel:#FFFFFF;--panel2:#F2F4F7;--glass:rgba(255,255,255,.66);--glass-brd:rgba(255,255,255,.8);--ink:#13161B;--ink2:rgba(19,22,27,.56);--ink3:rgba(19,22,27,.34);--line:rgba(20,28,40,.09);--shadow:0 40px 90px -38px rgba(38,46,62,.4);--shadow-sm:0 14px 34px -18px rgba(38,46,62,.24);--mint:#3B82F6;--mint2:#E8F0FE;--amber:#C9821F;--amber2:#F6ECDA;--red:#D2624F;--red2:#F7E7E3;--blue:#3B72E8;--ctl:#111827;--ctl-ink:#FFFFFF;min-height:100vh;background:var(--bg);color:var(--ink);position:relative;transition:background .4s ease,color .4s ease">
+
+  <!-- NAV -->
+  <nav style="position:sticky;top:16px;z-index:60;width:min(1280px,calc(100% - 28px));margin:16px auto 0;display:flex;align-items:center;gap:16px;padding:9px 9px 9px 18px;border-radius:999px;background:var(--glass);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border:1px solid var(--glass-brd);box-shadow:var(--shadow-sm)">
+    <a href="Cardeep — Landing.dc.html" style="display:flex;align-items:center;gap:10px">
+      <img src="assets/cd-icon.png" alt="" style="height:24px;width:auto;display:block"/>
+      <span style="font-weight:700;font-size:19px;letter-spacing:-.03em">cardeep</span>
+    </a>
+    <div style="display:flex;gap:2px;margin-left:8px;font-size:14px;color:var(--ink2)">
+      <a href="Cardeep — Landing.dc.html" style="padding:8px 13px;border-radius:999px">Índice</a>
+      <a href="#" style="padding:8px 13px;border-radius:999px;background:var(--panel2);color:var(--ink);font-weight:600">Marketplace</a>
+      <a href="Inteligencia.dc.html" style="padding:8px 13px;border-radius:999px">Inteligencia</a>
+      <a href="Dashboard.dc.html" style="padding:8px 13px;border-radius:999px">Para dealers</a>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <button id="cd-theme" aria-label="Cambiar tema" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0">
+        <svg id="cd-theme-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg>
+      </button>
+      <a href="Dashboard.dc.html" style="font-size:14px;font-weight:600;color:var(--ctl-ink);background:var(--ctl);padding:11px 18px;border-radius:999px">Acceder</a>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <header style="width:min(1280px,calc(100% - 28px));margin:34px auto 0">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--ink3)">Índice nacional · en vivo</div>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-top:10px">
+      <h1 style="font-weight:600;font-size:clamp(30px,3.4vw,44px);letter-spacing:-.035em;line-height:1.0;margin:0">Marketplace</h1>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink2)"><span style="color:var(--mint)">●</span> 1.284 coches · +142 hoy</div>
+    </div>
+    <!-- search -->
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <div style="flex:1;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 16px;box-shadow:var(--shadow-sm)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="cd-search" placeholder="Marca, modelo o código CDX…" style="flex:1;border:0;outline:none;background:transparent;color:var(--ink);font-size:15px;padding:14px 0"/>
+      </div>
+      <button id="cd-search-btn" style="border:0;cursor:pointer;background:var(--ctl);color:var(--ctl-ink);font-weight:600;font-size:14.5px;padding:0 24px;border-radius:14px">Buscar</button>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div style="width:min(1280px,calc(100% - 28px));margin:24px auto 70px;display:grid;grid-template-columns:248px 1fr;gap:20px;align-items:start">
+    <!-- FILTERS -->
+    <aside style="position:sticky;top:90px;background:var(--panel);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:17px 18px 13px;border-bottom:1px solid var(--line)">
+        <div style="font-weight:600;font-size:15px;letter-spacing:-.01em">Filtros</div>
+        <button id="cd-clear" style="cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink3);background:none;border:0;padding:4px 2px;display:none">Limpiar todo</button>
+      </div>
+      <div id="cd-filters" style="padding:4px 18px 14px"></div>
+      <div style="padding:12px 18px 14px;border-top:1px solid var(--line)">
+        <button id="cd-apply" style="width:100%;cursor:pointer;font-size:14px;font-weight:600;color:var(--ctl-ink);background:var(--ctl);border:0;border-radius:13px;padding:13px">Ver 9 coches</button>
+      </div>
+    </aside>
+
+    <!-- RESULTS -->
+    <section>
+      <div id="cd-active" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+        <div id="cd-count" style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink2)">9 resultados</div>
+        <div style="position:relative">
+          <button id="cd-sort-btn" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;outline:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h13M3 12h9M3 18h5M17 16l3 3 3-3M20 19V8"/></svg>
+            <span style="color:var(--ink3);font-weight:500">Ordenar:</span><span id="cd-sort-label">Relevancia</span>
+            <svg id="cd-sort-chev" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="cd-sort-menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:30;width:280px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:7px;overflow:hidden"></div>
+        </div>
+      </div>
+      <div id="cd-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px"></div>
+      <div id="cd-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--ink3)">
+        <div style="font-size:16px;font-weight:600;color:var(--ink2)">Sin resultados</div>
+        <div style="font-size:13.5px;margin-top:6px">Prueba a quitar algún filtro o cambia la búsqueda.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="border-top:1px solid var(--line)">
+    <div style="width:min(1280px,calc(100% - 28px));margin:0 auto;padding:30px 0;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;color:var(--ink3);font-size:13px">
+      <div style="display:flex;align-items:center;gap:9px"><img src="assets/cd-icon.png" alt="" style="height:18px;width:auto;display:block"/><span style="font-weight:700;font-size:15px;color:var(--ink);letter-spacing:-.03em">cardeep</span><span style="margin-left:6px">Cobertura total. Cero ruido.</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px">© 2026 · España</div>
+    </div>
+  </footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount(){
+    const root = document.getElementById('cd-root');
+    if(!root) return;
+    const LIGHT = {'--bg':'#EAECEF','--panel':'#FFFFFF','--panel2':'#F2F4F7','--glass':'rgba(255,255,255,.66)','--glass-brd':'rgba(255,255,255,.8)','--ink':'#13161B','--ink2':'rgba(19,22,27,.56)','--ink3':'rgba(19,22,27,.34)','--line':'rgba(20,28,40,.09)','--shadow':'0 40px 90px -38px rgba(38,46,62,.4)','--shadow-sm':'0 14px 34px -18px rgba(38,46,62,.24)','--mint':'#3B82F6','--mint2':'#E8F0FE','--amber':'#C9821F','--amber2':'#F6ECDA','--red':'#D2624F','--red2':'#F7E7E3','--blue':'#3B72E8','--ctl':'#111827','--ctl-ink':'#FFFFFF','--card-grad':'linear-gradient(180deg,rgba(244,246,249,.12) 0%,rgba(244,246,249,.78) 52%,rgba(244,246,249,.95) 100%)'};
+    const DARK = {'--bg':'#0B0D11','--panel':'#171A21','--panel2':'#1C2129','--glass':'rgba(22,26,33,.55)','--glass-brd':'rgba(255,255,255,.1)','--ink':'#F3F2EC','--ink2':'rgba(243,242,236,.6)','--ink3':'rgba(243,242,236,.4)','--line':'rgba(255,255,255,.08)','--shadow':'0 44px 96px -36px rgba(0,0,0,.74)','--shadow-sm':'0 14px 34px -18px rgba(0,0,0,.6)','--mint':'#5B96F8','--mint2':'rgba(59,130,246,.18)','--amber':'#E0A33A','--amber2':'rgba(224,163,58,.16)','--red':'#E2776B','--red2':'rgba(226,119,107,.16)','--blue':'#5B8BF5','--ctl':'#F3F2EC','--ctl-ink':'#111827','--card-grad':'linear-gradient(180deg,rgba(9,11,15,.1) 0%,rgba(9,11,15,.66) 50%,rgba(9,11,15,.9) 100%)'};
+    const sun='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/>';
+    const moon='<path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>';
+    let dark=false;
+    const apply=(t)=>{dark=t==='dark';const v=dark?DARK:LIGHT;for(const k in v)root.style.setProperty(k,v[k]);const ic=document.getElementById('cd-theme-icon');if(ic)ic.innerHTML=dark?moon:sun;try{localStorage.setItem('cardeep-theme',t);}catch(e){}};
+    let th='light';try{th=localStorage.getItem('cardeep-theme')||'light';}catch(e){}
+    apply(th);
+    const tb=document.getElementById('cd-theme');if(tb)tb.addEventListener('click',()=>apply(dark?'light':'dark'));
+
+    const fmt=(n)=>n.toLocaleString('es-ES');
+    const photos={suv:'uploads/car-suv-white.png',hatch:'uploads/car-hatch-silver.png',estate:'uploads/car-estate-blue.png'};
+    const deals={buen:{t:'Buen precio',c:'var(--mint)',bg:'var(--mint2)'},justo:{t:'Justo',c:'var(--amber)',bg:'var(--amber2)'},caro:{t:'Caro',c:'var(--red)',bg:'var(--red2)'}};
+    const cars=[
+      {n:'Peugeot 3008 1.5 BlueHDi',y:2022,km:41800,fuel:'Diésel',trans:'Auto',hp:130,price:23400,deal:'buen',body:'suv',loc:'Madrid',seller:'Profesional',cdx:'28-079-0413',ue:-4.2},
+      {n:'VW Golf 1.5 TSI',y:2021,km:42100,fuel:'Gasolina',trans:'Manual',hp:150,price:18450,deal:'buen',body:'hatch',loc:'Madrid',seller:'Profesional',cdx:'28-114-0277',ue:-3.1},
+      {n:'Audi A4 Avant 35 TDI',y:2021,km:61500,fuel:'Diésel',trans:'Auto',hp:163,price:27750,deal:'justo',body:'estate',loc:'Barcelona',seller:'Profesional',cdx:'08-201-0931',ue:1.4},
+      {n:'Kia Sportage 1.6 T-GDi',y:2021,km:52100,fuel:'Gasolina',trans:'Manual',hp:150,price:21900,deal:'justo',body:'suv',loc:'Valencia',seller:'Particular',cdx:'46-077-0560',ue:0.8},
+      {n:'Seat León FR',y:2022,km:28400,fuel:'Gasolina',trans:'Manual',hp:150,price:21300,deal:'buen',body:'hatch',loc:'Sevilla',seller:'Profesional',cdx:'41-330-0188',ue:-2.6},
+      {n:'VW Passat Variant 2.0 TDI',y:2020,km:76900,fuel:'Diésel',trans:'Auto',hp:150,price:24900,deal:'buen',body:'estate',loc:'Zaragoza',seller:'Profesional',cdx:'50-018-0742',ue:-5.0},
+      {n:'Hyundai Tucson 1.6 CRDi',y:2023,km:18300,fuel:'Diésel',trans:'Auto',hp:136,price:28750,deal:'caro',body:'suv',loc:'Málaga',seller:'Profesional',cdx:'29-455-0309',ue:6.3},
+      {n:'Renault Clio TCe',y:2021,km:34200,fuel:'Gasolina',trans:'Manual',hp:90,price:13200,deal:'buen',body:'hatch',loc:'Bilbao',seller:'Particular',cdx:'48-090-0651',ue:-3.8},
+      {n:'Skoda Octavia Combi 2.0 TDI',y:2022,km:39900,fuel:'Diésel',trans:'Auto',hp:150,price:22100,deal:'justo',body:'estate',loc:'Murcia',seller:'Profesional',cdx:'30-122-0474',ue:0.6}
+    ];
+
+    const grid=document.getElementById('cd-grid');
+    const card=(c)=>{
+      const d=deals[c.deal];
+      const ueTxt=(c.ue<0?'−':'+')+Math.abs(c.ue).toFixed(1).replace('.',',')+'%';
+      const mo=Math.round(c.price*0.0165/10)*10;
+      const a=document.createElement('a');
+      a.href='Dossier.dc.html';
+      a.style.cssText='position:relative;display:block;height:300px;border-radius:24px;overflow:hidden;-webkit-mask-image:-webkit-radial-gradient(#fff,#000);mask-image:radial-gradient(#fff,#000);isolation:isolate;box-shadow:var(--shadow-sm);background:#13161B;transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s';
+      a.onmouseenter=()=>{a.style.transform='translateY(-5px)';a.style.boxShadow='0 32px 60px -28px rgba(38,46,62,.45)';const ar=a.querySelector('.cd-arr');if(ar)ar.style.transform='translateX(3px)';const sp=a.querySelector('.cd-specs');if(sp){sp.style.maxHeight=sp.scrollHeight+'px';sp.style.opacity='1';sp.style.marginTop='11px';}const v=a.querySelector('.cd-veil');if(v)v.style.top='-118px';};
+      a.onmouseleave=()=>{a.style.transform='';a.style.boxShadow='var(--shadow-sm)';const ar=a.querySelector('.cd-arr');if(ar)ar.style.transform='';const sp=a.querySelector('.cd-specs');if(sp){sp.style.maxHeight='0';sp.style.opacity='0';sp.style.marginTop='0';}const v=a.querySelector('.cd-veil');if(v)v.style.top='-24px';};
+      const num='font-family:\'General Sans\',sans-serif;font-variant-numeric:tabular-nums';
+      const seal='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M12 2l2.4 1.8 3-.2 1 2.8 2.6 1.5-.7 2.9.7 2.9-2.6 1.5-1 2.8-3-.2L12 22l-2.4-1.8-3 .2-1-2.8L3 16.3l.7-2.9L3 10.5l2.6-1.5 1-2.8 3 .2L12 2z" fill="'+d.c+'"/><path d="M8.5 12.2l2.3 2.3 4.5-4.7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const I={
+        pin:'<path d="M12 21s7-6.5 7-11a7 7 0 10-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>',
+        cal:'<rect x="3.5" y="5" width="17" height="16" rx="2.4"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',
+        gear:'<circle cx="6" cy="5.5" r="1.8"/><circle cx="12" cy="5.5" r="1.8"/><circle cx="18" cy="5.5" r="1.8"/><path d="M6 7.3v3.2h12V7.3M12 10.5v8"/>',
+        fuel:'<path d="M5 21V6a2 2 0 012-2h6a2 2 0 012 2v15M4 21h12M15 10h2.5a2 2 0 012 2v4a1.6 1.6 0 003.2 0V9l-3-3"/>',
+        gauge:'<path d="M12 14a6 6 0 016-6M12 14l3-3M4 18a9 9 0 1116 0"/>',
+        power:'<path d="M13 2L5 13h6l-1 9 8-11h-6l1-9z"/>'
+      };
+      const sp=(k,v)=>'<span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:rgba(255,255,255,.86);white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+I[k]+'</svg>'+v+'</span>';
+      const chevron='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+      const arrow='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+      a.innerHTML=
+        '<img src="'+photos[c.body]+'" alt="'+c.n+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 50%"/>'
+        +'<div style="position:absolute;left:0;right:0;bottom:0;padding:18px">'
+          +'<div style="position:absolute;left:0;right:0;bottom:0;top:-24px;background:linear-gradient(180deg,rgba(10,12,16,0) 0%,rgba(10,12,16,.5) 44%,rgba(10,12,16,.9) 100%);backdrop-filter:blur(17px) saturate(135%);-webkit-backdrop-filter:blur(17px) saturate(135%);-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 50%);mask-image:linear-gradient(180deg,transparent 0,#000 50%);pointer-events:none;transition:top .4s cubic-bezier(.16,1,.3,1)" class="cd-veil"></div>'
+          +'<div style="position:relative">'
+          +'<div style="display:flex;align-items:center;gap:7px">'
+            +'<span style="font-weight:600;font-size:18px;letter-spacing:-.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.n+'</span>'+seal
+          +'</div>'
+          +'<div class="cd-specs" style="max-height:0;opacity:0;overflow:hidden;margin-top:0;transition:max-height .4s cubic-bezier(.16,1,.3,1),opacity .3s,margin-top .4s">'
+            +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px 10px">'
+              +sp('pin',c.loc)+sp('cal',c.y)+sp('gear',c.trans)+sp('fuel',c.fuel)+sp('gauge',fmt(c.km)+' km')+sp('power',c.hp+' CV')
+            +'</div>'
+            +'<div style="height:1px;background:rgba(255,255,255,.16);margin:13px 0 0"></div>'
+          +'</div>'
+          +'<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:13px">'
+            +'<div>'
+              +'<div style="'+num+';font-size:24px;font-weight:600;color:#fff;letter-spacing:-.025em;line-height:1">'+fmt(c.price)+' €</div>'
+              +'<div style="'+num+';font-size:11.5px;font-weight:500;color:rgba(255,255,255,.6);margin-top:5px">desde '+fmt(mo)+' €/mes</div>'
+            +'</div>'
+            +'<span class="cd-cta" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#11141a;background:#fff;padding:10px 16px;border-radius:999px;white-space:nowrap;box-shadow:0 8px 20px -8px rgba(0,0,0,.5)">Ver ficha<span class="cd-arr" style="display:inline-flex;transition:transform .25s cubic-bezier(.16,1,.3,1)">'+arrow+'</span></span>'
+          +'</div>'
+          +'</div>'
+        +'</div>';
+      a.dataset.name=c.n.toLowerCase()+' '+c.cdx;
+      a.dataset.deal=c.deal;a.dataset.body=c.body;a.dataset.price=c.price;a.dataset.km=c.km;
+      return a;
+    };
+
+    // ===== FILTER ENGINE =====
+    const brandOf=(c)=>c.n.split(' ')[0];
+    const B=(k)=>({lo:Math.min(...cars.map(c=>c[k])),hi:Math.max(...cars.map(c=>c[k]))});
+    const PB=B('price'),YB=B('y'),KB=B('km'),HB=B('hp');
+    const F={q:'',monthly:false,pMin:PB.lo,pMax:PB.hi,yMin:YB.lo,yMax:YB.hi,kMin:KB.lo,kMax:KB.hi,hMin:HB.lo,hMax:HB.hi,
+      deal:new Set(),brand:new Set(),fuel:new Set(),trans:new Set(),body:new Set(),prov:new Set(),seller:new Set()};
+    const moOf=(p)=>Math.round(p*0.0165/10)*10;
+
+    const test=(c,skip)=>{
+      if(F.q && !((c.n.toLowerCase()+' '+c.cdx).includes(F.q))) return false;
+      if(skip!=='price'&&(c.price<F.pMin||c.price>F.pMax)) return false;
+      if(skip!=='y'&&(c.y<F.yMin||c.y>F.yMax)) return false;
+      if(skip!=='km'&&(c.km<F.kMin||c.km>F.kMax)) return false;
+      if(skip!=='hp'&&(c.hp<F.hMin||c.hp>F.hMax)) return false;
+      if(skip!=='deal'&&F.deal.size&&!F.deal.has(c.deal)) return false;
+      if(skip!=='brand'&&F.brand.size&&!F.brand.has(brandOf(c))) return false;
+      if(skip!=='fuel'&&F.fuel.size&&!F.fuel.has(c.fuel)) return false;
+      if(skip!=='trans'&&F.trans.size&&!F.trans.has(c.trans)) return false;
+      if(skip!=='body'&&F.body.size&&!F.body.has(c.body)) return false;
+      if(skip!=='prov'&&F.prov.size&&!F.prov.has(c.loc)) return false;
+      if(skip!=='seller'&&F.seller.size&&!F.seller.has(c.seller)) return false;
+      return true;
+    };
+    const cnt=(skip,pred)=>cars.filter(c=>test(c,skip)&&pred(c)).length;
+
+    const host=document.getElementById('cd-filters');
+    const upd=[]; // refreshers run each render
+    const EL=(t,css,html)=>{const e=document.createElement(t);if(css)e.style.cssText=css;if(html!=null)e.innerHTML=html;return e;};
+    const chev='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+
+    // ---- smart presets (jobs-to-be-done; one tap sets several filters) ----
+    const pLabel=EL('div','font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:.12em;color:var(--ink3);padding:15px 0 9px','BÚSQUEDAS INTELIGENTES');
+    const pWrap=EL('div','display:flex;gap:7px;flex-wrap:wrap;padding-bottom:15px;border-bottom:1px solid var(--line)');
+    const presets=[
+      {t:'Chollos',ic:'<path d="M20.6 13.4 11 3.8a2 2 0 0 0-1.4-.6H4v5.6a2 2 0 0 0 .6 1.4l9.6 9.6a2 2 0 0 0 2.8 0l3.6-3.6a2 2 0 0 0 0-2.8z"/><circle cx="7.5" cy="7.5" r="1.1" fill="currentColor"/>',f:()=>{clearAll();F.deal.add('buen');}},
+      {t:'Para familia',ic:'<path d="M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>',f:()=>{clearAll();F.body.add('suv');F.body.add('estate');}},
+      {t:'Pocos km',ic:'<path d="M12 14a6 6 0 0 1 6-6M12 14l3-3M4 18a9 9 0 1 1 16 0"/>',f:()=>{clearAll();F.kMax=40000;}},
+      {t:'Recién llegados',ic:'<path d="M12 3v9m0 0 3.5-3.5M12 12 8.5 8.5M5 21h14"/>',f:()=>{clearAll();F.yMin=2022;}}
+    ];
+    presets.forEach(p=>{const b=EL('button','display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:8px 13px;border-radius:999px;transition:transform .15s,box-shadow .2s');
+      b.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p.ic+'</svg>'+p.t;
+      b.onmouseenter=()=>{b.style.transform='translateY(-2px)';b.style.boxShadow='var(--shadow-sm)';};
+      b.onmouseleave=()=>{b.style.transform='';b.style.boxShadow='none';};
+      b.onclick=()=>{p.f();render();};pWrap.appendChild(b);});
+    host.append(pLabel,pWrap);
+
+    // accordion section
+    const acc=(title,open,summaryFn)=>{
+      const sec=EL('div','border-bottom:1px solid var(--line)');
+      const head=EL('button','width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;background:none;border:0;cursor:pointer;padding:15px 0;color:var(--ink);font-family:inherit;text-align:left');
+      const tt=EL('span','font-weight:600;font-size:13.5px',title);
+      const right=EL('span','display:flex;align-items:center;gap:8px');
+      const sum=EL('span','font-size:11.5px;color:var(--ink3);font-weight:500;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis','');
+      const ch=EL('span','display:flex;color:var(--ink3);transition:transform .25s;transform:rotate('+(open?'180deg':'0')+')',chev);
+      right.append(sum,ch);head.append(tt,right);
+      const body=EL('div','overflow:hidden;transition:max-height .3s cubic-bezier(.16,1,.3,1);max-height:'+(open?'600px':'0'));
+      const inner=EL('div','padding:2px 0 17px');body.appendChild(inner);
+      let o=open;
+      head.onclick=()=>{o=!o;body.style.maxHeight=o?'600px':'0';ch.style.transform='rotate('+(o?'180deg':'0')+')';sum.style.display=o?'none':'block';};
+      sum.style.display=open?'none':'block';
+      sec.append(head,body);host.appendChild(sec);
+      if(summaryFn)upd.push(()=>{sum.textContent=summaryFn();});
+      return inner;
+    };
+
+    // chip multiselect
+    const chips=(inner,opts,set,key,getter)=>{
+      const wrap=EL('div','display:flex;flex-wrap:wrap;gap:7px');
+      const btns=opts.map(o=>{
+        const b=EL('button','cursor:pointer;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--ink2);padding:7px 11px;border-radius:999px;transition:background .15s,color .15s,border-color .15s,opacity .15s');
+        b.onclick=()=>{set.has(o.v)?set.delete(o.v):set.add(o.v);render();};
+        wrap.appendChild(b);return {b,o};
+      });
+      inner.appendChild(wrap);
+      upd.push(()=>btns.forEach(({b,o})=>{
+        const n=cnt(key,c=>getter(c)===o.v);
+        const on=set.has(o.v);
+        b.innerHTML=o.t+' <span style="opacity:.6;font-variant-numeric:tabular-nums">'+n+'</span>';
+        b.style.background=on?'var(--ctl)':'var(--panel2)';b.style.color=on?'var(--ctl-ink)':'var(--ink2)';b.style.borderColor=on?'var(--ctl)':'var(--line)';
+        b.style.opacity=(n===0&&!on)?'.4':'1';b.style.pointerEvents=(n===0&&!on)?'none':'auto';
+      }));
+    };
+
+    // dual range
+    const fmtMoney=(v)=>fmt(v)+' €';
+    const range=(inner,key,lo,hi,step,fmtFn)=>{
+      const kMin=key+'Min',kMaxk=key+'Max';
+      const row=EL('div','display:flex;gap:9px;margin-bottom:15px');
+      const mkIn=(which)=>{const w=EL('div','flex:1;border:1px solid var(--line);border-radius:11px;padding:7px 11px;background:var(--panel2)');
+        const lab=EL('div','font-size:9.5px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em',which==='min'?'Desde':'Hasta');
+        const inp=EL('input','width:100%;border:0;background:none;outline:none;color:var(--ink);font-family:\'General Sans\',sans-serif;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:600;padding:2px 0');
+        inp.type='text';w.append(lab,inp);return {w,inp};};
+      const a=mkIn('min'),b=mkIn('max');row.append(a.w,b.w);
+      const tr=EL('div','position:relative;height:4px;border-radius:3px;background:var(--panel2);margin:6px 6px 4px');
+      const fill=EL('div','position:absolute;top:0;bottom:0;background:var(--mint);border-radius:3px');
+      const t1=EL('div','position:absolute;top:50%;width:15px;height:15px;border-radius:50%;background:var(--panel);border:2px solid var(--mint);transform:translate(-50%,-50%);cursor:grab;box-shadow:var(--shadow-sm);touch-action:none');
+      const t2=t1.cloneNode();tr.append(fill,t1,t2);
+      inner.append(row,tr);
+      const pct=(v)=>(v-lo)/(hi-lo)*100;
+      const sync=()=>{const v1=F[kMin],v2=F[kMaxk];const p1=pct(v1),p2=pct(v2);
+        t1.style.left=p1+'%';t2.style.left=p2+'%';fill.style.left=p1+'%';fill.style.right=(100-p2)+'%';
+        if(document.activeElement!==a.inp)a.inp.value=fmtFn(v1);
+        if(document.activeElement!==b.inp)b.inp.value=fmtFn(v2);};
+      upd.push(sync);
+      const drag=(thumb,isMin)=>{
+        const down=(e)=>{e.preventDefault();const move=(ev)=>{const p=ev.touches?ev.touches[0]:ev;const r=tr.getBoundingClientRect();let ratio=(p.clientX-r.left)/r.width;ratio=Math.max(0,Math.min(1,ratio));let val=Math.round((lo+ratio*(hi-lo))/step)*step;
+          if(isMin)F[kMin]=Math.min(val,F[kMaxk]);else F[kMaxk]=Math.max(val,F[kMin]);render();};
+          const up=()=>{window.removeEventListener('mousemove',move);window.removeEventListener('mouseup',up);window.removeEventListener('touchmove',move);window.removeEventListener('touchend',up);thumb.style.cursor='grab';};
+          thumb.style.cursor='grabbing';window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);window.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);};
+        thumb.addEventListener('mousedown',down);thumb.addEventListener('touchstart',down,{passive:false});
+      };
+      drag(t1,true);drag(t2,false);
+      const parse=(s)=>parseInt(s.replace(/[^0-9]/g,''),10);
+      a.inp.onchange=()=>{let v=parse(a.inp.value);if(!isNaN(v)){F[kMin]=Math.max(lo,Math.min(v,F[kMaxk]));}render();};
+      b.inp.onchange=()=>{let v=parse(b.inp.value);if(!isNaN(v)){F[kMaxk]=Math.min(hi,Math.max(v,F[kMin]));}render();};
+      return {a,b};
+    };
+
+    // ---- build price section (range + monthly toggle + histogram) ----
+    const pInner=acc('Precio',true,()=>F.monthly?(fmt(moOf(F.pMin))+'–'+fmt(moOf(F.pMax))+' €/mes'):(fmt(F.pMin)+'–'+fmt(F.pMax)+' €'));
+    const tog=EL('div','display:flex;gap:4px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:14px');
+    const tA=EL('button','flex:1;cursor:pointer;border:0;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;padding:7px;background:var(--ctl);color:var(--ctl-ink)','Precio total');
+    const tB=EL('button','flex:1;cursor:pointer;border:0;border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;padding:7px;background:none;color:var(--ink2)','Cuota/mes');
+    tog.append(tA,tB);pInner.appendChild(tog);
+    const hist=EL('div','position:relative;display:flex;align-items:flex-end;gap:3px;height:64px;margin-bottom:14px');
+    const NB=14,bw=(PB.hi-PB.lo)/NB,bars=[];
+    for(let i=0;i<NB;i++){const bar=EL('div','flex:1;border-radius:3px 3px 1px 1px;background:var(--line);transition:background .2s,height .25s cubic-bezier(.16,1,.3,1);min-height:4px;cursor:pointer');
+      bar.title='Filtrar por esta banda';
+      bar.onclick=()=>{const a=Math.round((PB.lo+i*bw)/500)*500,b2=Math.round((PB.lo+(i+1)*bw)/500)*500;F.pMin=a;F.pMax=Math.max(b2,a+500);render();};
+      hist.appendChild(bar);bars.push(bar);}
+    const med=cars.map(c=>c.price).sort((a,b)=>a-b)[Math.floor(cars.length/2)];
+    const medLine=EL('div','position:absolute;top:-2px;bottom:0;width:2px;background:var(--ink);opacity:.35;border-radius:2px;pointer-events:none;left:'+((med-PB.lo)/(PB.hi-PB.lo)*100)+'%');
+    const medDot=EL('div','position:absolute;top:-7px;left:'+((med-PB.lo)/(PB.hi-PB.lo)*100)+'%;transform:translateX(-50%);font-family:\'JetBrains Mono\',monospace;font-size:9px;font-weight:600;color:var(--ink2);white-space:nowrap','mediana');
+    hist.append(medLine,medDot);
+    pInner.appendChild(hist);
+    range(pInner,'p',PB.lo,PB.hi,500,(v)=>F.monthly?fmt(moOf(v))+' €/mes':fmt(v)+' €');
+    upd.push(()=>{const counts=bars.map((_,i)=>{const a=PB.lo+i*bw,b=a+bw;return cars.filter(c=>c.price>=a&&c.price<(i===NB-1?b+1:b)).length;});
+      const mx=Math.max(1,...counts);
+      bars.forEach((bar,i)=>{const a=PB.lo+i*bw,b=a+bw;const inb=(b>=F.pMin&&a<=F.pMax);
+        bar.style.height=(10+counts[i]/mx*44)+'px';bar.style.background=inb?'var(--mint)':'var(--line)';bar.style.opacity=inb?'1':'.55';});});
+    tA.onclick=()=>{F.monthly=false;tA.style.background='var(--ctl)';tA.style.color='var(--ctl-ink)';tB.style.background='none';tB.style.color='var(--ink2)';render();};
+    tB.onclick=()=>{F.monthly=true;tB.style.background='var(--ctl)';tB.style.color='var(--ctl-ink)';tA.style.background='none';tA.style.color='var(--ink2)';render();};
+
+    // ---- valoración ----
+    chips(acc('Valoración Cardeep',true,()=>[...F.deal].map(v=>deals[v].t).join(', ')),
+      [{v:'buen',t:'Buen precio'},{v:'justo',t:'Justo'},{v:'caro',t:'Caro'}],F.deal,'deal',c=>c.deal);
+
+    // ---- marca ----
+    chips(acc('Marca',true,()=>[...F.brand].join(', ')),
+      [...new Set(cars.map(brandOf))].sort().map(b=>({v:b,t:b})),F.brand,'brand',brandOf);
+
+    // ---- año / km ----
+    range(acc('Año',true,()=>F.yMin+'–'+F.yMax),'y',YB.lo,YB.hi,1,(v)=>String(v));
+    range(acc('Kilómetros',true,()=>fmt(F.kMin)+'–'+fmt(F.kMax)),'k',KB.lo,KB.hi,1000,(v)=>fmt(v));
+
+    // ---- combustible / transmisión / carrocería ----
+    chips(acc('Combustible',false,()=>[...F.fuel].join(', ')),
+      [...new Set(cars.map(c=>c.fuel))].map(f=>({v:f,t:f})),F.fuel,'fuel',c=>c.fuel);
+    chips(acc('Transmisión',false,()=>[...F.trans].join(', ')),
+      [{v:'Manual',t:'Manual'},{v:'Auto',t:'Automático'}],F.trans,'trans',c=>c.trans);
+    chips(acc('Carrocería',false,()=>[...F.body].map(v=>({suv:'SUV',hatch:'Compacto',estate:'Familiar'})[v]).join(', ')),
+      [{v:'suv',t:'SUV'},{v:'hatch',t:'Compacto'},{v:'estate',t:'Familiar'}],F.body,'body',c=>c.body);
+
+    // ---- potencia ----
+    range(acc('Potencia',false,()=>F.hMin+'–'+F.hMax+' CV'),'h',HB.lo,HB.hi,5,(v)=>v+' CV');
+
+    // ---- provincia / vendedor ----
+    chips(acc('Provincia',false,()=>[...F.prov].join(', ')),
+      [...new Set(cars.map(c=>c.loc))].sort().map(l=>({v:l,t:l})),F.prov,'prov',c=>c.loc);
+    chips(acc('Vendedor',false,()=>[...F.seller].join(', ')),
+      [{v:'Profesional',t:'Profesional'},{v:'Particular',t:'Particular'}],F.seller,'seller',c=>c.seller);
+
+    // ===== active chips bar =====
+    const activeBox=document.getElementById('cd-active');
+    const labelFor=(k,v)=>{
+      if(k==='deal')return deals[v].t;
+      if(k==='body')return({suv:'SUV',hatch:'Compacto',estate:'Familiar'})[v];
+      if(k==='trans')return v==='Auto'?'Automático':v;
+      return v;
+    };
+    const buildActive=()=>{
+      activeBox.innerHTML='';const items=[];
+      const D=JSON.parse('{"pMin":'+PB.lo+',"pMax":'+PB.hi+',"yMin":'+YB.lo+',"yMax":'+YB.hi+',"kMin":'+KB.lo+',"kMax":'+KB.hi+',"hMin":'+HB.lo+',"hMax":'+HB.hi+'}');
+      if(F.q)items.push({t:'“'+F.q+'”',clr:()=>{F.q='';document.getElementById('cd-search').value='';}});
+      if(F.pMin!==D.pMin||F.pMax!==D.pMax)items.push({t:(F.monthly?fmt(moOf(F.pMin))+'–'+fmt(moOf(F.pMax))+' €/mes':fmt(F.pMin)+'–'+fmt(F.pMax)+' €'),clr:()=>{F.pMin=D.pMin;F.pMax=D.pMax;}});
+      if(F.yMin!==D.yMin||F.yMax!==D.yMax)items.push({t:F.yMin+'–'+F.yMax,clr:()=>{F.yMin=D.yMin;F.yMax=D.yMax;}});
+      if(F.kMin!==D.kMin||F.kMax!==D.kMax)items.push({t:fmt(F.kMin)+'–'+fmt(F.kMax)+' km',clr:()=>{F.kMin=D.kMin;F.kMax=D.kMax;}});
+      if(F.hMin!==D.hMin||F.hMax!==D.hMax)items.push({t:F.hMin+'–'+F.hMax+' CV',clr:()=>{F.hMin=D.hMin;F.hMax=D.hMax;}});
+      ['deal','brand','fuel','trans','body','prov','seller'].forEach(k=>{F[k].forEach(v=>items.push({t:labelFor(k,v),clr:()=>F[k].delete(v)}));});
+      items.forEach(it=>{const c=EL('button','display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 9px 7px 13px;box-shadow:var(--shadow-sm)');
+        c.innerHTML=it.t+'<span style="display:inline-flex;color:var(--ink3)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>';
+        c.onclick=()=>{it.clr();render();};activeBox.appendChild(c);});
+      if(items.length>1){const clr=EL('button','cursor:pointer;font-size:12.5px;font-weight:600;color:var(--mint);background:none;border:0;padding:7px 6px','Limpiar todo');clr.onclick=clearAll;activeBox.appendChild(clr);}
+      activeBox.style.display=items.length?'flex':'none';
+      document.getElementById('cd-clear').style.display=items.length?'block':'none';
+    };
+
+    // ===== render =====
+    const grid2=document.getElementById('cd-grid');
+    // ===== sort: Tier-1 set + Cardeep signature (precio vs índice UE) =====
+    const SORTS=[
+      {v:'rel',t:'Relevancia',d:'El mejor equilibrio para ti',grp:0,ic:'<path d="M5 3v18M19 3v18M5 8h14M5 14h14"/>',fn:(a,b)=>(a.deal==='caro')-(b.deal==='caro')||a.ue-b.ue},
+      {v:'deal',t:'Mejor precio de mercado',d:'Más por debajo de la media UE',grp:1,ic:'<path d="M3 17l6-6 4 4 8-8M21 7h-5M21 7v5"/>',fn:(a,b)=>a.ue-b.ue},
+      {v:'price-asc',t:'Precio: menor a mayor',grp:1,ic:'<path d="M3 6h11M3 12h7M3 18h4M18 8v11M18 19l3-3M18 19l-3-3"/>',fn:(a,b)=>a.price-b.price},
+      {v:'price-desc',t:'Precio: mayor a menor',grp:1,ic:'<path d="M3 6h11M3 12h7M3 18h4M18 16V5M18 5l3 3M18 5l-3 3"/>',fn:(a,b)=>b.price-a.price},
+      {v:'mo-asc',t:'Cuota mensual: menor',grp:1,ic:'<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',fn:(a,b)=>a.price-b.price},
+      {v:'km-asc',t:'Menos kilómetros',grp:2,ic:'<path d="M12 14a6 6 0 0 1 6-6M12 14l3-3M4 18a9 9 0 1 1 16 0"/>',fn:(a,b)=>a.km-b.km},
+      {v:'year-desc',t:'Más nuevos',grp:2,ic:'<rect x="3.5" y="5" width="17" height="16" rx="2.4"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>',fn:(a,b)=>b.y-a.y},
+      {v:'hp-desc',t:'Más potencia',grp:2,ic:'<path d="M13 2 5 13h6l-1 9 8-11h-6z"/>',fn:(a,b)=>b.hp-a.hp},
+      {v:'new',t:'Recién indexados',grp:2,ic:'<path d="M12 3v9m0 0 3.5-3.5M12 12 8.5 8.5M5 21h14"/>',fn:(a,b)=>0}
+    ];
+    const GRP=['Recomendado','Precio','Vehículo'];
+    let sortV='rel';
+    const sortBtn=document.getElementById('cd-sort-btn'),sortMenu=document.getElementById('cd-sort-menu'),sortLabel=document.getElementById('cd-sort-label'),sortChev=document.getElementById('cd-sort-chev');
+    const buildSortMenu=()=>{
+      sortMenu.innerHTML='';let lastGrp=-1;
+      SORTS.forEach(s=>{
+        if(s.grp!==lastGrp){lastGrp=s.grp;const h=EL('div','font-family:\'JetBrains Mono\',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--ink3);padding:'+(s.grp?'12px 11px 5px':'6px 11px 5px'));h.textContent=GRP[s.grp].toUpperCase();sortMenu.appendChild(h);}
+        const on=s.v===sortV;
+        const it=EL('button','width:100%;display:flex;align-items:center;gap:11px;cursor:pointer;text-align:left;border:0;border-radius:11px;padding:9px 11px;background:'+(on?'var(--panel2)':'none')+';color:var(--ink);font-family:inherit;transition:background .15s');
+        it.onmouseenter=()=>{if(s.v!==sortV)it.style.background='var(--panel2)';};
+        it.onmouseleave=()=>{if(s.v!==sortV)it.style.background='none';};
+        it.innerHTML='<span style="display:inline-flex;color:'+(on?'var(--mint)':'var(--ink3)')+'"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+s.ic+'</svg></span>'
+          +'<span style="flex:1"><span style="display:block;font-size:13.5px;font-weight:600">'+s.t+'</span>'+(s.d?'<span style="display:block;font-size:11.5px;color:var(--ink3);font-weight:500;margin-top:1px">'+s.d+'</span>':'')+'</span>'
+          +(on?'<span style="display:inline-flex;color:var(--mint)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>':'');
+        it.onclick=()=>{sortV=s.v;sortLabel.textContent=s.t;closeSort();render();};
+        sortMenu.appendChild(it);
+      });
+    };
+    let sortOpen=false;
+    const openSort=()=>{buildSortMenu();sortMenu.style.display='block';sortChev.style.transform='rotate(180deg)';sortBtn.style.borderColor='var(--ink3)';sortOpen=true;};
+    const closeSort=()=>{sortMenu.style.display='none';sortChev.style.transform='';sortBtn.style.borderColor='var(--line)';sortOpen=false;};
+    sortBtn.addEventListener('click',(e)=>{e.stopPropagation();sortOpen?closeSort():openSort();});
+    document.addEventListener('click',(e)=>{if(sortOpen&&!sortMenu.contains(e.target)&&!sortBtn.contains(e.target))closeSort();});
+
+    const render=()=>{
+      const s=SORTS.find(x=>x.v===sortV)||SORTS[0];
+      let list=cars.filter(c=>test(c,null));
+      list.sort(s.fn);
+      grid2.innerHTML='';
+      list.forEach((c,i)=>{const el=card(c);el.style.animation='cdCardIn .5s cubic-bezier(.16,1,.3,1) both';el.style.animationDelay=(i*0.03)+'s';grid2.appendChild(el);});
+      document.getElementById('cd-count').textContent=list.length+(list.length===1?' coche':' coches');
+      document.getElementById('cd-empty').style.display=list.length?'none':'block';
+      const ap=document.getElementById('cd-apply');if(ap)ap.textContent=list.length?('Ver '+list.length+(list.length===1?' coche':' coches')):'Sin resultados';
+      upd.forEach(fn=>fn());
+      buildActive();
+    };
+
+    function clearAll(){F.q='';F.monthly=false;F.pMin=PB.lo;F.pMax=PB.hi;F.yMin=YB.lo;F.yMax=YB.hi;F.kMin=KB.lo;F.kMax=KB.hi;F.hMin=HB.lo;F.hMax=HB.hi;
+      ['deal','brand','fuel','trans','body','prov','seller'].forEach(k=>F[k].clear());
+      const si2=document.getElementById('cd-search');if(si2)si2.value='';
+      F.monthly=false;tA.style.background='var(--ctl)';tA.style.color='var(--ctl-ink)';tB.style.background='none';tB.style.color='var(--ink2)';
+      render();}
+
+    const si=document.getElementById('cd-search');
+    si.addEventListener('input',()=>{F.q=si.value.trim().toLowerCase();render();});
+    document.getElementById('cd-search-btn').addEventListener('click',()=>{F.q=si.value.trim().toLowerCase();render();});
+    document.getElementById('cd-clear').addEventListener('click',clearAll);
+    const applyBtn=document.getElementById('cd-apply');if(applyBtn)applyBtn.addEventListener('click',()=>{window.scrollTo({top:grid2.getBoundingClientRect().top+window.scrollY-90,behavior:'smooth'});});
+
+    // apply incoming filters from landing (#brand=..&body=..&pmax=..)
+    try{const h=location.hash.replace(/^#/,'');if(h){const q=new URLSearchParams(h);
+      if(q.get('brand'))F.brand.add(q.get('brand'));
+      if(q.get('body'))F.body.add(q.get('body'));
+      if(q.get('pmax'))F.pMax=parseInt(q.get('pmax'),10);
+    }}catch(e){}
+
+    render();
+  }
+  renderVals(){ return {}; }
+}
+</script>
+</body>
+</html>
