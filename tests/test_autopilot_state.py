@@ -35,7 +35,9 @@ from pipeline.autopilot.state import (
     CampaignTransitionError,
     assert_valid_transition,
     current_state,
+    mark_pending_gates,
     next_state,
+    pending_owner_gates,
     register,
     transition,
 )
@@ -229,6 +231,34 @@ class TestCampaignProgressionOnDryRun:
                     assert [r["to_state"] for r in rows] == FORWARD_PATH
                     assert rows[0]["from_state"] is None  # birth has no from_state
 
+                    raise _Rollback()
+        finally:
+            await conn.close()
+
+    # --- 1.2: parked gates persist as CONSULTABLE resume state (autonomy-e2e) ----------
+    def test_pending_gates_persisted_and_queryable(self) -> None:
+        asyncio.run(self._run_pending_gates())
+
+    async def _run_pending_gates(self) -> None:
+        import asyncpg
+
+        dsn = _target_dsn()
+        assert "5433" not in dsn
+        conn = await asyncpg.connect(dsn)
+        try:
+            with pytest.raises(_Rollback):
+                async with conn.transaction():
+                    await register(conn, _SYNTHETIC_CC, actor="test")
+                    # Absent before marking.
+                    assert _SYNTHETIC_CC not in await pending_owner_gates(conn)
+                    # Mark PROD + LEGAL parked -> consultable resume state.
+                    await mark_pending_gates(
+                        conn, _SYNTHETIC_CC, [("PROD", "live write"), ("LEGAL", "unsigned ToS")])
+                    q = await pending_owner_gates(conn)
+                    assert q.get(_SYNTHETIC_CC) == ["PROD", "LEGAL"]
+                    # Empty list CLEARS the mark (no longer waiting on the owner).
+                    await mark_pending_gates(conn, _SYNTHETIC_CC, [])
+                    assert _SYNTHETIC_CC not in await pending_owner_gates(conn)
                     raise _Rollback()
         finally:
             await conn.close()

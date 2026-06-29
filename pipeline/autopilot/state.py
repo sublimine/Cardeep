@@ -208,6 +208,57 @@ async def current_state(conn: asyncpg.Connection, country_code: str) -> str | No
     )
 
 
+async def mark_pending_gates(
+    conn: asyncpg.Connection,
+    country_code: str,
+    gates: "list[tuple[str, str | None]]",
+) -> None:
+    """Persist the campaign's PENDIENTE-OWNER gate marks as CONSULTABLE state (autonomy-e2e 1.2).
+
+    The orchestrator's gates (GASTO/PROD/LEGAL) PARK without stopping the loop; until now the marks
+    rode only in the in-memory ``CampaignResult`` + the transition audit (an event, not state). This
+    stamps them on ``country_campaign.detail['pending_owner_gates']`` so a resume/supervisor can ASK
+    the DB which countries are blocked on which gate. Idempotent shallow-merge; an empty list CLEARS
+    the mark (the country is no longer waiting on the owner). Decoupled from ``gates.py`` by contract:
+    it takes plain ``(gate_name, reason)`` tuples, not ``GateResult`` — no layer dependency.
+    """
+    cc = _normalize_cc(country_code)
+    marks = [{"gate": g, "reason": r} for g, r in gates]
+    await conn.execute(
+        """
+        UPDATE country_campaign
+        SET detail = detail || jsonb_build_object('pending_owner_gates', $2::jsonb),
+            updated_at = now()
+        WHERE country_code = $1
+        """,
+        cc, json.dumps(marks),
+    )
+
+
+async def pending_owner_gates(conn: asyncpg.Connection) -> "dict[str, list[str]]":
+    """Resume view: ``{country_code: [gate, ...]}`` for every campaign parked PENDIENTE-OWNER.
+
+    Reads the marks set by :func:`mark_pending_gates`; a campaign with an empty/absent list is not
+    blocked and does not appear. The DB-backed answer to "what is waiting on the owner?" — the piece
+    the loop needs to resume and the owner needs to see the honest frontier.
+    """
+    rows = await conn.fetch(
+        """
+        SELECT country_code, detail->'pending_owner_gates' AS gates
+        FROM country_campaign
+        WHERE detail ? 'pending_owner_gates'
+          AND jsonb_array_length(detail->'pending_owner_gates') > 0
+        """
+    )
+    out: dict[str, list[str]] = {}
+    for r in rows:
+        gates = r["gates"]
+        if isinstance(gates, str):
+            gates = json.loads(gates)
+        out[r["country_code"]] = [g["gate"] for g in gates]
+    return out
+
+
 async def _append_transition(
     conn: asyncpg.Connection,
     country_code: str,

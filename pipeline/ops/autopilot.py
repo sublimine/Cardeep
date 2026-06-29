@@ -506,6 +506,9 @@ async def run_campaign(
     parked_gates = parked(gate_results)
     for g in parked_gates:
         checkpoints.append(f"gate.{g.gate}=PENDIENTE-OWNER")
+    # 1.2: persist the parked gates as CONSULTABLE resume state (not just in-memory + the audit
+    # trail), so a supervisor/owner can ask the DB which countries are blocked on which gate.
+    await state.mark_pending_gates(conn, cc, [(g.gate, g.reason) for g in parked_gates])
 
     # The honest frontier in code: a NON-dry-run would target the live harvest, which is gated.
     # The orchestrator REFUSES to auto-go-live — it parks at BOOTSTRAPPED.
