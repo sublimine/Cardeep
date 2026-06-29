@@ -32,6 +32,13 @@ cachetools>=5.3,<6      # TTLCache: bounded in-memory TTL cache, RAM-safe
 # or collecting their tests — requires it. The browser stack stays optional until those
 # heavier fronts come online.
 curl_cffi>=0.15,<0.16   # TLS-fingerprint HTTP client; required to import the live connectors
+
+lxml>=5.2,<7            # HTML/XML parser. Module-level import in pipeline/recipe_extract_css.py and
+                        # recipe_extract_llm.py (`from lxml import html`) + platform/generic_dealer_site.py
+                        # (`from lxml import etree`). Importing those modules — or COLLECTING their tests —
+                        # requires it. Was UNDECLARED → CI pytest collection failed with
+                        # `ModuleNotFoundError: No module named 'lxml'` on test_recipe_extract_css /
+                        # test_recipe_cracker_ladder, breaking all jobs (unit, DB-backed, smoke).
 # scrapling>=0.4.9
 # camoufox[geoip]
 # browserforge
