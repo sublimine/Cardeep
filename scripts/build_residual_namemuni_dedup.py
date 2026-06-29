@@ -407,8 +407,20 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
            FROM entity e LEFT JOIN v_dealer_resolved vdr ON vdr.entity_ulid=e.entity_ulid
            WHERE e.status='active' AND e.kind<>'particular'""")
     served_after = served_before - collapsed_codes
+    # VAM 2nd orthogonal path for served_after (the mig 0070 proof): recount the served universe with
+    # the overlay applied (new_rep), INDEPENDENT of collapsed_codes. Arithmetic path = served_before -
+    # collapsed_codes; structural path = distinct reps after mapping every served code through the
+    # overlay. If they disagree the overlay is inconsistent and the run must NOT be served.
+    _served_codes = [r["rcode"] for r in await conn.fetch(
+        """SELECT DISTINCT COALESCE(vdr.resolved_cdp_code, e.cdp_code) AS rcode
+           FROM entity e LEFT JOIN v_dealer_resolved vdr ON vdr.entity_ulid=e.entity_ulid
+           WHERE e.status='active' AND e.kind<>'particular'""")]
+    served_after_recount = len({new_rep(c) for c in _served_codes})
 
     failures = []
+    if served_after != served_after_recount:
+        failures.append(f"served_after path disagreement: arithmetic={served_after} vs "
+                        f"overlay-recount={served_after_recount} (overlay inconsistent — not serving)")
     if broken:
         failures.append(f"{len(broken)} base representatives re-absorbed unexpectedly")
     if collateral:
@@ -455,21 +467,35 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
             "INSERT INTO canonical_dedup_backup_20260620 SELECT * FROM canonical_dedup")
         await conn.execute("DELETE FROM canonical_dedup WHERE run_id=$1", RUN_ID)
         await conn.execute("DELETE FROM canonical_dedup_run WHERE run_id=$1", RUN_ID)
-        # ⚠ CUTOVER-BLOCKER for mig 0070 (vam_verified trigger): this INSERT sets vam_verified=TRUE
-        # WITHOUT a vam_verdict_id. Once 0070 is applied to a DB this RAISES (a served run needs a
-        # TRUSTWORTHY verification_verdict with quorum_n>=2). BEFORE applying 0070 to :5433, wire this
-        # exactly like scripts/gate_particular_dedup.py (lines 55-67): record a REAL verdict — run
-        # record_count_verdict over served_after with two orthogonal paths, NOT a fabricated [N,N] —
-        # and add vam_verdict_id to the column list + VALUES below. Found by the road-to-13 writer
-        # audit; until then the cutover would break this residual overlay builder. (gate_particular_
-        # dedup already complies; build_canonical_dedup inserts vam_verified=FALSE so it is unaffected.)
+        # VAM seal (mig 0070): record the TRUSTWORTHY verdict for served_after from the two orthogonal
+        # paths asserted-equal above (arithmetic served_before-collapsed vs structural overlay-recount)
+        # and link vam_verdict_id — exactly like gate_particular_dedup. The two agreeing values give
+        # quorum_n=2, and two distinct families/origins give family_n=2/origin_n=2, satisfying
+        # chk_trustworthy_needs_quorum and the 0070 trigger. (Real two-path quorum, not a literal [N,N].)
+        vam_vid = await conn.fetchval(
+            """INSERT INTO verification_verdict
+                 (subject_type, subject_key, claim, verdict, primary_value, primary_path,
+                  independent_values, verifier_paths, claim_kind, tolerance, method_version, evidence)
+               VALUES ('b1_dedup', $1,
+                       'residual name+muni overlay — served deduped identities (active, non-particular)',
+                       'TRUSTWORTHY', $2, 'served_before - collapsed_codes', $3::jsonb, $4::jsonb,
+                       'count', 0, 'residual-namemuni-v1',
+                       jsonb_build_object('served_before',$5::int,'collapsed_codes',$6::int,
+                                          'safe_groups',$7::int))
+               RETURNING id""",
+            RUN_ID, served_after,
+            f"[{served_after}, {served_after_recount}]",
+            '[{"family":"arithmetic","origin":"served_minus_collapsed"},'
+            '{"family":"structural","origin":"overlay_recount"}]',
+            served_before, collapsed_codes, safe_groups)
         await conn.execute(
             """INSERT INTO canonical_dedup_run
                (run_id, resolver, resolver_version, source_cluster_run, anti_hub_k,
-                n_canonicals_in, n_super_canonicals, n_merged, deduped_count, vam_verified, notes)
-               VALUES ($1,$2,$3,$4,3,$5,$6,$7,$8,TRUE,$9)""",
+                n_canonicals_in, n_super_canonicals, n_merged, deduped_count, vam_verified,
+                vam_verdict_id, notes)
+               VALUES ($1,$2,$3,$4,3,$5,$6,$7,$8,TRUE,$9,$10)""",
             RUN_ID, RESOLVER, RESOLVER_VERSION, SOURCE_CLUSTER_RUN,
-            len(safe_codes), len(comps), len(out) - len(comps), served_after,
+            len(safe_codes), len(comps), len(out) - len(comps), served_after, vam_vid,
             f'{{"basis":"{BASE_RUN}+residual-namemuni","safe_groups":{safe_groups},'
             f'"collapsed_codes":{collapsed_codes},"excl_chain":{excluded_chain},'
             f'"excl_addr":{excluded_addr}}}',
