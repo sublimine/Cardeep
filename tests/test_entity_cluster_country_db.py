@@ -30,11 +30,11 @@ def _setup(cur):
                 "VALUES ('ecr-71','test','test',FALSE) ON CONFLICT DO NOTHING")
     cur.execute("INSERT INTO entity (entity_ulid,cdp_code,kind,is_tier1,status,kind_source,"
                 "attest_count,country_code) VALUES "
-                "('01ARZ3NDEKTSV4RRFFQ69G5FAV','CDP-ES-28-AAAAAAAA','compraventa',false,'active','manual',1,'ES') "
+                "('01EC71E5AAAAAAAAAAAAAAAAAA','CDP-ES-28-EC71ESEE','compraventa',false,'active','manual',1,'ES') "
                 "ON CONFLICT DO NOTHING")
     cur.execute("INSERT INTO entity (entity_ulid,cdp_code,kind,is_tier1,status,kind_source,"
                 "attest_count,country_code) VALUES "
-                "('01BX5ZZKBKACTAV9WEVGEMMVRZ','CDP-PT-11-BBBBBBBB','compraventa',false,'active','manual',1,'PT') "
+                "('01EC71P7AAAAAAAAAAAAAAAAAA','CDP-PT-11-EC71PTPP','compraventa',false,'active','manual',1,'PT') "
                 "ON CONFLICT DO NOTHING")
 
 
@@ -51,11 +51,11 @@ def test_entity_cluster_cannot_span_countries():
         _setup(cur)
         # member ES, canonical PT -> cross-country -> rejected by the DB
         with pytest.raises(psycopg2.Error):
-            _cluster(cur, "01ARZ3NDEKTSV4RRFFQ69G5FAV", "01BX5ZZKBKACTAV9WEVGEMMVRZ")
+            _cluster(cur, "01EC71E5AAAAAAAAAAAAAAAAAA", "01EC71P7AAAAAAAAAAAAAAAAAA")
         conn.rollback()
         cur = conn.cursor()
         _setup(cur)
-        _cluster(cur, "01ARZ3NDEKTSV4RRFFQ69G5FAV", "01ARZ3NDEKTSV4RRFFQ69G5FAV")   # same country -> allowed (must not raise)
+        _cluster(cur, "01EC71E5AAAAAAAAAAAAAAAAAA", "01EC71E5AAAAAAAAAAAAAAAAAA")   # same country -> allowed (must not raise)
         conn.rollback()
     finally:
         conn.close()
