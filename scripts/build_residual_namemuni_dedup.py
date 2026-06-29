@@ -455,6 +455,14 @@ async def build(conn: asyncpg.Connection, commit: bool) -> None:
             "INSERT INTO canonical_dedup_backup_20260620 SELECT * FROM canonical_dedup")
         await conn.execute("DELETE FROM canonical_dedup WHERE run_id=$1", RUN_ID)
         await conn.execute("DELETE FROM canonical_dedup_run WHERE run_id=$1", RUN_ID)
+        # ⚠ CUTOVER-BLOCKER for mig 0070 (vam_verified trigger): this INSERT sets vam_verified=TRUE
+        # WITHOUT a vam_verdict_id. Once 0070 is applied to a DB this RAISES (a served run needs a
+        # TRUSTWORTHY verification_verdict with quorum_n>=2). BEFORE applying 0070 to :5433, wire this
+        # exactly like scripts/gate_particular_dedup.py (lines 55-67): record a REAL verdict — run
+        # record_count_verdict over served_after with two orthogonal paths, NOT a fabricated [N,N] —
+        # and add vam_verdict_id to the column list + VALUES below. Found by the road-to-13 writer
+        # audit; until then the cutover would break this residual overlay builder. (gate_particular_
+        # dedup already complies; build_canonical_dedup inserts vam_verified=FALSE so it is unaffected.)
         await conn.execute(
             """INSERT INTO canonical_dedup_run
                (run_id, resolver, resolver_version, source_cluster_run, anti_hub_k,
