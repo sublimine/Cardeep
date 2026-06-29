@@ -22,8 +22,15 @@ Infra viva: `:5433` prod (HEAD 0072), `:5434` dry-run (`cardeep-pg-r13`). Push v
 - [x] **4.2 · free-proxies pool vivo (egress €0)** — `fetch_candidates()` → **3194 candidatos** de proxyscrape/geonode (egress sin coste operativo). Verificado en vivo; el código maneja la flakiness de las fuentes gratis.
 - [x] **4.3 · `source_health` ES poblado** — gana el código: `:5433` ya tiene **56 fuentes ES** en `source_health` (el scheduler tiene su universo de cosecha). No requiere seed.
   ⇒ **PUNTO 4 (sentidos) COMPLETO** — Ollama (qwen2.5:7b operativo + env-config) + egress €0 + 56 fuentes ES. El sistema puede ver y cosechar.
-- [ ] 5.1 · dossier gates PENDIENTE-OWNER + comandos de desbloqueo
-- [ ] 5.2 · runbook arranque/observación/rollback (un comando)
+- [x] **5.1 · dossier gates PENDIENTE-OWNER** — `05-OWNER-GATES.md`: qué corre solo (cerebro/latido/cuerpo/sentidos) + los gates (HARVEST-PROD / LEGAL-ToS / GASTO€>0 / PROD-cutover ya hecho) con el comando/env exacto de desbloqueo + `pending_owner_gates` consultable.
+- [x] **5.2 · runbook arranque/observación/rollback** — `06-RUNBOOK.md`: `docker compose up -d` (un comando) + observación + parada + rollback. Queries verificadas vs :5433: **ES SEALED, 0 country-proof violations, 47/56 fuentes healthy.**
+  ⇒ **PUNTO 5 COMPLETO.**
+
+## ✅ PROYECTO AUTONOMY-E2E COMPLETO — 14/14 subpuntos verificados, probados, pusheados
+Cerebro (loop ensamblado) + latido (scheduler daemon) + cuerpo (`docker compose up -d`) + sentidos
+(Ollama+egress+fuentes) + frontera owner (dossier+runbook). El sistema **corre solo end-to-end**; lo
+único que falta para producir datos reales es **un comando owner** (`docker compose up -d autopilot`),
+documentado en `05-OWNER-GATES.md`. Cada subpunto cayó con su commit verificado a `main`.
 
 ## Decisiones / hallazgos
 - (0) `run_campaign` es el loop de ONBOARDING-país (dry-run, casi completo); el loop de COSECHA
