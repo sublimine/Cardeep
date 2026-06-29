@@ -587,6 +587,34 @@ def _build_cross_source_edges(entities: list[Entity]) -> list[MatchPair]:
 # ---------------------------------------------------------------------------
 
 
+class CrossCountryClusterError(ValueError):
+    """Raised when a cluster spans more than one country — the country-proof invariant violated.
+
+    Subclasses ValueError (project convention). This is the SECOND belt: every block-key already
+    carries country (first belt), but if any present-or-future edge-builder ever omits it, this
+    post-clustering assertion fails CLOSED instead of silently serving a cross-border merge."""
+
+
+def _assert_single_country_clusters(
+    components: dict[str, list[str]], entity_by_ulid: dict[str, "Entity"]
+) -> None:
+    """Defence-in-depth (T1.2 second belt): every cluster MUST be single-country — mirrors
+    resolve_entities._assert_no_cross_country_clusters. Empty/None country_codes are ignored (the
+    column is DEFAULT 'ES' NOT NULL in the schema; a missing value cannot create a cross-country
+    span). Raises :class:`CrossCountryClusterError` on the first multi-country cluster."""
+    for root, members in components.items():
+        countries = {
+            (entity_by_ulid[m].get("country_code") or "").strip().upper()
+            for m in members if m in entity_by_ulid
+        }
+        countries.discard("")
+        if len(countries) > 1:
+            raise CrossCountryClusterError(
+                f"cross-country cluster {root!r} spans {sorted(countries)} "
+                f"({len(members)} members) — country-proof violated (cross_source_dedup overlay)"
+            )
+
+
 def _build_cluster_table(
     entities: list[Entity],
     match_pairs: list[MatchPair],
@@ -613,6 +641,7 @@ def _build_cluster_table(
             pair_prob[key] = max(pair_prob.get(key, 0.0), prob)
 
     components = uf.components()
+    _assert_single_country_clusters(components, entity_by_ulid)  # second belt: fail closed
     result: list[dict] = []
     for _root, members in components.items():
         in_scope = [m for m in members if m in all_ulids]
