@@ -79,7 +79,7 @@ El "docker daemon OFF" NO estaba agotado: el daemon estaba **PARADO, no muerto**
 - **inquisition quorum (VAM adversarial) AGOTADO:** `test_quorum_decide_properties` (8 tests) — `decide` §5.4 (TRUSTWORTHY≥2 independientes / hard-veto / split / majority-refute / §5.5 false-veto-guard) + `within_tolerance` §5.2 (oráculo hardcoded). El último invariante puro de alta palanca, probado.
 
 ## GATES RESTANTES — todos REALES (no falsos como el de Docker)
-- **Aplicar 0070 a `:5433`** NO es un simple "aplicar trigger": exige ANTES cablear `gate_particular_dedup.py`/builders para que provean `vam_verdict_id` (si no, el trigger rompería el gating legítimo actual) + decidir backfill = **cutover coordinado, gate OWNER (serving-of-record)**.
+- **Aplicar 0070-0071 a `:5433`** = acto OWNER (arrancar prod + DDL; serving-of-record PENDING-OWNER por doctrina). **HALLAZGO verificado (gana el código, corrige nota previa):** `gate_particular_dedup.py` YA está cableado (líneas 55-67: inserta verdict TRUSTWORTHY con quorum y vincula `vam_verdict_id`) → el trigger 0070 NO rompe el gating. **VERIFICADO en :5434: el gate real + el trigger COEXISTEN** (verdict TRUSTWORTHY+quorum pasa). Cutover additive/forward-only/**REVERSIBLE** (DROP TRIGGER), validado en clon → **seguro; solo falta el acto owner sobre prod**. (De paso: `verdict_audit` es append-only vía `cdp_audit_immutable` — otro invariante de honestidad ya mecánico.)
 - **frontend real** necesita datos reales (`:5433` owner) o seed masivo — `:5434` está casi vacío, conectarlo no demuestra producto.
 - **red/LLM** = egress/ToS + Ollama con targets vivos (gate de red).
 - **suite db-tests integral** la verifica el CI al pushear (gh no-auth en sesión, pero corre).
