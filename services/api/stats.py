@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import asyncpg
+
 # The sole default tenant. Every count below is scoped by $1 = country_code so the headline
 # product figures belong to ONE country, never a country-blind sum across tenants. With the
 # default 'ES' (today entity non-ES = 0) every count is byte-identical to the historical query.
@@ -67,3 +69,27 @@ async def compute_counts(conn: Any, country_code: str = DEFAULT_COUNTRY) -> dict
     for key, sql in _QUERIES.items():
         out[key] = await conn.fetchval(sql, country_code)
     return out
+
+
+async def fetch_stats(conn: Any, country_code: str = DEFAULT_COUNTRY) -> tuple[dict[str, int], Any | None]:
+    """Read the precomputed product_stats row for ``country_code``; fall back to a live compute.
+
+    Returns ``(counts, computed_at)`` where ``computed_at`` is the row's freshness stamp, or ``None``
+    for the live fallback — taken when the row is absent (a tenant not yet refreshed) or when the
+    table/column is missing (pre-migration 0066 / pre-first-refresh). The /stats handler wraps this;
+    scripts/refresh_product_stats.py writes the rows off-request.
+
+    ES (the default) is byte-identical: the ES row's counts equal a live ``compute_counts(conn, 'ES')``
+    (the refresh writes exactly that), and the live fallback IS ``compute_counts(conn, 'ES')``.
+    """
+    try:
+        row = await conn.fetchrow(
+            "SELECT dealers, vehicles_unique_available, events, provinces, municipalities, "
+            "computed_at FROM product_stats WHERE country_code = $1",
+            country_code,
+        )
+    except (asyncpg.exceptions.UndefinedTableError, asyncpg.exceptions.UndefinedColumnError):
+        row = None
+    if row is not None:
+        return {k: row[k] for k in STAT_KEYS}, row["computed_at"]
+    return await compute_counts(conn, country_code), None

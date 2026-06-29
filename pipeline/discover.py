@@ -90,17 +90,20 @@ async def _upsert(conn: asyncpg.Connection, geo: GeoResolver, e: DiscoveredEntit
         return (False, False, False)
     code = cdp_code(province_code=prov, domain=e.website, cif=e.cif,
                     name=e.legal_name or e.trade_name, municipality_code=muni,
-                    address=e.address)
+                    address=e.address, country_code=e.country_code)
     eulid = ulid()
+    # country_code is persisted explicitly (was DEFAULTing to 'ES' in the schema). With
+    # DiscoveredEntity.country_code defaulting to 'ES', every ES entity stores 'ES' exactly as
+    # the column default did — byte-identical — while a second-country adapter lands its real tenant.
     row = await conn.fetchrow(
         """INSERT INTO entity (entity_ulid, cdp_code, kind, legal_name, trade_name, cif, cnae,
-               province_code, municipality_code, address, postcode, lat, lon, phone, email,
+               country_code, province_code, municipality_code, address, postcode, lat, lon, phone, email,
                website, is_tier1, status, first_discovered_source, last_seen)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'active',$18, now())
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'active',$19, now())
            ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now()
            RETURNING entity_ulid, (xmax = 0) AS inserted""",
         eulid, code, e.kind, e.legal_name, e.trade_name, e.cif, e.cnae,
-        prov, muni, e.address, e.postcode, e.lat, e.lon, e.phone, e.email,
+        e.country_code, prov, muni, e.address, e.postcode, e.lat, e.lon, e.phone, e.email,
         e.website, e.is_tier1, e.source_key)
     # entity_ulid comes back atomically from RETURNING (the existing one on conflict, the new
     # one on insert). No separate SELECT → no race window where a concurrent delete returns NULL
@@ -124,7 +127,12 @@ async def discover(source_key: str) -> None:
 
     conn = await asyncpg.connect(DSN)
     try:
-        geo = await GeoResolver.load(conn)
+        # A single SourceAdapter yields one tenant's entities (all ES today). Scope the geo
+        # backbone load to that country so the resolver never bridges province/city names across
+        # borders (the geo PK is composite (country_code, code) since 0053). Default 'ES' when the
+        # adapter returns nothing — byte-identical for ES, where every entity carries 'ES'.
+        country = entities[0].country_code if entities else "ES"
+        geo = await GeoResolver.load(conn, country)
         geocoder = None
         if any(e.lat is not None and not e.province_name for e in entities):
             from pipeline.geocode import ProvinceGeocoder

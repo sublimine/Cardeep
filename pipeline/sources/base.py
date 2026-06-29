@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 class DiscoveredEntity:
     kind: str                         # concesionario_oficial|compraventa|garaje|desguace|plataforma|cadena
     source_key: str                   # e.g. 'dgt_cat'
+    country_code: str = "ES"          # ISO-3166 alpha-2 tenant; adapters override per country.
+                                      # Defaults to 'ES' so every existing adapter (all ES today)
+                                      # and every ES output stay byte-identical until a second
+                                      # country's adapter sets it explicitly.
     source_ref: str | None = None     # stable id/url within the source
     legal_name: str | None = None
     trade_name: str | None = None

@@ -27,6 +27,7 @@ from pipeline.geo import GeoResolver
 from pipeline.verify import record_count_verdict
 from pipeline.delta_guard import should_emit_gone
 from pipeline.ops.health import fire_alert, build_origin, resolve_alerts
+from pipeline.complete import _NON_ES_PROVINCE_RE
 from services.api.codes import cdp_code
 
 
@@ -40,26 +41,34 @@ async def _event(conn, vulid, eulid, etype, old, new):
 
 
 async def ingest_dealer(conn: asyncpg.Connection, geo: GeoResolver, harvest: DealerHarvest,
-                        source_key: str = "as24") -> dict:
+                        source_key: str = "as24", country: str = "ES") -> dict:
     d = harvest.dealer
     if d is None or not d.province_code:
         return {"error": "no dealer / province", "ingested": 0}
-    # province must be a real Spanish INE province (01-52); a bad postcode (e.g. zip
-    # "89xxx") yields an out-of-range code that would violate the geo FK — skip honestly.
-    if not (d.province_code.isdigit() and "01" <= d.province_code <= "52"):
-        return {"error": f"province {d.province_code} out of Spain range (bad postcode)", "ingested": 0}
+    # Province must be a real province for the entity's country (a bad postcode yields an
+    # out-of-range code that would violate the composite geo FK — skip honestly). The validity
+    # rule is country-scoped EXACTLY like pipeline/complete.py:171: ES keeps the historical
+    # 01-52 grid (byte-identical expression AND message); a non-ES tenant validates against the
+    # generic geo_province.code shape (_NON_ES_PROVINCE_RE, 2-8 alphanumeric, VARCHAR(8) since
+    # 0059) so FR '2A'/'75', IT 'RM', DE Kreis are accepted instead of dropped as "out of Spain".
+    if country == "ES":
+        if not (d.province_code.isdigit() and "01" <= d.province_code <= "52"):
+            return {"error": f"province {d.province_code} out of Spain range (bad postcode)", "ingested": 0}
+    elif not _NON_ES_PROVINCE_RE.match(d.province_code):
+        return {"error": f"province {d.province_code!r} invalid for {country} "
+                         f"(not a geo_province.code shape)", "ingested": 0}
 
     muni = geo.municipality_code(d.province_code, d.city)
     code = cdp_code(province_code=d.province_code, domain=d.website, name=d.company_name,
-                    municipality_code=muni, address=d.street)
+                    municipality_code=muni, address=d.street, country_code=country)
     eulid = ulid()
     await conn.execute(
         """INSERT INTO entity (entity_ulid, cdp_code, kind, kind_source, legal_name, trade_name,
-               province_code, municipality_code, address, postcode, website, is_tier1,
+               country_code, province_code, municipality_code, address, postcode, website, is_tier1,
                status, recipe_version, first_discovered_source, last_seen)
-           VALUES ($1,$2,'compraventa','platform_label',$3,$3,$4,$5,$6,$7,$8,FALSE,'active',$9,$10, now())
+           VALUES ($1,$2,'compraventa','platform_label',$3,$3,$4,$5,$6,$7,$8,$9,FALSE,'active',$10,$11, now())
            ON CONFLICT (cdp_code) DO UPDATE SET last_seen = now(), recipe_version = EXCLUDED.recipe_version""",
-        eulid, code, d.company_name, d.province_code, muni, d.street, d.zip, d.website,
+        eulid, code, d.company_name, country, d.province_code, muni, d.street, d.zip, d.website,
         RECIPE_VERSION, source_key)
     eulid = await conn.fetchval("SELECT entity_ulid FROM entity WHERE cdp_code=$1", code)
     await conn.execute(

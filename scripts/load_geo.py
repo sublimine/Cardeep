@@ -8,16 +8,25 @@ https://www.ine.es/daco/daco42/codmun/diccionario25.xlsx).
 INSERT-only with ON CONFLICT DO NOTHING -> idempotent. Comarcas are left empty
 here (no universal INE comarca layer for all of Spain; populated per-region later).
 
-Usage: python -m scripts.load_geo
+Usage: python -m scripts.load_geo [--country ES]
+
+``--country`` (default ES) is stamped on every geo row (country_code). The DATA SOURCE here is the
+Spanish INE backbone; a second country's geo dictionary is an OPS deliverable, but the country
+PARAMETER is wired so the loader writes the right tenant's code rather than relying on the column
+DEFAULT 'ES'. ES is byte-identical (explicit 'ES' == the previous DEFAULT).
 """
 from __future__ import annotations
 
+import argparse
 import asyncio
 import os
 from pathlib import Path
 
 import asyncpg
 import openpyxl
+
+# The default (and, today, only) geo tenant; mirrors pipeline.paths.DEFAULT_COUNTRY.
+_DEFAULT_COUNTRY = "ES"
 
 DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep")
 XLSX = Path(__file__).resolve().parent.parent / "data" / "geo" / "diccionario_ine.xlsx"
@@ -71,21 +80,34 @@ def read_municipalities() -> list[tuple[str, str, str]]:
     return out
 
 
-async def main() -> None:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """CLI args: ``--country`` (ISO-3166 alpha-2, default ES) stamped on every geo row."""
+    parser = argparse.ArgumentParser(
+        description="Load a country geo backbone into geo_province + geo_municipality."
+    )
+    parser.add_argument(
+        "--country", default=_DEFAULT_COUNTRY,
+        help="ISO-3166 alpha-2 country_code stamped on every geo row (default ES).",
+    )
+    return parser.parse_args(argv)
+
+
+async def main(country: str = _DEFAULT_COUNTRY) -> None:
     munis = read_municipalities()
     conn = await asyncpg.connect(DSN)
     try:
         await conn.executemany(
-            # PK is composite (country_code, code) since migration 0052/0053; country_code defaults
-            # to 'ES' for these rows, so the conflict target must name both columns of the PK.
-            "INSERT INTO geo_province (code, name, ccaa_code, ccaa_name) "
-            "VALUES ($1, $2, $3, $4) ON CONFLICT (country_code, code) DO NOTHING",
-            [(code, name, ccaa, CCAA[ccaa]) for code, (name, ccaa) in PROVINCES.items()],
+            # PK is composite (country_code, code) since migration 0052/0053. country_code is now
+            # written EXPLICITLY (= *country*) rather than left to the column DEFAULT, so a second
+            # tenant lands under its own code; the conflict target names both PK columns.
+            "INSERT INTO geo_province (country_code, code, name, ccaa_code, ccaa_name) "
+            "VALUES ($1, $2, $3, $4, $5) ON CONFLICT (country_code, code) DO NOTHING",
+            [(country, code, name, ccaa, CCAA[ccaa]) for code, (name, ccaa) in PROVINCES.items()],
         )
         await conn.executemany(
-            "INSERT INTO geo_municipality (code, name, province_code) "
-            "VALUES ($1, $2, $3) ON CONFLICT (country_code, code) DO NOTHING",
-            munis,
+            "INSERT INTO geo_municipality (country_code, code, name, province_code) "
+            "VALUES ($1, $2, $3, $4) ON CONFLICT (country_code, code) DO NOTHING",
+            [(country, code, name, prov) for (code, name, prov) in munis],
         )
         nprov = await conn.fetchval("SELECT count(*) FROM geo_province")
         nmuni = await conn.fetchval("SELECT count(*) FROM geo_municipality")
@@ -103,4 +125,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(parse_args().country))

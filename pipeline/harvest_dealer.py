@@ -26,7 +26,7 @@ DSN = os.environ.get("CARDEEP_DSN", "postgres://cardeep:cardeep_dev_only@localho
 ROOT = Path(__file__).resolve().parent.parent
 
 
-async def run(slug: str) -> None:
+async def run(slug: str, country: str = "ES") -> None:
     # A failure anywhere here used to be invisible to monitoring (green-review P2/Q9): a scrape
     # exception crashed the process before the DB connection opened (no record, no alert), and an
     # ingest-level error was print-only. We now fire a dealer-specific alert on every failure path,
@@ -54,19 +54,19 @@ async def run(slug: str) -> None:
                              severity="warning", message=f"as24: no dealer parsed for {slug!r}")
             print("no dealer parsed; abort"); return
 
-        # raw dump (ephemeral, gitignored). Country is passed explicitly (ES default):
-        # at this point the cdp_code is not yet known (ingest runs below), and this
-        # orchestrator is the ES AutoScout24 path. data_root('ES') == data/ES, identical
-        # to the old literal; ROOT is threaded so the resolution honors this module's ROOT.
-        raw_dir = data_root("ES", root=ROOT) / slug / "raw"
+        # raw dump (ephemeral, gitignored). Country is threaded from the run argument
+        # (default 'ES'): at this point the cdp_code is not yet known (ingest runs below), so
+        # the tenant comes from the caller. data_root('ES') == data/ES, byte-identical to the
+        # old literal; ROOT is threaded so the resolution honors this module's ROOT.
+        raw_dir = data_root(country, root=ROOT) / slug / "raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
         (raw_dir / "harvest.json").write_text(
             json.dumps([v.__dict__ for v in harvest.vehicles], ensure_ascii=False, indent=1),
             encoding="utf-8")
 
-        geo = await GeoResolver.load(conn)
+        geo = await GeoResolver.load(conn, country)
         # FASE 4 — INGEST + delta + VAM
-        result = await ingest_dealer(conn, geo, harvest, source_key="as24")
+        result = await ingest_dealer(conn, geo, harvest, source_key="as24", country=country)
         if result.get("error"):
             await fire_alert(conn, build_origin("as24", "ingest", slug),
                              severity="warning",
@@ -92,9 +92,10 @@ async def run(slug: str) -> None:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("usage: python -m pipeline.harvest_dealer <as24_dealer_slug>")
+        print("usage: python -m pipeline.harvest_dealer <as24_dealer_slug> [country=ES]")
         sys.exit(2)
-    asyncio.run(run(sys.argv[1]))
+    country = sys.argv[2].strip().upper() if len(sys.argv) > 2 else "ES"
+    asyncio.run(run(sys.argv[1], country))
 
 
 if __name__ == "__main__":

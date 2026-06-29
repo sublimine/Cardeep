@@ -23,27 +23,34 @@ from dataclasses import dataclass
 
 from curl_cffi import requests as cffi_requests
 
-# Country we care about (egress should look ES for coherence with es-ES headers).
-_COUNTRY = "ES"
+from pipeline.paths import DEFAULT_COUNTRY
+
+# Default egress country (egress should look ES for coherence with es-ES headers). A run targets a
+# different country by passing country=...; the proxy SOURCES filter by ISO-3166 country code.
+_COUNTRY = DEFAULT_COUNTRY
 _HEALTH_URL = "https://api.ipify.org?format=json"
 _HEALTH_TIMEOUT = 8.0
 
-_PROXYSCRAPE = (
-    "https://api.proxyscrape.com/v4/free-proxy-list/get"
-    "?request=display_proxies&protocol=http&proxy_format=protocolipport&format=text"
-    f"&country={_COUNTRY}"
-)
-_PROXYSCRAPE_SOCKS = (
-    "https://api.proxyscrape.com/v4/free-proxy-list/get"
-    "?request=display_proxies&protocol=socks5&proxy_format=protocolipport&format=text"
-    f"&country={_COUNTRY}"
-)
-_GEONODE = (
-    "https://proxylist.geonode.com/api/proxy-list"
-    f"?limit=100&page=1&sort_by=lastChecked&sort_type=desc&country={_COUNTRY}"
-)
-# Raw GitHub lists (country-mixed; filtered to ES later only when possible — these
-# add volume so the ES health-check has more candidates to find a live one).
+
+def _source_urls(country: str = DEFAULT_COUNTRY) -> list[str]:
+    """The country-filtered free-proxy source URLs (proxyscrape http + socks5, geonode) for *country*.
+
+    These are the sources whose APIs accept an ISO country filter; the GitHub raw lists below are
+    country-mixed and added separately for candidate volume."""
+    return [
+        ("https://api.proxyscrape.com/v4/free-proxy-list/get"
+         "?request=display_proxies&protocol=http&proxy_format=protocolipport&format=text"
+         f"&country={country}"),
+        ("https://api.proxyscrape.com/v4/free-proxy-list/get"
+         "?request=display_proxies&protocol=socks5&proxy_format=protocolipport&format=text"
+         f"&country={country}"),
+        ("https://proxylist.geonode.com/api/proxy-list"
+         f"?limit=100&page=1&sort_by=lastChecked&sort_type=desc&country={country}"),
+    ]
+
+
+# Raw GitHub lists (country-mixed; filtered to the target country later only when possible — these
+# add volume so the health-check has more candidates to find a live one).
 _GITHUB_RAW = (
     "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
     "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt",
@@ -69,11 +76,12 @@ class ProxyHealth:
         return base + (1.0 if self.tier1_ok else 0.0)     # Tier-1 pass dominates
 
 
-def fetch_candidates(timeout: float = 15.0) -> list[str]:
-    """Pull candidate proxy URLs (http://ip:port) from free sources. Best-effort."""
+def fetch_candidates(timeout: float = 15.0, *, country: str = DEFAULT_COUNTRY) -> list[str]:
+    """Pull candidate proxy URLs (http://ip:port) from free sources for *country*. Best-effort."""
     out: list[str] = []
+    scrape_http, scrape_socks, geonode = _source_urls(country)
     try:
-        r = cffi_requests.get(_PROXYSCRAPE, impersonate="chrome131", timeout=timeout)
+        r = cffi_requests.get(scrape_http, impersonate="chrome131", timeout=timeout)
         if r.status_code == 200:
             for line in r.text.splitlines():
                 line = line.strip()
@@ -84,7 +92,7 @@ def fetch_candidates(timeout: float = 15.0) -> list[str]:
     except Exception:  # noqa: BLE001 - source down is non-fatal
         pass
     try:
-        r = cffi_requests.get(_PROXYSCRAPE_SOCKS, impersonate="chrome131", timeout=timeout)
+        r = cffi_requests.get(scrape_socks, impersonate="chrome131", timeout=timeout)
         if r.status_code == 200:
             for line in r.text.splitlines():
                 line = line.strip()
@@ -93,7 +101,7 @@ def fetch_candidates(timeout: float = 15.0) -> list[str]:
     except Exception:  # noqa: BLE001
         pass
     try:
-        r = cffi_requests.get(_GEONODE, impersonate="chrome131", timeout=timeout)
+        r = cffi_requests.get(geonode, impersonate="chrome131", timeout=timeout)
         if r.status_code == 200:
             data = json.loads(r.text).get("data", [])
             for row in data:
@@ -159,13 +167,15 @@ def health_check(proxy: str, *, test_url: str = _HEALTH_URL,
 
 def harvest_alive(*, max_candidates: int = 60, max_workers: int = 20,
                   timeout: float = _HEALTH_TIMEOUT,
-                  tier1_url: str | None = None) -> list[ProxyHealth]:
+                  tier1_url: str | None = None,
+                  country: str = DEFAULT_COUNTRY) -> list[ProxyHealth]:
     """Fetch candidates, health-check in parallel, return live ones SCORED (best first).
 
-    With `tier1_url`, alive proxies are also validated against a real Tier-1 target
-    and ranked above plain-alive ones (score puts tier1_ok first, then latency).
+    *country* selects the proxy egress country (default ES). With `tier1_url`, alive proxies are also
+    validated against a real Tier-1 target and ranked above plain-alive ones (score puts tier1_ok
+    first, then latency).
     """
-    candidates = fetch_candidates()[:max_candidates]
+    candidates = fetch_candidates(country=country)[:max_candidates]
     if not candidates:
         return []
     alive: list[ProxyHealth] = []
@@ -180,6 +190,6 @@ def harvest_alive(*, max_candidates: int = 60, max_workers: int = 20,
     return alive
 
 
-def refresh_pool_urls(**kw) -> list[str]:
-    """Convenience: harvest and return just the alive proxy URLs (fastest first)."""
-    return [h.url for h in harvest_alive(**kw)]
+def refresh_pool_urls(*, country: str = DEFAULT_COUNTRY, **kw) -> list[str]:
+    """Convenience: harvest and return just the alive proxy URLs (fastest first) for *country*."""
+    return [h.url for h in harvest_alive(country=country, **kw)]

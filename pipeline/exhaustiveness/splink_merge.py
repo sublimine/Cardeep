@@ -23,15 +23,23 @@ from functools import lru_cache
 import psycopg2
 
 from pipeline.exhaustiveness.capture import DEALER_KINDS, DSN
+from pipeline.identity.phone import phone_match_key
+from pipeline.paths import DEFAULT_COUNTRY
 
 _WS = re.compile(r"\s+")
 _NONAL = re.compile(r"[^a-z0-9 ]+")
-# legal-form suffixes, matched at END after punctuation is collapsed to spaces,
-# so "S.L." -> "s l" and "SLU" -> "slu" are both caught.
-_SUFFIX = re.compile(
+# Legal-form suffixes, matched at END after punctuation is collapsed to spaces, so "S.L." -> "s l"
+# and "SLU" -> "slu" are both caught. The set is PER COUNTRY: each tenant strips its OWN legal forms
+# and never another country's (an ES "s l" is a real token inside a German name, and vice-versa). ES is
+# the verbatim original — byte-identical. After _NONAL collapses punctuation to spaces, the DE forms
+# render as "gmbh", "gmbh co kg" (GmbH & Co. KG), "ag" and "e k" (e.K.); OPS extends a country's set
+# (e.g. UG/KG/OHG/GbR) here. A country with no entry strips nothing.
+_SUFFIX_ES = re.compile(
     r"\s+(s\s*l\s*u|s\s*a\s*u|s\s*l\s*l|s\s*l|s\s*a|s\s*c\s*p|s\s*c|c\s*b"
     r"|sociedad limitada|sociedad anonima|unipersonal)\s*$"
 )
+_SUFFIX_DE = re.compile(r"\s+(g\s*m\s*b\s*h(\s*co\s*k\s*g)?|a\s*g|e\s*k)\s*$")
+_SUFFIX_BY_COUNTRY: dict[str, "re.Pattern[str]"] = {"ES": _SUFFIX_ES, "DE": _SUFFIX_DE}
 
 
 @lru_cache(maxsize=1)
@@ -51,14 +59,16 @@ def _fold(s: str) -> str:
     )
 
 
-def _norm_name(s: str | None) -> str | None:
+def _norm_name(s: str | None, country_code: str = DEFAULT_COUNTRY) -> str | None:
     if not s:
         return None
     s = _fold(s.lower().strip())
     s = _NONAL.sub(" ", s)          # punctuation -> space first
     s = _WS.sub(" ", s).strip()
-    s = _SUFFIX.sub("", s)          # then strip trailing legal form
-    s = _WS.sub(" ", s).strip()
+    suffix_re = _SUFFIX_BY_COUNTRY.get(country_code)
+    if suffix_re is not None:
+        s = suffix_re.sub("", s)    # then strip trailing legal form (the country's OWN set)
+        s = _WS.sub(" ", s).strip()
     return s or None
 
 
@@ -71,11 +81,14 @@ def _host(url: str | None) -> str | None:
     return host or None
 
 
-def _digits(phone: str | None) -> str | None:
-    if not phone:
-        return None
-    d = re.sub(r"\D+", "", phone)
-    return d[-9:] if len(d) >= 9 else None
+def _digits(phone: str | None, country_code: str = DEFAULT_COUNTRY) -> str | None:
+    """Cross-source phone hard key via the country-aware identity authority (pipeline.identity.phone).
+
+    ES (default) -> the validated 9-digit national key: byte-identical to the legacy last-9 for a real
+    Spanish number, but a malformed string now yields None instead of a fragile substring — exactly the
+    hardening cross_source_dedup already adopted (fewer false-positive phone edges). Non-ES -> a
+    collision-proof E.164 key (a German +49 line can never collide with an ES +34 key)."""
+    return phone_match_key(phone, country_code)
 
 
 def _norm_cif(cif: str | None) -> str | None:
@@ -91,10 +104,14 @@ def _norm_cif(cif: str | None) -> str | None:
     return c
 
 
-def _load_dealers(conn):
+def _load_dealers(conn, country_code: str = DEFAULT_COUNTRY):
     import pandas as pd
 
     with conn.cursor() as cur:
+        # Country filter (indexed idx_entity_country): province / municipality codes COLLIDE across
+        # tenants (0053: DE '28' == ES Madrid '28'), so the dealer universe MUST be scoped to one
+        # country or two tenants' dealers would block/merge together. ES is byte-identical (the
+        # single-tenant census is all 'ES', so the filter returns the same rows as before).
         cur.execute(
             """
             SELECT e.entity_ulid,
@@ -103,13 +120,14 @@ def _load_dealers(conn):
                    e.phone, e.website, e.lat, e.lon, e.cif
             FROM entity e
             WHERE e.kind::text IN %s
+              AND e.country_code = %s
             """,
-            (DEALER_KINDS,),
+            (DEALER_KINDS, country_code),
         )
         rows = cur.fetchall()
     recs = []
     for ulid, name, prov, muni, phone, website, lat, lon, cif in rows:
-        nm = _norm_name(name)
+        nm = _norm_name(name, country_code)
         recs.append(
             {
                 "unique_id": ulid,
@@ -120,7 +138,7 @@ def _load_dealers(conn):
                 "name_prefix": (nm[:4] if nm else None),
                 "province_code": prov,
                 "municipality_code": muni,
-                "phone": _digits(phone),
+                "phone": _digits(phone, country_code),
                 "website_host": _host(website),
                 "lat": float(lat) if lat is not None else None,
                 "lon": float(lon) if lon is not None else None,
@@ -158,8 +176,12 @@ class _UF:
             self.p[hi] = lo
 
 
-def run(build_run_id: str, *, dsn: str = DSN, match_threshold: float = 0.9) -> dict:
-    """Run Splink dedupe over dealer entities and persist clusters. Returns summary."""
+def run(build_run_id: str, *, dsn: str = DSN, match_threshold: float = 0.9,
+        country_code: str = DEFAULT_COUNTRY) -> dict:
+    """Run Splink dedupe over dealer entities and persist clusters. Returns summary.
+
+    country_code : ISO-3166 alpha-2 tenant whose dealer universe is deduped. Scopes the entity load
+                   and the name/phone keys to that country; defaults to 'ES' (byte-identical)."""
     if not splink_available():
         return {"status": "splink_unavailable"}
 
@@ -168,7 +190,7 @@ def run(build_run_id: str, *, dsn: str = DSN, match_threshold: float = 0.9) -> d
 
     conn = psycopg2.connect(dsn)
     try:
-        df = _load_dealers(conn)
+        df = _load_dealers(conn, country_code)
         n_in = len(df)
 
         settings = SettingsCreator(

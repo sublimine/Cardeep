@@ -10,11 +10,16 @@ Strata: province_code x segment (4 broad dealer types) ~ 52 x 4.
 
 from __future__ import annotations
 
+import os
+
 import psycopg2
 
 from pipeline.exhaustiveness.lists import bucket_for, orthogonal_buckets
 
-DSN = "postgresql://cardeep:cardeep_dev_only@localhost:5433/cardeep"
+# Module DSN derives from CARDEEP_DSN (same contract as scripts/migrate.py), so a test/dry-run run
+# points at :5434 by exporting the env — never the hard-coded :5433 PRODUCTION constant. The default
+# (env unset) is byte-identical to the previous literal, so live behaviour is unchanged.
+DSN = os.environ.get("CARDEEP_DSN", "postgresql://cardeep:cardeep_dev_only@localhost:5433/cardeep")
 
 DEALER_KINDS = (
     "compraventa",
@@ -46,13 +51,20 @@ def segment_for(kind: str) -> str:
     return _SEGMENT.get(kind, "otros")
 
 
-def _fetch_raw(conn, *, unit: str = "resolved", splink_run_id: str | None = None):
+def _fetch_raw(conn, *, unit: str = "resolved", splink_run_id: str | None = None,
+               country_code: str = "ES"):
     """(capture_unit, province_code, kind, source_key) for dealer entities.
 
     unit="resolved" : capture unit = v_dealer_resolved.resolved_ulid (baseline).
     unit="splink"   : capture unit = discovery_splink_cluster.splink_cluster
                       (probabilistic merge; tighter overlaps). Entities absent
                       from the Splink run fall back to their resolved_ulid.
+    country_code    : ISO-3166 alpha-2 tenant filter. Province codes COLLIDE across
+                      tenants (0053: DE '28' == ES '28'), so the matrix must be built
+                      per country; the entity census carries country_code (0052), so
+                      it filters on COALESCE(re.country_code, e.country_code) — the
+                      resolved entity's country, falling back to the source entity's.
+                      Defaults to 'ES': byte-identical for today's sole tenant.
     """
     if unit == "splink":
         run = splink_run_id or "splink-current"
@@ -70,8 +82,9 @@ def _fetch_raw(conn, *, unit: str = "resolved", splink_run_id: str | None = None
                        ON sc.entity_ulid = es.entity_ulid AND sc.build_run_id = %s
                 LEFT JOIN entity re       ON re.entity_ulid = dr.resolved_ulid
                 WHERE e.kind::text IN %s
+                  AND COALESCE(re.country_code, e.country_code) = %s
                 """,
-                (run, DEALER_KINDS),
+                (run, DEALER_KINDS, country_code),
             )
             return cur.fetchall()
     with conn.cursor() as cur:
@@ -86,8 +99,9 @@ def _fetch_raw(conn, *, unit: str = "resolved", splink_run_id: str | None = None
             JOIN v_dealer_resolved dr ON dr.entity_ulid = es.entity_ulid
             LEFT JOIN entity re      ON re.entity_ulid = dr.resolved_ulid
             WHERE e.kind::text IN %s
+              AND COALESCE(re.country_code, e.country_code) = %s
             """,
-            (DEALER_KINDS,),
+            (DEALER_KINDS, country_code),
         )
         return cur.fetchall()
 
@@ -99,11 +113,19 @@ def build(
     replace: bool = True,
     unit: str = "resolved",
     splink_run_id: str | None = None,
+    country_code: str = "ES",
 ) -> dict:
-    """Populate discovery_capture for a build_run_id. Returns a summary dict."""
+    """Populate discovery_capture for a build_run_id. Returns a summary dict.
+
+    country_code : ISO-3166 alpha-2 tenant this build captures. Filters the entity
+                   census (province codes collide across tenants — 0053) and is stamped
+                   on every discovery_capture row so a per-country read never pools two
+                   tenants' strata. Defaults to 'ES': byte-identical for the sole tenant.
+    """
     conn = psycopg2.connect(dsn)
     try:
-        raw = _fetch_raw(conn, unit=unit, splink_run_id=splink_run_id)
+        raw = _fetch_raw(conn, unit=unit, splink_run_id=splink_run_id,
+                         country_code=country_code)
         # collapse to distinct (resolved_ulid, bucket) with stratum metadata
         seen: dict[tuple[str, str], tuple[str | None, str]] = {}
         for resolved_ulid, province, kind, source_key in raw:
@@ -113,7 +135,7 @@ def build(
             if key not in seen:
                 seen[key] = (province, seg)
         rows = [
-            (ru, bucket, prov, seg, build_run_id)
+            (ru, bucket, prov, seg, build_run_id, country_code)
             for (ru, bucket), (prov, seg) in seen.items()
         ]
         with conn, conn.cursor() as cur:
@@ -140,8 +162,8 @@ def build(
             cur.executemany(
                 """
                 INSERT INTO discovery_capture
-                    (resolved_ulid, list_key, province_code, segment, build_run_id)
-                VALUES (%s, %s, %s, %s, %s)
+                    (resolved_ulid, list_key, province_code, segment, build_run_id, country_code)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 ON CONFLICT (resolved_ulid, list_key, build_run_id) DO NOTHING
                 """,
                 rows,
@@ -164,6 +186,7 @@ def read_patterns(
     include_mkt: bool = False,
     province_code: str | None = None,
     segment: str | None = None,
+    country_code: str = "ES",
 ) -> dict[tuple[str | None, str | None], dict[tuple[int, ...], int]]:
     """Read capture patterns per stratum.
 
@@ -171,13 +194,18 @@ def read_patterns(
     0/1 tuple over ``orthogonal_buckets(include_mkt)`` order. The all-zero pattern
     (entities captured by no orthogonal list) is excluded — it is the unobserved
     cell the MSE estimates.
+
+    country_code : ISO-3166 alpha-2 tenant filter (the same scope seal.compute
+                   certifies). Province codes collide across tenants (0053), so the
+                   read MUST scope to one country or two tenants' '28' strata pool.
+                   Defaults to 'ES': byte-identical for today's sole tenant.
     """
     buckets = orthogonal_buckets(include_mkt)
     idx = {b: i for i, b in enumerate(buckets)}
     conn = psycopg2.connect(dsn)
     try:
-        where = ["build_run_id = %s"]
-        params: list = [build_run_id]
+        where = ["build_run_id = %s", "country_code = %s"]
+        params: list = [build_run_id, country_code]
         if province_code is not None:
             where.append("province_code = %s")
             params.append(province_code)

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncpg
 
+from pipeline.paths import country_of_cdp
 from services.api.codes import cdp_pair
 
 # source_key -> the particular_platform token canonical_key() normalizes.
@@ -80,9 +81,15 @@ async def backfill_canonical_keys(conn: asyncpg.Connection, *, apply: bool = Tru
     by_kind: dict[str, int] = {}
     updates: list[tuple[str, str]] = []
     for row in rows:
+        # Re-hash with the row's OWN country (from its CDP-XX- prefix) so the mint matches a non-ES
+        # code. Without this the recompute defaults to ES → CDP-ES-… → it can NEVER re-hash to a stored
+        # CDP-DE-… code, leaving every non-ES entity's canonical_key NULL forever. country_of_cdp →
+        # 'ES' for every CDP-ES- code, so cdp_pair(country_code='ES') is byte-identical for ES rows
+        # (country is in the human prefix only, not in canonical_key's immutable pre-image).
+        country = country_of_cdp(row["cdp_code"])
         for kw in candidate_kwargs(row):
             try:
-                key, code = cdp_pair(**kw)
+                key, code = cdp_pair(**kw, country_code=country)
             except (ValueError, TypeError):
                 continue
             if code == row["cdp_code"]:               # THE gate — re-hash must match stored code
