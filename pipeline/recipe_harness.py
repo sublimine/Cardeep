@@ -203,7 +203,10 @@ class RecipeHarness:
         if len(vals) < 2:
             return "UNVERIFIED"
         if len(set(vals)) == 1:
-            return "TRUSTWORTHY"
+            # Zero is NOT certifiable: two paths agreeing on 0 is the ABSENCE of evidence, not a
+            # quorum (mirrors verify.py's zero_certifiable guard for the DB seal). A 0==0 agreement
+            # falls to UNVERIFIED so the cracker's verdict trail never claims a quorum over nothing.
+            return "TRUSTWORTHY" if vals[0] != 0 else "UNVERIFIED"
         return "REFUTED"
 
 
