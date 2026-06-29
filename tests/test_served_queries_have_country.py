@@ -43,17 +43,20 @@ import pytest
 
 _REPO = Path(__file__).resolve().parent.parent
 
-# Every file whose SQL can reach the served census of entities/vehicles.
-_SERVING_FILES = (
-    "services/api/routers/geo.py",
-    "services/api/routers/entities.py",
-    "services/api/routers/vehicles.py",
-    "services/api/routers/platforms.py",
-    "services/api/routers/ops.py",
-    "services/api/stats.py",
-    "services/api/deps.py",
-    "pipeline/geo.py",
-)
+def _serving_files() -> list[Path]:
+    """Every Python file whose SQL can reach the served census of entities/vehicles.
+
+    DISCOVERED DYNAMICALLY (every module under services/api/, plus the mint-time geo backbone
+    pipeline/geo.py) rather than a static allowlist — so a NEW router/service file is scanned
+    automatically. This closes the bypass the adversarial review flagged: a hardcoded list let
+    someone add ``services/api/routers/dealers.py`` with a country-blind census query and evade the
+    guard entirely. ``test_scan_actually_sees_served_queries`` keeps the scan non-vacuous."""
+    api = _REPO / "services" / "api"
+    files = [p for p in sorted(api.rglob("*.py")) if "__pycache__" not in p.parts]
+    geo = _REPO / "pipeline" / "geo.py"
+    if geo.is_file():
+        files.append(geo)
+    return files
 
 # A SQL string reads the served CENSUS iff it names one of these row surfaces.
 _CENSUS_SURFACE = re.compile(
@@ -96,9 +99,8 @@ def _iter_sql_literals(path: Path):
 
 def _census_offenders() -> list[tuple[str, int, str]]:
     offenders: list[tuple[str, int, str]] = []
-    for rel in _SERVING_FILES:
-        path = _REPO / rel
-        assert path.exists(), f"serving file vanished from the scan set: {rel}"
+    for path in _serving_files():
+        rel = str(path.relative_to(_REPO))
         for lineno, sql in _iter_sql_literals(path):
             norm = " ".join(sql.split())
             if not _CENSUS_SURFACE.search(norm):
@@ -127,8 +129,8 @@ def test_scan_actually_sees_served_queries():
     """Guard the guard: the scanner must actually find census SQL in the serving files
     (a silent zero-match would make the offender test vacuously green)."""
     seen = 0
-    for rel in _SERVING_FILES:
-        for _ln, sql in _iter_sql_literals(_REPO / rel):
+    for path in _serving_files():
+        for _ln, sql in _iter_sql_literals(path):
             if _CENSUS_SURFACE.search(" ".join(sql.split())):
                 seen += 1
     assert seen >= 10, f"scanner saw only {seen} census queries -- the matcher is broken"
