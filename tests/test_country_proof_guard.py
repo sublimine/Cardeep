@@ -284,8 +284,15 @@ def test_guard_detects_forced_cross_country_vehicle(dry_conn):
         # FORCED cross-country canonical (bypasses the resolver): vde -> ves.
         run = "test-guard-vehicle-forced"
         _seed_vam_vehicle_run(cur, run)
-        _seed_vcluster(cur, run, ves, ves)
-        _seed_vcluster(cur, run, vde, ves)
+        # 0072's trg_vehicle_cluster_country now FORBIDS this cross-country write at
+        # write time; disable it ONLY for the forced injection -- THIS test asserts the
+        # DETECTION view (v_country_proof_violations) sees the violation, not the write-guard.
+        cur.execute("ALTER TABLE vehicle_cluster DISABLE TRIGGER trg_vehicle_cluster_country")
+        try:
+            _seed_vcluster(cur, run, ves, ves)
+            _seed_vcluster(cur, run, vde, ves)
+        finally:
+            cur.execute("ALTER TABLE vehicle_cluster ENABLE TRIGGER trg_vehicle_cluster_country")
 
     rows = _violations(dry_conn, layer="vehicle")
 
@@ -306,8 +313,15 @@ def test_guard_detects_forced_cross_country_dealer(dry_conn):
         # FORCED cross-country canonical: de_ent resolves to es_ent.
         run = "test-guard-dealer-forced"
         _seed_vam_entity_run(cur, run)
-        _seed_ecluster(cur, run, es_ent, es_ent)
-        _seed_ecluster(cur, run, de_ent, es_ent)
+        # 0071's trg_entity_cluster_country now FORBIDS this cross-country write at
+        # write time; disable it ONLY for the forced injection -- THIS test asserts the
+        # DETECTION view sees the violation, not the write-guard.
+        cur.execute("ALTER TABLE entity_cluster DISABLE TRIGGER trg_entity_cluster_country")
+        try:
+            _seed_ecluster(cur, run, es_ent, es_ent)
+            _seed_ecluster(cur, run, de_ent, es_ent)
+        finally:
+            cur.execute("ALTER TABLE entity_cluster ENABLE TRIGGER trg_entity_cluster_country")
 
     rows = _violations(dry_conn, layer="dealer")
 

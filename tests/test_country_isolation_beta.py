@@ -248,7 +248,15 @@ def test_fingerprint_cross_country_do_not_merge(dry_conn):
         de = _seed_entity(
             cur, ulid_tag="DEBETA", cdp="CDP-DE-28-BETA0002",
             name="autohaus sud", country="DE")
-        _seed_shared_fingerprint(cur, es, de, tag="X")
+        # _seed_shared_fingerprint plants a DE vehicle on an ES canonical (a cross-country
+        # vehicle_cluster -- the upstream Signal-A shape). 0072's trg_vehicle_cluster_country
+        # now forbids that write; disable it ONLY for the injection. We assert the BETA dealer
+        # resolver keeps ES/DE separate downstream, not the vehicle write-guard.
+        cur.execute("ALTER TABLE vehicle_cluster DISABLE TRIGGER trg_vehicle_cluster_country")
+        try:
+            _seed_shared_fingerprint(cur, es, de, tag="X")
+        finally:
+            cur.execute("ALTER TABLE vehicle_cluster ENABLE TRIGGER trg_vehicle_cluster_country")
 
     canon = _run_build(dry_conn)
 
