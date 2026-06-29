@@ -40,7 +40,9 @@ services:
     container_name: cardeep-api
     command: ["uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8090"]
     environment: &app_env
-      CARDEEP_DSN: "host=cardeep-pg port=5432 dbname=${CARDEEP_DB_NAME:-cardeep} user=${CARDEEP_DB_USER:-cardeep} password=${CARDEEP_DB_PASSWORD:-cardeep_dev_only}"
+      # URL form: BOTH drivers accept it (asyncpg in the API requires a postgresql:// URL; psycopg2
+      # in the scheduler accepts URL or keyword). A keyword DSN here breaks the API's asyncpg pool.
+      CARDEEP_DSN: "postgresql://${CARDEEP_DB_USER:-cardeep}:${CARDEEP_DB_PASSWORD:-cardeep_dev_only}@cardeep-pg:5432/${CARDEEP_DB_NAME:-cardeep}"
       CARDEEP_ASYNCPG_DSN: "postgresql://${CARDEEP_DB_USER:-cardeep}:${CARDEEP_DB_PASSWORD:-cardeep_dev_only}@cardeep-pg:5432/${CARDEEP_DB_NAME:-cardeep}"
       CARDEEP_DB_URL: "postgresql+psycopg2://${CARDEEP_DB_USER:-cardeep}:${CARDEEP_DB_PASSWORD:-cardeep_dev_only}@cardeep-pg:5432/${CARDEEP_DB_NAME:-cardeep}"
       # The autopilot daemon reaches the HOST's Ollama (a container's localhost is the container).
