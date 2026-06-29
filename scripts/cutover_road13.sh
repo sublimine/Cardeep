@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Supervised road-to-13 cutover — applies migrations 0070 (vam_verified trigger) + 0071 (entity_cluster
-# country-proof trigger) to the :5433 PRODUCTION database SAFELY, then any later pending migrations the
-# repo HEAD carries. THE OWNER RUNS THIS (it writes DDL to :5433 serving-of-record); the agent does not.
+# Supervised road-to-13 cutover — applies migrations 0070 (vam_verified trigger), 0071 (entity_cluster
+# country-proof) and 0072 (vehicle_cluster country-proof) to the :5433 PRODUCTION database SAFELY, plus
+# any later pending migrations. THE OWNER RUNS THIS (it writes DDL to :5433 serving-of-record).
 #
 # Why it is safe to run:
 #   - additive / forward-only: the triggers reject only FUTURE invalid writes; existing rows untouched.
@@ -50,8 +50,8 @@ CARDEEP_DSN="${DSN}" python scripts/migrate.py up
 
 # 5. Post-check (fail-closed on the structural checks; warn on data deltas for human review)
 echo "-- post-check --"
-N_TRIG="$(psql_prod "SELECT count(*) FROM pg_trigger WHERE tgname IN ('trg_canonical_dedup_vam_proof','trg_entity_cluster_country')")"
-[ "${N_TRIG}" = "2" ] || { echo "ABORT: expected 2 triggers, found ${N_TRIG}. Check migrate output."; exit 1; }
+N_TRIG="$(psql_prod "SELECT count(*) FROM pg_trigger WHERE tgname IN ('trg_canonical_dedup_vam_proof','trg_entity_cluster_country','trg_vehicle_cluster_country')")"
+[ "${N_TRIG}" = "3" ] || { echo "ABORT: expected 3 triggers, found ${N_TRIG}. Check migrate output."; exit 1; }
 VIOL="$(psql_prod "SELECT count(*) FROM v_country_proof_violations")"
 SERVED_AFTER="$(psql_prod "SELECT count(DISTINCT resolved_cdp_code) FROM v_dealer_resolved")"
 echo "   triggers present: ${N_TRIG}/2 | country-proof violations: ${VIOL} | served: ${SERVED_BEFORE} -> ${SERVED_AFTER}"
@@ -60,4 +60,4 @@ echo "   triggers present: ${N_TRIG}/2 | country-proof violations: ${VIOL} | ser
 
 echo "== CUTOVER OK — vam_verified + country-proof are now MECHANICAL on :5433 (serving-of-record). =="
 echo "Rollback (reversible, additive triggers):"
-echo "  docker exec ${PROD_CONTAINER} psql -U cardeep -d cardeep -c \"DROP TRIGGER IF EXISTS trg_canonical_dedup_vam_proof ON canonical_dedup_run; DROP TRIGGER IF EXISTS trg_entity_cluster_country ON entity_cluster;\""
+echo "  docker exec ${PROD_CONTAINER} psql -U cardeep -d cardeep -c \"DROP TRIGGER IF EXISTS trg_canonical_dedup_vam_proof ON canonical_dedup_run; DROP TRIGGER IF EXISTS trg_entity_cluster_country ON entity_cluster; DROP TRIGGER IF EXISTS trg_vehicle_cluster_country ON vehicle_cluster;\""
