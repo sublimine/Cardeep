@@ -1,0 +1,28 @@
+# Autonomy E2E — PROGRESO (estado vivo)
+
+## Resumen
+Cableado integral para autonomía operacional E2E. Plan en `00-PLAN.md` (5 puntos / 14 subpuntos).
+Cada subpunto = proyecto élite: código + test RED→GREEN + verificado vs PG + sin regresiones + pusheado.
+Infra viva: `:5433` prod (HEAD 0072), `:5434` dry-run (`cardeep-pg-r13`). Push vía token gh inline
+(`x-access-token:$(gh auth token)` — el credential helper cuelga tras 401; causa raíz documentada).
+
+## Bitácora
+- [x] **0 · PLAN + PROGRESO** — roadmap institucional verificado contra código (run_campaign / gates / supervisor / compose). Pusheado.
+- [ ] 1.1 · `health_rollup` → SUPERVISA de `run_campaign`
+- [ ] 1.2 · persistencia de veredicto de gates (PENDIENTE-OWNER)
+- [ ] 1.3 · ES registrada `SEALED` en `country_campaign`
+- [ ] 2.1 · `scheduler` due-sources → harvest (ciclo invocable)
+- [ ] 2.2 · `lock_heartbeat` + `scheduler_lease` (single-producer)
+- [ ] 2.3 · `silence_watchdog` → gestion_item
+- [ ] 3.1 · compose service `api`
+- [ ] 3.2 · compose service `autopilot` (daemon persistente)
+- [ ] 3.3 · restart/healthcheck + `compose up` E2E en clon
+- [ ] 4.1 · Ollama local + modelo (LLM matrix, €0)
+- [ ] 4.2 · free-proxies pool vivo
+- [ ] 4.3 · seed `source_health` ES (qué cosechar)
+- [ ] 5.1 · dossier gates PENDIENTE-OWNER + comandos de desbloqueo
+- [ ] 5.2 · runbook arranque/observación/rollback (un comando)
+
+## Decisiones / hallazgos
+- (0) `run_campaign` es el loop de ONBOARDING-país (dry-run, casi completo); el loop de COSECHA
+  continua (Punto 2) es el que mantiene un país vivo — ambos hacen falta para "correr solo E2E".
