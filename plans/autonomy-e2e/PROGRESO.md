@@ -8,7 +8,7 @@ Infra viva: `:5433` prod (HEAD 0072), `:5434` dry-run (`cardeep-pg-r13`). Push v
 
 ## Bitácora
 - [x] **0 · PLAN + PROGRESO** — roadmap institucional verificado contra código (run_campaign / gates / supervisor / compose). Pusheado.
-- [ ] 1.1 · `health_rollup` → SUPERVISA de `run_campaign`
+- [x] **1.1 · `health_rollup` → SUPERVISA de `run_campaign`** — el loop usaba `_supervise_proof` (proof global); ahora `health_rollup(conn,cc)` → `CountryHealth` (violations por-tenant + servable + seal + sources) reportado en checkpoints; `contaminated` preserva el fail-closed; huérfano eliminado. `test_supervisa_reports_full_health_rollup` + 14 loop E2E verdes vs :5434 limpio. **Pusheado.**
 - [ ] 1.2 · persistencia de veredicto de gates (PENDIENTE-OWNER)
 - [ ] 1.3 · ES registrada `SEALED` en `country_campaign`
 - [ ] 2.1 · `scheduler` due-sources → harvest (ciclo invocable)

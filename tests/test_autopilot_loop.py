@@ -216,6 +216,15 @@ class TestFullLoopOnDryRun:
         # 4) The denominator per-segment split rode along as a declared needs_audit checkpoint.
         assert any("needs_audit" in c for c in res.checkpoints)
 
+    # --- 1.1: SUPERVISA reports the FULL per-tenant health roll-up (not just the proof count) ----
+    def test_supervisa_reports_full_health_rollup(self, tmp_path: Path) -> None:
+        res = asyncio.run(self._run(tmp_path))
+        # The wired health_rollup surfaces servable / sources / seal on the campaign checkpoints;
+        # proof-only supervision (the pre-1.1 behaviour) would carry none of these.
+        rollup = [c for c in res.checkpoints if c.startswith("SUPERVISA: servable=")]
+        assert len(rollup) == 1, f"expected one SUPERVISA roll-up checkpoint, got {res.checkpoints}"
+        assert "sources=" in rollup[0] and "seal_segments=" in rollup[0]
+
     # --- the live gates park PENDIENTE-OWNER, never stop --------------------------------
     def test_live_gates_parked_pending_owner(self, tmp_path: Path) -> None:
         res = asyncio.run(self._run(tmp_path))

@@ -55,6 +55,7 @@ from typing import Any, Mapping
 import asyncpg
 
 from pipeline.autopilot import state
+from pipeline.autopilot.supervisor import health_rollup
 from pipeline.autopilot.auditor import (
     CountryPlan,
     Decision,
@@ -380,11 +381,6 @@ async def _seed_dealer(
     return key, code, muni.province_code, muni.code
 
 
-async def _supervise_proof(conn: asyncpg.Connection) -> int:
-    """SUPERVISAR: count rows in ``v_country_proof_violations`` — MUST be 0 (no cross-country merge)."""
-    return int(await conn.fetchval(f"SELECT count(*) FROM {PROOF_VIEW}"))
-
-
 # ---------------------------------------------------------------------------
 # The LOOP
 # ---------------------------------------------------------------------------
@@ -537,9 +533,18 @@ async def run_campaign(
         },
     )
 
-    # --- SUPERVISAR: the served-layer guard MUST be 0 ---------------------------------
-    proof_violations = await _supervise_proof(conn)
-    if proof_violations > 0:
+    # --- SUPERVISAR: full per-tenant health roll-up (1.1) — not just the proof count --
+    # The loop now reads the COMPLETE isolated health (violations + servable + seal + sources), so the
+    # campaign result carries observability, not only the fail-closed proof flag. contaminated is the
+    # SAME fail-closed signal (violations > 0) the proof-only check used, so behaviour is preserved.
+    health = await health_rollup(conn, cc)
+    proof_violations = health.violations
+    checkpoints.append(
+        f"SUPERVISA: servable={health.servable_dealers} "
+        f"sources={health.sources.healthy}/{health.sources.total}(silent={health.sources.silent}) "
+        f"seal_segments={health.seal.sealed_segments}"
+    )
+    if health.contaminated:
         # A country-blind cross-merge contaminated the served layer — fail-closed (do NOT seal a lie).
         checkpoints.append(f"SUPERVISA={PROOF_VIEW}={proof_violations} (CONTAMINATION)")
         return _result(
