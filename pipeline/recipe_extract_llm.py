@@ -30,6 +30,7 @@ zero network; runtime fetches through the shared antidetection engine.
 from __future__ import annotations
 
 import logging
+import os
 from html import unescape
 from typing import Any, Callable
 from urllib.parse import urljoin
@@ -232,8 +233,10 @@ class LlmFieldMapExtractor:
 # by the pure suite, which injects a mock; it is the rung's production llm_fn, analogous to the css
 # rung's _engine_fetch (real, behind the egress/spend gate).
 # ---------------------------------------------------------------------------
-_OLLAMA_URL = "http://localhost:11434/api/generate"
-_OLLAMA_MODEL = "qwen2.5:7b"   # small local model strong at structured JSON; owner-swappable
+# Env-configurable so a containerised daemon reaches the HOST's Ollama (inside a container
+# "localhost" is the container, not the host) and the owner can swap the model without editing code.
+_OLLAMA_URL = os.environ.get("CARDEEP_OLLAMA_URL", "http://localhost:11434/api/generate")
+_OLLAMA_MODEL = os.environ.get("CARDEEP_LLM_MODEL", "qwen2.5:7b")  # strong at structured JSON; swappable
 _HTML_BUDGET = 24_000          # cap the prompt HTML so a huge page does not blow the context window
 _LLM_PROMPT = (
     "You are a web-scraping selector inference engine. Given the HTML of a car-dealer inventory "

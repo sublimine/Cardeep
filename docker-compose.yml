@@ -43,6 +43,9 @@ services:
       CARDEEP_DSN: "host=cardeep-pg port=5432 dbname=${CARDEEP_DB_NAME:-cardeep} user=${CARDEEP_DB_USER:-cardeep} password=${CARDEEP_DB_PASSWORD:-cardeep_dev_only}"
       CARDEEP_ASYNCPG_DSN: "postgresql://${CARDEEP_DB_USER:-cardeep}:${CARDEEP_DB_PASSWORD:-cardeep_dev_only}@cardeep-pg:5432/${CARDEEP_DB_NAME:-cardeep}"
       CARDEEP_DB_URL: "postgresql+psycopg2://${CARDEEP_DB_USER:-cardeep}:${CARDEEP_DB_PASSWORD:-cardeep_dev_only}@cardeep-pg:5432/${CARDEEP_DB_NAME:-cardeep}"
+      # The autopilot daemon reaches the HOST's Ollama (a container's localhost is the container).
+      CARDEEP_OLLAMA_URL: "${CARDEEP_OLLAMA_URL:-http://host.docker.internal:11434/api/generate}"
+      CARDEEP_LLM_MODEL: "${CARDEEP_LLM_MODEL:-qwen2.5:7b}"
     ports:
       - "127.0.0.1:8090:8090"   # localhost-only, like the DB
     depends_on:

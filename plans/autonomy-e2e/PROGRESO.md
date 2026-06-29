@@ -18,7 +18,7 @@ Infra viva: `:5433` prod (HEAD 0072), `:5434` dry-run (`cardeep-pg-r13`). Push v
 - [x] **3.1 · compose service `api`** — `Dockerfile` (python:3.11-slim, una imagen para todo) + `.dockerignore` + service `api` (uvicorn :8090 localhost, depends_on pg healthy, healthcheck `/health`, restart unless-stopped). Imagen carga `services.api.main:app` OK.
 - [x] **3.2 · compose service `autopilot` (daemon)** — service `autopilot` (`python -m pipeline.ops.scheduler` = `_start_scheduler` APScheduler daemon = el heartbeat), misma imagen, 3 DSN (psycopg2/asyncpg/jobstore), depends_on pg, restart unless-stopped.
 - [x] **3.3 · build + verificación SEGURA** — `docker compose build` exit 0 (cardeep-app 800MB). Verificado vs imagen real: API carga + `scheduler --dry-run` lista due (2 would run) **SIN cosechar**, contra :5434 (nunca prod). `compose config` válido (3 servicios). ⇒ **PUNTO 3 (cuerpo) COMPLETO.**
-- [ ] 4.1 · Ollama local + modelo (LLM matrix, €0)
+- [x] **4.1 · Ollama local + modelo (env-config, €0)** — Ollama estaba instalado-pero-apagado → arrancado (`serve`); smoke OK (`{"ok":true}` con qwen2.5:3b). `_OLLAMA_URL`/`_OLLAMA_MODEL` ahora **env-configurables** (`CARDEEP_OLLAMA_URL`/`CARDEEP_LLM_MODEL`): el daemon en Docker alcanza el Ollama del host (host.docker.internal) y el owner swapea modelo sin editar código; compose los inyecta. `test_llm_model_and_url_are_env_configurable` (@unit) + py_compile. Pull de qwen2.5:7b (modelo default del código) en curso (€0). **Pusheado.**
 - [ ] 4.2 · free-proxies pool vivo
 - [ ] 4.3 · seed `source_health` ES (qué cosechar)
 - [ ] 5.1 · dossier gates PENDIENTE-OWNER + comandos de desbloqueo
