@@ -78,6 +78,19 @@ def _digits(phone: str | None) -> str | None:
     return d[-9:] if len(d) >= 9 else None
 
 
+def _norm_cif(cif: str | None) -> str | None:
+    """Spanish fiscal id normalised to 9 alnum chars, or None for placeholders/garbage (mirrors
+    cluster_dealers._normalize_cif). The strongest cross-source identity signal for the MSE capture
+    unit: an exact CIF match links the same legal company across sources/municipalities, recovering
+    overlaps that name/geo fuzziness misses — without the over-merge risk of a fuzzy key."""
+    if not cif:
+        return None
+    c = re.sub(r"[^A-Z0-9]", "", cif.upper())
+    if len(c) != 9 or len(set(c)) == 1:
+        return None
+    return c
+
+
 def _load_dealers(conn):
     import pandas as pd
 
@@ -87,7 +100,7 @@ def _load_dealers(conn):
             SELECT e.entity_ulid,
                    COALESCE(e.trade_name, e.legal_name) AS name,
                    e.province_code, e.municipality_code,
-                   e.phone, e.website, e.lat, e.lon
+                   e.phone, e.website, e.lat, e.lon, e.cif
             FROM entity e
             WHERE e.kind::text IN %s
             """,
@@ -95,7 +108,7 @@ def _load_dealers(conn):
         )
         rows = cur.fetchall()
     recs = []
-    for ulid, name, prov, muni, phone, website, lat, lon in rows:
+    for ulid, name, prov, muni, phone, website, lat, lon, cif in rows:
         nm = _norm_name(name)
         recs.append(
             {
@@ -111,6 +124,7 @@ def _load_dealers(conn):
                 "website_host": _host(website),
                 "lat": float(lat) if lat is not None else None,
                 "lon": float(lon) if lon is not None else None,
+                "cif": _norm_cif(cif),
             }
         )
     return pd.DataFrame.from_records(recs)
@@ -165,12 +179,16 @@ def run(build_run_id: str, *, dsn: str = DSN, match_threshold: float = 0.9) -> d
                 block_on("municipality_code", "name_prefix"),
                 block_on("phone"),
                 block_on("website_host"),
+                block_on("cif"),   # CIF block: same legal company across muni/source (T2.1/T2.2)
             ],
             comparisons=[
                 cl.JaroWinklerAtThresholds("name", [0.92, 0.82]),
                 cl.ExactMatch("municipality_code"),
                 cl.ExactMatch("phone").configure(term_frequency_adjustments=True),
                 cl.ExactMatch("website_host").configure(term_frequency_adjustments=True),
+                # CIF exact: the strongest cross-source link (same fiscal id = same company),
+                # over-merge-safe — recovers overlaps name/geo miss, tightening the MSE denominator.
+                cl.ExactMatch("cif").configure(term_frequency_adjustments=True),
             ],
             retain_intermediate_calculation_columns=False,
         )
