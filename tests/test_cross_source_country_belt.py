@@ -47,3 +47,17 @@ def test_singletons_of_distinct_countries_are_fine():
     ents = [_ent("A", "ES"), _ent("B", "PT")]
     rows = _build_cluster_table(ents, [])
     assert len({r["canonical_ulid"] for r in rows}) == 2
+
+
+def test_cluster_dealers_shares_the_same_second_belt():
+    # The SAME shared belt protects cluster_dealers: a cross-country edge -> fail closed there too.
+    from pipeline.identity.cluster_dealers import _build_cluster_table as cd_build
+    ents = [{"entity_ulid": "A", "country_code": "ES", "trade_name": "A", "cdp_code": "A",
+             "source_group": None, "first_seen": None, "website": None, "phone": None,
+             "address": None, "cif": None, "lat": None},
+            {"entity_ulid": "B", "country_code": "PT", "trade_name": "B", "cdp_code": "B",
+             "source_group": None, "first_seen": None, "website": None, "phone": None,
+             "address": None, "cif": None, "lat": None}]
+    with pytest.raises(CrossCountryClusterError):
+        cd_build(ents, [("A", "B")])
+

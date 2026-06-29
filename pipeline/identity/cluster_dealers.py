@@ -54,6 +54,7 @@ if __package__ in (None, ""):
     )
 
 from pipeline.identity.name_normalize import normalize_name as _normalize_name
+from pipeline.identity._country_guard import assert_single_country_clusters
 
 logging.basicConfig(
     level=logging.INFO,
@@ -564,6 +565,7 @@ def _build_cluster_table(
             uf.union(u, v)
 
     components = uf.components()
+    assert_single_country_clusters(components, entity_by_ulid)  # second belt: fail closed
     result: list[dict] = []
     for _root, members in components.items():
         in_scope = [m for m in members if m in all_ulids]
