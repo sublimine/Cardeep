@@ -160,19 +160,25 @@
 
 /* ── Light mode ──────────────────────────────────────────────────────────── */
 .light {
-  --bg-base:       #f8f4ff;
-  --bg-primary:    #f0ebff;
-  --bg-surface:    #ffffff;
-  --bg-elevated:   #faf7ff;
-  --bg-overlay:    #ede9fe;
-  --bg-input:      rgba(0,0,0,0.04);
-  --bg-hover:      rgba(0,0,0,0.05);
+  /* Paleta neutra del landing (portal/index.html) — flat, elegante, cero violeta. */
+  --bg-base:       #EAECEF;
+  --bg-primary:    #EAECEF;
+  --bg-surface:    #FFFFFF;
+  --bg-elevated:   #FFFFFF;
+  --bg-overlay:    #F1F3F6;
+  --bg-input:      rgba(20,28,40,0.04);
+  --bg-hover:      rgba(20,28,40,0.05);
 
-  --t1:            #0f172a;
-  --t2:            #1e293b;
-  --t3:            #475569;
-  --t4:            #64748b;
-  --t5:            #94a3b8;
+  /* -ch overrides: Tailwind usa rgb(var(--bg-*-ch)); sin esto las clases bg-* se quedan oscuras en light. */
+  --bg-primary-ch:  234 236 239;
+  --bg-surface-ch:  255 255 255;
+  --bg-elevated-ch: 255 255 255;
+
+  --t1:            #13161B;
+  --t2:            #2A2F38;
+  --t3:            #5E6470;
+  --t4:            #8A909C;
+  --t5:            #B0B5BE;
 
   --text-primary:   var(--t1);
   --text-secondary: var(--t3);
@@ -230,8 +236,9 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #0a0a1a;
+  font-family: 'General Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.005em;
+  background: var(--bg-base);
   color: var(--t1);
   line-height: 1.5;
   min-height: 100dvh;
@@ -248,40 +255,17 @@ body {
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
-  background:
-    linear-gradient(135deg,
-      #0d0d2b 0%,
-      #1a0a3d 28%,
-      #0a1240 58%,
-      #0a2638 100%);
+  /* cardeep landing = fondo FLAT (sin mesh de orbes DeFi). Sigue el tema. */
+  background: var(--bg-base);
 }
 
-.cx-mesh::before {
-  /* Orb 1 — violet, top-left */
-  content: '';
-  position: absolute;
-  top: 4%;
-  left: 12%;
-  width: 720px;
-  height: 720px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(59, 130, 246,0.55) 0%, rgba(59, 130, 246,0) 70%);
-  filter: blur(90px);
-  animation: cxFloat1 14s ease-in-out infinite;
-}
-
-.cx-mesh::after {
-  /* Orb 2 — deep blue, top-right */
-  content: '';
-  position: absolute;
-  top: 32%;
-  right: 6%;
-  width: 620px;
-  height: 620px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(37,99,235,0.50) 0%, rgba(37,99,235,0) 70%);
-  filter: blur(80px);
-  animation: cxFloat2 16s ease-in-out infinite;
+/* Mesh de orbes desactivado (estilo landing flat). Oculta orbes pseudo + los inline de App.tsx
+   (cx-orb y el grain overlay, que son hijos directos de .cx-mesh). Keyframes se conservan por compat. */
+.cx-mesh::before,
+.cx-mesh::after,
+.cx-orb,
+.cx-mesh > div {
+  display: none !important;
 }
 
 /* Tertiary orbs — added via inline divs from App.tsx since pseudo-element budget is 2 */
@@ -517,27 +501,8 @@ html.light body.on-terminal .cx-mesh {
 
 /* ── Light mode mesh ─────────────────────────────────────────────────────── */
 .light .cx-mesh {
-  background: linear-gradient(
-    135deg,
-    #f8f4ff 0%,
-    #ede9fe 22%,
-    #ddd6fe 50%,
-    #bfdbfe 78%,
-    #e0f2fe 100%
-  );
-}
-
-.light .cx-mesh::before {
-  background: radial-gradient(circle, rgba(167,139,250,0.32) 0%, rgba(167,139,250,0) 70%);
-}
-
-.light .cx-mesh::after {
-  background: radial-gradient(circle, rgba(147,197,253,0.28) 0%, rgba(147,197,253,0) 70%);
-}
-
-/* Reduce inline orb intensity in light mode */
-.light .cx-orb {
-  opacity: 0.42;
+  /* flat — sigue el bg neutro del landing (#EAECEF) */
+  background: var(--bg-base);
 }
 
 /* Light mode glass utility overrides */

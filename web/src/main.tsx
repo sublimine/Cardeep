@@ -9,11 +9,12 @@ import './index.css'
 // Apply saved theme before first paint.
 // CSS tokens: :root = dark (default), .light = light overrides.
 // Tailwind darkMode:'class' requires the .dark class on <html>.
+// cardeep = light-first (la referencia es el landing). Dark solo si se guardó explícitamente.
 const saved = localStorage.getItem('theme')
-if (saved === 'light') {
-  document.documentElement.classList.add('light')
-} else {
+if (saved === 'dark') {
   document.documentElement.classList.add('dark')
+} else {
+  document.documentElement.classList.add('light')
 }
 
 // Register service worker
