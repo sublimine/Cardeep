@@ -202,8 +202,8 @@ export default function CheckPage() {
                       onClick={() => setActiveTab(tab)}
                       className={`px-4 py-1.5 rounded-t-md text-xs font-semibold transition-all duration-150 ${
                         activeTab === tab
-                          ? 'bg-neutral-900 text-neutral-100 border border-b-0 border-neutral-700'
-                          : 'text-neutral-500 hover:text-neutral-300'
+                          ? 'bg-bg-surface text-text-primary border border-b-0 border-border-subtle'
+                          : 'text-text-muted hover:text-text-secondary'
                       }`}
                     >
                       {tab === 'dossier' ? 'Autoficha' : 'Informe completo'}
@@ -216,14 +216,14 @@ export default function CheckPage() {
               {(activeTab === 'dossier' || !report) && dossier && (
                 <div className="max-w-3xl mx-auto px-5 pt-4 pb-16">
                   {dossierLoading ? (
-                    <div className="text-neutral-500 text-sm py-8 text-center">Cargando autoficha…</div>
+                    <div className="text-text-muted text-sm py-8 text-center">Cargando autoficha…</div>
                   ) : (
                     <DossierReport dossier={dossier} />
                   )}
                   <div className="mt-4 flex justify-center">
                     <button
                       onClick={handleBack}
-                      className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+                      className="text-xs text-text-muted hover:text-text-secondary transition-colors"
                     >
                       ← Nueva búsqueda
                     </button>

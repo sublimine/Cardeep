@@ -30,3 +30,8 @@
   Memoria respaldando: "do NOT ship DeFi figures". Nav: añadir Inteligencia + Arbitrage + API/Tokens.
 - Orden afinado: B3 landing limpia + login → B4 dashboard (añadir señales inteligencia/arbitrage dealer-first)
   → B5 Inteligencia + Arbitrage (reemplazo DeFi) + pulir workspace → B6 API/Tokens → B2 nav final → B7 auditoría.
+- 2026-06-30: Owner aclara — ABSORBER TailAdmin(87)+Spike(88) en el frontend (no solo re-skin). Escrito
+  `UNIFICATION.md` (175 pantallas → secciones canónicas, que no falten). Entregado+verde: Inteligencia,
+  Arbitrage, API&Tokens (134f30b). Theming workspace arreglado: Vehicles/Check/DossierReport dark→tokens
+  (Vehicles verificado light; Inbox/Calendar ya OK). Orquestando por olas: en vuelo Landing limpia, suite Auth
+  (Login/Registro/Reset/2FA), Dashboard único, Analítica.
