@@ -9,10 +9,22 @@
 - [ ] **B2** Shell + navegación unificada (un solo sitio, dealer-first)
 - [ ] **B3** Landing pública limpia + Login
 - [ ] **B4** Dashboard único dealer-first (unifica los 4)
-- [ ] **B5** Secciones end-to-end (inventario, CRM, finanzas, inteligencia, arbitrage, check, settings)
+- [~] **B5** Secciones — **Inteligencia ✅ + Arbitrage ✅** (React en estilo landing, desde MATRIX/OFFERING/
+      ARBITRAGE; reemplazan el terminal DeFi; nav grupo INTELIGENCIA, Terminal fuera; verificadas light+dark,
+      0 errores, build ✓). Pendiente: pulir workspace (Vehicles/CRM/Finance/Inbox/Calendar/Settings cascaron
+      en B1) + Check/Dossier. /api es forward-ref (B6).
 - [ ] **B6** API & Tokens (venta info + inventario por tokens)
 - [ ] **B7** Auditoría final + parte
 
 ## Log
 - 2026-06-30: Recon completo de `web/` (app React real con auth/router/components/hooks). PLAN.md escrito.
   Decisión: build en `web/`, re-skin al landing por tokens (cascada). Arranco B0 (baseline build).
+- 2026-06-30: B0+B1 cerrados (commit pusheado). Barrido visual: las páginas workspace (Dashboard, Vehicles,
+  CRM, Finance, Inbox, Calendar, Settings) cascan bien al landing. **PERO `Market`/`Terminal` son un terminal
+  de trading DeFi (velas, watchlist, "estimated balance", portfolios) — oscuro, metáfora bursátil que NO
+  encaja con el dealer ni con la auditoría, y choca con el landing.** Decisión (autoridad): en B5 se
+  REEMPLAZAN por **Inteligencia** (price-position/residual/days-to-sell/distribución/delta) y **Arbitrage**
+  (deal-score/sourcing/cross-platform/spread/time) en estilo landing, desde MATRIX/PLACEMENT/OFFERING/ARBITRAGE.
+  Memoria respaldando: "do NOT ship DeFi figures". Nav: añadir Inteligencia + Arbitrage + API/Tokens.
+- Orden afinado: B3 landing limpia + login → B4 dashboard (añadir señales inteligencia/arbitrage dealer-first)
+  → B5 Inteligencia + Arbitrage (reemplazo DeFi) + pulir workspace → B6 API/Tokens → B2 nav final → B7 auditoría.

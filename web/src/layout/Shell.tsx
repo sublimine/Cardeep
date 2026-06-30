@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Car, KanbanSquare, Users, GitPullRequest,
   MessageSquare, Calendar, BarChart3, Settings, FileSearch,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
+  TrendingUp, Zap, Code2,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -25,6 +26,13 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'INTELIGENCIA',
+    items: [
+      { to: '/inteligencia', label: 'Inteligencia', icon: TrendingUp, end: false },
+      { to: '/arbitrage',    label: 'Arbitrage',    icon: Zap,        end: false },
+    ],
+  },
+  {
     label: 'CRM',
     items: [
       { to: '/contacts', label: 'Contacts', icon: Users,          end: false },
@@ -37,7 +45,7 @@ const NAV_GROUPS = [
     label: 'TOOLS',
     items: [
       { to: '/finance',  label: 'Finance',   icon: BarChart3,  end: false },
-      { to: '/terminal',  label: 'Terminal',  icon: Activity,   end: false },
+      { to: '/api',      label: 'API & Tokens', icon: Code2,   end: false },
       { to: '/check',    label: 'VIN Check', icon: FileSearch, end: false },
       { to: '/settings', label: 'Settings',  icon: Settings,   end: false },
     ],
