@@ -16,7 +16,7 @@ def pretty(s):
 # ---- Sitio 1: portal de diseño cardeep ----
 DESIGN={"index":"Landing","marketplace":"Marketplace","analitica":"Analítica","dashboard":"Resumen",
  "dealers":"Dealers","dossier":"Dossier 3D","finanzas":"Finanzas","garaje":"Garaje 360°",
- "inteligencia":"Inteligencia","plano":"Plano 3D"}
+ "inteligencia":"Inteligencia","plano":"Plano 3D","arbitrage":"Arbitrage"}
 design=[{"cat":"Pantallas","items":[{"label":DESIGN[s],"href":h} for s,h in stems("*.html","") if s in DESIGN]}]
 
 # ---- Sitio 2: TailAdmin PRO (app/*.html) ----

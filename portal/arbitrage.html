@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arbitrage · cardeep</title>
+<link rel="icon" href="assets/cd-icon.png">
+<link rel="preconnect" href="https://api.fontshare.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'General Sans','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+  a{color:inherit;text-decoration:none}
+  select{font-family:inherit}
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<!-- cardeep · Arbitrage. Construido en el lenguaje de diseño del portal (tokens/glass-nav/cards de
+     inteligencia.html). Materializa ARBITRAGE.md: deal-score, sourcing de chollos, cross-platform, spread,
+     time-arbitrage. Datos representativos hasta cablear el censo (:8090). -->
+<div id="cd-root" style="--bg:#EAECEF;--panel:#FFFFFF;--panel2:#F2F4F7;--ink:#13161B;--ink2:rgba(19,22,27,.56);--ink3:rgba(19,22,27,.34);--line:rgba(20,28,40,.09);--shadow-sm:0 14px 34px -18px rgba(38,46,62,.22);--mint:#3B82F6;--mint2:#E8F0FE;--amber:#C9821F;--amber2:#F7EEDD;--red:#D2624F;--red2:#F8E9E5;--blue:#3B72E8;--ctl:#111827;--ctl-ink:#FFFFFF;min-height:100vh;background:var(--bg);color:var(--ink);transition:background .4s ease,color .4s ease">
+
+  <nav style="position:sticky;top:16px;z-index:60;width:min(1200px,calc(100% - 28px));margin:16px auto 0;display:flex;align-items:center;gap:16px;padding:9px 9px 9px 18px;border-radius:999px;background:rgba(255,255,255,.66);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border:1px solid rgba(255,255,255,.8);box-shadow:var(--shadow-sm)">
+    <a href="dashboard.html" style="display:flex;align-items:center;gap:10px"><img src="assets/cd-icon.png" alt="" style="height:24px;width:auto;display:block"/><span style="font-weight:700;font-size:19px;letter-spacing:-.03em">cardeep</span></a>
+    <div style="display:flex;gap:2px;margin-left:8px;font-size:14px;color:var(--ink2)">
+      <a href="dashboard.html" style="padding:8px 13px;border-radius:999px">Resumen</a>
+      <a href="garaje.html" style="padding:8px 13px;border-radius:999px">Garaje 360°</a>
+      <a href="inteligencia.html" style="padding:8px 13px;border-radius:999px">Inteligencia</a>
+      <a href="#" style="padding:8px 13px;border-radius:999px;background:var(--panel2);color:var(--ink);font-weight:600">Arbitrage</a>
+      <a href="finanzas.html" style="padding:8px 13px;border-radius:999px">Finanzas</a>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <button id="cd-theme" aria-label="Tema" style="width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer;display:grid;place-items:center;padding:0"><svg id="cd-theme-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/></svg></button>
+    </div>
+  </nav>
+
+  <main style="width:min(1200px,calc(100% - 28px));margin:30px auto 60px">
+    <div class="mono" style="font-size:12px;color:var(--ink3)">Censo vivo · oportunidades en tu radio</div>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:10px">
+      <h1 style="font-weight:600;font-size:clamp(26px,3vw,38px);letter-spacing:-.035em;margin:0">Arbitrage</h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select style="cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;box-shadow:var(--shadow-sm)"><option>Toda España</option><option>Madrid</option><option>Cataluña</option><option>Levante</option></select>
+        <select style="cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;box-shadow:var(--shadow-sm)"><option>Todos los segmentos</option><option>Compacto</option><option>SUV</option><option>Berlina</option></select>
+        <select style="cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;outline:none;box-shadow:var(--shadow-sm)"><option>Margen ≥ 1.500 €</option><option>Margen ≥ 1.000 €</option><option>Margen ≥ 500 €</option></select>
+      </div>
+    </div>
+
+    <!-- KPI band -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-top:22px">
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">Chollos hoy</div><div class="mono" style="font-size:24px;font-weight:500;margin-top:6px">37</div></div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">Margen medio</div><div class="mono" style="font-size:24px;font-weight:500;margin-top:6px;color:var(--mint)">2.140 €</div></div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">Mejor deal-score</div><div class="mono" style="font-size:24px;font-weight:500;margin-top:6px;color:var(--mint)">94</div></div>
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow-sm)"><div style="font-size:12.5px;color:var(--ink3)">Gaps cross-platform</div><div class="mono" style="font-size:24px;font-weight:500;margin-top:6px">12</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:16px">
+      <!-- SOURCING: chollos por deal-score -->
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-weight:600;font-size:15px">Chollos ahora · deal-score</div><div class="mono" style="font-size:11px;color:var(--ink3)">precio vs mercado vivo</div></div>
+        <div id="cd-deals" style="margin-top:14px;display:flex;flex-direction:column;gap:9px"></div>
+      </div>
+      <!-- CROSS-PLATFORM gap -->
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="font-weight:600;font-size:15px">Gap cross-platform</div>
+        <div class="mono" style="font-size:11px;color:var(--ink3);margin-top:2px">mismo coche, distinto precio</div>
+        <div id="cd-xp" style="margin-top:14px;display:flex;flex-direction:column;gap:12px"></div>
+      </div>
+      <!-- SPREAD retail vs wholesale -->
+      <div style="background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="font-weight:600;font-size:15px">Spread retail vs wholesale</div>
+        <div class="mono" style="font-size:11px;color:var(--ink3);margin-top:2px">margen de flip por modelo</div>
+        <div id="cd-spread" style="margin-top:16px;display:flex;flex-direction:column;gap:13px"></div>
+      </div>
+      <!-- TIME arbitrage -->
+      <div style="background:var(--ctl);color:var(--ctl-ink);border-radius:20px;padding:20px;box-shadow:var(--shadow-sm)">
+        <div style="font-weight:600;font-size:15px">Time-arbitrage</div>
+        <div class="mono" style="font-size:11px;opacity:.6;margin-top:2px">trayectoria de precio · suelo estimado</div>
+        <svg width="100%" height="120" viewBox="0 0 480 120" preserveAspectRatio="none" style="margin-top:16px;display:block;overflow:visible">
+          <line x1="0" y1="100" x2="480" y2="100" stroke="rgba(255,255,255,.12)"/>
+          <path d="M0 18 C80 22 120 40 180 52 C260 68 300 82 360 90 C410 96 450 99 480 100" stroke="#5B96F8" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <circle cx="360" cy="90" r="4" fill="#5B96F8"/>
+          <path d="M360 90 C400 94 450 99 480 100" stroke="#5B96F8" stroke-width="2.4" stroke-dasharray="4 5" fill="none"/>
+          <line x1="430" y1="0" x2="430" y2="100" stroke="rgba(91,150,248,.4)" stroke-dasharray="3 4"/>
+          <text x="430" y="116" class="mono" font-size="10" fill="rgba(243,245,248,.7)" text-anchor="middle">suelo ~21d</text>
+        </svg>
+        <div class="mono" style="font-size:11.5px;opacity:.75;margin-top:8px">Audi A4 Avant · bajó 1.100 € en 18 días · suelo estimado <span style="color:#9fc0fb">26.300 €</span> a ~21 días</div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>class DCLogic{constructor(){}renderVals(){return {};}}</script>
+<script>
+class Component extends DCLogic {
+  componentDidMount(){
+    const root=document.getElementById('cd-root');if(!root)return;
+    const LIGHT={'--bg':'#EAECEF','--panel':'#FFFFFF','--panel2':'#F2F4F7','--ink':'#13161B','--ink2':'rgba(19,22,27,.56)','--ink3':'rgba(19,22,27,.34)','--line':'rgba(20,28,40,.09)','--shadow-sm':'0 14px 34px -18px rgba(38,46,62,.22)','--mint':'#3B82F6','--mint2':'#E8F0FE','--amber':'#C9821F','--amber2':'#F7EEDD','--red':'#D2624F','--red2':'#F8E9E5','--blue':'#3B72E8','--ctl':'#111827','--ctl-ink':'#FFFFFF'};
+    const DARK={'--bg':'#0B0D11','--panel':'#15181F','--panel2':'#1C2129','--ink':'#F3F2EC','--ink2':'rgba(243,242,236,.6)','--ink3':'rgba(243,242,236,.4)','--line':'rgba(255,255,255,.08)','--shadow-sm':'0 14px 34px -18px rgba(0,0,0,.6)','--mint':'#5B96F8','--mint2':'rgba(59,130,246,.18)','--amber':'#E0A33A','--amber2':'rgba(224,163,58,.16)','--red':'#E2776B','--red2':'rgba(226,119,107,.16)','--blue':'#5B8BF5','--ctl':'#06080C','--ctl-ink':'#F3F5F8'};
+    const sun='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/>';
+    const moon='<path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>';
+    let dark=false;
+    const apply=(t)=>{dark=t==='dark';const v=dark?DARK:LIGHT;for(const k in v)root.style.setProperty(k,v[k]);const ic=document.getElementById('cd-theme-icon');if(ic)ic.innerHTML=dark?moon:sun;try{localStorage.setItem('cardeep-theme',t);}catch(e){}};
+    let th='light';try{th=localStorage.getItem('cardeep-theme')||'light';}catch(e){}
+    apply(th);
+    const tb=document.getElementById('cd-theme');if(tb)tb.addEventListener('click',()=>apply(dark?'light':'dark'));
+
+    // deal-score color by score
+    const sc=(n)=>n>=85?'var(--mint)':n>=70?'var(--amber)':'var(--ink3)';
+    const deals=[
+      {m:'Peugeot 3008 1.5 BlueHDi',loc:'Madrid',p:'21.900 €',mk:'24.100 €',d:94,days:3,delta:'−800 €'},
+      {m:'VW Golf 1.5 TSI',loc:'Toledo',p:'17.300 €',mk:'18.900 €',d:88,days:6,delta:'−500 €'},
+      {m:'Audi A4 Avant 2.0 TDI',loc:'Valencia',p:'26.300 €',mk:'28.750 €',d:86,days:18,delta:'−1.100 €'},
+      {m:'Seat León FR',loc:'Sevilla',p:'19.800 €',mk:'21.300 €',d:81,days:9,delta:'—'},
+      {m:'Kia Sportage 1.6 CRDi',loc:'Bilbao',p:'20.600 €',mk:'21.900 €',d:76,days:12,delta:'−300 €'},
+    ];
+    document.getElementById('cd-deals').innerHTML=deals.map(x=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:13px;background:var(--panel2)">
+      <div style="width:42px;height:42px;border-radius:11px;background:${sc(x.d)};color:#fff;display:grid;place-items:center;font-weight:700;flex-shrink:0" class="mono">${x.d}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.m}</div><div style="font-size:12px;color:var(--ink3)">${x.loc} · ${x.days} días · ${x.delta}</div></div>
+      <div style="text-align:right"><div class="mono" style="font-weight:600;font-size:14px">${x.p}</div><div class="mono" style="font-size:11px;color:var(--ink3)">mkt ${x.mk}</div></div>
+    </div>`).join('');
+
+    const xp=[
+      {m:'BMW 320d Touring',a:'AutoScout24 · 27.750 €',b:'coches.net · 29.400 €',gap:'1.650 €'},
+      {m:'Renault Clio TCe',a:'Wallapop · 12.900 €',b:'Milanuncios · 13.800 €',gap:'900 €'},
+      {m:'Mercedes A 200',a:'coches.net · 24.100 €',b:'mobile.de · 25.600 €',gap:'1.500 €'},
+    ];
+    document.getElementById('cd-xp').innerHTML=xp.map(x=>`<div><div style="font-weight:600;font-size:13.5px">${x.m}</div><div style="font-size:12px;color:var(--ink2);margin-top:2px">${x.a}</div><div style="font-size:12px;color:var(--ink2)">${x.b}</div><div class="mono" style="font-size:12px;color:var(--mint);font-weight:600;margin-top:3px">gap ${x.gap}</div></div>`).join('');
+
+    const spread=[['VW Golf',62],['Peugeot 3008',78],['Audi A4',88],['Seat León',54],['Kia Sportage',46]];
+    const mx=Math.max(...spread.map(s=>s[1]));
+    document.getElementById('cd-spread').innerHTML=spread.map(([m,v])=>`<div><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:13px;font-weight:500">${m}</span><span class="mono" style="font-size:12px;color:var(--mint)">+${(v*30).toLocaleString('es-ES')} €</span></div><div style="height:7px;border-radius:5px;background:var(--panel2);overflow:hidden"><div style="height:100%;width:${Math.round(v/mx*100)}%;background:var(--mint);border-radius:5px"></div></div></div>`).join('');
+  }
+  renderVals(){ return {}; }
+}
+</script>
+<script>document.addEventListener("DOMContentLoaded",function(){try{new Component().componentDidMount();}catch(e){console.error("[cardeep portal] init error:",e);}});</script>
+</body>
+</html>
