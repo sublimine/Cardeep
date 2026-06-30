@@ -1,0 +1,481 @@
+# Qué vende cardeep — síntesis de la oferta (borrador 109/109)
+
+> Construido desde el catálogo de campos + gaps + diferenciales de las auditorías. El edge estructural de cardeep: censo VIVO 100% del territorio, delta+historial, verificación multi-fuente (VAM), cross-platform — capacidades que la mayoría NO tiene.
+
+## 1. Núcleo obligatorio (table-stakes del sector)
+Los campos que ofrece la mayoría; cardeep los necesita para competir:
+
+- Marca  _(98/109)_
+- Modelo / serie / generación  _(95/109)_
+- Kilometraje / odómetro  _(85/109)_
+- Versión / trim / acabado  _(84/109)_
+- Año / model year / fabricación  _(83/109)_
+- Otros valores  _(80/109)_
+- Combustible / motorización  _(79/109)_
+- VIN / chasis  _(79/109)_
+- Otros precios / costes  _(77/109)_
+- Ubicación / geolocalización  _(68/109)_
+- Fotos / imágenes / vídeo  _(67/109)_
+- Matrícula / placa  _(67/109)_
+- Segmento / categoría / clase  _(66/109)_
+- Carrocería / body type  _(64/109)_
+- Transmisión / caja de cambios  _(64/109)_
+- Motor (tipo/código/config)  _(63/109)_
+- Equipamiento / característica (otros)  _(62/109)_
+- ITV/MOT/inspección/servicio  _(61/109)_
+- Vendedor / concesionario  _(59/109)_
+- Condición / estado del vehículo  _(58/109)_
+- Equipamiento opcional / extras / paquetes  _(58/109)_
+- Potencia / par / prestaciones  _(57/109)_
+- Mercado / país / moneda  _(55/109)_
+- Volumen de stock / inventario  _(54/109)_
+- Color exterior / código de pintura  _(53/109)_
+- Accidentes / siniestros / daños  _(52/109)_
+- Informe historial / provenance / telemática  _(52/109)_
+- PVP / precio nuevo (MSRP/lista)  _(50/109)_
+- Texto / descripción / calidad anuncio  _(50/109)_
+- Cilindrada / cilindros / aspiración  _(49/109)_
+- Metadatos informe / tasación  _(49/109)_
+- Valor de venta / retail  _(49/109)_
+- Demanda / deseabilidad / engagement  _(47/109)_
+- Financiación / leasing / LTV  _(47/109)_
+- Tracción / drivetrain  _(47/109)_
+- Valor de mercado  _(44/109)_
+- Valor de compra / trade-in  _(43/109)_
+- Autonomía eléctrica (EV range)  _(42/109)_
+- Peso  _(42/109)_
+- Emisiones CO2 / norma / clase  _(41/109)_
+- Rating / reseña / premio  _(41/109)_
+- Número de propietarios  _(40/109)_
+- Seguro / prima / póliza  _(40/109)_
+- Ventas / volumen de ventas  _(40/109)_
+
+## 2. Diferenciadores explotables (pocos los ofrecen)
+Campos raros = si cardeep los da, gana ventaja:
+
+- % de cumplimiento del objetivo 2030 (Fit for 55)  _(ANFAC (Asociación Española de Fabricantes de Automóviles y Camiones))_
+- % diferença / posição vs FIPE  _(Webmotors)_
+- 0to100_kmph  _(AutoGrab)_
+- 0to60_mph  _(AutoGrab)_
+- 160+ customizable rule data fields  _(ACV Auctions)_
+- 1st-party data enrich (additional vehicles owned, financial profile)  _(S&P Global Mobility (Mobility Global Inc., NYSE: MBGL — spin-off 1-jul-2026))_
+- [EQUIP·Equipaje] 2 posavasos delanteros y 2 traseros  _(km77.com)_
+- £30,000 data guarantee  _(HPI Check (HPI Ltd, a Solera company))_
+- 30+ variables de regresion hedonica / matriz de coeficientes  _(Datium Insights)_
+- 比车300估值 低/高 X万 (delta vs Che300 valuation)  _(Che300 (车300 / 三百云 Sanbaiyun) — Nanjing Sanbaiyun Information Technology Co., Ltd.)_
+- 检测报告 300+项 (inspection report)  _(Autohome (汽车之家))_
+- 4 roues motrices  _(La Centrale)_
+- 70+ Ausstattungsmerkmale (equipment features)  _(AutoScout24)_
+- A/B/C柱切割焊接 (pillar cut/weld signal)  _(Che300 (车300 / 三百云 Sanbaiyun) — Nanjing Sanbaiyun Information Technology Co., Ltd.)_
+- 傷 A1/A2/A3 (scratch by size)  _(USS (ユー・エス・エス) Co., Ltd.)_
+- aangedreven_as (traccion)  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aangedreven_rupsband_indicator  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aanhangwagen_autonoom_geremd  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aanhangwagen_middenas_geremd  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- Aankoop bij een particulier  _(ANWB Koerslijst (Autowaarde berekenen))_
+- aantal_assen  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantal_cilinders  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantal_gebreken_geconstateerd  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantal_passagiers_zitplaatsen_wettelijk  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantal_rolstoelplaatsen  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantal_staanplaatsen  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantal_wielen  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantal_zitplaatsen  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantalpassagiers_ondergrens_bovengrens  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantalrolstoelplaatsen_ogr_bgr  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aantalzitplaatsen_ondergrens_bovengrens  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aanwijzingsnummer  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- Abandon flag  _(Experian Automotive (AutoCheck))_
+- Abolladuras de panel (mm)  _(Cox Automotive Europe)_
+- 自适应巡航 ACC  _(Autohome (汽车之家))_
+- Accelerated Search  _(IAA (Insurance Auto Auctions))_
+- accessories (accesorios)  _(Autotelex B.V.)_
+- accidentDamaged  _(mobile.de)_
+- Account: payoff indicators  _(Experian Automotive (AutoCheck))_
+- AccuTrade GID (gid)  _(Accu-Trade (AccuTrade))_
+- ACES codes  _(Experian Automotive (AutoCheck))_
+- ACES codes & descriptions  _(S&P Global Mobility (Mobility Global Inc., NYSE: MBGL — spin-off 1-jul-2026))_
+- ACES EngineConfigID  _(DataOne Software (DataOne, LLC))_
+- ACES VCdb identifiers  _(DataOne Software (DataOne, LLC))_
+- ACES VehicleToEngineID  _(DataOne Software (DataOne, LLC))_
+- ACH funding  _(IAA (Insurance Auto Auctions))_
+- 시세 변ación por 지역 (región)  _(Encar (엔카닷컴 / Encar.com))_
+- acquire_acquisition_management_tracking  _(carsales (carsales.com.au))_
+- acquire_analytics_dashboard_team_performance  _(carsales (carsales.com.au))_
+- acquire_find_opportunities_filter_220k_cars  _(carsales (carsales.com.au))_
+- acquire_livemarket_data_per_listing  _(carsales (carsales.com.au))_
+- acquire_onthego_remote_appraisal  _(carsales (carsales.com.au))_
+- Acquisition / capture rate  _(Accu-Trade (AccuTrade))_
+- Acquisition channel recommendation (trade/auction/private-party)  _(VINCUE (DealerCue Automotive Corp.))_
+- Acquisition Insights: estimated turn time  _(CarOffer (a CarGurus company))_
+- actie_radius_enkel_elektrisch_wltp (autonomia EV)  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- actie_radius_extern_opladen_wltp  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- actieradius  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- actieradius_extern_oplaadbaar  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- ad budget reinvestment % (10-15%)  _(Urban Science)_
+- Ad Frequency  _(Urban Science)_
+- Adaptive Driving Beam (ADB)  _(NHTSA vPIC (Product Information Catalog and Vehicle Listing))_
+- Additional Error Text  _(NHTSA vPIC (Product Information Catalog and Vehicle Listing))_
+- Additional history: Abandoned  _(AutoCheck (by Experian))_
+- Additional history: Repossessed  _(AutoCheck (by Experian))_
+- Additional Parts Information  _(GT Motive)_
+- additional_vehicles  _(AutoGrab)_
+- additionalBuildData.label  _(ChromeData (part of J.D. Power / Autodata Solutions Division))_
+- address  _(Vehicle Databases)_
+- Adjustable Headlamps  _(CarDekho (Girnar Software Pvt Ltd / CarDekho Group))_
+- Adjustable Headrest  _(CarDekho (Girnar Software Pvt Ltd / CarDekho Group))_
+- Adjusted MMR (on-demand via API)  _(Manheim)_
+- adjustedBy: EVBH (Electric Vehicle Battery Health)  _(Cox Automotive)_
+- Adjustment % (km/condition)  _(RedBook)_
+- adjustment.retail_adjustment  _(AutoGrab)_
+- adjustment.trade_adjustment  _(AutoGrab)_
+- Ads: audiência qualificada (perfil demográfico)  _(Webmotors)_
+- Ads: CRM Push  _(Webmotors)_
+- Ads: Loja Oficial (showroom oficial)  _(Webmotors)_
+- adsCategoryIdDescriptions  _(ChromeData (part of J.D. Power / Autodata Solutions Division))_
+- adsCategoryIds  _(ChromeData (part of J.D. Power / Autodata Solutions Division))_
+- adsTypeIdDescriptions  _(ChromeData (part of J.D. Power / Autodata Solutions Division))_
+- adsTypeIds  _(ChromeData (part of J.D. Power / Autodata Solutions Division))_
+- Advanced data analytics / customizable reporting  _(ACV Auctions)_
+- advertisementUrl  _(Autotelex B.V.)_
+- advertiserVehicleHighlight (1-3)  _(Auto Trader UK (Autotrader Group plc))_
+- Advertising history (historial publicitario)  _(Autotelex B.V.)_
+- aerodynamic_drag  _(DataOne Software (DataOne, LLC))_
+- aerodynamische_voorziening  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- AFC: AFCDealer portal (gestion floorplan 24/7)  _(OPENLANE)_
+- AFC: floorplan revolving credit line  _(OPENLANE)_
+- AFC: Pay with AFC (floorea precio + auction fees + transporte)  _(OPENLANE)_
+- AFC: plazo hasta 90 dias  _(OPENLANE)_
+- afstand_hart_koppeling_tot_achterzijde  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- afstand_tot_volgende_as  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- afstand_voorzijde_tot_hart_koppeling  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aftermarket by channel (Garages, VM Networks, Autocentres, Tire Specialists, Parts Accessories, Online Sales, Hypermarkets, Petrol Stations, Fast Fits, Crash Repair/Bodyshops)  _(GlobalData Automotive)_
+- aftermarket CAGR  _(GlobalData Automotive)_
+- aftermarket part volume  _(GlobalData Automotive)_
+- Aftermarket tint  _(Accu-Trade (AccuTrade))_
+- AfterSales: customer marketing analytics  _(cap hpi (CAP + HPI, a Solera company))_
+- AfterSales: retention / loyalty metrics  _(cap hpi (CAP + HPI, a Solera company))_
+- AfterSales: service customer targeting  _(cap hpi (CAP + HPI, a Solera company))_
+- AFV share (%)  _(Dealer Auction)_
+- afwijkende_maximum_snelheid  _(RDW (Rijksdienst voor het Wegverkeer / Netherlands Vehicle Authority))_
+- aggregate performance metric by geographic level  _(Urban Science)_
+- agregación de expedientes  _(IDEAUTO — Instituto de Estudios de Automoción, S.L.U. (IEA))_
+- ahorro energético (kWh)  _(IDEAUTO — Instituto de Estudios de Automoción, S.L.U. (IEA))_
+- ai_buyer_signals_preferences_next_steps  _(carsales (carsales.com.au))_
+- ai_call_transcription_summary_gemini  _(carsales (carsales.com.au))_
+- ai_contextual_buyer_summary  _(carsales (carsales.com.au))_
+- ai_intent_detection_hot_leads  _(carsales (carsales.com.au))_
+- air_bag_deployment  _(Vehicle Databases)_
+- air.performance_benchmarking (vs nacional/estatal)  _(AutoGrab)_
+- [EQUIP·Seguridad] Aislamiento térmico y doble acristalamiento lateral  _(km77.com)_
+- Aisle/Stall  _(IAA (Insurance Auto Auctions))_
+- Ajuste por blindagem (vehículo blindado)  _(Molicar (KBB Brasil — Tabela Molicar))_
+- Ajuste por cor  _(Molicar (KBB Brasil — Tabela Molicar))_
+- Ajuste por quilometragem (km rodados)  _(Molicar (KBB Brasil — Tabela Molicar))_
+- Ajustes definidos por el cliente  _(Eurotax (JD Power / Autovista Group))_
+
+## 3. Gaps declarados por las empresas (lo que NO hacen) → terreno de cardeep
+
+- _Autovista Group_: NO es marketplace ni listado de inventario ni clasificados de consumidor: es datos B2B. Agrega 'observaciones de mercado', NO publica un censo/directorio de puntos de venta ni el stock vivo por dealer (el core de cardeep: huella digital punto-de-venta)
+- _Autovista Group_: NO hay feed de inventario individual por concesionario ni identidad/codigo de dealer (cdp_code)
+- _Autovista Group_: Metricas de velocidad estilo J.D. Power US ('market days supply', 'price-to-market %') NO evidenciadas en producto europeo; si aparece days-to-sell / time-to-sale como KPI de stock, pero supply/price-to-market = gap probable
+- _Autovista Group_: Pricing opaco (sin lista publica de precios)
+- _Autovista Group_: Norteamerica limitada (foco Europa + Australia; SMR menciona NA pero las valoraciones son europeas)
+- _Autovista Group_: NO hay informe de historial por-VIN de siniestros/km tipo Carfax/autoDNA: tienen coste de reparacion (SMR/REPAIR) pero no base de eventos/historial del vehiculo (accidentes, fraude de cuentakilometros)
+- _Autovista Group_: % de accuracy (MAPE) concreto NO publicado en paginas publicas
+- _Autovista Group_: Camiones pesados / agricola no destacados (foco cars/LCV/bikes)
+- _Autovista Group_: Diccionarios de campo exhaustivos tras muro comercial ('Get Started'); los campos son los nombrados explicitamente, no un schema completo publicado
+- _Glass's_: VIN not supported in MVA valuation app (VRM/Make-Model only); VIN exists only in feeds (AutovistaREFORECAST) - app/feed inconsistency
+- _Glass's_: DMS import and bulk revaluation discontinued in MVA
+- _Glass's_: TCO cost components (fuel/insurance/tyres/tax/electricity) not publicly itemized in Car Cost Expert [NO-VERIFICADO]
+- _Glass's_: No own provenance/history product (write-off/finance/theft/mileage): provenance is outsourced to Experian as a separate subscription - no HPI-Check equivalent
+- _Glass's_: No marketplace or auction/remarketing transaction layer (data only, unlike BCA/Manheim)
+- _Glass's_: Opaque pricing: no public prices or discoverable tiers
+- _Glass's_: Repair Estimate excludes some luxury brands (Ferrari, Bentley)
+- _Glass's_: Real-time/live retail is UK-centric; pan-EU data relies on weekly/monthly updates, not live spot
+- _Glass's_: Full AutovistaSPEC technical attribute list (dimensions, torque, power, etc.) not published in open web - count/names not confirmed [NO-VERIFICADO]
+- _Glass's_: Minor inconsistency in observation-volume figures across pages (8.4M vs 8.6M vs 1.8M); no single canonical public data sheet
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Sin provenance/historial por VIN (no check de siniestros/odometro/robo/financiacion); REPAIR usa VIN para spec, no para historia
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Sin censo de anuncios live a nivel individual: es valoracion model-level, no indice nacional de listings/huella digital (lo de cardeep)
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Sin indice explicito demanda/oferta, price-to-market % ni market days supply (Standtage es solo del stock propio del dealer) [probable gap, territorio INDICATA/vAuto]
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Sin mapa/censo de puntos de venta fisicos ni huella digital por dealer (Schwacke valora, no geolocaliza la red comercial)
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Precios no transparentes: todo contacto comercial salvo API pay-per-use
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: B2C casi inexistente (es B2B; schwake.de es un dominio lookalike ajeno, no Schwacke)
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Alcance geografico EU-centrico, sin cobertura global propia (US/Asia via J.D. Power a nivel grupo, no marca Schwacke)
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Toolkit de daños DE-especifico (GDV, HSN/TSN) poco trasladable fuera de Alemania
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Solo España: sin cobertura pan-europea
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Tablas base IGNORAN kilometraje, equipamiento/accesorios y estado general (solo marca/modelo/versión/antigüedad); el ajuste fino requiere el producto GANVAM-DAT aparte
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Sin API pública / acceso self-serve para desarrolladores documentado (todo gated por membresía o demo B2B)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Sin historial per-VIN propio (siniestros/ITV/km histórico); lo más cercano es INTEVES, que es un passthrough de datos DGT, no dato propietario
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Sin métrica per-listing de days-to-sell / market days supply productizada (la rotación se trata a nivel mercado, no por vehículo)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Sin producto público de scraping/feed de anuncios independiente (los precios de oferta online alimentan el índice pero no se exponen como dataset)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Pricing totalmente opaco, no transparente, no autoservicio
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Mayoría de datos tras login: poca apertura de datos abiertos
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Ajuste por daño/estado no integrado en la valoración base (se externaliza a herramientas DAT como FastTrackAI/weDAT)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Distinción Boletín Blanco vs Azul no documentada públicamente con precisión (contenido de asociado): riesgo de reproducir mal el matiz sin acceso
+- _L'argus (Cote Argus®)_: Solo Francia — sin cobertura paneuropea propia (contrastar con JATO/Autovista/Indicata).
+- _L'argus (Cote Argus®)_: Sin historial profundo de vehículo: no expone siniestros, nº de propietarios, mantenimiento ni verificación de km (entrega CO2/fiscal/VIN de la carte grise, pero no un vehicle-history tipo Carfax/Histovec).
+- _L'argus (Cote Argus®)_: Sin telemática ni datos de uso en tiempo real.
+- _L'argus (Cote Argus®)_: No cotiza nichos: vehículos no particulares, de prestige, km<10 o >300.000, mise en circulation <6 meses o >10 años.
+- _L'argus (Cote Argus®)_: Sin precios de subasta/wholesale ni arbitraje cross-platform en la API (Transaction es retail B2B/B2C, no precio de remate).
+- _L'argus (Cote Argus®)_: Sin market-days-supply ni price-to-market % estandarizados ni índice oferta/demanda explícito (ofrece Délai Rotation en días y dispersion).
+- _L'argus (Cote Argus®)_: VR limitada a VP/VUL, tope 6.250 km/mes, archive solo para VN.
+- _L'argus (Cote Argus®)_: Acceso de pago bajo contrato anual; sin self-service ni tarifa pública.
+- _L'argus (Cote Argus®)_: Propiedad de Planet VO (marca autobiz) y Cardiff VO NO verificada — no atribuibles a L'argus sin confirmar.
+- _DAT (Deutsche Automobil Treuhand GmbH)_: No ofrece historial de vehiculo consolidado (siniestros previos, titularidades, fraude de km) tipo HPI Check/CARFAX; solo captura km y Vorbesitzer puntuales
+- _DAT (Deutsche Automobil Treuhand GmbH)_: No da days-to-sell ni market days supply por vehiculo individual en la ficha; solo agregado de mercado (Standtage)
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Sin price-to-market % explicito por anuncio (webScan es comparacion grafica, no indice numerico tipo Indicata/vAuto)
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Cobertura de valoracion limitada a ~11 paises (no pan-EU completa ni global; fuerte solo en DACH + Sur/Este de Europa)
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Sin API publica/autoservicio con docs REST abiertas; integracion mediada por partnership (friccion para developers)
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Sin transparencia de precios (lista oficial solo bajo consulta)
+- _DAT (Deutsche Automobil Treuhand GmbH)_: No cubre datos de subasta/wholesale en vivo ni arbitraje cross-platform (terreno de Black Book/AUTO1/Manheim)
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Indicador granular demanda/oferta y rotacion por modelo/region (Indicata-style) solo parcial via Risikobestand/Standtage agregados
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Producto y UI muy centrados en Alemania; dato espanol llega via DAT Iberica/GANVAM, no como producto DAT homogeneo
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Drittdaten (datos de terceros) sin garantia de actualidad/exactitud declarada por la propia DAT
+- _Black Book (National Auto Research — Hearst)_: Sin herramienta de consumidor directa (declarado): delega en terceros como Car and Driver
+- _Black Book (National Auto Research — Hearst)_: Geografia limitada a EE.UU. + Canada; sin cobertura Europa/Espana
+- _Black Book (National Auto Research — Hearst)_: Private Party value solo en light-duty (ausente en truck/RV/powersports/CPI)
+- _Black Book (National Auto Research — Hearst)_: Residual centrado en wholesale light-duty; sin residuales publicados para MHD truck/RV/powersports
+- _Black Book (National Auto Research — Hearst)_: EV: cobertura de bateria limitada a set inicial de modelos (Bolt/Volt/LEAF/Tesla), no universal
+- _Black Book (National Auto Research — Hearst)_: Pricing opaco para productos enterprise (solo contact sales)
+- _Black Book (National Auto Research — Hearst)_: Discrepancias de cifras entre paginas (Retail Listings 45k/14M vs 40k/7M/3M; powersports 1980 vs 1981)
+- _Black Book (National Auto Research — Hearst)_: Historial de siniestros/propietarios/uso llega via terceros (AutoCheck/Experian), no como dataset propio descargable
+- _Black Book (National Auto Research — Hearst)_: No expone odometro/telemetria directa ni titulo salvage propio
+- _Black Book (National Auto Research — Hearst)_: Sin API de consumidor; inventario propio solo via Retail Listings agregado
+- _Kelley Blue Book_: Solo EE.UU. (+ B2B limitado en Canada); sin cobertura europea ni global
+- _Kelley Blue Book_: No valora boats/RVs/fuerabordas/remolques (muestra insuficiente) ni clasicos/coleccion
+- _Kelley Blue Book_: No tiene historial/provenance VIN propio; lo subcontrata a Experian AutoCheck
+- _Kelley Blue Book_: Auction Value y Lending Value vetados al publico (solo B2B/interno)
+- _Kelley Blue Book_: Kilometraje = input del usuario; sin telemetria/odometro en vivo
+- _Kelley Blue Book_: Precio B2B opaco (sin tarifa publica)
+- _Kelley Blue Book_: No es catalogo de specs profundo (specs son capa de soporte, no producto estrella)
+- _Kelley Blue Book_: Days-to-sell / market days supply / price-to-market no son producto KBB publico (viven en vAuto, hermano Cox)
+- _Kelley Blue Book_: No publica curva de depreciacion descargable ni dataset crudo; entrega valores puntuales/rango
+- _J.D. Power Valuation Services_: Solo EE. UU. para valores de guia (US-spec only); Canada solo via ALG; SIN Europa ni global - hueco mayor para cardeep
+- _J.D. Power Valuation Services_: Vehicle history NO propio: depende de AutoCheck (Experian) y afiliados (BeenVerified)
+- _J.D. Power Valuation Services_: Marca de consumo mas debil que KBB (el publico dice 'Blue Book', no 'J.D. Power value'); fuerte en B2B/financiero
+- _J.D. Power Valuation Services_: Refresco MENSUAL de Trade-In/Loan/Retail (solo New y Auction son semanales)
+- _J.D. Power Valuation Services_: Sin oferta transaccional real al consumidor tipo Instant Cash Offer redimible de KBB [inferido por ausencia]
+- _J.D. Power Valuation Services_: Metricas de velocidad de mercado de consumo (days-to-sell, market days supply, price-to-market %, indice oferta/demanda por listing) no son producto publico destacado [PARCIAL]
+- _J.D. Power Valuation Services_: Contenido enterprise gateado: paginas /business/* bloqueadas (403); pricing enterprise/API opaco (call for quote)
+- _J.D. Power Valuation Services_: Millaje y condicion = input del usuario/dealer, no telemetria/odometro en vivo
+- _J.D. Power Valuation Services_: No publica curva de depreciacion granular descargable a nivel consumidor (la curva 1-36m vive en herramientas de pago)
+- _J.D. Power Valuation Services_: Sin badges de pricing en SRP/VDP estilo 'Good/Great Price' de KBB Price Advisor [inferido por ausencia]
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Solo Norteamérica (US + Canada); sin Europa/global bajo marca ALG (lo cubre Autovista, hermana en J.D. Power)
+- _ALG (Automotive Lease Guide) — JD Power ALG_: No es portal de consumo: B2B/feed-first; el consumidor solo ve el award badge
+- _ALG (Automotive Lease Guide) — JD Power ALG_: No es catálogo de specs/equipamiento profundo; depende de Chrome/NADA ID vía Mapping
+- _ALG (Automotive Lease Guide) — JD Power ALG_: No ofrece historial/provenance por VIN (siniestros, dueños, odómetro real); no es Carfax/AutoCheck
+- _ALG (Automotive Lease Guide) — JD Power ALG_: No publica métricas de velocidad de mercado de cara al cliente (days-to-sell, market days supply, price-to-market %) como producto ALG [PARCIAL: existen en analítica retail del grupo]
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Kilometraje/condición = supuestos de modelo o input, no telemetría de odómetro en vivo (salvo batería EV vía Recurrent)
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Precio mayormente opaco salvo Values Online ($945/1k) y MarketValues ($900/yr); feeds/portfolio/consulting/API sin tarifa pública
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Foco en valor wholesale/residual, no en retail transaccional fino salvo vía DMA (apoyado en PIN)
+- _ALG (Automotive Lease Guide) — JD Power ALG_: No motos/powersports/boats/RV bajo ALG (residual ALG = coche/pickup/SUV/van/EV/fleet) [NO-VERIFICADO exhaustivo]
+- _RedBook_: No public B2B pricing; everything quote-based; no free tier / sandbox API (x-api-key required)
+- _RedBook_: Geography limited to 8 APAC + Gulf markets (AU, NZ, China, HK, Malaysia, Thailand, Singapore, UAE) — NO Europe/Americas under this brand; does NOT cover Spain/EU. (US 'Auto Red Book' = Price Digests; UK 'Red Book' = cap hpi/Solera — different companies)
+- _RedBook_: No full CARFAX-style history report: only written-off/stolen/registration (NEVDIS) + finance owing (PPSR); deep odometer/accident history (CarHistory) is a separate carsales product, not RedBook
+- _RedBook_: Full attribute schema and dynamic pricing response fields sit behind licence/login; the 800+ spec attributes are not publicly enumerated (swagger returns dynamic objects)
+- _RedBook_: Cost-to-Own limited to MY2022+, <=5 years / 75,000 km, and only cars/SUV/LCV
+- _RedBook_: Newest 'New Gen' v3 RTV/forecast engine flagged 'works with Australian Cars only'
+- _RedBook_: Not a marketplace and no point-of-sale digital-footprint catalogue: sells the value/data, does not publish inventory or catalogue dealers/their online presence (cardeep's territory)
+- _RedBook_: Consumer fine-grained valuation is paywalled (AU$33) beyond free basic ranges
+- _RedBook_: price-to-market % / demand index not documented as open API fields (present only inside LIVE dashboards as dynamic objects)
+- _RedBook_: No telematics / real-usage / driver-behaviour data
+- _FIPE (Tabela Fipe Veículos)_: Solo Brasil (sin cobertura internacional)
+- _FIPE (Tabela Fipe Veículos)_: Una sola métrica: precio medio nacional. Sin retail/trade/private, sin venta/compra separadas, sin wholesale/subasta, sin rango low-high
+- _FIPE (Tabela Fipe Veículos)_: Sin ajuste por km, conservación, color, opcionais ni región (promedio nacional explícito; la transacción real puede desviarse mucho)
+- _FIPE (Tabela Fipe Veículos)_: Sin curva de depreciación, sin forecast, sin valor residual como producto (output = valor puntual del mes)
+- _FIPE (Tabela Fipe Veículos)_: Sin catálogo de specs/equipamiento (potencia, plazas, dimensiones) — lo añaden terceros, no FIPE
+- _FIPE (Tabela Fipe Veículos)_: Sin VIN/chasis decode, sin historial (siniestros/dueños/odómetro), sin consulta por placa (todo de terceros)
+- _FIPE (Tabela Fipe Veículos)_: Sin analítica de mercado: ni days-to-sell, ni market days supply, ni price-to-market %, ni índice oferta/demanda, ni volumen de anuncios
+- _FIPE (Tabela Fipe Veículos)_: Sin API oficial documentada ni feed/Excel masivo gratis; licencia comercial opaca -> el ecosistema depende de scrapear el endpoint interno
+- _FIPE (Tabela Fipe Veículos)_: Sin desglose regional/estatal pese a sondear 24 estados (colapsa a media nacional)
+- _FIPE (Tabela Fipe Veículos)_: Sin MSRP/invoice de coche nuevo, sin incentivos, sin TCO/cost-to-own, sin ratings/reviews/contenido editorial
+- _FIPE (Tabela Fipe Veículos)_: Cobertura limitada a versiones de fábrica mass-market; especiales/importados/frota/modificados excluidos (nichos y exóticos mal representados)
+- _Canadian Black Book_: Solo Canadá - sin Europa ni cobertura propia US bajo marca CBB (hueco para cardeep)
+- _Canadian Black Book_: No cubre motos/powersports (eso es Canadian Blue Book, otra empresa) ni heavy/medium-duty commercial (a diferencia de la matriz US); scope CA estrecho a cars/SUV/light-truck/van + CPI + RV
+- _Canadian Black Book_: Portal de consumo pobre: solo trade-in (no retail/private), condición no editable (asume media), y exige datos personales cedidos a dealers - funnel de leads, no herramienta neutral
+- _Canadian Black Book_: Tiers exactos de condición wholesale no públicos (opacidad metodológica externa)
+- _Canadian Black Book_: Precio opaco - sin tarifa pública canadiense; las cifras conocidas (US$65/mes) son de Black Book US
+- _Canadian Black Book_: Volumen de datos no divulgado (sin cifra dura de data points/VINs/transacciones)
+- _Canadian Black Book_: Sin report de historial/provenance VIN al consumidor (Carfax Canada domina); HAV es B2B
+- _Canadian Black Book_: No es catálogo de specs/equipamiento profundo como producto estrella (vs Autovista/Chrome Data)
+- _Canadian Black Book_: Days-to-sell / market days' supply / DOM solo en herramientas pro (Cherry/Pulse/API), NO en el portal de consumo
+- _Canadian Black Book_: Esquema atómico completo de la API (tipos GraphQL, enums de condición) tras login - contrato no público
+- _autobiz (autobiz Group)_: Precio no público: pricing.autobiz.com tras login Auth0; ningún importe descubrible (solo demo/contacto) [V]
+- _autobiz (autobiz Group)_: Sin historial de vehículo / siniestros / fraude de cuentakilómetros por VIN (tipo Carfax/autoDNA): Carcheck es inspección fresca, no informe de provenance/incidentes; autobizVIN da specs/equipamiento, no propietarios/accidentes/km certificado [V]
+- _autobiz (autobiz Group)_: Cobertura desigual por producto: Noa y Clic2Sell solo Francia; AdsScan solo 6 países (vs 22 de valoración); Trade 10 países [V]
+- _autobiz (autobiz Group)_: Sin tipos de vehículo más allá de turismo declarados: no se mencionan motos, LCV ni industrial [A — ausencia]
+- _autobiz (autobiz Group)_: Sin datos OEM de mantenimiento/reparación tipo SMR (tiempos de mano de obra, precios de piezas, TecDoc): calcula recon desde inspección, no catálogo SMR [A]
+- _autobiz (autobiz Group)_: Sin inteligencia de batería/EV (kWh, química de celda, envíos) tipo EV Volumes [A]
+- _autobiz (autobiz Group)_: Sin TCO / coste total de propiedad como producto [A]
+- _autobiz (autobiz Group)_: valuation.autobiz.com cerrado (403): el público no puede inspeccionar el motor/widget de valoración embebido [V]
+- _autobiz (autobiz Group)_: Documentación técnica de API no pública: sin esquema JSON, auth, rate limits ni diccionario de campos expuestos [A]
+- _autobiz (autobiz Group)_: Métricas tipo 'price-to-market %' y 'market days supply' no nombradas como índices normalizados; usan rotación/turnover, posicionamiento vs competidores y écart à la cote [A]
+- _autobiz (autobiz Group)_: Sin marketplace transaccional propio de listados al consumidor: canal transaccional es subasta B2B (Trade) y buyback B2C (EasyReprise), no portal de anuncios [A]
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Transparencia de precio nula: todo quote-based, sin self-serve publico (salvo trial Cartotrade)
+- _Percayso Vehicle Intelligence (formerly Cazana)_: UK-centrico: cobertura europea declarada pero no expuesta por pais
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Sin docs de API publicos ni sandbox: 'thousands of data fields' sin enumerar
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Inestabilidad de marca/dominio: percayso-vehicle-intelligence.co.uk redirige a cazana.com; sucesion de rebrands Cazana->PVI->vuelta de Cazana 2026
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Sin catalogo NVD de coche nuevo tipo cap (no 460k options/list prices, no WLTP/CO2/P11D atomico)
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Sin SMR / TCO / whole-life-cost (no modela costes de explotacion ni pence-per-mile)
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Sin informe provenance 'check' de consumidor equivalente a HPI Check (finance/PNC/write-off viven en contexto de seguros)
+- _Percayso Vehicle Intelligence (formerly Cazana)_: No expone 'price-to-market %' ni 'market days supply' por nombre (tiene days-to-sell + demand) [NO-VERIFICADO interno]
+- _Percayso Vehicle Intelligence (formerly Cazana)_: No es marketplace ni vende stock: monetiza el dato/valor, no el inventario
+- _Percayso Vehicle Intelligence (formerly Cazana)_: No huella digital de punto de venta: no cataloga dealers ni su presencia online (territorio de cardeep)
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Dependencia del advert lake: el retail-back puede adelgazar en vehiculos raros/baja rotacion [INFERIDO]
+- _DAT Ibérica (DAT Automóvil Ibérica SLU)_: No es proveedor de historial de vehículo (siniestros previos, titularidades, fraude de km consolidado, procedencia tipo HPI/CARFAX); captura km en valoración pero no un registro histórico
+- _DAT Ibérica (DAT Automóvil Ibérica SLU)_: No publica días-para-vender / market days supply por unidad ni price-to-market % numérico por anuncio (a diferencia de Indicata/vAuto); su índice es agregado de mercado, no instrumento por ficha
+- _DAT Ibérica (DAT Automóvil Ibérica SLU)_: Cobertura solo España (el resto lo cubren otras filiales DAT)
+
+## 4. Diferenciales que cada empresa presume (para igualar/superar)
+
+- _Autovista Group_: Dataset pan-europeo armonizado/estandarizado en 20+ paises via un unico feed -> comparacion cross-border like-for-like real
+- _Autovista Group_: Herencia y autoridad desde los 1930s: Glass's (UK), Eurotax, Schwacke (DE) son las 'biblias' nacionales del trade, tratadas como estandar de industria
+- _Autovista Group_: Independencia (sin propiedad/lazos OEM) -> valoraciones imparciales
+- _Autovista Group_: Forecast de valor residual PRE-LANZAMIENTO hasta 4 anos antes del lanzamiento (Car to Market, 16 RV drivers, 3 fases)
+- _Autovista Group_: Inteligencia EV best-in-class (EV Volumes: cell type, cathode chemistry, battery kWh, 120-130+ mercados)
+- _Autovista Group_: Cobertura de ciclo completo: identification -> spec -> valuation -> forecast -> SMR/repair -> TCO
+- _Autovista Group_: Hibrido ML + ~400 expertos humanos; forecast a 120 meses (10 anos)
+- _Autovista Group_: 40+ OEM data partnerships, 5.000+ componentes identificados
+- _Autovista Group_: Respaldo de J.D. Power (analitica predictiva global + datasets customer experience)
+- _Eurotax (JD Power / Autovista Group)_: Valor SPOT en tiempo real por region sobre listados online limpios (sin particulares/fantasma/trampa) junto al valor base sobre transacciones reales nacionales: doble verdad lo-que-se-pide vs lo-que-se-paga
+- _Eurotax (JD Power / Autovista Group)_: Codificacion de vehiculo unica paneuropea (NatCode) que armoniza 15-17 mercados -> comparacion VR real vs previsto transfronteriza (arbitraje geografico de remarketing)
+- _Eurotax (JD Power / Autovista Group)_: Cobertura de ciclo de vida 360 en un solo proveedor: identificacion->especificacion->valoracion->prevision VR->reparacion/SMR->TCO->datos EV
+- _Eurotax (JD Power / Autovista Group)_: Consultoria pre-lanzamiento de VR (Car to Market) hasta 4 anos antes con 16 drivers
+- _Eurotax (JD Power / Autovista Group)_: EV Volumes con profundidad de bateria (kWh, quimica celda, catodo, fabricante celda, ruteo por pais) y 130+ mercados
+- _Eurotax (JD Power / Autovista Group)_: Dias anunciado con historial de cambios de precio + media de dias para la venta como proxy de demanda integrados en el flujo de tasacion
+- _Eurotax (JD Power / Autovista Group)_: Compatibilidad TecDoc y datos de pintura AZT en reparacion
+- _Eurotax (JD Power / Autovista Group)_: Prevision VR OEM-aprobada y autoridad de marca centenaria (Glass's/Schwacke/Eurotax) bajo J.D. Power
+- _Glass's_: Trade-guide brand equity since 1933 ('the bible'), positioned as sector benchmark
+- _Glass's_: Dual offering: Autovista* data feeds/APIs AND turnkey web apps over the same data
+- _Glass's_: Publishes its own data-accuracy figures every month, checked against auction observations
+- _Glass's_: Native total-loss/claims workflow (MVA + Radar): settlement figures, spot prices, repair-cost/value ratio, case management; data trusted by the Financial Ombudsman Service
+- _Glass's_: True pan-European comparison: same methodology across 15-17 markets with cross-country weighted averages (Autovista/Eurotax/Schwacke umbrella)
+- _Glass's_: WLTP CO2/consumption per any option/package combination via single multi-make/market web service for tax & final-price calc
+- _Glass's_: EV Volumes battery intelligence: kWh battery shipments, cell-maker, cathode chemistry, charging connectors across 130+ markets
+- _Glass's_: 120-month RV forecast with 16 age-mileage combos + stress-testing; Car to Market pre-launch consultancy up to 4 years ahead (750 experts/20 countries)
+- _Glass's_: Graphic click-to-price Repair Estimate with AZT paint data and TecDoc compatibility
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Autoridad historica del usado aleman: la Schwacke-Liste es estandar de facto en DE desde 1957 (peso de marca tipo KBB aleman)
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Ecosistema de daños/siniestros insurance-grade: SchadenManager con Wiederbeschaffungswert, Nutzungsausfall, AZT paint, interfaz GDV y arbol HSN/TSN
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: AutovistaSPEC con profundidad de especificacion extrema: NatCode, ESACO, 20 años de precios de lista/equipamiento
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Bloque EV de elite: nº motores electricos, potencia pico/continua 30-60min, bateria Ah/kWh/V/garantia/ubicacion, variantes de carga AC/DC, tiempos de carga 80/100%, nivel SAE de autonomia, AdBlue
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Datos paneuropeos armonizados: un feed para 15-17 mercados (RV cross-border) via Autovista
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: TCO granular y simulable (Car Cost Expert): assumptions editables, 300 escenarios, export Excel/PDF
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Reparacion a nivel de pieza con grafico interactivo + TecDoc
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: EV Volumes: datos y forecasts de mercado EV
+- _Schwacke (Schwacke GmbH / JD Power Autovista)_: Valoracion diaria (Tagespreis) reflejando live retail
+- _cap hpi (CAP + HPI, a Solera company)_: Benchmark histórico de facto en UK: Black Book (CAP, 1979) + HPI Check (1938)
+- _cap hpi (CAP + HPI, a Solera company)_: Valoración atómica multi-condición: trade Clean/Average/Below + retail + internet high/low + future hasta 60m + option-level, por derivative x 10 plates x 6 mileage points
+- _cap hpi (CAP + HPI, a Solera company)_: Black Book Live: ~6M movimientos de valor entre publicaciones mensuales, 365 d/año, con explicacion editorial del porque
+- _cap hpi (CAP + HPI, a Solera company)_: CAP Code como llave universal que conecta valoracion + specs + provenance + costes, replicada internacionalmente
+- _cap hpi (CAP + HPI, a Solera company)_: Rigor academico: metodologia con University of Leeds ITS sobre ~700k anuncios/dia + 160k transacciones
+- _cap hpi (CAP + HPI, a Solera company)_: NMR propietaria: 500M+ lecturas de millaje (DVLA, V5, MOT, auctions, insurance, leasing)
+- _cap hpi (CAP + HPI, a Solera company)_: Stack de entrega maduro: REST + SOAP + ficheros ASCII/CSV/JSON + portal + apps, embebible en DMS
+- _cap hpi (CAP + HPI, a Solera company)_: Option Values (2024): valora extras de fabrica en usado, gap clasico del sector
+- _cap hpi (CAP + HPI, a Solera company)_: One-stop: valoracion + specs + provenance + SMR/TCO + seguros + parc + AfterSales
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Referencia OFICIAL/institucional de valor venal en España (Hacienda/ITP modelo 620, DGT, aseguradoras, tribunales, administraciones, Consorcio de Compensación de Seguros)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Serie histórica de valores VO desde 1966 (>50 años)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Grounding en transacciones reales profesional→cliente final (~8.000/mes, ~800 empresas)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Índice neutral GANVAM-DAT: transacciones reales + ofertas online + IA (DAT Group) + variables EV (batería/carga/telemática) + rotación/demanda por canal
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Amplitud de tipologías (coches, motos, ciclomotores, quads, microcoches, tractores, industriales)
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Par venta/compra (retail/trade) con identificación VIN y equipamiento
+- _GANVAM (Asociación Nacional de Vendedores y Reparadores de Vehículos) / GANVAM-DAT_: Granularidad geográfica fina (provincia/municipio/código postal)
+- _L'argus (Cote Argus®)_: Autoridad de mercado: Cote Argus® = valor-pivot de referencia del VO en Francia desde 1927, ~90% de cuota, reconocida por professions réglementées (peso institucional difícil de replicar).
+- _L'argus (Cote Argus®)_: Triple capa de valor etiquetada y separada: cote à dire d'expert (custom-market-values) + valor de anuncio (displayed-selling-values) + valor de transacción REAL B2B y B2C (btob/btoc-transaction-values), no un único 'market value'.
+- _L'argus (Cote Argus®)_: influence desglosado: la API devuelve cuánto pesa carrocería, km, opciones, frais profesionales y antigüedad sobre el valor (explicabilidad poco común).
+- _L'argus (Cote Argus®)_: Incertidumbre cuantificada por valor: confidence-index + confidence-intervals (min/max/probability) + dispersion.
+- _L'argus (Cote Argus®)_: Délai Argus Rotation® (days-to-sell como mediana real de detención) integrado con el valor.
+- _L'argus (Cote Argus®)_: Identificación por matrícula con CNIT/TVV (v3.1) + lista de candidates con probabilidad (quote-ratio).
+- _L'argus (Cote Argus®)_: VR Argus con personalización fina (customization_amount/percent, hasta 400 escenarios durée/km, perfiles, LOA/LLD) e índice de decote histórico (Prevar desde 1998).
+- _L'argus (Cote Argus®)_: Référentiel hasta 268 datos por vehículo VP, con liens logiques de opciones y frecuencia de cada finición en el parc real francés.
+- _L'argus (Cote Argus®)_: SONAR: comparables reales (anuncios + transacciones anonimizadas) embebidos en la herramienta de valor.
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Neutralidad institucional accionarial (VDA + VDIK + ZDK): dato de referencia de facto del sector aleman desde 1931
+- _DAT (Deutsche Automobil Treuhand GmbH)_: DAT Euro-Code propietario de 15 digitos: normalizacion cross-fabricante unica para comparar/peritar/flota
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Base de valor en transacciones REALES retroalimentadas por OEM y clientes (no solo asking prices); >1M transacciones/ano para residual
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Suite end-to-end en una plataforma: identificacion -> valoracion -> calculo de reparacion -> siniestro IA -> residual -> telematica
+- _DAT (Deutsche Automobil Treuhand GmbH)_: SoH (State of Health) de bateria integrado en la valoracion de VE
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Mietwagenspiegel defendible en tribunal (avalado por sentencias) para privacion de uso
+- _DAT (Deutsche Automobil Treuhand GmbH)_: DAT Report (serie desde 1974) + observacion mensual de mercado = autoridad de mercado, no solo herramienta
+- _DAT (Deutsche Automobil Treuhand GmbH)_: 99,8% del parque turismo aleman identificable
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Ecosistema de ~400 partners de interfaz / >50 DMS
+- _DAT (Deutsche Automobil Treuhand GmbH)_: Valor GANVAM-DAT como referencia oficial en Espana
+- _Black Book (National Auto Research — Hearst)_: History Adjusted Valuations y Residuals VIN-específicos integrando AutoCheck (reclama ser el primero del mercado)
+- _Black Book (National Auto Research — Hearst)_: Enhanced Vehicle Matching con OEM build data + millones de registros/dia: resuelve one-to-many VIN->trim y aplica add/deducts auto
+- _Black Book (National Auto Research — Hearst)_: Residuales hasta 120 meses sobre 10 model years + scenario-based CCAR/DFAST + sensitivity 'War Game'
+- _Black Book (National Auto Research — Hearst)_: Foco wholesale/profesional: UVI basado en Wholesale Average real de subasta (benchmark de remarketing)
+- _Black Book (National Auto Research — Hearst)_: Brand Value Index (BVI): metrica propietaria de fuerza/pricing power de marca por nameplate (2024)
+- _Black Book (National Auto Research — Hearst)_: Valoracion EV con datos de bateria (Recurrent Range Score, 100M millas EV) - ajuste por salud de bateria
+- _Black Book (National Auto Research — Hearst)_: Asset Verification Tool como extension de navegador integrable en LOS (verificacion de colateral in-situ)
+- _Black Book (National Auto Research — Hearst)_: Cobertura multi-clase bajo una marca (light, MHD truck/trailer, powersports, RV, collectible)
+- _Black Book (National Auto Research — Hearst)_: Ecosistema de 100+ integraciones (DMS/LOS/marketplaces) + DaaS/data licensing
+- _Black Book (National Auto Research — Hearst)_: Respaldo Hearst + report anual de depreciacion conjunto con Fitch Ratings
+- _Kelley Blue Book_: Marca de confianza #1 de consumo en EE.UU. (desde 1926); 'Blue Book Value' es casi un termino generico
+- _Kelley Blue Book_: Actualizacion semanal con forecast <=1 semana (competidores 3-4 semanas)
+- _Kelley Blue Book_: Ecosistema Cox cerrado wholesale->retail: Manheim ~100k transacciones de subasta/semana alimentan el dato
+- _Kelley Blue Book_: Instant Cash Offer: oferta REAL redimible que el dealer debe honrar (transaccional, no solo estimado)
+- _Kelley Blue Book_: Range-based pricing (Fair Market Range) + badging de 3 zonas Good/Great Price listo para SRP/VDP
+- _Kelley Blue Book_: Capa de autoridad empaquetada: Expert/Consumer Ratings+Reviews, Awards, Brand Watch, 5YCTO
+- _Kelley Blue Book_: Historial de valor consultable desde enero 2014
+- _Kelley Blue Book_: Micro-regionalizacion en 134 regiones de EE.UU.
+- _J.D. Power Valuation Services_: Valor basado en transaccion RETAIL real (PIN: >12M transacciones/ano, >16.000 dealers, >250 metricas por reporte), no extrapolacion de subasta - lo afirman explicitamente frente a KBB y Black Book
+- _J.D. Power Valuation Services_: ALG = autoridad de valores residuales de Norteamerica: casi todas las transacciones de leasing US y ~40% de lanzamientos nuevos; 50+ anos
+- _J.D. Power Valuation Services_: VIN Precision+ / As-Built: VIN de 17 caracteres con opciones de fabrica linea a linea (add/deducts) para lenders (ejemplo $180M de discrepancia en cartera de 500k)
+- _J.D. Power Valuation Services_: Estandar del sector financiero desde el legado NADA (1933): el Loan Value de referencia para bancos/credit unions/aseguradoras
+- _J.D. Power Valuation Services_: Amplitud de activos inigualable: coches, light/commercial trucks, motos, ATV, snowmobiles, PWC, RV, BARCOS, manufactured homes, classic cars, farm equipment (KBB no valora barcos/RV)
+- _J.D. Power Valuation Services_: Dos lados del mercado: PIN (retail) + AuctionNet (>80% de subastas del pais) bajo un mismo techo
+- _J.D. Power Valuation Services_: Indice de precio mayorista propio (UVPI) con forecast a 2 anos e historico desde 1995, en Excel/CSV
+- _J.D. Power Valuation Services_: Ecosistema completo via Autodata/ChromeData: specs + VIN decode + build data + imagenes/videos + incentivos, no solo el valor
+- _J.D. Power Valuation Services_: Pricing self-service transparente (Values Online/Connect con tarifas publicas)
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Benchmark #1 de residuales de Norteamérica: informa ~40% de lanzamientos NA y casi todo el leasing US
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Forecast del valor FUTURO (curva 24-60m lease + 1-36m corto plazo DMA/zip), no solo el valor presente
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Análisis de cartera a nivel VIN: mark-to-market + loss reserves + securitization (carteras ~$500B) para lenders/captives/investment community
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Stormwatch: residuales bajo escenarios macro alternos (recesión leve/severa, inflación, estancamiento, crecimiento) sobre la cartera real del cliente
+- _ALG (Automotive Lease Guide) — JD Power ALG_: EV Model 8.0 + Recurrent: residuales EV con rango/salud de batería reales (~1B millas, ~100 modelos, incl. Tesla/Rivian)
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Historical Accuracy como producto explícito (transparencia publicado vs reventa real)
+- _ALG (Automotive Lease Guide) — JD Power ALG_: ALG Residual Value Awards (US + Canada) como sello de marca/confianza usado en marketing OEM/dealer
+- _ALG (Automotive Lease Guide) — JD Power ALG_: Sinergia de grupo J.D. Power: PIN 294M+ transacciones + Values Online + MarketValues + ex-NADAguides; Autovista cubre Europa (grupo global)
+- _RedBook_: Exclusive, authentic daily data feed from the carsales network (largest AU marketplace) + its verticals — including live AND delisted listings — inside the same parent group (CAR Group)
+- _RedBook_: Real Time Valuation (RTV): daily dynamic price adjusted by km/margin/condition, with Base vs Market (base vehicle vs option-equipped) distinction
+- _RedBook_: Native market intelligence: days-to-sell, market days' supply, price movements, stock volume, confidence/pricing scores from the live marketplace
+- _RedBook_: 75+ years heritage; longest AU price history (individual used prices back to 1935; 10M+ sales records since 1950)
+- _RedBook_: PredictRV PRO forward residual forecast to 5yr+ at make/model/year/variant granularity (quarterly + ad-hoc), with downside risk, end-of-term value and contract equity
+- _RedBook_: Complete identity+status stack: NEVDIS authorised broker (rego->VIN, written-off, stolen, reg status, build/compliance across 8 road authorities) + PPSR (finance owing) + VFACTS build/paint + factory-fitted options decode by VIN (FCAI-authorised)
+- _RedBook_: RedBook ID/Code as a universal key linking identification + specs + pricing + imagery, replicated across 8 countries
+- _RedBook_: Proprietary digital image library (up to 20 compositions per variant) integrable by code
+- _RedBook_: Multi-asset coverage: cars, bikes, trucks (heavy), marine/boats, caravans — not just passenger cars
+- _RedBook_: Part of CAR Group: scale, carsales/AutoGate integration and a hard-to-replicate data moat
+- _FIPE (Tabela Fipe Veículos)_: Estándar nacional cuasi-regulatorio: referencia aceptada para indemnización de seguro, base de cálculo del IPVA y financiación (estatus cuasi-oficial único en su mercado)
+- _FIPE (Tabela Fipe Veículos)_: Aval académico USP / fundación privada sin ánimo de lucro -> neutralidad e independencia percibidas (no es de dealer ni aseguradora)
+- _FIPE (Tabela Fipe Veículos)_: Número único, simple, transparente y GRATIS; 'vale X na FIPE' es lenguaje cotidiano (reconocimiento total)
+- _FIPE (Tabela Fipe Veículos)_: Código Fipe: identificador nacional compacto por versión-año que actúa como clave de unión compartida por aseguradoras, Detran, bancos y portales
+- _FIPE (Tabela Fipe Veículos)_: Código de autenticación por consulta -> resultado verificable/auditable
+- _FIPE (Tabela Fipe Veículos)_: Cadencia mensual con décadas de continuidad y una sola metodología estable
+- _Canadian Black Book_: History-Adjusted Valuations VIN-específicas (9+ factores: dueños, uso, siniestro+severidad, título, flood/hail/fire, CPO) con +31% de precisión vs precio de subasta
+- _Canadian Black Book_: Enhanced Vehicle Matching (ML+NLP) que resuelve el ~30% de VINs ambiguos y aplica add/deducts automáticos sobre OEM build data ('industry leader in trim decoding')
+- _Canadian Black Book_: Residual Sensitivity Analysis (simulador what-if ajustando MSRP/incentivos/rental penetration)
+- _Canadian Black Book_: Used Vehicle Retention Index propio (barómetro del mercado de usados canadiense, 2-6 años, %MSRP, ponderado por matriculaciones)
+- _Canadian Black Book_: Proyecciones de residual 1-72 meses con History Adjustments
+- _Canadian Black Book_: Autoridad independiente #1 de usados en Canadá desde 1961 (respaldo Hearst/National Auto Research)
+- _Canadian Black Book_: Ecosistema de entrega completo: consumo + app dealer (Cherry VIN scanner) + widget (TradeMax) + analytics (Pulse) + batch (ValuEngine) + GraphQL/REST + libro impreso semanal
+- _Canadian Black Book_: Cobertura de colección/lujo (CPI) desde 1946 en fair/good/excellent
+- _Canadian Black Book_: Brazo financiero propio (Canadian Black Book Financial), monetización vertical poco común en un proveedor de datos puro
+- _Canadian Black Book_: Actualización diaria 'from more sources than anyone else'
+- _autobiz (autobiz Group)_: Valor de mercado 100% estadístico y observado (no editorial): calculado a diario desde ~2M anuncios deduplicados / 20M lecturas de precio / 10B+ precios históricos
+- _autobiz (autobiz Group)_: Tres capas de valor de mercado en un solo producto (B2C / Network / C2C) + B2B + reprise + futuro — granularidad de canal poco común
+- _autobiz (autobiz Group)_: Certificación IFRS 13 (primera del sector) + auditoría Chappuis Halder + alineación BCE -> valores bancables para colateral y stress test (autobizPortfolio)
+- _autobiz (autobiz Group)_: Sistema operativo VO de extremo a extremo en un proveedor: valoración -> sourcing (AdsScan/Clic2Buy QR) -> tasación + IA de daños (Carcheck+Noa) -> inteligencia de stock/precio (MyStock/PricingPower/Cockpit) -> remarketing (Trade/Pilot/Interface/Targeting) -> arbitraje transfronterizo (Crossborder) -> subasta B2B (Trade) -> buyback B2C (EasyReprise)
+- _autobiz (autobiz Group)_: Noa: IA de detección de daños sobre foto (Monk AI) con tipo/severidad/parte/coste + alerta de discrepancia declarado-vs-IA integrada en el expediente
+- _autobiz (autobiz Group)_: autobizCrossborder: valoración multi-mercado con impuestos locales + fiscalidad transfronteriza + logística + score de potencial de exportación
+- _autobiz (autobiz Group)_: Datasets Joreca de estudios de mercado: 15B anuncios / 37 países / 330k+ anunciantes / cuota de mercado por tipo de anuncio; usados en 5 operaciones de M&A
+- _autobiz (autobiz Group)_: Motor de generación de leads de reprise (iFrame/TradeIn): 2M+ leads/año, +100% leads, 8-15% conversión
+- _autobiz (autobiz Group)_: Sourcing omnicanal: QR en concesionario (Clic2Buy) + reprise 100% remoto por SMS (Clic2Sell) + detección de gangas en infomediarios (AdsScan)
+- _autobiz (autobiz Group)_: Respaldo Stellantis (accionista mayoritario, confianza OEM) + partnership JATO Dynamics (specs/taxonomía) -> framework specs-to-valuation
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Valoracion 100% ML/data-driven SIN edicion humana (quantile regression + decision trees), antitesis de las guias editoriales cap/Glass's
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Real-time diario, no cadencia mensual de guia
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Valores retail SEGMENTADOS POR CANAL: Supermarket / Independent / Franchise (ademas de Trade y Retail)
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Lago de anuncios masivo: 1.000M+ live & historic adverts desde 2012, 800k VRN/dia, 12.000+ fuentes, mapeado a VRM/VIN
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Metricas de velocidad de mercado nativas en la valuation card: days-to-sell, market demand, profit corridor (estilo Auto Trader/Indicata)
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Provenance por arqueologia de anuncios: timeline con DANIO y MODIFICACIONES detectados desde las fotos de anuncios previos
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Forecast hasta 10 anios via API + EV/defleet residuals explicitos
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Doble vertical: automocion + insurance intelligence (point-of-quote, fraude, total loss) bajo el grupo Percayso Inform
+- _Percayso Vehicle Intelligence (formerly Cazana)_: Ecosistema de embed: Motors/Cazoo, Experian, Cartotrade, AUCA, One Auto API, MotorCheck

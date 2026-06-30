@@ -2,7 +2,7 @@
 
 > Construido sobre la auditoría atómica de 109 empresas del sector (ver `companies/*.md`, `MATRIX.md`,
 > `PLACEMENT-MAP.md`, y los pools de gaps/diferenciales en `AUDITS.json` / `_offering_data.md`). Datos base:
-> 26 métricas table-stakes, 1.127 gaps declarados, 958 diferenciales, 1.353 patrones de colocación. Esto es
+> 44 métricas table-stakes, 1.127 gaps declarados, 958 diferenciales, 1.353 patrones de colocación. Esto es
 > la ESTRATEGIA; el detalle por campo y empresa vive en los ficheros de datos.
 
 ## 0. Tesis y edge estructural
@@ -16,7 +16,7 @@ Traducción comercial: donde Autovista/JATO/Indicata dicen *"estimamos que este 
 su gemelo está en Z"* — **observado, no estimado, y verificado**. Eso es lo que se vende.
 
 ## 1. Capa 0 — Baseline (table-stakes: obligatorio para competir)
-Las 26 métricas que ofrece la mayoría de los 109 (frecuencias en `MATRIX.md`). cardeep las debe servir todas;
+Las 44 métricas que ofrece la mayoría de los 109 (frecuencias en `MATRIX.md`). cardeep las debe servir todas;
 ya tiene la materia prima del censo para casi todas:
 - **Identidad + ficha:** Marca, Modelo, Versión/trim, Carrocería/segmento, Año, Motor/potencia, VIN,
   Combustible, Transmisión, Color, Dimensiones, CO2, Consumo, Autonomía/batería EV, Equipamiento opcional.

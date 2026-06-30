@@ -67,6 +67,7 @@ CANON = [
  ("Geolocalización / región", r"region|provincia|location|postcode|codigo postal|geo|zone|area|plz"),
  ("Concesionario / vendedor", r"dealer|concesionario|seller|vendedor|haendler|trader"),
 ]
+exec(open(os.path.join(BASE, "_canon.py"), encoding="utf-8").read())  # 99 metricas (agente) -> override del heuristico inline
 CANON_C = [(c, re.compile(p)) for c, p in CANON]
 def canonize(k):
     for c, rx in CANON_C:
