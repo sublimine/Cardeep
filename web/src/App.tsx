@@ -18,6 +18,7 @@ import Market from './pages/Market'
 import Terminal from './pages/Terminal'
 import Inteligencia from './pages/Inteligencia'
 import Arbitrage from './pages/Arbitrage'
+import Api from './pages/Api'
 import { useAuthContext } from './auth/AuthContext'
 
 function RootRedirect() {
@@ -113,6 +114,7 @@ export default function App() {
           <Route path="terminal"  element={<Terminal />} />
           <Route path="inteligencia" element={<Inteligencia />} />
           <Route path="arbitrage"  element={<Arbitrage />} />
+          <Route path="api"        element={<Api />} />
           <Route path="settings"   element={<Settings />} />
           <Route path="*"          element={<Navigate to="/dashboard" replace />} />
         </Route>

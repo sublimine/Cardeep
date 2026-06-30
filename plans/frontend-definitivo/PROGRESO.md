@@ -13,7 +13,9 @@
       ARBITRAGE; reemplazan el terminal DeFi; nav grupo INTELIGENCIA, Terminal fuera; verificadas light+dark,
       0 errores, build ✓). Pendiente: pulir workspace (Vehicles/CRM/Finance/Inbox/Calendar/Settings cascaron
       en B1) + Check/Dossier. /api es forward-ref (B6).
-- [ ] **B6** API & Tokens (venta info + inventario por tokens)
+- [x] **B6** API & Tokens — KPIs (saldo/consumo/plan/llamadas), catálogo endpoints INFO/INVENTORY con coste
+      en tokens, consumo chart 30d, API keys CRUD (crear/rotar/revocar), planes Starter/Scale/Enterprise,
+      quick-start curl. Verificada light, 0 errores, build ✓. PENDIENTE polish marca: violeta "Scale"/planes → azul.
 - [ ] **B7** Auditoría final + parte
 
 ## Log
