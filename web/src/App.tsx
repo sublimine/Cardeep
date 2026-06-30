@@ -23,6 +23,11 @@ import Analitica from './pages/Analitica'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import TwoStep from './pages/TwoStep'
+import Invoices from './pages/Invoices'
+import Pricing from './pages/Pricing'
+import Notes from './pages/Notes'
+import Profile from './pages/Profile'
+import Support from './pages/Support'
 import { useAuthContext } from './auth/AuthContext'
 
 function RootRedirect() {
@@ -123,6 +128,11 @@ export default function App() {
           <Route path="arbitrage"  element={<Arbitrage />} />
           <Route path="api"        element={<Api />} />
           <Route path="analitica"  element={<Analitica />} />
+          <Route path="invoices"   element={<Invoices />} />
+          <Route path="pricing"    element={<Pricing />} />
+          <Route path="notes"      element={<Notes />} />
+          <Route path="profile"    element={<Profile />} />
+          <Route path="support"    element={<Support />} />
           <Route path="settings"   element={<Settings />} />
           <Route path="*"          element={<Navigate to="/dashboard" replace />} />
         </Route>

@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Car, KanbanSquare, Users, GitPullRequest,
   MessageSquare, Calendar, BarChart3, Settings, FileSearch,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
-  TrendingUp, Zap, Code2, LineChart,
+  TrendingUp, Zap, Code2, LineChart, StickyNote, Receipt, CreditCard, UserCircle, LifeBuoy,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -20,9 +20,8 @@ const NAV_GROUPS = [
   {
     label: null,
     items: [
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true  },
-      { to: '/vehicles',  label: 'Vehicles',  icon: Car,             end: false },
-      { to: '/kanban',    label: 'Kanban',    icon: KanbanSquare,    end: false },
+      { to: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard, end: true  },
+      { to: '/vehicles',  label: 'Inventario', icon: Car,             end: false },
     ],
   },
   {
@@ -34,21 +33,42 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'CRM',
+    label: 'CRM & VENTAS',
     items: [
-      { to: '/contacts', label: 'Contacts', icon: Users,          end: false },
-      { to: '/deals',    label: 'Deals',    icon: GitPullRequest, end: false },
-      { to: '/inbox',    label: 'Inbox',    icon: MessageSquare,  end: false },
-      { to: '/calendar', label: 'Calendar', icon: Calendar,       end: false },
+      { to: '/contacts', label: 'Contactos', icon: Users,          end: false },
+      { to: '/deals',    label: 'Deals',     icon: GitPullRequest, end: false },
+      { to: '/kanban',   label: 'Kanban',    icon: KanbanSquare,   end: false },
+      { to: '/notes',    label: 'Notas',     icon: StickyNote,     end: false },
     ],
   },
   {
-    label: 'TOOLS',
+    label: 'OPERACIÓN',
     items: [
-      { to: '/finance',  label: 'Finance',   icon: BarChart3,  end: false },
-      { to: '/api',      label: 'API & Tokens', icon: Code2,   end: false },
-      { to: '/check',    label: 'VIN Check', icon: FileSearch, end: false },
-      { to: '/settings', label: 'Settings',  icon: Settings,   end: false },
+      { to: '/inbox',    label: 'Inbox',      icon: MessageSquare, end: false },
+      { to: '/calendar', label: 'Calendario', icon: Calendar,      end: false },
+    ],
+  },
+  {
+    label: 'FINANZAS',
+    items: [
+      { to: '/finance',  label: 'Finanzas', icon: BarChart3,  end: false },
+      { to: '/invoices', label: 'Facturas', icon: Receipt,    end: false },
+      { to: '/pricing',  label: 'Planes',   icon: CreditCard, end: false },
+    ],
+  },
+  {
+    label: 'HERRAMIENTAS',
+    items: [
+      { to: '/api',   label: 'API & Tokens', icon: Code2,      end: false },
+      { to: '/check', label: 'VIN Check',    icon: FileSearch, end: false },
+    ],
+  },
+  {
+    label: 'CUENTA',
+    items: [
+      { to: '/profile',  label: 'Perfil',  icon: UserCircle, end: false },
+      { to: '/support',  label: 'Soporte', icon: LifeBuoy,   end: false },
+      { to: '/settings', label: 'Ajustes', icon: Settings,   end: false },
     ],
   },
 ] as const

@@ -35,6 +35,13 @@
   PENDIENTE ola 3: CRM (Contactos/Deals/Tareas-Kanban-Notas) · Comunicación (Inbox/Chat) · Finanzas (Facturas/
   Transacciones/Planes) · Cuenta (Perfil/Ajustes/Soporte) · Inventario rico · Calendario · Asistente IA · errores ·
   componentes design-system. + pasada coherencia marca (violeta→azul donde quedó). + verificación dark global.
+- 2026-06-30 (OLA 3, integrada+verificada+build verde): **Finanzas** (Finance rewrite + Facturas + Planes) ·
+  **CRM** (Contactos/Deals/Kanban reskin + Notas nueva) · **Cuenta** (Settings 5-tabs + Perfil + Soporte). NAV
+  reestructurado a 7 grupos dealer-first en ES: PRINCIPAL(Dashboard/Inventario) · INTELIGENCIA · CRM&VENTAS ·
+  OPERACIÓN(Inbox/Calendario) · FINANZAS(Finanzas/Facturas/Planes) · HERRAMIENTAS(API/VIN) · CUENTA(Perfil/
+  Soporte/Ajustes). Rutas /invoices /pricing /notes /profile /support. Verificado Invoices + nav (1 sitio, sin ruido).
+  PENDIENTE ola 4: Comunicación(Chat) · Inventario rico (foto/detalle) · Calendario · Asistente IA · errores ·
+  componentes design-system · coherencia marca (algún violeta→azul, títulos EN→ES) · verificación DARK global · B7.
 - Orden afinado: B3 landing limpia + login → B4 dashboard (añadir señales inteligencia/arbitrage dealer-first)
   → B5 Inteligencia + Arbitrage (reemplazo DeFi) + pulir workspace → B6 API/Tokens → B2 nav final → B7 auditoría.
 - 2026-06-30: Owner aclara — ABSORBER TailAdmin(87)+Spike(88) en el frontend (no solo re-skin). Escrito
