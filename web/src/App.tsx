@@ -4,6 +4,7 @@ import Shell from './layout/Shell'
 import ProtectedRoute from './auth/ProtectedRoute'
 import LoginPage from './auth/LoginPage'
 import Landing from './pages/Landing'
+import Marketplace from './pages/Marketplace'
 import CheckPage from './pages/Check'
 import Dashboard from './pages/Dashboard'
 import Vehicles from './pages/Vehicles'
@@ -101,6 +102,7 @@ export default function App() {
         {/* Public routes */}
         <Route path="/"         element={<RootRedirect />} />
         <Route path="/landing"  element={<Landing />} />
+        <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/reset"    element={<ResetPassword />} />
