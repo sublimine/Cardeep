@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Car, KanbanSquare, Users, GitPullRequest,
   MessageSquare, Calendar, BarChart3, Settings, FileSearch,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
-  TrendingUp, Zap, Code2,
+  TrendingUp, Zap, Code2, LineChart,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -30,6 +30,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/inteligencia', label: 'Inteligencia', icon: TrendingUp, end: false },
       { to: '/arbitrage',    label: 'Arbitrage',    icon: Zap,        end: false },
+      { to: '/analitica',    label: 'Analítica',    icon: LineChart,  end: false },
     ],
   },
   {

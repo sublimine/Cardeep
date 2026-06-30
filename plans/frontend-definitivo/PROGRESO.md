@@ -28,6 +28,13 @@
   REEMPLAZAN por **Inteligencia** (price-position/residual/days-to-sell/distribución/delta) y **Arbitrage**
   (deal-score/sourcing/cross-platform/spread/time) en estilo landing, desde MATRIX/PLACEMENT/OFFERING/ARBITRAGE.
   Memoria respaldando: "do NOT ship DeFi figures". Nav: añadir Inteligencia + Arbitrage + API/Tokens.
+- 2026-06-30 (OLA 2, integrada+verificada+build verde): **Landing** limpia (sustituye DeFi) · **Auth** suite
+  (Login re-skin 2-col + Registro + Reset + 2FA) · **Dashboard ÚNICO** dealer-first (KPIs→Oportunidades deal-score
+  →Posición mercado→Margin/Pipeline/AI→Revenue/Top-modelos→Stale/Activity) · **Analítica** (KPIs+tendencia+embudo+
+  canales+rotación+región). Nav grupo INTELIGENCIA (Inteligencia/Arbitrage/Analítica). Verificadas light Playwright.
+  PENDIENTE ola 3: CRM (Contactos/Deals/Tareas-Kanban-Notas) · Comunicación (Inbox/Chat) · Finanzas (Facturas/
+  Transacciones/Planes) · Cuenta (Perfil/Ajustes/Soporte) · Inventario rico · Calendario · Asistente IA · errores ·
+  componentes design-system. + pasada coherencia marca (violeta→azul donde quedó). + verificación dark global.
 - Orden afinado: B3 landing limpia + login → B4 dashboard (añadir señales inteligencia/arbitrage dealer-first)
   → B5 Inteligencia + Arbitrage (reemplazo DeFi) + pulir workspace → B6 API/Tokens → B2 nav final → B7 auditoría.
 - 2026-06-30: Owner aclara — ABSORBER TailAdmin(87)+Spike(88) en el frontend (no solo re-skin). Escrito

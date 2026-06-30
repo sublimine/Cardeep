@@ -1,744 +1,563 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createPortal } from 'react-dom'
-import { motion, AnimatePresence, useScroll, useTransform, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useAuthContext } from '../auth/AuthContext'
-import { BRANDS, type Brand, type Model } from '../data/catalog'
-import LOGO_AR from '../data/logo-ar.json'
-import LandingSections from './landing-sections'
-import ShaderBackground from './landing/ShaderBackground'
-import Cursor from './landing/Cursor'
-import Preloader from './landing/Preloader'
-import { useLenis } from './landing/useLenis'
+
+// ── Design tokens ──────────────────────────────────────────────────────────
+interface Tok {
+  bg: string; panel: string; panel2: string
+  glass: string; glassBrd: string
+  ink: string; ink2: string; ink3: string
+  line: string; shadowSm: string; shadow: string
+  mint: string; mint2: string
+  ctl: string; ctlInk: string
+}
+const LIGHT: Tok = {
+  bg: '#EAECEF', panel: '#FFFFFF', panel2: '#F1F3F6',
+  glass: 'rgba(255,255,255,.34)', glassBrd: 'rgba(255,255,255,.55)',
+  ink: '#13161B', ink2: '#5E6470', ink3: 'rgba(19,22,27,.4)',
+  line: 'rgba(20,28,40,.09)',
+  shadowSm: '0 14px 34px -18px rgba(38,46,62,.24)',
+  shadow: '0 44px 96px -40px rgba(38,46,62,.46)',
+  mint: '#3B82F6', mint2: '#E8F0FE',
+  ctl: '#111827', ctlInk: '#FFFFFF',
+}
+const DARK: Tok = {
+  bg: '#0B0D11', panel: '#15181F', panel2: '#1C2129',
+  glass: 'rgba(20,24,31,.46)', glassBrd: 'rgba(255,255,255,.12)',
+  ink: '#F3F2EC', ink2: 'rgba(243,242,236,.66)', ink3: 'rgba(243,242,236,.42)',
+  line: 'rgba(255,255,255,.08)',
+  shadowSm: '0 14px 34px -18px rgba(0,0,0,.6)',
+  shadow: '0 44px 96px -36px rgba(0,0,0,.74)',
+  mint: '#5B96F8', mint2: 'rgba(59,130,246,.18)',
+  ctl: '#F3F2EC', ctlInk: '#111827',
+}
+
+// ── Mock stock for filter preview ──────────────────────────────────────────
+const STOCK: [string, string, number][] = [
+  ['Peugeot', 'suv',    23400],
+  ['VW',      'hatch',  18450],
+  ['Audi',    'estate', 27750],
+  ['Kia',     'suv',    21900],
+  ['Seat',    'hatch',  21300],
+  ['VW',      'estate', 24900],
+  ['Hyundai', 'suv',    28750],
+  ['Renault', 'hatch',  13200],
+  ['Skoda',   'estate', 22100],
+]
 
 const EXPO = [0.16, 1, 0.3, 1] as const
-const HERO_IMG = '/hero-cardeep.jpg'
 
-/* ─── Source portals — one per country + AS24 global ──────────────────── */
-interface Portal { name: string; favicon?: string; initial?: string; bg: string; border?: string; textColor?: string }
-const PORTALS: Portal[] = [
-  { name: 'AutoScout24', favicon: 'https://www.google.com/s2/favicons?domain=autoscout24.com&sz=128', bg: '#111', border: '#FFCD00' },
-  { name: 'mobile.de',   favicon: 'https://www.google.com/s2/favicons?domain=mobile.de&sz=128',       bg: '#ff6600' },
-  { name: 'coches.net',  favicon: 'https://www.google.com/s2/favicons?domain=coches.net&sz=128',      bg: '#e30613' },
-  { name: 'La Centrale', favicon: 'https://www.google.com/s2/favicons?domain=lacentrale.fr&sz=128',   bg: '#c8102e' },
-  { name: 'marktplaats', initial: 'M', bg: '#002b5c', textColor: '#4db8a4' },
-  { name: '2dehands',    favicon: 'https://www.google.com/s2/favicons?domain=2dehands.be&sz=128',     bg: '#003a78' },
-  { name: 'tutti.ch',    favicon: 'https://www.google.com/s2/favicons?domain=tutti.ch&sz=128',        bg: '#1a1a1a' },
-]
+// ── Animated count (triggers on viewport entry) ────────────────────────────
+function AnimatedCount({ value }: { value: number }) {
+  const [count, setCount] = useState(0)
+  const spanRef = useRef<HTMLSpanElement>(null)
+  const rafRef = useRef<number>(0)
+  const reduced = useReducedMotion() === true
 
-/* ─── Countries with flag images ──────────────────────────────────────── */
-const PAISES = [
-  { code: '',   label: 'Todos los países', flag: '' },
-  { code: 'de', label: 'Alemania',        flag: 'https://flagcdn.com/w40/de.png' },
-  { code: 'es', label: 'España',          flag: 'https://flagcdn.com/w40/es.png' },
-  { code: 'fr', label: 'Francia',         flag: 'https://flagcdn.com/w40/fr.png' },
-  { code: 'nl', label: 'Países Bajos',    flag: 'https://flagcdn.com/w40/nl.png' },
-  { code: 'be', label: 'Bélgica',         flag: 'https://flagcdn.com/w40/be.png' },
-  { code: 'ch', label: 'Suiza',           flag: 'https://flagcdn.com/w40/ch.png' },
-]
+  useEffect(() => {
+    const el = spanRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      obs.disconnect()
+      if (reduced) { setCount(value); return }
+      const start = performance.now()
+      const dur = 1500
+      const tick = (now: number) => {
+        const k = Math.min(1, (now - start) / dur)
+        setCount(Math.round(value * (1 - Math.pow(1 - k, 3))))
+        if (k < 1) rafRef.current = requestAnimationFrame(tick)
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }, { threshold: 0.6 })
+    obs.observe(el)
+    return () => { obs.disconnect(); cancelAnimationFrame(rafRef.current) }
+  }, [value, reduced])
 
-/* ─── Year + mileage domains ──────────────────────────────────────────── */
-const CUR_YEAR = new Date().getFullYear()
-const YEARS: number[] = Array.from({ length: CUR_YEAR - 1989 }, (_, i) => CUR_YEAR - i) // desc
-const KM_MAX = 200_000          // top bucket is open-ended "200.000+"
-const KM_STEP = 5_000
-/* synthetic inventory density across 0..KM_MAX — drives the histogram cue (count is heuristic) */
-const KM_DENSITY = [4, 8, 14, 22, 33, 46, 60, 73, 84, 93, 99, 100, 97, 90, 81, 71, 61, 52, 44, 36, 29, 23, 18, 13, 9, 6, 4, 3]
-
-const fmt = (n: number) => n.toLocaleString('de-DE')
-
-/* ─── Shared field styles (minimalist) ────────────────────────────────── */
-function triggerStyle(open: boolean): React.CSSProperties {
-  return {
-    width: '100%', height: 46, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '0 14px', borderRadius: 10, gap: 8, cursor: 'pointer', fontFamily: 'inherit',
-    background: open ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.05)',
-    border: `1px solid ${open ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.09)'}`,
-    transition: 'all 0.18s',
-  }
+  return <span ref={spanRef}>{count.toLocaleString('es-ES')}</span>
 }
-const LABEL: React.CSSProperties = { fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.32)', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.1 }
-const SECTION: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.07em', textTransform: 'uppercase' }
-function valueStyle(active: boolean): React.CSSProperties {
-  return { fontSize: 13, fontWeight: active ? 600 : 400, color: active ? '#f8fafc' : 'rgba(255,255,255,0.42)', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }
-}
-function Chevron({ open }: { open: boolean }) {
+
+// ── SVG icons ──────────────────────────────────────────────────────────────
+function IconSun() {
   return (
-    <svg width={11} height={11} viewBox="0 0 11 11" style={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: 'rgba(255,255,255,0.32)' }}>
-      <path d="M1.5 3.5l4 4 4-4" stroke="currentColor" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.4 1.4M17.6 17.6L19 19M19 5l-1.4 1.4M6.4 17.6L5 19"/>
     </svg>
   )
 }
-function ClearDot({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
+function IconMoon() {
   return (
-    <div role="button" onClick={onClick}
-      style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}>
-      <svg width={8} height={8} viewBox="0 0 8 8"><path d="M1 1l6 6M7 1L1 7" stroke="rgba(255,255,255,0.75)" strokeWidth={1.5} strokeLinecap="round" /></svg>
-    </div>
+    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/>
+    </svg>
   )
 }
-
-/* ─── Small car icon (logo fallback) ──────────────────────────────────── */
-function CarIcon({ size = 16, color = 'rgba(255,255,255,0.5)' }: { size?: number; color?: string }) {
+function IconArrow() {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 17H3a2 2 0 01-2-2v-4l2-5h14l2 5v4a2 2 0 01-2 2h-2" />
-      <circle cx="7.5" cy="17.5" r="2.5" />
-      <circle cx="16.5" cy="17.5" r="2.5" />
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 17L17 7M9 7h8v8"/>
+    </svg>
+  )
+}
+function IconSearch() {
+  return (
+    <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+    </svg>
+  )
+}
+function IconChevron() {
+  return (
+    <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18l6-6-6-6"/>
     </svg>
   )
 }
 
-/* ─── Brand logo — normalized to equal OPTICAL size across all marks ───── */
-const AR_MAP = LOGO_AR as Record<string, number>
-const LOGO_DENSE = new Set(['pagani.svg', 'wiesmann.svg', 'abarth.svg', 'lexus.svg', 'lancia.svg', 'alpine.svg', 'koenigsegg.svg'])
-const LOGO_THIN = new Set(['lucid.svg', 'rivian.svg', 'jaguar.svg', 'hummer.svg'])
-
-function logoImgStyle(logo: string, box: number): React.CSSProperties {
-  const base: React.CSSProperties = { width: 'auto', height: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)' }
-  if (logo.includes('simpleicons')) {
-    return { ...base, maxWidth: box * 0.64, maxHeight: box * 0.64 }
-  }
-  const file = logo.split('/').pop() || ''
-  const ar = AR_MAP[file] ?? 1
-  let maxW: number, maxH: number, scale = 1
-  if (ar > 2.5) { maxW = box * 0.94; maxH = box * (ar > 7 ? 0.34 : 0.42) }      // wide wordmark
-  else if (ar > 1.4) { maxW = box * 0.88; maxH = box * 0.56 }                   // landscape
-  else if (ar < 0.7) { maxW = box * 0.5; maxH = box * 0.78 }                    // tall
-  else { maxW = box * 0.68; maxH = box * 0.68 }                                 // square emblem
-  if (LOGO_DENSE.has(file)) scale = 0.9
-  if (LOGO_THIN.has(file)) scale = 1.1
-  return { ...base, maxWidth: maxW, maxHeight: maxH, transform: scale !== 1 ? `scale(${scale})` : undefined }
+// ── Feature icons ──────────────────────────────────────────────────────────
+function IconLayers() {
+  return <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/></svg>
+}
+function IconShield() {
+  return <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+}
+function IconChart() {
+  return <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+}
+function IconGarage() {
+  return <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8V6a5 5 0 0110 0v2"/></svg>
+}
+function IconDollar() {
+  return <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
 }
 
-function BrandLogo({ brand, size = 34 }: { brand: Brand; size?: number }) {
-  const [failed, setFailed] = useState(false)
-  if (!brand.logo || failed) {
-    return (
-      <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <CarIcon size={Math.round(size * 0.46)} color="rgba(255,255,255,0.34)" />
-      </div>
-    )
-  }
-  return (
-    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      <img src={brand.logo} alt={brand.name} onError={() => setFailed(true)} style={logoImgStyle(brand.logo, size)} />
-    </div>
-  )
+// ── Feature cards data ─────────────────────────────────────────────────────
+interface Feature {
+  icon: React.ReactNode
+  title: string
+  desc: string
+  highlighted?: boolean
 }
+const FEATURES: Feature[] = [
+  { icon: <IconLayers />, title: 'Índice nacional',  desc: 'Cada punto de venta de España, con su stock y su delta.' },
+  { icon: <IconShield />, title: 'Historial',        desc: 'Km, siniestros, titulares y cargas. Scraping propio.' },
+  { icon: <IconChart />,  title: 'Inteligencia UE',  desc: 'Valor residual y sweet-spot contra 27 mercados.' },
+  { icon: <IconGarage />, title: 'Garaje 360°',      desc: 'Tu stock como activo vivo, moldeable a tu gusto.' },
+  { icon: <IconDollar />, title: 'Finanzas',         desc: 'Margen por coche, cashflow y P&L. All-in-one.', highlighted: true },
+]
 
-/* ─── Minimalist glass overlay ─────────────────────────────────────────── */
-const PANEL_GLASS: React.CSSProperties = {
-  position: 'fixed',
-  zIndex: 500,
-  background: 'rgba(9,8,20,0.74)',
-  backdropFilter: 'blur(40px) saturate(150%)',
-  WebkitBackdropFilter: 'blur(40px) saturate(150%)',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: 14,
-  boxShadow: '0 24px 70px rgba(0,0,0,0.5)',
-  overflow: 'hidden',
-}
-const SEL_BG = 'rgba(255,255,255,0.09)'
-const SEL_BORDER = 'rgba(255,255,255,0.14)'
-const HOVER_BG = 'rgba(255,255,255,0.05)'
-const DIVIDER = 'rgba(255,255,255,0.07)'
+// ── Trust strip stats ──────────────────────────────────────────────────────
+interface Stat { value?: number; display?: string; label: string; accent?: boolean }
+const STATS: Stat[] = [
+  { value: 48213, label: 'fuentes indexadas' },
+  { display: '1,92M', label: 'coches vivos' },
+  { value: 142, label: 'altas hoy', accent: true },
+  { display: '27', label: 'mercados UE cruzados' },
+]
 
-/* ─── Centered modal shell ─────────────────────────────────────────────── */
-function CenterModal({ id, width, children }: { id: string; width: number; children: React.ReactNode }) {
-  // Portal to <body> so the modal is centered on the viewport regardless of any
-  // transformed ancestor (the right-side filter panel uses a transform).
-  return createPortal(
-    <div id={id} style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 500, width: `min(${width}px, 92vw)` }}>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97, y: 6 }}
-        transition={{ duration: 0.2, ease: EXPO }}
-        style={{ ...PANEL_GLASS, position: 'relative', width: '100%' }}
-      >
-        {children}
-      </motion.div>
-    </div>,
-    document.body
-  )
-}
-function ModalHeader({ title, onClose, onBack }: { title: React.ReactNode; onClose: () => void; onBack?: () => void }) {
-  return (
-    <div style={{ padding: '13px 14px 11px', borderBottom: `1px solid ${DIVIDER}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-      {onBack && (
-        <button onClick={onBack} style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-          <svg width={11} height={11} viewBox="0 0 12 12"><path d="M8 2L4 6l4 4" stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
-      )}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '-0.01em' }}>{title}</div>
-      <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-        <svg width={10} height={10} viewBox="0 0 10 10"><path d="M1 1l8 8M9 1L1 9" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} strokeLinecap="round" /></svg>
-      </button>
-    </div>
-  )
-}
-function SearchBox({ value, onChange, placeholder, inputRef }: { value: string; onChange: (v: string) => void; placeholder: string; inputRef?: React.RefObject<HTMLInputElement> }) {
-  return (
-    <div style={{ padding: '10px 14px 6px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 9, padding: '7px 12px' }}>
-        <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={2} strokeLinecap="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-        <input ref={inputRef} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-          style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13, color: '#fff', fontFamily: 'inherit' }} />
-        {value && <button onClick={() => onChange('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', fontSize: 14, lineHeight: 1, padding: 0 }}>×</button>}
-      </div>
-    </div>
-  )
-}
-function FooterActions({ onClear, onDone }: { onClear: () => void; onDone: () => void }) {
-  return (
-    <div style={{ padding: '12px 16px 16px', display: 'flex', gap: 8, borderTop: `1px solid ${DIVIDER}` }}>
-      <button onClick={onClear} style={{ flex: '0 0 auto', padding: '10px 16px', borderRadius: 9, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Limpiar</button>
-      <button onClick={onDone} style={{ flex: 1, padding: '10px 0', borderRadius: 9, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.3)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Listo</button>
-    </div>
-  )
-}
-function useOutside(open: boolean, panelId: string, triggerRef: React.RefObject<HTMLElement>, close: () => void) {
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      const panel = document.getElementById(panelId)
-      if (!panel?.contains(e.target as Node) && !triggerRef.current?.contains(e.target as Node)) close()
-    }
-    if (open) document.addEventListener('mousedown', fn)
-    return () => document.removeEventListener('mousedown', fn)
-  }, [open, panelId, triggerRef, close])
-}
-
-/* ─── Marca y Modelo — 3-step picker (brand → model → submodel) ────────── */
-interface MMState { brand: Brand | null; model: Model | null; submodel: string }
-
-function MarcaModeloField({ value, onChange }: { value: MMState; onChange: (v: MMState) => void }) {
-  const [open, setOpen] = useState(false)
-  const [step, setStep] = useState<'brand' | 'model' | 'submodel'>('brand')
-  const [search, setSearch] = useState('')
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
-
-  const close = useCallback(() => { setOpen(false); setSearch(''); setStep('brand') }, [])
-  useOutside(open, 'mm-panel', triggerRef, close)
-  useEffect(() => { if (open) setTimeout(() => searchRef.current?.focus(), 80) }, [open, step])
-
-  const q = search.toLowerCase()
-  const filteredBrands = BRANDS.filter(b => b.name.toLowerCase().includes(q))
-  const filteredModels = value.brand ? value.brand.models.filter(m => m.name.toLowerCase().includes(q)) : []
-  const filteredSubs = value.model ? value.model.submodels.filter(s => s.toLowerCase().includes(q)) : []
-
-  const label = !value.brand ? 'Cualquier marca'
-    : !value.model ? value.brand.name
-    : !value.submodel ? `${value.brand.name} · ${value.model.name}`
-    : `${value.brand.name} · ${value.model.name} · ${value.submodel}`
-
-  function selectBrand(b: Brand) { onChange({ brand: b, model: null, submodel: '' }); setSearch(''); setStep('model') }
-  function selectModel(m: Model) {
-    onChange({ brand: value.brand, model: m, submodel: '' }); setSearch('')
-    if (m.submodels.length > 0) setStep('submodel'); else close()
-  }
-
-  const title = step === 'brand' ? 'Selecciona una marca'
-    : step === 'model' ? `${value.brand?.name} — modelo`
-    : `${value.model?.name} — versión`
-
-  return (
-    <>
-      <button ref={triggerRef}
-        onClick={() => { setOpen(v => !v); setStep(value.submodel ? 'submodel' : value.brand ? 'model' : 'brand') }}
-        style={triggerStyle(open)}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-          <span style={LABEL}>Marca y modelo</span>
-          <span style={valueStyle(!!value.brand)}>{label}</span>
-        </div>
-        {value.brand
-          ? <ClearDot onClick={e => { e.stopPropagation(); onChange({ brand: null, model: null, submodel: '' }); close() }} />
-          : <Chevron open={open} />}
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <CenterModal id="mm-panel" width={560}>
-            <ModalHeader
-              title={<>
-                {step !== 'brand' && value.brand && <BrandLogo brand={value.brand} size={22} />}
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
-              </>}
-              onClose={close}
-              onBack={step === 'brand' ? undefined : () => {
-                if (step === 'submodel') { setStep('model'); setSearch('') }
-                else { setStep('brand'); setSearch(''); onChange({ brand: null, model: null, submodel: '' }) }
-              }}
-            />
-            <SearchBox value={search} onChange={setSearch} inputRef={searchRef}
-              placeholder={step === 'brand' ? 'Buscar marca…' : step === 'model' ? 'Buscar modelo…' : 'Buscar versión…'} />
-
-            {step === 'brand' && (
-              <div style={{ padding: '4px 14px 14px', maxHeight: '56vh', overflowY: 'auto' }}>
-                <button onClick={() => { onChange({ brand: null, model: null, submodel: '' }); close() }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 10px', borderRadius: 9, marginBottom: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = HOVER_BG)} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                  <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CarIcon size={15} color="rgba(255,255,255,0.5)" /></div>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.6)' }}>Cualquier marca</span>
-                </button>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
-                  {filteredBrands.map(b => {
-                    const sel = value.brand?.name === b.name
-                    return (
-                      <motion.button key={b.name} onClick={() => selectBrand(b)} whileTap={{ scale: 0.97 }} transition={{ duration: 0.12 }}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '11px 6px 8px', background: sel ? SEL_BG : 'transparent', border: `1px solid ${sel ? SEL_BORDER : 'transparent'}`, borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.14s, border-color 0.14s' }}
-                        onMouseEnter={e => { if (!sel) e.currentTarget.style.background = HOVER_BG }}
-                        onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'transparent' }}>
-                        <BrandLogo brand={b} size={30} />
-                        <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.62)', textAlign: 'center', lineHeight: 1.2 }}>{b.name}</span>
-                      </motion.button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {step === 'model' && (
-              <div style={{ maxHeight: '56vh', overflowY: 'auto', padding: '4px 14px 14px' }}>
-                <button onClick={() => { onChange({ brand: value.brand, model: null, submodel: '' }); close() }}
-                  style={{ display: 'flex', width: '100%', padding: '9px 12px', marginBottom: 3, background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = HOVER_BG)} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.6)' }}>Todos los modelos de {value.brand?.name}</span>
-                </button>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  {filteredModels.map(m => {
-                    const sel = value.model?.name === m.name
-                    return (
-                      <button key={m.name} onClick={() => selectModel(m)}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: sel ? SEL_BG : 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', gap: 6 }}
-                        onMouseEnter={e => { if (!sel) e.currentTarget.style.background = HOVER_BG }} onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'transparent' }}>
-                        <span style={{ fontSize: 13, fontWeight: sel ? 600 : 400, color: sel ? '#fff' : 'rgba(255,255,255,0.66)' }}>{m.name}</span>
-                        {m.submodels.length > 0 && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.22)', flexShrink: 0 }}>{m.submodels.length}</span>}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {step === 'submodel' && (
-              <div style={{ maxHeight: '56vh', overflowY: 'auto', padding: '4px 14px 14px' }}>
-                <button onClick={() => { onChange({ brand: value.brand, model: value.model, submodel: '' }); close() }}
-                  style={{ display: 'flex', width: '100%', padding: '9px 12px', marginBottom: 3, background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = HOVER_BG)} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.6)' }}>Todas las versiones de {value.model?.name}</span>
-                </button>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  {filteredSubs.map(s => {
-                    const sel = value.submodel === s
-                    return (
-                      <button key={s} onClick={() => { onChange({ brand: value.brand, model: value.model, submodel: s }); close() }}
-                        style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', background: sel ? SEL_BG : 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}
-                        onMouseEnter={e => { if (!sel) e.currentTarget.style.background = HOVER_BG }} onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'transparent' }}>
-                        <span style={{ fontSize: 13, fontWeight: sel ? 600 : 400, color: sel ? '#fff' : 'rgba(255,255,255,0.66)' }}>{s}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </CenterModal>
-        )}
-      </AnimatePresence>
-    </>
-  )
-}
-
-/* ─── Year column — type-or-pick ──────────────────────────────────────── */
-function YearColumn({ heading, value, onChange, options }: { heading: string; value: number | null; onChange: (y: number | null) => void; options: number[] }) {
-  const [text, setText] = useState('')
-  const typed = text.replace(/\D/g, '')
-  const list = options.filter(y => !typed || String(y).includes(typed))
-  return (
-    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <span style={{ ...LABEL, marginBottom: 6 }}>{heading}</span>
-      <input
-        value={text || (value ?? '')}
-        onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setText(v); onChange(v.length === 4 ? Number(v) : null) }}
-        inputMode="numeric" placeholder="—"
-        style={{ height: 40, borderRadius: 9, padding: '0 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', outline: 'none', width: '100%' }} />
-      <div style={{ marginTop: 6, maxHeight: 152, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {list.map(y => {
-          const sel = value === y
-          return (
-            <button key={y} onClick={() => { onChange(y); setText('') }}
-              style={{ textAlign: 'left', padding: '7px 12px', borderRadius: 7, background: sel ? SEL_BG : 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: sel ? 600 : 400, color: sel ? '#fff' : 'rgba(255,255,255,0.6)' }}
-              onMouseEnter={e => { if (!sel) e.currentTarget.style.background = HOVER_BG }} onMouseLeave={e => { if (!sel) e.currentTarget.style.background = 'transparent' }}>
-              {y}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-/* ─── Año y kilómetros — one field, one widget with both ranges ────────── */
-function AnoKmField({ minY, maxY, kmMin, kmMax, onYear, onKm }: {
-  minY: number | null; maxY: number | null; kmMin: number; kmMax: number;
-  onYear: (lo: number | null, hi: number | null) => void; onKm: (lo: number, hi: number) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [drag, setDrag] = useState<null | 'min' | 'max'>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const trackRef = useRef<HTMLDivElement>(null)
-  const close = useCallback(() => setOpen(false), [])
-  useOutside(open, 'anokm-panel', triggerRef, close)
-
-  const minF = kmMin / KM_MAX, maxF = kmMax / KM_MAX
-  const anoActive = minY != null || maxY != null
-  const kmActive = kmMin > 0 || kmMax < KM_MAX
-  const active = anoActive || kmActive
-  const maxLabel = kmMax >= KM_MAX ? `${fmt(KM_MAX)}+` : fmt(kmMax)
-
-  const anoTxt = !anoActive ? null : (minY != null && maxY != null ? `${minY}–${maxY}` : minY != null ? `desde ${minY}` : `hasta ${maxY}`)
-  const kmTxt = !kmActive ? null : `${fmt(kmMin)}–${maxLabel} km`
-  const label = [anoTxt, kmTxt].filter(Boolean).join('  ·  ') || 'Cualquiera'
-
-  const setLo = (y: number | null) => onYear(y, maxY != null && y != null && y > maxY ? y : maxY)
-  const setHi = (y: number | null) => onYear(minY != null && y != null && y < minY ? y : minY, y)
-
-  useEffect(() => {
-    if (!drag) return
-    const move = (e: PointerEvent) => {
-      const r = trackRef.current?.getBoundingClientRect(); if (!r) return
-      const f = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
-      const km = Math.round((f * KM_MAX) / KM_STEP) * KM_STEP
-      if (drag === 'min') onKm(Math.min(km, kmMax - KM_STEP), kmMax)
-      else onKm(kmMin, Math.max(km, kmMin + KM_STEP))
-    }
-    const up = () => setDrag(null)
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
-    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
-  }, [drag, kmMin, kmMax, onKm])
-
-  const inv = Math.round(KM_DENSITY.reduce((acc, d, i) => {
-    const c = (i + 0.5) / KM_DENSITY.length
-    return acc + (c >= minF && c <= maxF ? d : 0)
-  }, 0) / KM_DENSITY.reduce((a, b) => a + b, 0) * 1_550_000)
-
-  const clearAll = () => { onYear(null, null); onKm(0, KM_MAX) }
-
-  return (
-    <>
-      <button ref={triggerRef} onClick={() => setOpen(v => !v)} style={triggerStyle(open)}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-          <span style={LABEL}>Año y kilómetros</span>
-          <span style={valueStyle(active)}>{label}</span>
-        </div>
-        {active
-          ? <ClearDot onClick={e => { e.stopPropagation(); clearAll(); close() }} />
-          : <Chevron open={open} />}
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <CenterModal id="anokm-panel" width={500}>
-            <ModalHeader title="Año y kilómetros" onClose={close} />
-            <div style={{ maxHeight: '74vh', overflowY: 'auto' }}>
-              {/* ── Año ── */}
-              <div style={{ padding: '14px 18px 4px' }}>
-                <div style={{ ...SECTION, marginBottom: 12 }}>Año de matriculación</div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <YearColumn heading="Desde" value={minY} onChange={setLo} options={maxY != null ? YEARS.filter(y => y <= maxY) : YEARS} />
-                  <div style={{ width: 1, background: DIVIDER }} />
-                  <YearColumn heading="Hasta" value={maxY} onChange={setHi} options={minY != null ? YEARS.filter(y => y >= minY) : YEARS} />
-                </div>
-              </div>
-
-              <div style={{ height: 1, background: DIVIDER, margin: '14px 0 0' }} />
-
-              {/* ── Kilómetros ── */}
-              <div style={{ padding: '16px 20px 6px' }}>
-                <div style={{ ...SECTION, marginBottom: 14 }}>Kilómetros</div>
-                <div ref={trackRef} style={{ position: 'relative', height: 72, touchAction: 'none' }}>
-                  <div style={{ position: 'absolute', inset: '0 0 8px 0', display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-                    {KM_DENSITY.map((d, i) => {
-                      const c = (i + 0.5) / KM_DENSITY.length
-                      const on = c >= minF && c <= maxF
-                      return <div key={i} style={{ flex: 1, height: `${d}%`, borderRadius: '2px 2px 0 0', background: on ? 'rgba(129,140,248,0.6)' : 'rgba(255,255,255,0.07)', transition: 'background 0.12s' }} />
-                    })}
-                  </div>
-                  <div style={{ position: 'absolute', left: 0, right: 0, bottom: 5, height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }} />
-                  <div style={{ position: 'absolute', bottom: 5, height: 3, left: `${minF * 100}%`, width: `${(maxF - minF) * 100}%`, background: 'rgba(129,140,248,0.85)', borderRadius: 2 }} />
-                  {(['min', 'max'] as const).map(h => {
-                    const f = h === 'min' ? minF : maxF
-                    return (
-                      <div key={h} onPointerDown={e => { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); setDrag(h) }}
-                        style={{ position: 'absolute', bottom: -1, left: `${f * 100}%`, transform: 'translateX(-50%)', width: 16, height: 16, borderRadius: '50%', background: '#0b0a1e', border: `2px solid ${drag === h ? '#c7d2fe' : 'rgba(165,180,252,0.95)'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.55)', cursor: drag === h ? 'grabbing' : 'grab', touchAction: 'none', zIndex: 2 }}>
-                        <svg width={8} height={8} viewBox="0 0 8 8" style={{ position: 'absolute', inset: 2, opacity: 0.7 }}><path d="M3 1L1 4l2 3M5 1l2 3-2 3" stroke="#a5b4fc" strokeWidth={1} fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 4 }}>≈ {fmt(inv)} coches en este rango</div>
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, paddingTop: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Desde</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, borderRadius: 9, padding: '0 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                      <input value={fmt(kmMin)} onChange={e => { const v = Number(e.target.value.replace(/\D/g, '')) || 0; onKm(Math.min(v, kmMax - KM_STEP), kmMax) }}
-                        inputMode="numeric" style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: 'inherit' }} />
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>km</span>
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Hasta</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, borderRadius: 9, padding: '0 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}>
-                      <input value={maxLabel} onChange={e => { const raw = e.target.value.replace(/\D/g, ''); const v = raw ? Number(raw) : KM_MAX; onKm(kmMin, Math.max(Math.min(v, KM_MAX), kmMin + KM_STEP)) }}
-                        inputMode="numeric" style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: 14, fontWeight: 600, fontFamily: 'inherit' }} />
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>km</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <FooterActions onClear={clearAll} onDone={close} />
-          </CenterModal>
-        )}
-      </AnimatePresence>
-    </>
-  )
-}
-
-/* ─── País — minimalist inline select ──────────────────────────────────── */
-function PaisSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  const sel = PAISES.find(p => p.code === value) ?? PAISES[0]
-  useEffect(() => {
-    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    if (open) document.addEventListener('mousedown', fn)
-    return () => document.removeEventListener('mousedown', fn)
-  }, [open])
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(v => !v)} style={triggerStyle(open)}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
-          <span style={LABEL}>País</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            {sel.flag && <img src={sel.flag} alt="" style={{ width: 18, height: 13, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />}
-            <span style={valueStyle(value !== '')}>{sel.label}</span>
-          </div>
-        </div>
-        <Chevron open={open} />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, y: 6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4, scale: 0.97 }} transition={{ duration: 0.16, ease: EXPO }}
-            style={{ ...PANEL_GLASS, position: 'absolute', top: 'calc(100% + 8px)', left: 0, minWidth: '100%', zIndex: 300, padding: 4 }}>
-            {PAISES.map(p => {
-              const a = p.code === value
-              return (
-                <button key={p.code} onClick={() => { onChange(p.code); setOpen(false) }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', textAlign: 'left', padding: '8px 12px', borderRadius: 8, background: a ? SEL_BG : 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: a ? 600 : 400, color: a ? '#fff' : 'rgba(255,255,255,0.62)', whiteSpace: 'nowrap' }}
-                  onMouseEnter={e => { if (!a) e.currentTarget.style.background = HOVER_BG }} onMouseLeave={e => { if (!a) e.currentTarget.style.background = 'none' }}>
-                  {p.flag ? <img src={p.flag} alt="" style={{ width: 20, height: 14, borderRadius: 2, objectFit: 'cover' }} /> : <span style={{ width: 20 }} />}
-                  <span>{p.label}</span>
-                </button>
-              )
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-/* ─── Main ─────────────────────────────────────────────────────────────── */
+// ── Landing ────────────────────────────────────────────────────────────────
 export default function Landing() {
   const nav = useNavigate()
   const { isAuthenticated } = useAuthContext()
-  const [navScrolled, setNavScrolled] = useState(false)
-  const [query, setQuery] = useState('')
-  const [marca, setMarca] = useState<MMState>({ brand: null, model: null, submodel: '' })
-  const [pais, setPais] = useState('')
-  const [anoMin, setAnoMin] = useState<number | null>(null)
-  const [anoMax, setAnoMax] = useState<number | null>(null)
-  const [kmMin, setKmMin] = useState(0)
-  const [kmMax, setKmMax] = useState(KM_MAX)
-  const [booting, setBooting] = useState(true)
-  const finishBoot = useCallback(() => setBooting(false), [])
-  useLenis(booting)
+  const prefersReduced = useReducedMotion()
+  const reduced = prefersReduced === true
 
+  const [dark, setDark] = useState(false)
+  const [brand, setBrand] = useState('')
+  const [body,  setBody]  = useState('')
+  const [price, setPrice] = useState('')
+
+  // Hydrate theme from localStorage
   useEffect(() => {
-    const fn = () => setNavScrolled(window.scrollY > 30)
-    window.addEventListener('scroll', fn, { passive: true })
-    return () => window.removeEventListener('scroll', fn)
+    try { if (localStorage.getItem('cardeep-theme') === 'dark') setDark(true) } catch { /* noop */ }
   }, [])
 
-  const heroRef = useRef<HTMLDivElement>(null)
-  const reduced = useReducedMotion()
-  const { scrollYProgress: heroP } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
-  const heroY = useTransform(heroP, [0, 1], ['0%', '15%'])
-  const heroScale = useTransform(heroP, [0, 1], [1, 1.1])
-  const heroFade = useTransform(heroP, [0, 0.8], [1, 0])
-  const heroTextY = useTransform(heroP, [0, 1], ['0px', '-80px'])   // text drifts faster than image — parallax depth
+  // Inject web fonts
+  useEffect(() => {
+    const ids = ['cd-font-gs', 'cd-font-jb']
+    const hrefs = [
+      'https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap',
+      'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap',
+    ]
+    ids.forEach((id, i) => {
+      if (document.getElementById(id)) return
+      const el = document.createElement('link')
+      el.id = id; el.rel = 'stylesheet'; el.href = hrefs[i]
+      document.head.appendChild(el)
+    })
+  }, [])
 
-  function handleEnter() { nav(isAuthenticated ? '/dashboard' : '/login') }
-  function handleSearch(e: React.FormEvent) { e.preventDefault(); nav('/dashboard') }
+  const toggleTheme = () => {
+    setDark(d => {
+      const next = !d
+      try { localStorage.setItem('cardeep-theme', next ? 'dark' : 'light') } catch { /* noop */ }
+      return next
+    })
+  }
 
-  const count = Math.round(
-    1_550_000
-    * (marca.brand ? 0.065 : 1)
-    * (marca.model ? 0.18 : 1)
-    * (marca.submodel ? 0.42 : 1)
-    * (pais ? 0.22 : 1)
-    * (anoMin != null || anoMax != null ? 0.5 : 1)
-    * (kmMin > 0 || kmMax < KM_MAX ? 0.55 : 1)
+  const t = dark ? DARK : LIGHT
+  const dest = isAuthenticated ? '/dashboard' : '/login'
+
+  // Filter counter
+  const brands = [...new Set(STOCK.map(s => s[0]))].sort()
+  const matched = STOCK.filter(([b, bo, p]) =>
+    (!brand || b === brand) && (!body || bo === body) && (!price || p <= Number(price))
   )
+  const filterLabel = matched.length
+    ? `Ver ${matched.length} coche${matched.length === 1 ? '' : 's'}`
+    : 'Sin resultados'
+
+  // Per-mode hero bg
+  const heroCardBg  = dark ? '#1C2129' : '#EEF0F3'
+  const heroGrad    = dark
+    ? 'linear-gradient(180deg,#1C2129 0%,rgba(28,33,41,.9) 20%,rgba(28,33,41,.4) 36%,rgba(28,33,41,.06) 54%,transparent 72%)'
+    : 'linear-gradient(180deg,#EEF0F3 0%,rgba(238,240,243,.9) 20%,rgba(238,240,243,.4) 36%,rgba(238,240,243,.06) 54%,transparent 72%)'
+  const heroRadial  = dark
+    ? 'radial-gradient(ellipse 58% 92% at 50% 32%,#1C2129 0%,rgba(28,33,41,.86) 34%,rgba(28,33,41,.4) 56%,transparent 76%)'
+    : 'radial-gradient(ellipse 58% 92% at 50% 32%,#EEF0F3 0%,rgba(238,240,243,.86) 34%,rgba(238,240,243,.4) 56%,transparent 76%)'
+  const heroMesh    = dark
+    ? 'radial-gradient(ellipse 70% 70% at 62% 38%,rgba(59,130,246,.12) 0%,transparent 60%),radial-gradient(ellipse 55% 55% at 20% 68%,rgba(124,58,237,.08) 0%,transparent 50%)'
+    : 'radial-gradient(ellipse 70% 70% at 62% 38%,rgba(147,197,253,.28) 0%,transparent 60%),radial-gradient(ellipse 55% 55% at 20% 68%,rgba(196,181,253,.18) 0%,transparent 50%)'
+
+  // Select text color for dark mode (native select options inherit bg from OS in dark)
+  const selStyle: React.CSSProperties = {
+    appearance: 'none', WebkitAppearance: 'none', border: 0, background: 'none',
+    outline: 'none', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
+    color: t.ink, cursor: 'pointer', padding: '2px 0 0',
+  }
+  const filterSegStyle: React.CSSProperties = {
+    flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+    textAlign: 'left', padding: '9px 18px', borderRadius: 999, cursor: 'pointer',
+    background: 'none', transition: 'background .18s',
+  }
+  const filterLabelStyle: React.CSSProperties = {
+    fontSize: 10.5, fontWeight: 600, color: t.ink3,
+    textTransform: 'uppercase', letterSpacing: '0.07em',
+  }
 
   return (
-    <div className="cx-landing" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#06060e', position: 'relative' }}>
-      <ShaderBackground />
-      <Cursor />
-      <AnimatePresence>{booting && <Preloader key="cx-preloader" onComplete={finishBoot} />}</AnimatePresence>
+    <div style={{
+      background: t.bg, color: t.ink, minHeight: '100vh',
+      fontFamily: "'General Sans','Segoe UI',system-ui,sans-serif",
+      WebkitFontSmoothing: 'antialiased', letterSpacing: '-0.005em',
+      overflowX: 'hidden', transition: 'background .4s ease,color .4s ease',
+    }}>
+      <style>{`
+        *{box-sizing:border-box}
+        a{color:inherit;text-decoration:none}
+        .cd-press{transition:transform .18s cubic-bezier(.16,1,.3,1),box-shadow .2s,background .2s}
+        .cd-press:hover{transform:translateY(-2px)}
+        .cd-press:active{transform:scale(.98)}
+        .cd-link{transition:opacity .2s}
+        .cd-link:hover{opacity:.6}
+        .cd-fseg:hover{background:${dark ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.45)'} !important}
+        @media(max-width:680px){.cd-nav-links{display:none!important}}
+        @media(max-width:520px){.cd-filter-bar{flex-wrap:wrap;border-radius:20px!important;padding:8px!important}}
+      `}</style>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <div style={{ width: '100%', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <motion.section
+          initial={reduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.9, ease: EXPO }}
+          style={{
+            position: 'relative', width: '100%', maxWidth: 1536,
+            height: 'calc(100dvh - 32px)', minHeight: 600,
+            borderRadius: 36, overflow: 'hidden',
+            background: heroCardBg,
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+          }}
+        >
+          {/* Ambient mesh — substitutes for hero video */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: heroMesh }} />
+          {/* Top-to-transparent gradient overlay */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: heroGrad }} />
+          {/* Radial spotlight orb top-center */}
+          <div style={{ position: 'absolute', top: 64, left: '50%', transform: 'translateX(-50%)', width: 'min(1080px,100%)', height: 420, zIndex: 2, pointerEvents: 'none', background: heroRadial }} />
 
-      {/* ── NAVBAR ─────────────────────────────────────────────────────── */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 400, height: 60, display: 'flex', alignItems: 'center',
-        padding: '0 clamp(20px,4vw,48px)', transition: 'background 0.3s, border-color 0.3s',
-        background: navScrolled ? 'rgba(7,7,15,0.8)' : 'transparent',
-        backdropFilter: navScrolled ? 'blur(20px) saturate(180%)' : 'none',
-        WebkitBackdropFilter: navScrolled ? 'blur(20px) saturate(180%)' : 'none',
-        borderBottom: navScrolled ? '1px solid rgba(255,255,255,0.07)' : '1px solid transparent',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 14px rgba(99,102,241,0.4)' }}>
-            <div style={{ width: 10, height: 10, borderRadius: 3, background: 'rgba(255,255,255,0.92)' }} />
+          {/* Content */}
+          <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+            {/* NAV */}
+            <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px', width: '100%' }}>
+              {/* Logo */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 25, height: 25, borderRadius: 6, background: 'linear-gradient(135deg,#3B82F6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(255,255,255,.9)' }} />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: '-0.035em', color: t.ink }}>cardeep</span>
+              </div>
+
+              {/* Nav links */}
+              <ul className="cd-nav-links" style={{ display: 'flex', alignItems: 'center', gap: 30, listStyle: 'none', margin: 0, padding: 0, color: t.ink2, fontSize: 14 }}>
+                {['Índice', 'Inteligencia', 'Marketplace', 'Garaje 360°'].map(l => (
+                  <li key={l} className="cd-link"><a href="#bento">{l}</a></li>
+                ))}
+              </ul>
+
+              {/* Actions */}
+              <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
+                <button onClick={toggleTheme} aria-label="Cambiar tema" className="cd-press" style={{ width: 40, height: 40, borderRadius: 999, border: `1px solid ${t.line}`, background: dark ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.6)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', color: t.ink, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 }}>
+                  {dark ? <IconSun /> : <IconMoon />}
+                </button>
+                <button onClick={() => nav(dest)} className="cd-press" style={{ display: 'flex', alignItems: 'center', gap: 10, background: t.ctl, color: t.ctlInk, borderRadius: 999, padding: '7px 18px 7px 8px', fontSize: 14, fontWeight: 500, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <span style={{ background: 'rgba(255,255,255,.2)', padding: 6, borderRadius: 999, display: 'grid', placeItems: 'center' }}><IconArrow /></span>
+                  Ver demo
+                </button>
+              </div>
+            </nav>
+
+            {/* HERO TEXT + FILTER BAR */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', width: '100%', padding: '6px 24px 30px', textAlign: 'center' }}>
+              <motion.h1
+                initial={reduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, ease: EXPO, delay: 0.15 }}
+                style={{ fontWeight: 500, fontSize: 'clamp(34px,5vw,60px)', color: dark ? '#E0DDD6' : '#2f3744', margin: 0, letterSpacing: '-0.035em', lineHeight: 1.02 }}
+              >
+                El mercado entero,<br />en un índice vivo.
+              </motion.h1>
+
+              <motion.p
+                initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: EXPO, delay: 0.3 }}
+                style={{ fontSize: 'clamp(14px,1.3vw,17px)', color: t.ink2, lineHeight: 1.5, maxWidth: 440, margin: '14px 0 0' }}
+              >
+                Indexamos cada plataforma de España y te decimos, en claro, si un coche está bien comprado.
+              </motion.p>
+
+              {/* GLASS FILTER BAR */}
+              <motion.div
+                initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: EXPO, delay: 0.42 }}
+                style={{ marginTop: 26, width: 'min(880px,100%)' }}
+              >
+                <div className="cd-filter-bar" style={{
+                  display: 'flex', alignItems: 'stretch', gap: 6, padding: 7, borderRadius: 999,
+                  background: dark ? 'rgba(20,24,31,.52)' : 'rgba(255,255,255,.42)',
+                  backdropFilter: 'blur(26px) saturate(165%)', WebkitBackdropFilter: 'blur(26px) saturate(165%)',
+                  border: `1px solid ${dark ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.6)'}`,
+                  boxShadow: dark
+                    ? '0 22px 60px -26px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.1)'
+                    : '0 22px 60px -26px rgba(38,46,62,.5),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(40,48,64,.06)',
+                }}>
+                  {/* Marca */}
+                  <label className="cd-fseg" style={filterSegStyle}>
+                    <span style={filterLabelStyle}>Marca</span>
+                    <select value={brand} onChange={e => setBrand(e.target.value)} style={selStyle}>
+                      <option value="">Cualquiera</option>
+                      {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </label>
+                  <div style={{ width: 1, background: dark ? 'rgba(255,255,255,.1)' : 'rgba(40,48,64,.12)', margin: '9px 0' }} />
+
+                  {/* Carrocería */}
+                  <label className="cd-fseg" style={filterSegStyle}>
+                    <span style={filterLabelStyle}>Carrocería</span>
+                    <select value={body} onChange={e => setBody(e.target.value)} style={selStyle}>
+                      <option value="">Cualquiera</option>
+                      <option value="suv">SUV</option>
+                      <option value="hatch">Compacto</option>
+                      <option value="estate">Familiar</option>
+                    </select>
+                  </label>
+                  <div style={{ width: 1, background: dark ? 'rgba(255,255,255,.1)' : 'rgba(40,48,64,.12)', margin: '9px 0' }} />
+
+                  {/* Precio máx */}
+                  <label className="cd-fseg" style={filterSegStyle}>
+                    <span style={filterLabelStyle}>Precio máx</span>
+                    <select value={price} onChange={e => setPrice(e.target.value)} style={selStyle}>
+                      <option value="">Sin límite</option>
+                      <option value="15000">15.000 €</option>
+                      <option value="20000">20.000 €</option>
+                      <option value="25000">25.000 €</option>
+                      <option value="30000">30.000 €</option>
+                    </select>
+                  </label>
+
+                  {/* Search CTA */}
+                  <button onClick={() => nav(dest)} className="cd-press" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 9, background: t.ctl, color: t.ctlInk, borderRadius: 999, padding: '0 24px', fontSize: 14.5, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 10px 24px -10px rgba(0,0,0,.5)' }}>
+                    <IconSearch />
+                    <span>{filterLabel}</span>
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* BOTTOM-LEFT GLASS CARD */}
+            <motion.div
+              initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: EXPO, delay: 0.55 }}
+              style={{
+                position: 'absolute', left: 28, bottom: 28, zIndex: 11,
+                padding: 20, borderRadius: 26,
+                background: t.glass, backdropFilter: 'blur(26px) saturate(150%)',
+                WebkitBackdropFilter: 'blur(26px) saturate(150%)',
+                border: `1px solid ${t.glassBrd}`,
+                boxShadow: `${t.shadow},inset 0 1px 0 rgba(255,255,255,.6)`,
+                display: 'flex', flexDirection: 'column', gap: 14, minWidth: 190,
+              }}
+            >
+              <div>
+                <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: 32, fontWeight: 600, letterSpacing: '-0.03em', color: dark ? t.ink : '#1b2330' }}>
+                  <AnimatedCount value={48213} />
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: t.ink3, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3 }}>fuentes vivas</div>
+              </div>
+              <button onClick={() => nav(dest)} className="cd-press" style={{ display: 'flex', alignItems: 'center', gap: 9, background: t.panel, borderRadius: 999, padding: '7px 16px 7px 7px', alignSelf: 'flex-start', boxShadow: t.shadowSm, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <span style={{ background: t.mint2, padding: 6, borderRadius: 999, display: 'grid', placeItems: 'center' }}>
+                  <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={t.mint} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: dark ? t.ink : '#1b2330' }}>Explorar el índice</span>
+              </button>
+            </motion.div>
+
+            {/* BOTTOM-RIGHT CORNER-CUT CARD */}
+            <motion.div
+              initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: EXPO, delay: 0.65 }}
+              style={{ position: 'absolute', bottom: 0, right: 0, zIndex: 11, padding: '28px 28px 28px 56px', background: t.bg, borderTopLeftRadius: 40, display: 'flex', alignItems: 'center', gap: 20 }}
+            >
+              {/* Corner SVG cut-outs to blend with page bg */}
+              <div style={{ position: 'absolute', top: -40, right: 0, width: 40, height: 40, pointerEvents: 'none' }}>
+                <svg width="100%" height="100%" viewBox="0 0 56 56" fill="none">
+                  <path d="M56 56V0C56 30.9279 30.9279 56 0 56H56Z" fill={t.bg} />
+                </svg>
+              </div>
+              <div style={{ position: 'absolute', bottom: 0, left: -40, width: 40, height: 40, pointerEvents: 'none' }}>
+                <svg width="100%" height="100%" viewBox="0 0 56 56" fill="none">
+                  <path d="M56 56H0C30.9279 56 56 30.9279 56 0V56Z" fill={t.bg} />
+                </svg>
+              </div>
+              <button onClick={() => nav(dest)} className="cd-press" style={{ width: 54, height: 54, borderRadius: 999, background: t.panel, border: `1px solid ${t.line}`, display: 'grid', placeItems: 'center', color: t.ink, boxShadow: t.shadowSm, cursor: 'pointer', flexShrink: 0 }}>
+                <IconArrow />
+              </button>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: 500, color: t.ink }}>Dossier de inteligencia</div>
+                <button onClick={() => nav(dest)} className="cd-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: t.ink3, marginTop: 3, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Ver un ejemplo</span>
+                  <IconChevron />
+                </button>
+              </div>
+            </motion.div>
+
           </div>
-          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.13em', background: 'linear-gradient(120deg,#c4b5fd,#818cf8,#67e8f9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CARDEEP</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
-          {['Platform', 'Coverage', 'Pricing'].map(l => (
-            <button key={l} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.5)', fontFamily: 'inherit', transition: 'color 0.18s' }}
-              onMouseEnter={e => ((e.target as HTMLElement).style.color = '#fff')} onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.5)')}>{l}</button>
+        </motion.section>
+      </div>
+
+      {/* ── TRUST STRIP ──────────────────────────────────────────────────── */}
+      <section id="stats" style={{ width: 'min(1200px,calc(100% - 32px))', margin: '30px auto 0' }}>
+        <motion.div
+          initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: EXPO }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 1, borderRadius: 22, overflow: 'hidden', background: t.line, border: `1px solid ${t.line}`, boxShadow: t.shadowSm }}
+        >
+          {STATS.map(({ value, display, label, accent }) => (
+            <div key={label} style={{ background: t.panel, padding: '22px 24px' }}>
+              <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: 27, fontWeight: 600, letterSpacing: '-0.03em', color: accent ? t.mint : t.ink }}>
+                {accent && <span>+</span>}
+                {value !== undefined ? <AnimatedCount value={value} /> : <span>{display}</span>}
+              </div>
+              <div style={{ fontSize: 12.5, color: t.ink3, marginTop: 3 }}>{label}</div>
+            </div>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* ── BENTO ────────────────────────────────────────────────────────── */}
+      <section id="bento" style={{ width: 'min(1200px,calc(100% - 32px))', margin: '80px auto 0' }}>
+        <motion.div
+          initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: EXPO }}
+          style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, letterSpacing: '0.06em', color: t.ink3 }}
+        >
+          Una plataforma · todo el ciclo
+        </motion.div>
+        <motion.h2
+          initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: EXPO, delay: 0.06 }}
+          style={{ fontWeight: 600, fontSize: 'clamp(26px,3.2vw,40px)', letterSpacing: '-0.03em', margin: '12px 0 0', maxWidth: 600, color: t.ink }}
+        >
+          Lo que hoy vive repartido en seis pestañas, aquí en una.
+        </motion.h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(205px,1fr))', gap: 14, marginTop: 34 }}>
+          {FEATURES.map(({ icon, title, desc, highlighted }, i) => (
+            <motion.button
+              key={title}
+              initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: EXPO, delay: i * 0.07 }}
+              onClick={() => nav(dest)}
+              className="cd-press"
+              style={{
+                background: highlighted ? t.ctl : t.panel,
+                border: `1px solid ${highlighted ? t.ctl : t.line}`,
+                borderRadius: 24, padding: 22,
+                boxShadow: t.shadowSm,
+                color: highlighted ? t.ctlInk : t.ink,
+                textAlign: 'left', cursor: 'pointer',
+                fontFamily: "'General Sans','Segoe UI',system-ui,sans-serif",
+                display: 'block', width: '100%',
+              }}
+            >
+              {icon}
+              <div style={{ fontWeight: 600, fontSize: 16, marginTop: 15 }}>{title}</div>
+              <p style={{ fontSize: 13, lineHeight: 1.5, color: highlighted ? 'rgba(255,255,255,.7)' : t.ink2, margin: '6px 0 0' }}>{desc}</p>
+            </motion.button>
           ))}
         </div>
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12 }}>
-          <button onClick={handleEnter} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.5)', fontFamily: 'inherit', transition: 'color 0.18s' }}
-            onMouseEnter={e => ((e.target as HTMLElement).style.color = '#fff')} onMouseLeave={e => ((e.target as HTMLElement).style.color = 'rgba(255,255,255,0.5)')}>Log In</button>
-          <motion.button onClick={handleEnter} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.14, ease: EXPO }}
-            style={{ padding: '7px 20px', borderRadius: 999, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.16)', backdropFilter: 'blur(12px)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Sign In</motion.button>
-        </div>
-      </nav>
+      </section>
 
-      {/* ── HERO ───────────────────────────────────────────────────────── */}
-      <div ref={heroRef} style={{ position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden' }}>
-        {/* cinematic image — flipped horizontally, parallax + Ken Burns */}
-        <motion.div style={{ position: 'absolute', inset: '-8% 0 0 0', y: reduced ? 0 : heroY, scale: reduced ? 1 : heroScale, willChange: 'transform' }}>
-          <div className={reduced ? undefined : 'cx-kenburns'} style={{ width: '100%', height: '108%' }}>
-            <img src={HERO_IMG} alt="" {...{ fetchpriority: 'high' }} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 64%' }} />
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <section style={{ width: 'min(1200px,calc(100% - 32px))', margin: '80px auto 90px' }}>
+        <motion.div
+          initial={reduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: EXPO }}
+          style={{ borderRadius: 34, padding: '64px 40px', textAlign: 'center', background: t.panel, border: `1px solid ${t.line}`, boxShadow: t.shadow }}
+        >
+          <h2 style={{ fontWeight: 600, fontSize: 'clamp(28px,3.6vw,46px)', letterSpacing: '-0.032em', lineHeight: 1.04, margin: '0 auto', maxWidth: 620, color: t.ink }}>
+            El mapa completo de un mercado que hoy nadie tiene entero.
+          </h2>
+          <p style={{ fontSize: 16.5, lineHeight: 1.55, color: t.ink2, margin: '18px auto 0', maxWidth: 500 }}>
+            Opera con el índice nacional y la inteligencia europea de tu lado.
+          </p>
+          <div style={{ display: 'flex', gap: 11, justifyContent: 'center', marginTop: 28, flexWrap: 'wrap' }}>
+            <button onClick={() => nav(dest)} className="cd-press" style={{ fontWeight: 600, fontSize: 15, color: t.ctlInk, background: t.ctl, padding: '16px 30px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              Explorar el índice
+            </button>
+            <button onClick={() => nav(dest)} className="cd-press" style={{ fontWeight: 500, fontSize: 15, color: t.ink, background: t.panel2, padding: '16px 30px', borderRadius: 999, border: `1px solid ${t.line}`, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Para dealers
+            </button>
           </div>
         </motion.div>
-        {/* grades: bottom fade + left/right scrim for legibility */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(7,7,15,0.34) 0%, rgba(7,7,15,0.05) 28%, rgba(7,7,15,0.5) 72%, #06060e 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(7,7,15,0.72) 0%, rgba(7,7,15,0.2) 32%, transparent 50%, rgba(7,7,15,0.4) 100%)' }} />
 
-        <motion.div style={{ position: 'absolute', inset: 0, opacity: reduced ? 1 : heroFade, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'clamp(24px,5vw,80px)', padding: '88px clamp(20px,5vw,72px) 64px', pointerEvents: 'none' }}>
-          {/* LEFT — editorial title over the image */}
-          <motion.div style={{ pointerEvents: 'auto', maxWidth: 'min(640px, 56vw)', flexShrink: 1, minWidth: 0, y: reduced ? 0 : heroTextY }}>
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EXPO, delay: 0.1 }}
-              style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(196,181,253,0.9)' }}>
-              Inteligencia · Mercado · 6 países UE
-            </motion.div>
-            <h1 style={{ margin: '18px 0 0', fontSize: 'clamp(2.7rem,1.3rem+4.9vw,5.4rem)', lineHeight: 0.97, fontWeight: 700, letterSpacing: '-0.045em', color: '#fff' }}>
-              {['La biblia del', 'coche usado', 'en Europa.'].map((ln, i) => (
-                <span key={i} style={{ display: 'block', overflow: 'hidden', paddingBottom: '0.03em' }}>
-                  <motion.span style={{ display: 'block' }} initial={reduced ? { y: 0 } : { y: '115%' }} animate={{ y: '0%' }} transition={{ duration: 0.9, ease: EXPO, delay: 0.25 + i * 0.1 }}>
-                    {i === 2 ? <span style={{ background: 'linear-gradient(120deg,#c4b5fd,#818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{ln}</span> : ln}
-                  </motion.span>
-                </span>
-              ))}
-            </h1>
-            <motion.p initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EXPO, delay: 0.36 }}
-              style={{ margin: '24px 0 0', maxWidth: '46ch', fontSize: 'clamp(1rem,0.94rem+0.32vw,1.2rem)', lineHeight: 1.6, color: 'rgba(255,255,255,0.72)' }}>
-              Indexamos, verificamos y deduplicamos el inventario de seis mercados. Una sola plataforma para el profesional que mueve coches entre fronteras.
-            </motion.p>
-          </motion.div>
-
-          {/* RIGHT — narrow glass search panel (more image than panel) */}
-          <motion.aside initial={{ opacity: 0, x: 28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EXPO, delay: 0.25 }}
-            style={{
-              pointerEvents: 'auto', position: 'relative', boxSizing: 'border-box', textAlign: 'left', flexShrink: 0,
-              width: 'clamp(318px, 25vw, 356px)', maxWidth: '100%', display: 'flex', flexDirection: 'column', gap: 9,
-              padding: '18px 18px 15px', borderRadius: 22,
-              background: 'linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02) 64%)',
-              backdropFilter: 'blur(40px) saturate(180%)', WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-              border: '1px solid rgba(255,255,255,0.14)',
-              boxShadow: '0 30px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.28)',
-            }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(196,181,253,0.9)', textTransform: 'uppercase', marginBottom: 1 }}>Busca en 6 países</div>
-            <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 9, height: 44, padding: '0 13px', borderRadius: 11, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth={2} strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-              <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="BMW Serie 3, Audi A4…"
-                style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', fontSize: 14, color: '#fff', fontFamily: 'inherit' }} />
-            </form>
-            <MarcaModeloField value={marca} onChange={setMarca} />
-            <PaisSelect value={pais} onChange={setPais} />
-            <AnoKmField
-              minY={anoMin} maxY={anoMax} kmMin={kmMin} kmMax={kmMax}
-              onYear={(lo, hi) => { setAnoMin(lo); setAnoMax(hi) }}
-              onKm={(lo, hi) => { setKmMin(lo); setKmMax(hi) }}
-            />
-            <motion.button onClick={handleSearch} whileHover={{ scale: 1.012 }} whileTap={{ scale: 0.985 }} transition={{ duration: 0.14, ease: EXPO }}
-              style={{ width: '100%', padding: '12px 0', borderRadius: 11, background: 'linear-gradient(120deg,#6366f1,#3b82f6)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em', marginTop: 2, boxShadow: '0 8px 28px rgba(99,102,241,0.32)' }}>
-              Mostrar {count.toLocaleString('de-DE')} resultados
-            </motion.button>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, paddingTop: 8, marginTop: 2, borderTop: `1px solid ${DIVIDER}` }}>
-              <div style={{ display: 'flex' }}>
-                {PORTALS.slice(0, 6).map((p, i) => (
-                  <div key={p.name} title={p.name}
-                    style={{ width: 22, height: 22, borderRadius: 6, background: p.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: i > 0 ? -5 : 0, boxShadow: '0 4px 12px rgba(0,0,0,0.55)', position: 'relative', zIndex: PORTALS.length - i, flexShrink: 0, border: `1.5px solid ${p.border ?? 'rgba(255,255,255,0.1)'}`, transform: 'rotate(8deg)', overflow: 'hidden' }}>
-                    {p.favicon
-                      ? <img src={p.favicon} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      : <span style={{ fontSize: 9, fontWeight: 800, color: p.textColor ?? '#fff', lineHeight: 1, fontFamily: 'Inter, sans-serif' }}>{p.initial}</span>}
-                  </div>
-                ))}
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>28.000+ dealers</span>
+        {/* Footer row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20, flexWrap: 'wrap', marginTop: 30, color: t.ink3, fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <div style={{ width: 19, height: 19, borderRadius: 4, background: 'linear-gradient(135deg,#3B82F6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 7, height: 7, borderRadius: 1.5, background: 'rgba(255,255,255,.9)' }} />
             </div>
-          </motion.aside>
-        </motion.div>
-
-        {/* scroll cue */}
-        <motion.div aria-hidden style={{ position: 'absolute', bottom: 22, left: '50%', x: '-50%', opacity: reduced ? 1 : heroFade }}>
-          <motion.div animate={{ y: [0, 7, 0] }} transition={{ duration: 1.8, ease: 'easeInOut', repeat: Infinity }}
-            style={{ width: 22, height: 36, borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.3)', display: 'flex', justifyContent: 'center', paddingTop: 7 }}>
-            <div style={{ width: 3, height: 7, borderRadius: 2, background: 'rgba(255,255,255,0.6)' }} />
-          </motion.div>
-        </motion.div>
-      </div>
-
-      {/* ── SCROLL NARRATIVE ───────────────────────────────────────────── */}
-      <LandingSections onEnter={handleEnter} />
-      </div>
-
-      <style>{`
-        input::placeholder { color: rgba(255,255,255,0.33) !important; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 4px; }
-        html.lenis, html.lenis body { height: auto; }
-        .lenis.lenis-smooth { scroll-behavior: auto !important; }
-        .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
-        .lenis.lenis-stopped { overflow: hidden; }
-        @media (pointer: fine) { .cx-landing, .cx-landing * { cursor: none !important; } }
-        .cx-landing a:focus-visible, .cx-landing button:focus-visible, .cx-landing input:focus-visible, .cx-landing [tabindex]:focus-visible {
-          outline: 2px solid #818cf8; outline-offset: 3px; border-radius: 8px;
-        }
-        .cx-kenburns { animation: cxKenBurns 26s ease-in-out infinite; will-change: transform; transform-origin: center; }
-        @keyframes cxKenBurns { 0%,100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-        @media (prefers-reduced-motion: reduce) { .cx-kenburns { animation: none; } }
-      `}</style>
+            <span style={{ fontWeight: 700, fontSize: 15, color: t.ink, letterSpacing: '-0.035em' }}>cardeep</span>
+            <span style={{ marginLeft: 6 }}>Cobertura total. Cero ruido.</span>
+          </div>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11 }}>© 2026 · España</div>
+        </div>
+      </section>
     </div>
   )
 }

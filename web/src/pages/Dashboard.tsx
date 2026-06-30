@@ -68,6 +68,28 @@ const DEALER = {
   ],
 }
 
+const TOP_DEALS = [
+  { id: 'td1', model: 'Peugeot 3008 1.5 BlueHDi', location: 'Madrid',   price: 21_900, marketPrice: 24_100, score: 94, daysListed:  3, delta: -800   },
+  { id: 'td2', model: 'VW Golf 1.5 TSI',           location: 'Toledo',   price: 17_300, marketPrice: 18_900, score: 88, daysListed:  6, delta: -500   },
+  { id: 'td3', model: 'Audi A4 Avant 2.0 TDI',     location: 'Valencia', price: 26_300, marketPrice: 28_750, score: 86, daysListed: 18, delta: -1_100 },
+]
+
+const MARKET_POS = {
+  priceVsMkt: -3.8, // % below market median — good
+  myDays:     47,
+  mktDays:    39,
+}
+
+const TOP_MODELS = [
+  { model: 'VW Golf',      sold: 7, revenue: 121_000 },
+  { model: 'BMW 320d',     sold: 5, revenue: 142_500 },
+  { model: 'Audi A4',      sold: 4, revenue: 114_000 },
+  { model: 'Seat León',    sold: 4, revenue:  76_000 },
+  { model: 'Peugeot 3008', sold: 3, revenue:  69_000 },
+]
+
+const MAX_MODELS_SOLD = Math.max(...TOP_MODELS.map(m => m.sold))
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; prefix?: string; suffix?: string; decimals?: number }) {
@@ -107,6 +129,12 @@ function renderBold(text: string, color: string): React.ReactNode {
   return text.split(/\*\*(.*?)\*\*/g).map((p, i) =>
     i % 2 === 1 ? <strong key={i} style={{ fontWeight: 700, color }}>{p}</strong> : <span key={i}>{p}</span>
   )
+}
+
+function scoreColor(score: number): string {
+  if (score >= 85) return '#5b8df8'
+  if (score >= 70) return '#f59e0b'
+  return '#94a3b8'
 }
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
@@ -649,6 +677,293 @@ function ChatCompact({ kpi, dark, username }: { kpi: KpiData; dark: boolean; use
   )
 }
 
+// ── Oportunidades (top chollos · deal-score) ──────────────────────────────────
+
+function OportunidadesPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
+  const c = tok(dark)
+  return (
+    <GCard dark={dark} style={{ height: '100%' }}>
+      <div style={{ padding: '18px 20px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
+          <div>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Oportunidades</h2>
+            <p style={{ fontSize: 10.5, color: c.t4 }}>Top chollos · deal-score en vivo</p>
+          </div>
+          <button
+            onClick={onNavigate}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,141,248,0.10)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 3,
+              padding: '4px 8px', borderRadius: 7,
+              color: '#5b8df8', fontSize: 10.5, fontWeight: 600,
+              fontFamily: 'Inter, system-ui', transition: 'background 120ms',
+            }}
+          >
+            ver todo <ChevronRight style={{ width: 11, height: 11 }} />
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, flex: 1 }}>
+          {TOP_DEALS.map((deal, i) => {
+            const sc = scoreColor(deal.score)
+            const pctUnder = Math.round(((deal.marketPrice - deal.price) / deal.marketPrice) * 100)
+            return (
+              <motion.div
+                key={deal.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.18 + i * 0.08, duration: 0.34 }}
+                whileHover={{ y: -2, transition: { duration: 0.18 } }}
+                style={{
+                  padding: '13px 13px 11px',
+                  borderRadius: 12,
+                  background: c.subBg,
+                  border: `1px solid ${c.subBord}`,
+                  borderLeft: `2px solid ${sc}`,
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                    background: `${sc}16`, border: `1px solid ${sc}28`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: sc, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                      {deal.score}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: sc }}>−{pctUnder}% mkt</span>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, color: c.t1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {deal.model}
+                  </div>
+                  <div style={{ fontSize: 10, color: c.t4, marginTop: 2 }}>
+                    {deal.location} · {deal.daysListed}d
+                    {deal.delta < 0 ? ` · −€${Math.abs(deal.delta).toLocaleString()}` : ''}
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 14, fontWeight: 700, color: c.t1, fontVariantNumeric: 'tabular-nums' }}>
+                  €{deal.price.toLocaleString()}
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </GCard>
+  )
+}
+
+// ── Posición de mercado · mini ─────────────────────────────────────────────────
+
+function MarketPositionMini({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
+  const c = tok(dark)
+  return (
+    <GCard dark={dark} style={{ height: '100%' }}>
+      <div style={{ padding: '18px 16px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1 }}>Posición mercado</h2>
+          <button onClick={onNavigate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.t4, padding: 0 }}>
+            <ChevronRight style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+          {/* Price vs market */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.22, duration: 0.34 }}
+            style={{ padding: '12px', borderRadius: 11, background: c.subBg, border: `1px solid ${c.subBord}` }}
+          >
+            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: c.t4, marginBottom: 7 }}>
+              Precio vs mercado
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: '#22c55e', lineHeight: 1, marginBottom: 3 }}>
+              {MARKET_POS.priceVsMkt.toFixed(1)}%
+            </div>
+            <div style={{ fontSize: 10, color: c.t4, marginBottom: 7 }}>bajo la mediana UE</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <ArrowUpRight style={{ width: 10, height: 10, color: '#22c55e' }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e' }}>posición competitiva</span>
+            </div>
+          </motion.div>
+
+          {/* Days vs market */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.30, duration: 0.34 }}
+            style={{ padding: '12px', borderRadius: 11, background: c.subBg, border: `1px solid ${c.subBord}`, flex: 1 }}
+          >
+            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: c.t4, marginBottom: 7 }}>
+              Días stock vs mkt
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 8 }}>
+              <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: '#f87171', lineHeight: 1 }}>
+                {MARKET_POS.myDays}d
+              </span>
+              <span style={{ fontSize: 10, color: c.t4 }}>tu dealer</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: c.t4, marginBottom: 4 }}>
+              <span>Tu dealer</span><span>Mediana {MARKET_POS.mktDays}d</span>
+            </div>
+            <div style={{ position: 'relative', height: 6, borderRadius: 99, background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)', overflow: 'visible' }}>
+              <div style={{
+                position: 'absolute',
+                left: `${(MARKET_POS.mktDays / 70) * 100}%`,
+                top: -3, width: 2, height: 12, borderRadius: 1,
+                background: '#22c55e',
+              }} />
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${(MARKET_POS.myDays / 70) * 100}%` }}
+                transition={{ duration: 0.7, delay: 0.45, ease: [0.32, 0.72, 0, 1] }}
+                style={{ height: '100%', borderRadius: 99, background: '#f87171', opacity: 0.80 }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 6 }}>
+              <ArrowDownRight style={{ width: 10, height: 10, color: '#f87171' }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: '#f87171' }}>
+                +{MARKET_POS.myDays - MARKET_POS.mktDays}d sobre mediana
+              </span>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </GCard>
+  )
+}
+
+// ── Revenue & Coste chart ─────────────────────────────────────────────────────
+
+function RevenueChart({ data, dark, onNavigate }: { data: KpiData['marginHistory']; dark: boolean; onNavigate: () => void }) {
+  const c = tok(dark)
+  const tickColor = dark ? '#3f3f5a' : '#94a3b8'
+  const gridColor = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
+
+  return (
+    <GCard dark={dark} style={{ height: '100%' }}>
+      <div style={{ padding: '18px 20px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexShrink: 0 }}>
+          <div>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Revenue & Coste</h2>
+            <p style={{ fontSize: 10.5, color: c.t4 }}>6 meses · ingresos vs coste</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10.5, color: c.t4 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 12, height: 2, background: '#5b8df8', display: 'inline-block', borderRadius: 1 }} />
+                Revenue
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 12, borderTop: '2px dashed rgba(248,113,113,0.65)', display: 'inline-block' }} />
+                Coste
+              </span>
+            </div>
+            <button
+              onClick={onNavigate}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 2,
+                color: c.t4, fontSize: 10.5, fontFamily: 'Inter, system-ui', padding: 0,
+              }}
+            >
+              Finance <ChevronRight style={{ width: 11, height: 11 }} />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gr-rev" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#5b8df8" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#5b8df8" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gr-cost" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor="#f87171" stopOpacity={0.14} />
+                  <stop offset="100%" stopColor="#f87171" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
+              <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
+              <ChartTooltip
+                contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: `1px solid ${c.cardBord}`, borderRadius: 10, fontSize: 11.5, color: c.t1, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+                formatter={(v: number, name: string) => [`€${v.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Coste']}
+                cursor={{ stroke: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}
+              />
+              <Area type="monotone" dataKey="revenue" stroke="#5b8df8" strokeWidth={2} fill="url(#gr-rev)" dot={false} activeDot={{ r: 3, fill: '#5b8df8', strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="cost" stroke="#f87171" strokeWidth={1.5} strokeDasharray="4 4" fill="url(#gr-cost)" dot={false} activeDot={{ r: 3, fill: '#f87171', strokeWidth: 0 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </GCard>
+  )
+}
+
+// ── Top modelos vendidos ───────────────────────────────────────────────────────
+
+function TopModelsPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
+  const c = tok(dark)
+  const totalSold = TOP_MODELS.reduce((s, m) => s + m.sold, 0)
+
+  return (
+    <GCard dark={dark} style={{ height: '100%' }}>
+      <div style={{ padding: '18px 20px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
+          <div>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Top modelos vendidos</h2>
+            <p style={{ fontSize: 10.5, color: c.t4 }}>este mes · {totalSold} unidades</p>
+          </div>
+          <button onClick={onNavigate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.t4, padding: 0 }}>
+            <ChevronRight style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+          {TOP_MODELS.map((item, i) => {
+            const barW = Math.round((item.sold / MAX_MODELS_SOLD) * 100)
+            return (
+              <motion.div
+                key={item.model}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.22 + i * 0.07 }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 500, color: c.t2 }}>{item.model}</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: c.t1, fontVariantNumeric: 'tabular-nums' }}>{item.sold} ud.</span>
+                    <span style={{ fontSize: 10, color: c.t4, fontVariantNumeric: 'tabular-nums' }}>€{(item.revenue / 1000).toFixed(0)}k</span>
+                  </div>
+                </div>
+                <div style={{ height: 5, borderRadius: 5, background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${barW}%` }}
+                    transition={{ delay: 0.36 + i * 0.08, duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+                    style={{ height: '100%', borderRadius: 5, background: 'linear-gradient(90deg, #5b8df8, #9b6dff)', boxShadow: '0 0 6px rgba(91,141,248,0.28)' }}
+                  />
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </GCard>
+  )
+}
+
 // ── Quick actions ─────────────────────────────────────────────────────────────
 
 function QuickActions({ dark, onNavigate }: { dark: boolean; onNavigate: (path: string) => void }) {
@@ -803,12 +1118,31 @@ export default function Dashboard() {
           <MetricCard key={card.label} dark={dark} {...card} />
         ))}
 
-        {/* Row 2 — Chart (2 cols) + Pipeline (1 col) + AI Chat (1 col) */}
+        {/* Row 2 — Oportunidades (3 cols) + Posición mercado mini (1 col) */}
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '1 / 3', gridRow: '2', minHeight: 260 }}
+          style={{ gridColumn: '1 / 4', gridRow: '2', minHeight: 200 }}
+        >
+          <OportunidadesPanel dark={dark} onNavigate={() => navigate('/arbitrage')} />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '4', gridRow: '2' }}
+        >
+          <MarketPositionMini dark={dark} onNavigate={() => navigate('/inteligencia')} />
+        </motion.div>
+
+        {/* Row 3 — Gross Margin (2 cols) + Pipeline (1 col) + AI Chat (1 col) */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.30, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '1 / 3', gridRow: '3', minHeight: 260 }}
         >
           <MarginChart data={kpi.marginHistory} dark={dark} />
         </motion.div>
@@ -816,8 +1150,8 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '3', gridRow: '2' }}
+          transition={{ delay: 0.34, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '3', gridRow: '3' }}
         >
           <PipelinePanel dark={dark} />
         </motion.div>
@@ -825,18 +1159,37 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.32, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '4', gridRow: '2' }}
+          transition={{ delay: 0.38, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '4', gridRow: '3' }}
         >
           <ChatCompact kpi={kpi} dark={dark} username={username} />
         </motion.div>
 
-        {/* Row 3 — Stale (1) + Activity (2) + Follow-ups/QA (1) */}
+        {/* Row 4 — Revenue & Coste (2 cols) + Top modelos (2 cols) */}
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.34, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '1', gridRow: '3' }}
+          transition={{ delay: 0.40, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '1 / 3', gridRow: '4', minHeight: 240 }}
+        >
+          <RevenueChart data={kpi.marginHistory} dark={dark} onNavigate={() => navigate('/finance')} />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.44, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '3 / 5', gridRow: '4' }}
+        >
+          <TopModelsPanel dark={dark} onNavigate={() => navigate('/finance')} />
+        </motion.div>
+
+        {/* Row 5 — Stale (1) + Activity (2) + Follow-ups (1) */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.46, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '1', gridRow: '5' }}
         >
           <StalePanel dark={dark} onNavigate={() => navigate('/vehicles')} />
         </motion.div>
@@ -844,8 +1197,8 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.38, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '2 / 4', gridRow: '3' }}
+          transition={{ delay: 0.48, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '2 / 4', gridRow: '5' }}
         >
           <ActivityFeed activities={kpi.recentActivities} dark={dark} />
         </motion.div>
@@ -853,8 +1206,8 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.42, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '4', gridRow: '3' }}
+          transition={{ delay: 0.50, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
+          style={{ gridColumn: '4', gridRow: '5' }}
         >
           <FollowUpsPanel dark={dark} onNavigate={() => navigate('/inbox')} />
         </motion.div>

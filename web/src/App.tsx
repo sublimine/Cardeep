@@ -19,6 +19,10 @@ import Terminal from './pages/Terminal'
 import Inteligencia from './pages/Inteligencia'
 import Arbitrage from './pages/Arbitrage'
 import Api from './pages/Api'
+import Analitica from './pages/Analitica'
+import Register from './pages/Register'
+import ResetPassword from './pages/ResetPassword'
+import TwoStep from './pages/TwoStep'
 import { useAuthContext } from './auth/AuthContext'
 
 function RootRedirect() {
@@ -91,6 +95,9 @@ export default function App() {
         <Route path="/"         element={<RootRedirect />} />
         <Route path="/landing"  element={<Landing />} />
         <Route path="/login"    element={<LoginPage />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/reset"    element={<ResetPassword />} />
+        <Route path="/2fa"      element={<TwoStep />} />
         <Route path="/check"    element={<CheckPage />} />
         <Route path="/check/:vin" element={<CheckPage />} />
 
@@ -115,6 +122,7 @@ export default function App() {
           <Route path="inteligencia" element={<Inteligencia />} />
           <Route path="arbitrage"  element={<Arbitrage />} />
           <Route path="api"        element={<Api />} />
+          <Route path="analitica"  element={<Analitica />} />
           <Route path="settings"   element={<Settings />} />
           <Route path="*"          element={<Navigate to="/dashboard" replace />} />
         </Route>
