@@ -11,6 +11,9 @@
 #   - docs/ and countries/: runbooks and per-entity scraping recipes that DOCUMENT third-party PUBLIC
 #     keys -- the values that target sites ship in their own public client-side bundles and CARDEEP
 #     records to replay their PUBLIC APIs (public-by-design, not CARDEEP credentials).
+#   - plans/intel-audit/: 109 auditorias de empresas de datos de automocion (research de docs PUBLICAS).
+#     Prosa con nombres tipo-token de APIs/fuentes ajenas (p.ej. "One Auto API: MIAFTR/PNC") que la regla
+#     generic-api-key marca por entropia -- NO son secretos CARDEEP. Superficie no ejecutable (como docs/).
 #   - the four in-code third-party public keys (group_subastas ALD gateway, Volvo Codeweavers,
 #     JLR NetDirector, Mercedes dealer-locator) -- each documented in-line as a client-side public key;
 #     allowlisted by their exact value so a NEW/unknown secret on any other line still trips the gate.
@@ -33,6 +36,7 @@ paths = [
   '''web/package-lock\.json$''',
   '''(^|/)docs/''',
   '''(^|/)countries/''',
+  '''(^|/)plans/intel-audit/''',
 ]
 regexes = [
   '''3b2cc62fd26c4e29a762db3de181266b''',                 # group_subastas: ALD public gateway subscription key
