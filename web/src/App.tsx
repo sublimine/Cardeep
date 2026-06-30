@@ -28,6 +28,8 @@ import Pricing from './pages/Pricing'
 import Notes from './pages/Notes'
 import Profile from './pages/Profile'
 import Support from './pages/Support'
+import Chat from './pages/Chat'
+import Assistant from './pages/Assistant'
 import { useAuthContext } from './auth/AuthContext'
 
 function RootRedirect() {
@@ -133,6 +135,8 @@ export default function App() {
           <Route path="notes"      element={<Notes />} />
           <Route path="profile"    element={<Profile />} />
           <Route path="support"    element={<Support />} />
+          <Route path="chat"       element={<Chat />} />
+          <Route path="assistant"  element={<Assistant />} />
           <Route path="settings"   element={<Settings />} />
           <Route path="*"          element={<Navigate to="/dashboard" replace />} />
         </Route>

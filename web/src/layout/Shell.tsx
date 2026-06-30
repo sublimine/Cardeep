@@ -6,6 +6,7 @@ import {
   MessageSquare, Calendar, BarChart3, Settings, FileSearch,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
   TrendingUp, Zap, Code2, LineChart, StickyNote, Receipt, CreditCard, UserCircle, LifeBuoy,
+  MessagesSquare, Bot,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -44,8 +45,9 @@ const NAV_GROUPS = [
   {
     label: 'OPERACIÓN',
     items: [
-      { to: '/inbox',    label: 'Inbox',      icon: MessageSquare, end: false },
-      { to: '/calendar', label: 'Calendario', icon: Calendar,      end: false },
+      { to: '/inbox',    label: 'Inbox',      icon: MessageSquare,  end: false },
+      { to: '/chat',     label: 'Chat',       icon: MessagesSquare, end: false },
+      { to: '/calendar', label: 'Calendario', icon: Calendar,       end: false },
     ],
   },
   {
@@ -59,8 +61,9 @@ const NAV_GROUPS = [
   {
     label: 'HERRAMIENTAS',
     items: [
-      { to: '/api',   label: 'API & Tokens', icon: Code2,      end: false },
-      { to: '/check', label: 'VIN Check',    icon: FileSearch, end: false },
+      { to: '/api',       label: 'API & Tokens', icon: Code2,      end: false },
+      { to: '/assistant', label: 'Asistente IA', icon: Bot,        end: false },
+      { to: '/check',     label: 'VIN Check',    icon: FileSearch, end: false },
     ],
   },
   {

@@ -58,7 +58,7 @@ const KPI_VALUES: Record<Range, KpiValues> = {
 
 const TOP_MODELS = [
   { model: 'BMW 320d Touring',    units: 8, color: '#5b8df8' },
-  { model: 'VW Golf 1.5 TSI',    units: 7, color: '#a78bfa' },
+  { model: 'VW Golf 1.5 TSI',    units: 7, color: '#60a5fa' },
   { model: 'Audi A4 2.0 TDI',   units: 5, color: '#0ea5e9' },
   { model: 'Mercedes C220d',     units: 2, color: '#22c55e' },
   { model: 'Ford Kuga 2.5 PHEV', units: 1, color: '#f59e0b' },
@@ -67,28 +67,28 @@ const TOP_MODELS = [
 const STOCK_SEGMENTS = [
   { segment: 'Urbano',    days: 28, target: 30, count: 42, color: '#22c55e' },
   { segment: 'Familiar',  days: 41, target: 35, count: 68, color: '#5b8df8' },
-  { segment: 'SUV',       days: 35, target: 35, count: 87, color: '#a78bfa' },
+  { segment: 'SUV',       days: 35, target: 35, count: 87, color: '#60a5fa' },
   { segment: 'Premium',   days: 52, target: 40, count: 34, color: '#f87171' },
   { segment: 'Furgoneta', days: 61, target: 45, count: 12, color: '#f87171' },
 ]
 
 const CHANNELS = [
   { name: 'coches.net',  leads: 142, sales: 12, cpl: 9.40, color: '#5b8df8', pct: 42 },
-  { name: 'AutoScout24', leads:  88, sales:  7, cpl: 8.10, color: '#a78bfa', pct: 26 },
+  { name: 'AutoScout24', leads:  88, sales:  7, cpl: 8.10, color: '#60a5fa', pct: 26 },
   { name: 'Web propia',  leads:  67, sales:  3, cpl: 6.20, color: '#22c55e', pct: 20 },
   { name: 'Particular',  leads:  45, sales:  1, cpl: 3.50, color: '#f59e0b', pct: 12 },
 ]
 
 const FUNNEL_STAGES = [
   { label: 'Leads',    count: 342, color: '#5b8df8' },
-  { label: 'Contacto', count: 218, color: '#a78bfa' },
+  { label: 'Contacto', count: 218, color: '#60a5fa' },
   { label: 'Oferta',   count:  97, color: '#f59e0b' },
   { label: 'Venta',    count:  23, color: '#22c55e' },
 ]
 
 const REGION_SALES = [
   { region: 'Madrid',    sales: 8, pct: 35, color: '#5b8df8' },
-  { region: 'Cataluña',  sales: 5, pct: 22, color: '#a78bfa' },
+  { region: 'Cataluña',  sales: 5, pct: 22, color: '#60a5fa' },
   { region: 'Valencia',  sales: 4, pct: 17, color: '#0ea5e9' },
   { region: 'Andalucía', sales: 3, pct: 13, color: '#22c55e' },
   { region: 'Otras',     sales: 3, pct: 13, color: '#f59e0b' },
@@ -287,7 +287,7 @@ function ConversionFunnel({ dark }: { dark: boolean }) {
     <GCard dark={dark} style={{ height: '100%' }}>
       <div style={{ padding: '18px 18px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          <Target style={{ width: 12, height: 12, color: '#a78bfa' }} />
+          <Target style={{ width: 12, height: 12, color: '#60a5fa' }} />
           <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1 }}>Embudo de conversión</h2>
         </div>
         <p style={{ fontSize: 10.5, color: c.t4, marginBottom: 16 }}>Lead a venta cerrada</p>
@@ -620,7 +620,7 @@ export default function Analitica() {
       sub: 'todos los canales',
       trend: 'up',
       trendLabel: '+11% vs período anterior',
-      accent: '#a78bfa',
+      accent: '#60a5fa',
       spark: [280, 295, 310, 325, 336, kpi.leads],
       delay: 0.06,
     },

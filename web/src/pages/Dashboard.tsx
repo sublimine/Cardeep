@@ -51,7 +51,7 @@ const DEALER = {
   targetSoldMonth: 30,
   dealStages: [
     { label: 'New',         count: 15, color: '#5b8df8' },
-    { label: 'Contacted',   count: 12, color: '#a78bfa' },
+    { label: 'Contacted',   count: 12, color: '#60a5fa' },
     { label: 'Offer Sent',  count: 10, color: '#f59e0b' },
     { label: 'Negotiation', count: 10, color: '#fb923c' },
     { label: 'Closed',      count:  8, color: '#22c55e' },
@@ -413,8 +413,8 @@ function StalePanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => voi
 // ── Follow-ups today ──────────────────────────────────────────────────────────
 
 const TYPE_COLOR: Record<string, string> = {
-  inquiry: '#5b8df8', call: '#22c55e', reply: '#9b6dff', note: '#f59e0b', reminder: '#fb923c',
-  drive: '#0ea5e9', offer: '#a78bfa',
+  inquiry: '#5b8df8', call: '#22c55e', reply: '#60a5fa', note: '#f59e0b', reminder: '#fb923c',
+  drive: '#0ea5e9', offer: '#60a5fa',
 }
 
 function FollowUpsPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
@@ -952,7 +952,7 @@ function TopModelsPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () =>
                     initial={{ width: 0 }}
                     animate={{ width: `${barW}%` }}
                     transition={{ delay: 0.36 + i * 0.08, duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-                    style={{ height: '100%', borderRadius: 5, background: 'linear-gradient(90deg, #5b8df8, #9b6dff)', boxShadow: '0 0 6px rgba(91,141,248,0.28)' }}
+                    style={{ height: '100%', borderRadius: 5, background: 'linear-gradient(90deg, #5b8df8, #60a5fa)', boxShadow: '0 0 6px rgba(91,141,248,0.28)' }}
                   />
                 </div>
               </motion.div>
@@ -970,7 +970,7 @@ function QuickActions({ dark, onNavigate }: { dark: boolean; onNavigate: (path: 
   const c = tok(dark)
   const actions = [
     { label: 'Add Vehicle', color: '#5b8df8', icon: <TrendingUp    style={{ width: 13, height: 13, color: '#5b8df8'  }} />, path: '/vehicles'  },
-    { label: 'New Deal',    color: '#9b6dff', icon: <ClipboardList style={{ width: 13, height: 13, color: '#9b6dff'  }} />, path: '/deals'     },
+    { label: 'New Deal',    color: '#60a5fa', icon: <ClipboardList style={{ width: 13, height: 13, color: '#60a5fa'  }} />, path: '/deals'     },
     { label: 'Check VIN',  color: '#00d68a', icon: <Search        style={{ width: 13, height: 13, color: '#00d68a'  }} />, path: '/check'     },
     { label: 'Kanban',     color: '#f59e0b', icon: <Zap           style={{ width: 13, height: 13, color: '#f59e0b'  }} />, path: '/kanban'    },
   ]
@@ -1040,7 +1040,7 @@ export default function Dashboard() {
       sub: '8 closing this week',
       trend: 'flat' as const,
       trendLabel: 'stable',
-      accent: '#9b6dff',
+      accent: '#60a5fa',
       spark: [42, 48, 51, 53, 54, kpi.activeDeals],
       delay: 0.06,
     },

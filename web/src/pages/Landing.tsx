@@ -284,7 +284,7 @@ export default function Landing() {
             <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px 28px', width: '100%' }}>
               {/* Logo */}
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 25, height: 25, borderRadius: 6, background: 'linear-gradient(135deg,#3B82F6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 25, height: 25, borderRadius: 6, background: 'linear-gradient(135deg,#3B82F6,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(255,255,255,.9)' }} />
                 </div>
                 <span style={{ fontWeight: 700, fontSize: 20, letterSpacing: '-0.035em', color: t.ink }}>cardeep</span>
@@ -549,7 +549,7 @@ export default function Landing() {
         {/* Footer row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20, flexWrap: 'wrap', marginTop: 30, color: t.ink3, fontSize: 13 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <div style={{ width: 19, height: 19, borderRadius: 4, background: 'linear-gradient(135deg,#3B82F6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 19, height: 19, borderRadius: 4, background: 'linear-gradient(135deg,#3B82F6,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <div style={{ width: 7, height: 7, borderRadius: 1.5, background: 'rgba(255,255,255,.9)' }} />
             </div>
             <span style={{ fontWeight: 700, fontSize: 15, color: t.ink, letterSpacing: '-0.035em' }}>cardeep</span>

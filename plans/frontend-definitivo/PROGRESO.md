@@ -42,6 +42,12 @@
   Soporte/Ajustes). Rutas /invoices /pricing /notes /profile /support. Verificado Invoices + nav (1 sitio, sin ruido).
   PENDIENTE ola 4: Comunicación(Chat) · Inventario rico (foto/detalle) · Calendario · Asistente IA · errores ·
   componentes design-system · coherencia marca (algún violeta→azul, títulos EN→ES) · verificación DARK global · B7.
+- 2026-06-30 (OLA 4 + coherencia marca, integrada+verificada+build verde): **Chat** (3-col mensajería) +
+  **Asistente IA** (4 modos: Preguntar/Descripción anuncio/Valorar VIN/Imagen — unifica los generadores).
+  Nav: Chat→OPERACIÓN, Asistente IA→HERRAMIENTAS. **Pasada de marca:** púrpura hardcodeado→azul en Api/Dashboard/
+  Analitica/Landing/Inteligencia/Arbitrage (cero violeta en páginas en-uso; Market/terminal DeFi quedan fuera de nav).
+  Verificado Assistant + nav completo. PENDIENTE cierre: páginas de error · B7 auditoría (barrido TODAS las rutas +
+  dark + responsive 390/768 + CI) · opcional (componentes-showcase, inventario-detalle, títulos EN→ES) · parte.
 - Orden afinado: B3 landing limpia + login → B4 dashboard (añadir señales inteligencia/arbitrage dealer-first)
   → B5 Inteligencia + Arbitrage (reemplazo DeFi) + pulir workspace → B6 API/Tokens → B2 nav final → B7 auditoría.
 - 2026-06-30: Owner aclara — ABSORBER TailAdmin(87)+Spike(88) en el frontend (no solo re-skin). Escrito

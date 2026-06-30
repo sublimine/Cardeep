@@ -95,7 +95,7 @@ const PLANS: Plan[] = [
     features: ['All endpoints', 'INVENTORY feed', '500 req / min', 'Webhook alerts', 'Priority support'],
   },
   {
-    id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', tokens: 0, current: false, accent: '#7c3aed',
+    id: 'enterprise', name: 'Enterprise', price: 'Custom', period: '', tokens: 0, current: false, accent: '#3b82f6',
     features: ['Unlimited tokens', 'SLA 99.9 %', 'Dedicated ingestion', 'EU data residency', 'SSO / SAML'],
   },
 ]
@@ -140,7 +140,7 @@ const RESPONSE_EXAMPLE = `{
 const ENDPOINT_COLORS: Record<string, string> = {
   market:    '#3b82f6',
   valuation: '#f59e0b',
-  history:   '#a78bfa',
+  history:   '#60a5fa',
   dealScore: '#22c55e',
   inventory: '#0ea5e9',
 }
@@ -329,7 +329,7 @@ function EndpointCatalog({ dark }: { dark: boolean }) {
                     padding: '1px 6px', borderRadius: 4, flexShrink: 0,
                     background: ep.type === 'INFO' ? 'rgba(59,130,246,0.12)' : 'rgba(124,58,237,0.12)',
                     border:     `1px solid ${ep.type === 'INFO' ? 'rgba(59,130,246,0.25)' : 'rgba(124,58,237,0.25)'}`,
-                    color:      ep.type === 'INFO' ? '#3b82f6' : '#7c3aed',
+                    color:      ep.type === 'INFO' ? '#3b82f6' : '#3b82f6',
                   }}>
                     {ep.type}
                   </span>
@@ -781,7 +781,7 @@ export default function Api() {
       sub: '€149 / month · 200k tokens',
       trend: 'good',
       trendLabel: 'active subscription',
-      accent: '#7c3aed',
+      accent: '#3b82f6',
       spark: [1, 1, 1, 1, 1, 1],
       delay: 0.12,
     },
