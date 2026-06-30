@@ -1,0 +1,693 @@
+17VIN :: Asia-Pacific :: VIN decode & build data; B2B data & VIN API :: China-focused VIN/vehicle database with deep specs for BYD, Geely, Chery, BBA and NEV battery parameters.
+1link Trade Buyer :: Europe :: Subastas / remarketing / wholesale B2B :: UK online vehicle auction platform for fleet disposals.
+2ndMove by Europcar :: Europe :: Remarketing de flotas/leasing :: Europcar's B2B remarketing service for ex-rental fleet vehicles (multi-country).
+2trde :: Europe :: Arbitraje / compra-venta mayorista :: Digital marketplace aggregating vehicles across multiple European auction houses.
+58.com :: Asia :: Classifieds + used-car valuation :: Chinese classifieds giant with used-car listings and valuation estimates.
+AA Car Check :: UK :: Vehicle history report :: AA-branded UK vehicle history check.
+AA Cars :: UK :: Consumer valuation / price guide :: AA's used-car marketplace and quarterly Used Car Index of real asking prices and demand.
+AAA Auto :: Europe :: Subastas / remarketing / wholesale B2B :: Largest Central European used-car group with B2B wholesale services.
+ABCoA :: North America :: Dealer Management System (DMS) :: Deal Pack DMS focused on BHPH/LHPH dealers and finance integration.
+ABOS Marine Blue Book :: North America :: Specialty valuation (marine) :: Leading boat/marine value guide since 1928, published by Price Digests.
+ACARA Guía Oficial de Precios :: LATAM :: Dealer-association price guide :: Argentine dealer association's official used-vehicle valuation guide.
+ACCURE Battery Intelligence :: Europe :: EV charging & battery data :: Cloud predictive battery analytics.
+ACV Auctions :: North America :: Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B :: Digital wholesale auctions plus ACV MAX inventory analytics and ML retail/wholesale pricing.
+ADAC :: Germany :: Consumer valuation / price guide :: German auto club providing free used-car valuations (last 10 years) and Autokosten/TCO tables.
+ADESA (US physical) :: North America :: Subastas / remarketing / wholesale B2B :: 56-site US physical wholesale auction business acquired by Carvana in 2022.
+AECA-ITV :: España :: Inspección / certificación (datos) :: Patronal de las estaciones ITV; estadísticas de inspecciones, rechazos y estado del parque.
+AEDIVE :: España :: Asociación / patronal :: Patronal del vehículo eléctrico; barómetros de matriculación VE e infraestructura de recarga.
+AEGFA :: España :: Asociación / patronal :: Asociación de gestores de flotas (500.000+ vehículos gestionados); estudios y revista del sector.
+AER :: España :: Asociación / patronal :: Patronal del renting; informe anual y datos de flota en renting.
+AHELP.UA :: Russia/CIS :: Vehicle history report :: Free Ukrainian VIN check and decoder.
+ALG :: North America :: Vehicle valuation / guidebook :: Industry-standard residual value and depreciation forecasts used for leasing and remarketing.
+ALLDATA :: North America :: Repair/technical data :: Industry-leading OEM-accurate repair information (1982-present) for 400k+ technicians.
+AMAG ReCars :: Europe :: Subastas / remarketing / wholesale B2B :: B2B trading platform of AMAG, Switzerland's largest automotive company.
+AMPECO :: Europe :: EV charging & battery data :: White-label EV charging management platform.
+ANCERA :: España :: Asociación / patronal :: Patronal de la distribución de recambios; datos del mercado de aftermarket.
+ANCOVE :: España :: Asociación / patronal :: Asociación nacional de comerciantes de todo tipo de vehículos nuevos y usados (desde 1989).
+ANESDOR :: España :: Asociación / patronal :: Patronal de la moto; estadísticas mensuales de matriculación de dos ruedas y ligeros.
+ANFAC :: España :: Asociación / patronal :: Patronal de fabricantes; fuente primaria de matriculaciones y producción en España.
+ANIACAM :: España :: Asociación / patronal :: Patronal histórica de importadores; disuelta en 2020 y sus marcas integradas en ANFAC.
+ANWB Koerslijst :: Netherlands :: Consumer valuation / price guide :: The Netherlands' most-used consumer valuation list (with BOVAG), by brand/model/mileage/options.
+API.VIN :: Global :: VIN decode & build data :: Professional VIN decoder returning a full structured profile from IDs to factory equipment and trim codes.
+ASCABUS :: España :: Asociación / patronal :: Patronal de carroceros y fabricantes de autobús; datos de producción y exportación.
+AUCNET :: Asia :: Subastas / remarketing / wholesale B2B :: Japan's pioneering virtual used-car auction platform (since 1985).
+AUTO1 Group :: Germany :: Wholesale / remarketing pricing data; Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B :: Europe's largest digital car platform; wholesale pricing (AUTO1.com), instant consumer valuation (wirkaufendeinauto) and
+AUTOkm :: Europe (multi-country) :: Vehicle history report :: VIN decoder, mileage check and vehicle history from EUR 15.90 (DACH/EU).
+AUTOproff :: Europe :: Subastas / remarketing / wholesale B2B :: Fast-growing European B2B used-car trading platform (DACH + Nordics + Benelux).
+Accu-Trade :: North America :: Appraisal & instant offer; Vehicle valuation / guidebook :: VIN-specific appraisal and real cash offer engine under Cars Commerce.
+Aeris :: North America :: OEM telematics & connectivity services :: IoT connectivity + connected-vehicle platform.
+Affinitiv :: North America :: Dealer / retail data (CDP) :: Automotive marketing data and CDP for dealers/OEMs.
+Airbiquity :: North America :: OEM telematics & connectivity services :: OTA software + connected-vehicle services for OEMs.
+Al Wataneya Auctions :: Middle East :: Subastas / remarketing / wholesale B2B :: UAE car auction platform (est. 1999) offering daily online auctions.
+Al-Futtaim Auto Auction :: Middle East :: Subastas / remarketing / wholesale B2B :: UAE auction of used and salvage cars, vans, HGVs and motorcycles.
+Al-Futtaim Automall :: Middle East :: Subastas / remarketing / wholesale B2B :: UAE's largest used-car dealership (also Qatar) with trade/wholesale.
+Alcopa Auction :: Europe :: Subastas / remarketing / wholesale B2B :: Auction leader offering weekly B2B vehicle auctions across FR/BE/ES.
+Alex Lyon & Son :: North America :: Camión / maquinaria :: US auctioneer of construction equipment, trucks and fleet assets.
+America's Group :: North America :: Subastas / remarketing / wholesale B2B :: Independent US auction group (~39+ sites) combining America's Auto Auction and XLerate.
+Anglia Car Auctions :: Europe :: Subastas / remarketing / wholesale B2B :: Family-run UK auction house specializing in classic and modern vehicles.
+Applied Intuition :: North America :: AV data, simulation & foundation models :: Simulation + data tooling for ADAS/AV development.
+Applus+ ITEUVE :: España :: Inspección / certificación (datos) :: Gran operador de ITV en España (3M+ inspecciones/año) con datos del estado del parque.
+Aramis Group :: Europe :: Subastas / remarketing / wholesale B2B :: Pan-European online used/refurbished car group (6 countries).
+Aramisauto :: France :: Instant-offer car buyer (valuation tool) :: French online used-car retailer with instant trade-in valuation and buy-back offers.
+Arity :: North America :: Insurance telematics / UBI :: Allstate's mobility data and driving-behavior analytics arm.
+Arval Mobility Observatory :: España :: Renting / flotas (datos) :: Plataforma de investigación de flotas y movilidad; informe anual y barómetro internacional.
+Arval MotorTrade :: Europe :: Remarketing de flotas/leasing :: Online remarketing platform for Arval's fleet/lease vehicle disposals.
+Aston Barclay :: UK :: Wholesale / remarketing pricing data; Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B :: UK vehicle auction/remarketing house (sites now part of BCA) with wholesale prices and appraisal.
+Aucor :: Africa :: Subastas / remarketing / wholesale B2B :: Established South African auctioneer including vehicles and assets.
+Auction Edge :: North America :: Wholesale auction & dealer sourcing; Infraestructura (datos/credenciales/floorplan) :: Software powering independent US auto auctions with online sourcing and market reports.
+Auction Simplified :: North America :: Subastas / remarketing / wholesale B2B :: Run-your-own private wholesale auction / bid-sale platform for dealers.
+Auction4Cars :: Europe :: Subastas / remarketing / wholesale B2B :: Trade-only online car auction sourcing We Buy Any Car stock.
+AuctionACCESS :: North America :: Infraestructura (datos/credenciales/floorplan) :: Credentialing gateway connecting dealers to 400+ wholesale marketplaces in US/Canada.
+Audatex España :: Spain :: Insurance / claims valuation :: Solera's Audatex: total-loss market valuation and repair estimation, a benchmark in Spanish bodyshops/insurers.
+Audatex España (Solera) :: España :: Seguros / peritación (datos) :: Estándar de peritación en España (~80% de cuota); base de datos de modelos y daños.
+Auto Avaliar :: LATAM :: B2B/C2B valuation :: Transactional Brazilian pricing table for C2B/B2B/B2C plus dealer auctions.
+Auto Care Association :: North America :: Government / standards :: Maintains the Vehicle Configuration Database (VCdb) and ACES/PIES standards used across North-American aftermarket data.
+Auto Data API :: Europe :: Vehicle specs & catalog :: Large car technical-specifications database (Europe-weighted) served via API in 14 languages.
+Auto Trader UK :: UK :: Consumer valuation / price guide; Used-car analytics & inventory management :: UK's largest marketplace; live Retail Valuations, Retail Price Index and i-Control pricing from ~900k daily prices.
+Auto.dev :: North America :: VIN decode & build data :: Developer-focused VIN decoder, specifications, recalls and vehicle listings APIs.
+AutoAstat :: Global (US auctions) :: Auction & salvage history :: Vehicle photos and sales history for Copart and IAAI.
+AutoAuctionHistory.com :: Global (US auctions) :: Auction & salvage history :: Archive of Copart/IAAI bids, vehicles and photos by VIN.
+AutoCango :: Asia-Pacific :: Vehicle specs & catalog :: Multilingual specification database for Chinese-brand cars, with models/trims and export tooling.
+AutoCheck :: US :: Vehicle history report :: Experian's vehicle history report with comparative AutoCheck Score, strong auction coverage.
+AutoCheck (Australia) :: Australia :: Vehicle history report :: Online PPSR, REVS and VCheck certificate provider.
+AutoGrab :: Oceania :: Automotive intelligence & valuation; Used-car analytics & inventory management :: Australian automotive data platform with real-time retail/trade valuations; expanded to UK/NZ/Malaysia/Philippines.
+AutoHistorieCheck.nl :: Netherlands :: Vehicle history report :: Dutch vehicle history checking service.
+AutoIMS :: North America :: Infraestructura (datos/credenciales/floorplan) :: Neutral consignment-management system linking institutional sellers, auctions and remarketers.
+AutoManager :: North America :: Dealer Management System (DMS) :: DeskManager/WebManager DMS with inventory syndication to 250+ partners.
+AutoNavi :: Asia-Pacific :: Map / road / movement data :: Chinese maps/navigation and HD map data (Alibaba).
+AutoScout24 :: Pan-European :: Consumer valuation / price guide; Marketplace with dealer market-data tools :: Pan-European marketplace with a free price estimate comparing against millions of listings (DE, CH, BE, IT, NL, AT...).
+AutoScout24 España :: España :: Marketplace / portal :: Marketplace paneuropeo de VO/VN operado en España por Sumauto.
+AutoScout24.ch :: Switzerland :: Consumer valuation / price guide :: Switzerland's leading car marketplace with a free market-value price estimate.
+AutoTradeOnly :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Australian B2B vehicle trading platform for dealer trade-ins.
+AutoTrader.ca :: North America :: Marketplace valuation; Marketplace with dealer market-data tools :: Canada's largest car marketplace with valuation vs live listings and Accu-Trade ICO.
+AutoUncle :: Pan-European :: Consumer valuation / price guide; Used-car analytics & inventory management :: Danish independent used-car price aggregator/valuation across 14 European countries (used by the Danish tax ministry).
+Autobaza :: Poland :: Vehicle history report :: Polish leader aggregating 40+ databases for VIN/plate history.
+Autobid.de :: Europe :: Subastas / remarketing / wholesale B2B :: One of Europe's leading B2B auction platforms (~4,500 vehicles/week, 17 sites).
+Autocasión :: España :: Marketplace / portal :: Portal histórico de VO; anuncios, precios y contenidos de mercado.
+Autochek :: Africa :: Used-car analytics & inventory management; Arbitraje / compra-venta mayorista :: Pan-African used-car platform with valuation, financing and dealer/inventory tools.
+Autocosmos :: LATAM :: Multi-country price guide :: Regional LATAM portal offering used-car price guides in MX, CO, CL, PE and AR.
+Autodata :: Europe :: Repair/technical data :: Online technical information for service, maintenance, diagnostics and repair of cars, vans and motorcycles.
+Autofact :: LATAM :: VIN history + valuation :: Chilean history + valuation service giving commercial value by plate.
+Autofesa :: Spain :: Instant-offer car buyer (valuation tool) :: Spanish used-car buyer offering free GANVAM/Eurotax-based valuation and instant buy-back offers.
+Autohome :: Asia :: Auto portal pricing; Vehicle specs & catalog; Marketplace with dealer market-data tools :: Leading Chinese auto portal with pricing, quotes and used-car valuation.
+Automano :: Europe (multi-country) :: Vehicle history report :: Unlimited VIN decoding plus low-cost reports backed by DVLA, HistoVec, NHTSA and KBA.
+Automoli :: Europe (multi-country) :: Vehicle history report :: Low-cost EU/US VIN history reports with broad data sourcing.
+Automotive Trade Center (ATC) :: Europe :: Subastas / remarketing / wholesale B2B :: Dutch online auction with 40,000+ inspected used vehicles.
+Autopista (Motorpress Ibérica) :: España :: Marketplace / portal :: Medio del motor con base de datos de 5.000+ fichas técnicas y precios de coches.
+Autoprotetta :: Italy :: Vehicle history report :: Italian chassis/VIN history check (accidents, liens, km).
+Autorola :: Nordics :: Wholesale / remarketing pricing data; Remarketing + valuation; Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B :: Danish online B2B remarketing group whose MarketPlace wholesale prices power Indicata's used-car intelligence.
+Autorola / INDICATA :: España :: Subastas VO / inteligencia de mercado :: Plataforma de subastas de VO (200.000 vehículos/año) e inteligencia de mercado INDICATA.
+Autosoft :: North America :: Dealer Management System (DMS) :: DMS provider serving franchise and independent dealers.
+Autosphère :: France :: Instant-offer car buyer (valuation tool) :: Emil Frey France used-car brand with valuation and buy-back service.
+Autoteka :: Russia/CIS :: Vehicle history report :: Avito-owned Russian vehicle history report by VIN/plate.
+Autotelex :: Netherlands :: Valuation & residual value data provider :: NL vehicle-data market leader since 1964; Autotelex PRO trade/retail valuation and identification (via VWE).
+Autotrader :: North America :: Marketplace with dealer market-data tools :: Large US marketplace with KBB-integrated pricing guidance and dealer advertising tools.
+Autovista Group :: Pan-European :: Valuation & residual value data provider; Valuation + specs; Vehicle valuation / guidebook; Infraestructura (datos/credenciales/floorplan); Automotive market intelligence & valuation :: Pan-European umbrella for Eurotax, Glass's, Schwacke, Rødboka and EV-Volumes; sets the standard for valuation, RV foreca
+Autowini :: Asia :: Arbitraje / compra-venta mayorista :: Korean wholesale/export marketplace including salvage auctions.
+Avito Auto :: Russia :: Marketplace with dealer market-data tools :: Russia's largest classifieds with used-car pricing/market data and dealer tools.
+Avtocod :: Russia/CIS :: Vehicle history report :: Russian VIN/plate report using GIBDD, RSA and customs sources.
+Avtoproverka :: Russia/CIS :: Vehicle history report :: Russian check using GIBDD, RSA, FTS and other official sources.
+Ayvens Carmarket :: Europe :: Remarketing de flotas/leasing :: B2B remarketing platform for ex-lease vehicles from the merged ALD+LeasePlan group.
+BCA :: Pan-European :: Wholesale / remarketing pricing data; Subastas / remarketing / wholesale B2B :: Europe's largest used-vehicle remarketing operator; wholesale sale prices, appraisal and valuation.
+BE FORWARD :: Asia :: Arbitraje / compra-venta mayorista :: Major Japanese used-vehicle exporter sourcing auction/wholesale stock globally.
+BMW CarData :: Europe :: OEM data monetization :: BMW's connected-vehicle data-access program.
+BUC International :: Global :: Specialty valuation (marine) :: Long-standing used boat price guide for retail and wholesale boat values.
+Baidu Apollo :: Asia-Pacific :: AV data, simulation & foundation models :: Baidu's autonomous-driving data/platform.
+Banma (Zebra) :: Asia-Pacific :: Connected-car data platform / aggregator :: Chinese connected-car OS and data (Alibaba/SAIC JV).
+BeenVerified :: US :: Vehicle history report :: Background-data platform offering NMVTIS-affiliated VIN lookups.
+Best Car Price :: Europe :: Subastas / remarketing / wholesale B2B :: Swiss B2B auction platform for garages (founded 2021).
+BestVinDecoder :: Europe (multi-country) :: B2B data & VIN API :: VIN decoding service/aggregator for European and global vehicles.
+BidFax / Bid.Cars :: Global (US auctions) :: Auction & salvage history :: Copart/IAAI auction history searchable by VIN or lot/stock number.
+Bilpriser / KVD :: Nordics :: Consumer valuation / price guide :: Swedish/Norwegian free car valuation backed by KVD auction sale prices and forecasts (15k+ models).
+Bilregistret.ai :: Nordics :: Vehicle history report :: Swedish registration-number lookup and vehicle info.
+Biluppgifter.se :: Nordics :: Vehicle history report :: Sweden's largest vehicle info service (15M+ vehicles), free for consumers.
+Bilweb Auctions :: Europe :: Subastas / remarketing / wholesale B2B :: Swedish online vehicle auction marketplace.
+Black Book :: North America :: Wholesale valuation & data; Valuation + specs; Vehicle valuation / guidebook; Infraestructura (datos/credenciales/floorplan); Automotive market intelligence & valuation :: Daily auction-based wholesale and residual values used by lenders and dealers.
+Bonbanh.com :: Asia :: Marketplace pricing :: Long-running Vietnamese used/new car listings and price reference site.
+Bosch :: Global :: Repair/technical data :: ESI[tronic] diagnostic software with vehicle technical data covering 150+ brands (cars, CV, buses, off-highway).
+Bosch Mobility :: Europe :: OEM telematics & connectivity services :: Tier-1 connected-mobility data and services.
+Budget Direct PPSR Check :: Australia :: Vehicle history report :: Insurer offering free PPSR/car history checks.
+Bumper :: US :: Vehicle history report :: NMVTIS-authorized subscription VIN reports with market value and recalls.
+Burchmore's :: Africa :: Subastas / remarketing / wholesale B2B :: South African vehicle auction house (bank/fleet remarketing).
+CAR VX :: Japan :: Vehicle history report :: Japan's most complete vehicle history report (130M+ vehicles).
+CARAUKTION :: Europe :: Subastas / remarketing / wholesale B2B :: Swiss B2B e-auction platform (founded 2004), large professional remarketing.
+CARCHECK.JP :: Japan :: Vehicle history report :: Japan auction-listed vehicle history with reports, photos and auction sheets.
+CARFAX :: North America :: VIN history + valuation; Vehicle history & VIN data; Vehicle history report; Vehicle history & data; Vehicle history / VIN data :: US vehicle history reports with a history-based market value tool.
+CARFAX Canada :: North America :: VIN history + valuation; Vehicle history report; Vehicle history & data :: Canadian history + market value tool based on actual paid prices.
+CARFAX Europe :: Europe (multi-country) :: Vehicle history report :: CARFAX's consumer-facing European arm (sells reports direct, unlike US).
+CARUSO Dataplace :: Europe :: Connected-vehicle data; Vehicle data marketplace :: Neutral, OEM-independent marketplace standardizing connected-car data from 30+ manufacturers (85%+ of EU connected cars)
+CCC Intelligent Solutions :: North America :: Total-loss / insurance valuation; AI inspection / claims / diagnostics :: Total-loss vehicle valuation used by major US insurers (State Farm, GEICO, USAA).
+CDK Global :: North America :: Dealer Management System (DMS) :: Major US DMS with AI-driven Vehicle Inventory Suite and Intelligence analytics.
+CESVIMAP :: España :: Seguros / peritación (datos) :: Centro de investigación de MAPFRE en reparabilidad, peritación y seguridad del vehículo.
+CETRAA :: España :: Asociación / patronal :: Confederación de talleres; datos y observatorio del sector de reparación.
+CIS Automotive :: North America :: VIN decode & build data :: Automotive API offering VIN decoding, recalls and dealer inventory/pricing data.
+CONEPA :: España :: Asociación / patronal :: Federación de talleres y electromecánica (en fusión con CETRAA); datos de posventa.
+CONFEBUS :: España :: Asociación / patronal :: Confederación del autobús; informe 'El Autobús en España' y estadísticas de demanda y flota.
+Cambridge Mobile Telematics :: North America :: Insurance telematics / UBI :: Largest telematics service provider for auto insurance.
+Canadian Black Book :: North America :: Vehicle valuation guide; Vehicle valuation / guidebook :: Canada's leading independent vehicle valuation provider since 1955.
+Canadian Red Book :: North America :: Vehicle valuation guide :: Valuation tool of choice for Canadian governments, insurers and lenders, powered by CARFAX Canada.
+Car Registration API (India) :: India :: Reg/VRM lookup data :: Indian car registration lookup API returning vehicle details/specs from registration number.
+Car Spot :: LATAM :: Valuation / marketplace :: Peru-based car valuation and buy/sell platform.
+Car365 :: South Korea :: Government / official registry :: Korea's official integrated used-car history portal.
+CarAPI :: North America :: VIN decode & build data :: Subscription car API with US VIN decoder plus year/make/model/trim and specs database.
+CarCostCheck :: UK :: Vehicle history report :: Low-cost Experian-sourced provenance plus running costs and reliability.
+CarDataChecks :: UK :: Vehicle history report :: Free HPI-style and MOT history checks.
+CarDekho :: Asia :: Portal valuation; Marketplace with dealer market-data tools :: Indian auto portal with used-car valuation and new-car pricing.
+CarGurus :: UK :: Consumer valuation / price guide; Marketplace valuation; Marketplace with dealer market-data tools :: Marketplace with Instant Market Value (IMV) and Deal Ratings; operates UK, Germany, Italy and Spain.
+CarHistory (KIDI) :: South Korea :: Government / official registry :: Korea's statutory accident-history service from all domestic insurers' claim records.
+CarHistory.com.au :: Australia :: Vehicle history report :: Australian vehicle history reports built on PPSR/NEVDIS data.
+CarMD :: North America :: Repair/technical data :: VIN/YMM API returning decode plus TSBs, maintenance, recalls, warranty and DTC-based repair guidance.
+CarMax :: North America :: Retailer instant offer :: Largest US used-car retailer with 7-day instant cash offers.
+CarMax Auctions :: North America :: Subastas / remarketing / wholesale B2B :: Dealer-only wholesale auctions of CarMax-owned trade-in inventory at ~70+ stores plus online.
+CarNewsChina Data :: Asia-Pacific :: Vehicle specs & catalog :: Specs and sales database for 4,000+ China-market models/trims across 110 brands, EV-focused.
+CarNext :: Pan-European :: Wholesale / remarketing pricing data :: Pan-European used-car platform (carved out of LeasePlan) now operating under the BCA/Constellation umbrella.
+CarOffer :: North America :: Wholesale auction & dealer sourcing; Arbitraje / compra-venta mayorista :: Instant used-vehicle wholesale trading platform (CarGurus wound down operations at end of 2025).
+CarOnSale :: Europe :: Subastas / remarketing / wholesale B2B :: AI-powered B2B used-car auction across 20+ European markets (~1.3M vehicles/yr).
+CarPrice.co.nz :: Oceania :: Online valuation :: Free online vehicle valuation for the New Zealand market.
+CarStory :: North America :: Dealer / retail data :: AI market data and insights for used-car retail.
+CarSwitch :: Asia :: Marketplace valuation; Arbitraje / compra-venta mayorista :: UAE/KSA tech-enabled used-car marketplace with a car valuator.
+CarTrade Exchange :: Asia :: Subastas / remarketing / wholesale B2B :: Leading Indian online vehicle auction platform with 3,000+ dealers across 80+ cities.
+CarTrade Tech :: India :: Marketplace with dealer market-data tools :: India auto group (CarTrade/CarWale) with valuations and dealer auction/exchange platform.
+CarValue (carvalue.co.za) :: South Africa :: Vehicle history report :: SA valuation plus mileage, finance and SAPS status.
+CarVerif :: France :: Vehicle history report :: French vehicle history report service complementing HistoVec.
+CarVeto :: UK :: Vehicle history report :: Free DVLA-based check with paid tiers and physical inspection service.
+CarWale / CarTrade :: Asia :: Portal valuation :: Indian auto group with used-car valuation and two-wheeler values (BikeWale).
+Carapis :: Global :: Automotive market & registration data :: Automotive listing and market-data API spanning 25+ markets including Japan/Korea/China auctions.
+Carbly :: North America :: VIN-scan appraisal :: Mobile VIN-scan appraisal aggregating MMR, Black Book, Galves and J.D. Power values.
+Cardentity :: Germany :: Vehicle history report :: German specialist claiming 90%+ coverage of used-car FIN queries from DE sources.
+Cardog :: North America :: VIN decode & build data :: Developer VIN decoder API positioned as a free alternative to NHTSA/Auto.dev with vehicle specs.
+Carketa :: North America :: Reconditioning workflow :: Reconditioning pipeline and days-on-lot analytics with configurable inspection stages.
+Carlins Automotive Auctioneers :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: 60-year-old Australian dealer-only automotive remarketing company.
+Carlytics :: Europe (multi-country) :: Vehicle history report :: Low-cost European report cross-matching official registers across 47+ countries.
+Carmigo :: North America :: Arbitraje / compra-venta mayorista :: Online auction connecting private sellers to a vetted dealer-buyer network.
+Caroom :: France :: Consumer valuation / price guide :: French new-car broker/marketplace with car valuation ('cote auto') guidance.
+Carpeep :: UK :: Vehicle history report :: Single flat-price UK report bundling all key risk checks.
+Carro :: Asia :: Used-car platform & data; Marketplace with dealer market-data tools; Arbitraje / compra-venta mayorista :: Singapore-HQ SEA used-car group (incl. myTukar) with AI valuation.
+Cars Commerce :: North America :: Marketplace with dealer market-data tools :: Cars.com marketplace plus Accu-Trade appraisal, DealerClub wholesale and Dealer Inspire.
+Cars24 :: Asia :: C2B valuation / retailer; Wholesale auction & dealer sourcing; Arbitraje / compra-venta mayorista :: India-origin used-car platform with free instant valuation calculator.
+Cars24 Service History :: India :: Vehicle history report :: India service-history check covering accidents, service and legal details.
+Cars45 :: Africa :: Wholesale auction & dealer sourcing; Arbitraje / compra-venta mayorista :: West African used-car marketplace/auction with diagnostics engine and transparent pricing data.
+CarsOnNet :: Europe :: Subastas / remarketing / wholesale B2B :: European B2B used-car auction service across DE/CZ/AT/PL.
+CarsXE :: Global :: VIN decode & build data :: REST API (275M+ records, 50+ countries) for VIN decode, specs, plate lookup, market value and history.
+Carsensor :: Asia :: Portal valuation; Marketplace with dealer market-data tools :: Recruit's Japanese used-car portal with satei appraisal estimates.
+Carsforsale.com :: US :: Vehicle history report :: Marketplace offering free NMVTIS-based vehicle history reports.
+Carsome :: Asia :: C2B used-car platform; Wholesale auction & dealer sourcing; Arbitraje / compra-venta mayorista :: Southeast Asia's largest used-car e-commerce platform with instant valuation.
+Carstat :: Global :: VIN decode & build data :: Production-grade vehicle spec API: VIN decode, 250+ engineering spec fields and NHTSA recalls via REST and MCP.
+Carstock.ie / CDX.ie / Trade Motors (Ireland trade platforms) :: Europe :: Subastas / remarketing / wholesale B2B :: Irish trade-only vehicle tender/exchange platforms for motor dealers.
+Cartell :: Ireland :: Vehicle history report :: Pioneer Irish vehicle history checker (since 2006); created the Irish anti-fraud write-off register.
+Carvago :: Baltics/CEE :: Instant-offer car buyer (valuation tool) :: Czech pan-European online used-car platform handling cross-border buying, pricing and AI pre-qualification.
+Carvana :: North America :: Online retailer instant offer; Subastas / remarketing / wholesale B2B :: Online used-car retailer with instant online purchase offers.
+Carwow :: UK :: Consumer valuation / price guide :: New-car pricing/deals plus sell-my-car valuation via dealer bidding; operates carwow.de and Spain.
+Carwow Auctions :: Europe :: Arbitraje / compra-venta mayorista :: UK C2B daily auction putting private-seller cars in front of 6,000+ dealers.
+Carwow España :: España :: Marketplace / portal :: Comparador de ofertas de coche nuevo; datos de precios de concesionarios y leads.
+Cazana :: UK :: Used-car analytics & inventory management :: Used-car valuation and market intelligence (acquired and revived by Percayso).
+Cebia :: Czechia / Slovakia :: Vehicle history report :: One of Europe's largest history-data providers (AUTOTRACER, PROVIN); CZ/SK + foreign data.
+Central Auto Auctions (CAA) :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Queensland's oldest privately-owned dealer-only auction house (since 1977).
+Central Car Auctions :: Europe :: Subastas / remarketing / wholesale B2B :: Scotland's largest trade-only auction house (since 1965).
+Centro Zaragoza :: España :: Seguros / peritación (datos) :: Instituto de investigación de vehículos participado por 19 aseguradoras; daños y siniestralidad.
+CerebrumX :: North America :: Connected-car data platform / aggregator :: AI-powered OEM-grade connected-vehicle data platform.
+Cerence :: North America :: OEM telematics & connectivity services :: Automotive conversational-AI and connected-vehicle data.
+ChargePoint :: North America :: EV charging & battery data :: EV charging network and management software.
+Che300 :: Asia :: Used-car valuation data :: Chinese used-car valuation engine covering ~86% of industry professionals.
+Check-VIN :: Global (US auctions) :: Auction & salvage history :: Auction report service for IAAI/Copart vehicles by VIN.
+CheckThatVIN :: US :: Vehicle history report :: NMVTIS-approved consumer VIN history report provider.
+Chileautos :: LATAM :: Marketplace valuation :: Chilean marketplace with commercial value tool and valuation by plate.
+China VIN Center (qp110) :: China :: B2B data & VIN API :: Chinese VIN decoding center (manufacturer/type codes, chassis).
+China Vehicle History :: China :: Vehicle history report :: Free Chinese VIN decoder with vehicle history checks.
+Chrome Data :: Global :: Vehicle data (build/pricing) :: VIN-to-trim build data, MSRP/invoice pricing and incentives.
+ChromeData :: North America :: Automotive market & registration data :: VIN/build vehicle descriptions feeding hundreds of dealer inventory management systems.
+Chợ Tốt Xe :: Asia :: Marketplace valuation :: Vietnam's largest classifieds auto vertical (Carousell) with price suggestion.
+Cipia :: Middle East :: AI inspection / claims / diagnostics :: Driver-monitoring and in-cabin sensing data.
+City Auction Group :: Europe :: Subastas / remarketing / wholesale B2B :: Vehicle auction company with centres in Belfast, Dublin and Rockingham.
+Classic.com :: Global :: Specialty valuation (classic) :: Market data and price indices for collector and enthusiast cars.
+ClearVIN :: North America :: VIN decode & history; Vehicle history report :: NMVTIS-approved provider combining VIN decoding (up to 150 params) with title/history for US & Canada incl. trucks and m
+Clicars :: España :: Marketplace / portal :: Pionero del e-commerce de coches en España; catálogo de VO con datos de precio/stock.
+Clidrive :: España :: Marketplace / portal :: Marketplace de VO y financiación; valoración de vehículo para crédito.
+Cognata :: Middle East :: AV data, simulation & foundation models :: Simulation + synthetic data for AV/ADAS.
+Commercial Vehicle Auctions (CVA) :: Europe :: Subastas / remarketing / wholesale B2B :: Long-established UK commercial vehicle (van/LCV) auction house.
+Connected Cars :: Europe :: OEM telematics & connectivity services :: OEM-embedded connected-car data solutions for dealers (VW/Toyota, Nordics).
+Constellation Automotive Group :: UK :: Wholesale auction & dealer sourcing :: European vehicle-remarketing group (BCA, cinch, We Buy Any Car, Aston Barclay, Movex).
+ConsultaDeVIN :: Spain / Latin America :: Vehicle history report :: Spanish-language VIN check covering Spain and Mexico/REPUVE.
+Convermax :: North America :: Parts fitment data :: Fitment-data and search platform powering VIN and Year-Make-Model parts lookup using MOTOR and other sources.
+Copart :: Global :: Salvage / siniestros :: Global 100% online salvage and used vehicle auction leader, ~200 locations, 11+ countries.
+Copart Middle East :: Middle East :: Salvage / siniestros :: Copart's Middle East operation (UAE/Oman/Bahrain) for salvage and used vehicles.
+Cox Automotive :: Global :: Parent group (multi-brand valuation); Conglomerate / umbrella; Dealer / retail + remarketing data :: Owns KBB, Manheim/MMR, vAuto, Accu-Trade and China's JingZhenGu.
+Cox Automotive Europe :: UK :: Wholesale / remarketing pricing data :: Operates Manheim, Dealer Auction and eVA Valuations & Appraisals; retail/wholesale data dashboards.
+Cross-Sell :: North America :: Automotive market & registration data :: Registration-sourced local market intelligence for dealer market-share strategy.
+Cubic Telecom :: Europe :: OEM telematics & connectivity services :: Connected-vehicle global connectivity middleware.
+CycleVIN :: US :: Vehicle history report :: Motorcycle history reports tied to state/federal DMV theft data.
+Cyclepedia VIN Decoder :: US :: B2B data & VIN API :: Motorcycle/powersports VIN decoding (make, model, year, specs).
+Cámara del Comercio Automotor :: LATAM :: Price guide :: Argentine chamber publishing official new/used price lists.
+DAT (Deutsche Automobil Treuhand) :: Germany :: Valuation & residual value data provider; B2B data & VIN API :: Neutral German institution for used-car values, EV residuals, repair cost calculation and the DAT Report market study.
+DAT Group :: Europe :: Vehicle specs & catalog; Vehicle valuation / guidebook; Automotive market intelligence & valuation :: German vehicle-data institution: SilverDAT VIN query for standard/optional equipment, repair-cost calc and valuations (d
+DAT Ibérica :: España :: Valoración / tasación :: Soluciones de valoración (valor GANVAM-DAT) y datos de reparación para automoción.
+DEKRA :: Germany :: Inspection / appraisal -> valuation; Government / official registry :: Inspection giant offering used-car appraisal/valuation and expert condition reports.
+DEKRA España :: España :: Inspección / certificación (datos) :: Operador de ITV, certificación y peritaje de automoción con soluciones digitales y de datos.
+DGT :: España :: Datos oficiales / sector público :: Registro oficial de vehículos; microdatos de matriculaciones, transferencias, bajas y parque.
+DGT Informe de Vehículo :: Spain :: Government / official registry :: Spain's official report: registration, ITV, owners, charges and mileage.
+DMVdesk :: US :: B2B data & VIN API :: NMVTIS commercial provider serving dealerships (not consumer-facing).
+DVLA :: Europe :: Government / standards :: Official UK government Vehicle Enquiry Service API returning vehicle details by registration (JSON).
+DataOne Software :: Global :: Vehicle data (specs/pricing); VIN decode & build data; B2B data & VIN API; Automotive market & registration data :: VIN decoding and build/equipment data with pricing and market value feeds.
+Dataforce :: Germany :: Automotive market data & analytics :: New-car registration and true-fleet market data for Germany and 40+ countries, with CO2/fuel segmentation.
+Datium Insights :: Oceania :: Valuation data & analytics; Used-car analytics & inventory management :: Australian vehicle pricing/valuation data aggregator (Sydney + KL).
+Dealer Auction :: Europe :: Subastas / remarketing / wholesale B2B :: UK's leading digital trade-to-trade wholesale marketplace (~600 auctions/day).
+Dealer2Trade :: Europe :: Subastas / remarketing / wholesale B2B :: Independent UK dealer-to-dealer auction platform designed to reduce fees.
+DealerCenter :: North America :: Dealer Management System (DMS) :: Cloud DMS for independent dealers with MAX Digital-powered market pricing.
+DealerHub :: North America :: Subastas / remarketing / wholesale B2B :: Verified dealer-to-dealer online wholesale auction at a flat fee, no subscription.
+DealerSocket :: North America :: Used-car analytics & inventory management :: Unified franchise/independent suite with Inventory+ market pricing, CRM, DMS and websites.
+Dealerslink :: North America :: Used-car analytics & inventory management :: Inventory, pricing and dealer-to-dealer sourcing marketplace scanning 50k+ sites daily.
+Dealertrack :: North America :: Dealer Management System (DMS) :: Cox Automotive DMS integrated with Manheim, KBB and vAuto data ecosystems.
+Detailed Vehicle History :: Global (US-based) :: Vehicle history report :: Concise structured reports by VIN or plate; US plus South Africa and global markets.
+Dominion DMS :: North America :: Dealer Management System (DMS) :: Data-driven DMS emphasizing CRM, inventory and lifecycle analytics.
+Dongchedi :: Asia :: Auto content + trading valuation :: ByteDance auto platform with car pricing and used-car valuation.
+Driivz :: Middle East :: EV charging & battery data :: EV charging management and energy software.
+DriveArabia :: Asia :: Valuation tool & data :: Middle East auto site with instant online car valuation (UAE/KSA).
+DriveQuant :: Europe :: Insurance telematics / UBI :: Smartphone telematics for connected insurance (15+ countries).
+DriveRightData :: Europe :: Reg/VRM lookup data :: Global VRM service identifying vehicles and specs across France, Netherlands, Ireland, Italy, Spain and Germany via REST
+Drom :: Russia :: Marketplace with dealer market-data tools :: Major Russian used-car marketplace with pricing and market data.
+Droom :: India :: Vehicle valuation / guidebook; Subastas / remarketing / wholesale B2B :: India marketplace with Orange Book Value algorithmic pricing and inspection reports.
+Droom History :: India :: Vehicle history report :: India history report across 200M+ records and 1000+ RTO databases.
+DubiCars :: Asia :: Marketplace valuation :: UAE used/new car marketplace offering free online valuation.
+Dubizzle Cars :: Asia :: Marketplace valuation :: Largest UAE car-selling platform with instant free valuation.
+E Inc :: North America :: Wholesale auction & dealer sourcing :: Digital wholesale auction marketplace (EBLOCK) with dealer sourcing and market data across Canada/US.
+EBlock :: North America :: Subastas / remarketing / wholesale B2B :: Real-time dealer-to-dealer digital auction connecting physical lanes and online.
+EROAD :: Oceania :: Fleet telematics :: Compliance-focused fleet telematics and tax automation.
+Edmunds :: North America :: Vehicle valuation & research; Valuation + specs; Marketplace with dealer market-data tools; Automotive market intelligence :: New/used pricing and appraisal portal, owned by CarMax.
+Element Fleet Remarketing :: North America :: Remarketing de flotas/leasing :: North America's largest fleet remarketer (~200,000+ vehicles/yr).
+Emirates Auction :: Middle East :: Subastas / remarketing / wholesale B2B :: UAE/Middle East's first and largest online auction for cars and machinery.
+Encar :: Asia :: Used-car platform valuation; Marketplace with dealer market-data tools; Subastas / remarketing / wholesale B2B :: South Korea's largest used-car portal with market price (시세) and diagnostics.
+EpicVIN :: North America :: VIN decode & history; Vehicle history report :: VIN lookup surfacing trim, engine, build sheet, recalls and liens; ~40M vehicle records.
+Epicor :: North America :: Parts fitment data :: PartExpert eCatalog: 17M+ part numbers with vehicle application/fitment and ACES/PIES, incl. Mexico catalog.
+EquipmentWatch :: North America :: Specialty valuation (heavy equipment) :: Fair-market and forced-liquidation values plus rental rates for equipment.
+Eurotax :: Pan-European :: Valuation & residual value data provider :: Market-standard used-car valuations and residual values across AT, CH, ES, IT, PL, PT, HU, RO, CZ, SK, SI; the GANVAM ta
+Eurotax (J.D. Power / Autovista) :: España :: Valoración / tasación :: Referencia en valoración de VO y residuales en España; base de las tablas GANVAM-Eurotax.
+Eurotax Italia :: Italy :: Valuation & residual value data provider :: Italian Eurotax used-car quotations (Giallo/Blu) updated monthly from dealer and trade surveys.
+Eurotax via TCS :: Switzerland :: Valuation & residual value data provider :: Eurotax valuations distributed in Switzerland via TCS; the standard for insurance and leasing.
+Experian Automotive :: North America :: Vehicle history & VIN data; Vehicle history & data; Vehicle history / VIN / registration data :: AutoCheck history reports and Auto AccuSelect API delivering VIN history attributes, recalls and accident data.
+FIPE :: Brazil :: Vehicle valuation / guidebook :: Brazil's official monthly average-market-price reference index for cars, motos and trucks.
+Faconauto :: España :: Asociación / patronal :: Patronal de concesionarios oficiales; datos de matriculación por canal y observatorio de posventa.
+Fahrgestellnummer-pruefen.de :: Germany :: Vehicle history report :: German FIN/VIN lookup and auto-history check.
+Fahrzeugschein.de :: Germany :: Vehicle history report :: German premium report with transparent source table, no subscription.
+Fasecolda Guía de Valores :: LATAM :: Insurer valuation guide :: Colombian insurers' federation value guide with 12k+ references and Fasecolda code.
+Fasttrack (Emarat) :: UAE/Gulf :: Vehicle history report :: UAE complete vehicle background/history report.
+Feneval :: España :: Asociación / patronal :: Patronal del rent a car; datos de flota y matriculaciones del canal de alquiler.
+FirstCheck :: South Africa :: Vehicle history report :: SA's consumer-focused vehicle verification app with live SAPS link.
+Fleet Auction Group (FLAG) :: Europe :: Subastas / remarketing / wholesale B2B :: UK fleet and lease vehicle remarketing specialist (serves Honda UK).
+Fleet Complete :: North America :: Fleet telematics :: Fleet, asset and mobile-workforce telematics.
+Flexicar :: España :: Marketplace / portal :: Mayor red de concesionarios de VO en España y Portugal; stock y precios.
+Foureyes :: North America :: Automotive market & registration data :: Connected dealer data platform with public US auto inventory-level dashboards and sales intelligence.
+Frazer :: North America :: Dealer Management System (DMS) :: Affordable DMS trusted by 19,000+ independent used-car dealers.
+FullCarChecks :: UK :: Vehicle history report :: Free instant UK vehicle history check.
+Fullbay :: North America :: VIN decode & build data :: Heavy-duty truck VIN decoder returning chassis, engine, trailer/cab and origin details.
+G3 Remarketing :: Europe :: Subastas / remarketing / wholesale B2B :: UK remarketing company serving fleets like AVIS and Europcar.
+GANVAM :: Spain :: Valuation & residual value data provider; Vehicle valuation / guidebook; Asociación / patronal :: Spain's leading dealer/repair association publishing the standard used-vehicle value tables (built with Eurotax).
+GOV.UK MOT History & DVLA Vehicle Enquiry :: UK :: Government / official registry :: Free official MOT history (with mileage at test) and DVLA vehicle enquiry.
+GT Motive :: Spain :: Insurance / claims valuation :: Spanish-rooted international claims/repair valuation software; GT Estimate plus vehicle valuation widely used by insurer
+Galves :: North America :: Wholesale valuation :: Wholesale/auction-reactive used vehicle values for dealers.
+Galves Market Data :: North America :: Vehicle valuation / guidebook :: Daily wholesale-transaction-based trade-in and market-ready values, the pro's choice since 1957.
+Geotab :: North America :: Fleet telematics :: Open fleet telematics platform with millions of connected vehicles.
+GiPA :: España :: Proveedor de datos / inteligencia de mercado :: Especialista en inteligencia del mercado de posventa; estudios de taller, recambio y neumático.
+Glass's :: UK :: Valuation & residual value data provider; Vehicle valuation / guidebook :: Long-established UK trade valuation guide; Glass's Compare forecasts and benchmarks residual values across markets.
+Glass's Australia :: Asia-Pacific :: Valuation + specs :: Australian vehicle identification, specification and valuation/forecast data (back to 1962).
+Glass's Guide Australia :: Oceania :: Vehicle valuation data :: Australian valuation data and specs with records back to 1962.
+GlobalData Automotive :: Pan-European :: Automotive market data & analytics :: Automotive forecasts, sales/registration data and pricing/positioning intelligence (absorbed LMC Automotive).
+GlobalVIN :: Europe :: VIN decode & build data :: European VIN API delivering factory specifications, production details and equipment for EU OEMs across 27+ countries.
+GoBid :: Africa :: Subastas / remarketing / wholesale B2B :: South African online car auction platform.
+Goo-net :: Asia :: Portal valuation; Marketplace with dealer market-data tools :: Japanese used-car portal by PROTO Corporation with buy-back (kaitori) valuation.
+GoodCar :: US :: Vehicle history report :: NMVTIS-feed reports with future value projection; mobile-first.
+Grays :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Australia's largest industrial, auto and commercial eCommerce auction platform.
+Greater Than :: Europe :: Insurance telematics / UBI :: AI driving-risk and crash-probability data for insurers.
+Guazi :: Asia :: Used-car marketplace valuation; Marketplace with dealer market-data tools; Arbitraje / compra-venta mayorista :: Major Chinese used-car platform with inspection-based pricing and export auctions.
+Gurtam (Wialon) :: Europe :: Telematics platform / middleware :: White-label telematics middleware platform (Wialon).
+Guía Autométrica :: LATAM :: Professional valuation :: Mexico's professional used-car valuation guide for dealers and insurers since 1995.
+HARMAN :: North America :: OEM telematics & connectivity services :: Connected-car infotainment/telematics tier-1.
+HELLA Gutmann :: Europe :: Repair/technical data :: HGS Data flat-rate workshop technical data: specs, circuit diagrams, repair tips and diagnostics.
+HERE Technologies :: Europe :: Map / road / movement data :: Location data and HD maps for automotive.
+HPI :: UK :: Consumer valuation / price guide; Reg/VRM lookup data; Vehicle history & data :: UK consumer provenance and car valuation brand (history check plus value).
+HPI Check :: UK :: Vehicle history report :: UK's longest-running provenance check, sourced from police (PNC), DVLA and finance houses.
+Hagerty :: Global :: Specialty valuation (classic) :: Industry standard for collector car values via the Hagerty Price Guide.
+Hatla2ee :: Asia :: Marketplace pricing :: Egypt's major used/new car marketplace and price reference (Dubizzle Group).
+HaynesPro :: Europe :: Repair/technical data :: European workshop technical data: 3M+ repair methods, 1M+ wiring diagrams, ADAS/torque specs across 127 makes (~99% EU c
+Helm.ai :: North America :: AV data, simulation & foundation models :: AI-first software + generative data for ADAS/AV.
+HeyDealer :: Asia :: C2B auction valuation :: Korean app where dealers competitively bid to value/buy a seller's car.
+High Mobility :: Europe :: Connected-vehicle data; Connected-car data platform / aggregator :: API-first platform standardizing manufacturer-specific connected-car data collected via the vehicle's VIN.
+HistoVec :: France :: Government / official registry :: Free official French history shared by the seller via link.
+Historia Pojazdu (gov.pl) / CEPiK :: Poland :: Government / official registry :: Free official Polish history from the central vehicle register (CEP).
+HistoriaSzkod.pl :: Poland :: Vehicle history report :: Polish VIN damage-history checking service.
+Holman Remarketing :: North America :: Remarketing de flotas/leasing :: Fleet remarketing with digital portal and instant-purchase options (US & Europe).
+Honest John :: UK :: Consumer valuation / price guide :: UK consumer site with free used-car valuations and new-car prices/deals.
+Hudson Kapel Remarketing (HKR) :: Europe :: Subastas / remarketing / wholesale B2B :: UK specialist trade-only online auctions for used vans and salvage.
+Hyundai Glovis Auto Auction :: Asia :: Subastas / remarketing / wholesale B2B :: Hyundai Group's B2B auction platform for late-model Hyundai/Kia vehicles.
+IAA :: Global :: Salvage / siniestros :: Major global salvage & repairable vehicle auction platform (~2.5M+ vehicles/yr).
+ICBC Vehicle Claims History :: Canada :: Government / official registry :: Official BC claims/damage history for vehicles registered in British Columbia.
+IDAE :: España :: Datos oficiales / sector público :: Base de datos oficial de consumo y emisiones de vehículos nuevos y etiqueta de consumo.
+IDEAUTO (IEA) :: España :: Proveedor de datos / inteligencia de mercado :: Filial de datos de ANFAC; estadísticas y estudios de VN/VO (proveedor de GANVAM y ANFAC).
+IDOM :: Asia :: Used-car retailer valuation :: Major Japanese used-car retailer offering appraisal and instant valuation.
+IMS (Insurance & Mobility Solutions) :: North America :: Insurance telematics / UBI :: Connected-vehicle data solutions for insurers (VDX).
+INE :: España :: Datos oficiales / sector público :: Estadística oficial; series de matriculación, transferencia, bajas y parque nacional de vehículos.
+INRIX :: North America :: Map / road / movement data :: Traffic and connected-vehicle movement data analytics.
+ISAAC Instruments :: North America :: Fleet telematics :: Trucking ELD and fleet telematics platform.
+Identifix :: North America :: Repair/technical data; AI inspection / claims / diagnostics :: Direct-Hit confirmed-fix database (3M+) plus OEM manuals, wiring diagrams, labor guides and specs.
+Impel :: North America :: Inventory merchandising & AI marketing :: 360 imaging and AI engagement/merchandising platform used by 8,000+ dealers in 51 countries.
+Indian Blue Book :: Asia :: Valuation guide :: India's trusted used-car pricing guide by Mahindra First Choice Wheels / car&bike.
+Indicata :: Pan-European :: Valuation & residual value data provider; Used-car market intelligence; Used-car analytics & inventory management; Infraestructura (datos/credenciales/floorplan); Used-car inventory intelligence :: Real-time used-car market intelligence across 16 European countries: pricing, RV tracking and forecasting.
+InfoAuto :: LATAM :: Official price guide :: Argentina's reference price guide for new and used vehicles.
+InfoTracer :: US :: Vehicle history report :: GoodCar-affiliated data platform with VIN history lookups.
+Inspektlabs :: Asia-Pacific :: AI inspection / claims / diagnostics :: AI damage inspection and condition data via API.
+InstaCarro :: LATAM :: C2B auction valuation; Arbitraje / compra-venta mayorista :: Brazilian inspect-and-auction model giving sellers a same-day best-market price.
+Instamotion :: Germany :: Instant-offer car buyer (valuation tool) :: German online used-car retailer (since 2017) with online pricing and purchase.
+Intangles :: Asia-Pacific :: Predictive maintenance :: Digital-twin AI fleet intelligence (India leader).
+Intelimotor :: LATAM :: Dealer SaaS valuation :: Mexican automotive SaaS with appraisal/valuation and inventory pricing.
+IronPlanet :: Global :: Camión / maquinaria :: Ritchie Bros.' online marketplace for used heavy equipment and trucks.
+Iternio :: Europe :: EV charging & battery data :: EV route planning and energy-consumption data/API.
+Ituran :: Latin America :: OEM telematics & connectivity services :: Location-based connected-car services, stolen-vehicle recovery and UBI (Israel/LatAm).
+J.D. Power :: North America :: Automotive market intelligence & valuation :: Automotive data, valuations and consumer insight.
+J.D. Power ChromeData :: North America :: VIN decode & build data :: Describes ~4B VINs/year using a 30+ year vehicle catalog cross-referenced with OEM build data (Ford/Lincoln, ~80% of bra
+J.D. Power Valuation Services :: Global :: Vehicle valuation guide & data; Valuation + specs; Vehicle valuation / guidebook :: Former NADAguides; values cars, motorcycles, RVs, boats and powersports plus ALG residuals.
+J.J. Kane Auctioneers :: North America :: Camión / maquinaria :: US public auctions of utility fleet trucks, vehicles and equipment.
+JAAI :: Asia :: Appraisal authority :: Japanese body setting standardized used-vehicle appraisal and valuation.
+JATO Dynamics :: Pan-European :: Valuation & residual value data provider; Global pricing & specs data; Vehicle specs & catalog; B2B data & VIN API; Automotive market & registration data; Automotive market intelligence & valuation :: Global leader in new-car specifications, list/transaction pricing and registrations; partnered with autobiz for a specs-
+JATO Dynamics España :: España :: Proveedor de datos / inteligencia de mercado :: Referencia mundial en especificaciones, precios y volúmenes; oficina en Madrid.
+JNPSoft OptiCat :: North America :: Parts fitment data :: Maps, validates and publishes aftermarket catalog data in ACES/PIES and TecDoc/OE formats.
+JP Sheet :: Japan :: Vehicle history report :: Connects 500+ Japanese auction sources for sheet verification by chassis number.
+JP-AUC :: Japan :: Vehicle history report :: Japanese auction 'true report' keyed by chassis/VIN.
+JP.cars :: Netherlands :: Valuation & residual value data provider :: Amsterdam AI platform computing real-time marketability and current/future residual values for used cars, local and cros
+JapanStat :: Japan :: Vehicle history report :: Japanese auction-history service with photos, sheets and translation.
+JingZhenGu :: Asia :: Used-car valuation :: Chinese real-time used-car valuation backed by Cox Automotive and KBB.
+Jooycar :: Latin America :: Insurance telematics / UBI :: LatAm connected-car and usage-based-insurance data platform.
+K Car :: Asia :: Used-car retailer valuation; Marketplace with dealer market-data tools; Subastas / remarketing / wholesale B2B :: Korean certified used-car retailer with instant purchase appraisal.
+KB Cha Cha Cha :: Asia :: Used-car platform; Marketplace with dealer market-data tools :: KB Capital's Korean used-car platform with market value and financing.
+KVD :: Europe :: Subastas / remarketing / wholesale B2B :: Sweden's largest online car auction marketplace.
+Kavak :: LATAM :: Used-car retailer valuation; Arbitraje / compra-venta mayorista :: LATAM used-car unicorn with instant purchase offers; also UAE and Turkey.
+Kelley Blue Book :: North America :: Vehicle valuation guide; Valuation + specs; Vehicle valuation / guidebook; Automotive market intelligence & valuation :: US gold-standard car valuation brand; also localized as KBB.com.mx and KBB Brasil.
+Kentekencheck.nl :: Netherlands :: Vehicle history report :: Comprehensive Dutch license-plate (kenteken) check.
+Kentekeninformatie.nl :: Netherlands :: Vehicle history report :: Dutch plate check telling 'the real story' of each car.
+Keyloop :: Europe :: Dealer Management System (DMS) :: Global DMS group (ex-CDK International) powering dealer platforms across Europe.
+Klaravik :: Europe :: Subastas / remarketing / wholesale B2B :: Scandinavia's leading online auction house for machinery, trucks and vehicles.
+L'argus :: France :: Valuation & residual value data provider; Vehicle valuation / guidebook :: France's historic reference value (Cote Argus) for used cars, plus new-car prices and B2B RV tools.
+La Centrale :: France :: Consumer valuation / price guide; Marketplace with dealer market-data tools :: Free French valuation built from ~1M daily-scanned listings to reflect real market price.
+Laser Appraiser :: North America :: VIN-scan appraisal :: VIN-scanning appraisal tool consolidating multiple guidebooks and market data.
+Levi Itzhak Price List :: Asia :: Valuation price list :: Israel's official monthly car price list, the standard for banks and insurers.
+LexisNexis Risk Solutions :: North America :: Insurance / driving data :: Insurance data broker normalizing telematics into risk scores.
+Libro Azul :: LATAM :: Consumer valuation guide :: Mexico's consumer-facing used-car price guide (AMDA origin).
+Lloyds Auctions :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Australian auctioneer handling vehicles, classics and diverse assets.
+Localiza Seminovos :: Latin America :: Remarketing de flotas/leasing :: Used-vehicle remarketing arm of a major Latin American car rental company.
+Lotlinx :: North America :: Inventory merchandising & AI marketing; Dealer / retail data :: VIN performance management using AI to predict risk and steer pricing/marketing per vehicle.
+Lotpop :: North America :: Used-car analytics & inventory management :: Used-car performance analytics (aging, pricing gaps, leads) paired with merchandising coaching.
+Lotte Auto Auction :: Asia :: Subastas / remarketing / wholesale B2B :: Major Korean used-car auction operator (Lotte group).
+Luminar Technologies :: North America :: AV data, simulation & foundation models :: LiDAR + perception data and mapping for ADAS/AV.
+Lytx :: North America :: Fleet telematics :: Video telematics and driver-behavior analytics.
+MAM Software :: Europe :: Parts fitment data :: Autocat online parts catalogue providing vehicle-linked parts data/fitment for the automotive aftermarket.
+MAX Digital :: North America :: Used-car analytics & inventory management :: FirstLook inventory management system with predictive wholesale/retail pricing and merchandising.
+MOTOR Information Systems :: North America :: Automotive data; Repair/technical data :: Vehicle, pricing and labor data provider (publisher of automotive guides).
+MSI :: España :: Proveedor de datos / inteligencia de mercado :: Proveedor de inteligencia de mercado para 2.000+ empresas; bases de matriculaciones, VO y parque.
+Mahindra First Choice Wheels :: India :: Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B :: India multi-brand used-car franchise with valuation tools and dealer-to-dealer auctions.
+Manheim :: Global :: Wholesale auction valuation; Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B; Remarketing / auction data :: World's largest wholesale auction; MMR is the US wholesale value benchmark.
+Manheim Australia :: Australia :: Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B :: Australia's largest auto auction with Car Price Guide valuations and wholesale market data.
+Manheim España :: Europe :: Subastas / remarketing / wholesale B2B :: Spain's Cox Automotive B2B vehicle remarketing platform (20+ years).
+Manheim UK :: UK :: Wholesale / remarketing pricing data; Subastas / remarketing / wholesale B2B :: One of the UK's largest wholesale marketplaces; the Manheim Used Vehicle Value Index tracks wholesale prices.
+Mapbox :: North America :: Map / road / movement data :: Developer mapping/navigation platform incl. automotive.
+Marhaba Auctions :: Middle East :: Subastas / remarketing / wholesale B2B :: UAE car auction company (4 branches) with live auctions four days weekly.
+MarketCheck :: UK :: Automotive market data & analytics; Automotive data & valuation API; VIN decode & build data; Automotive market & registration data; Dealer / retail inventory data :: Automotive data API and used-car analytics: listings, market days supply and pricing trends for the UK/Europe.
+MeinAutoCheck :: Germany :: Vehicle history report :: Collects damage, mileage and prior-owner info across listed countries.
+Merchants Fleet :: North America :: Remarketing de flotas/leasing :: US fleet management company offering fleet lease remarketing/disposal.
+Merlin Car Auctions :: Europe :: Subastas / remarketing / wholesale B2B :: Ireland's longest-established car auction house (50+ years).
+Merthyr Motor Auctions :: Europe :: Subastas / remarketing / wholesale B2B :: UK's largest direct fleet auction (40+ years).
+MiX Telematics :: Global :: Fleet telematics :: Global fleet telematics (now part of Powerfleet).
+Michelin Connected Fleet :: Europe :: Fleet telematics :: Michelin's connected-fleet data services (ex-Masternaut).
+Microlise :: Europe :: Fleet telematics :: Fleet telematics and transport optimization (UK).
+Mike Albert Fleet Solutions :: North America :: Remarketing de flotas/leasing :: Fleet lessor with vehicle remarketing and direct used-vehicle sales.
+Milanuncios :: España :: Marketplace / portal :: Portal de anuncios de gran volumen; datos de oferta y precios de coches usados.
+Ministerio de Transportes y Movilidad Sostenible (MITMA) :: España :: Datos oficiales / sector público :: Datos abiertos de movilidad con big data y observatorio del transporte y la logística.
+Mitchell :: Pan-European :: Insurance / claims valuation :: Claims-tech provider with total-loss vehicle valuation (WorkCenter Total Loss) and repair estimation.
+Mitchell 1 :: North America :: Repair/technical data :: OEM-verified repair, diagnostic and estimating data for light-duty (ProDemand) and HD trucks (TruckSeries).
+Mitchell International :: Global :: Total-loss / insurance valuation; AI inspection / claims / diagnostics :: WorkCenter Total Loss market-value reports used by Progressive, Liberty Mutual, Erie.
+Mobiauto :: Brazil :: Marketplace with dealer market-data tools :: Brazilian marketplace combining Tabela FIPE with real listing-based pricing.
+Mobileye :: Middle East :: AV data, simulation & foundation models :: ADAS/AV vision + crowdsourced REM map data.
+Mobilisights :: Europe :: OEM data monetization :: Stellantis's connected-vehicle data-as-a-service business.
+Mobito :: Europe :: Vehicle data marketplace :: B2B mobility/vehicle data marketplace with anonymized connected-vehicle data.
+Mojio :: North America :: Connected-car data platform / aggregator :: Connected-car platform powering carrier and insurer mobility services.
+Molicar :: LATAM :: Vehicle valuation table & data; Valuation + specs :: Detailed Brazilian valuation table adjusting for optionals, mileage and region since 1994.
+Momenta :: Asia-Pacific :: AV data, simulation & foundation models :: Chinese autonomous-driving data and software.
+Monta :: Europe :: EV charging & battery data :: EV charging operating platform.
+Motive :: North America :: Fleet telematics :: AI-driven fleet management and safety platform.
+Motor Auction Group (MAG) :: Europe :: Subastas / remarketing / wholesale B2B :: Family-run UK vehicle remarketing group (75+ years).
+Motor.es :: España :: Marketplace / portal :: Medio del motor con base de datos de fichas técnicas, precios y datos de matriculaciones.
+MotorCheck :: Europe :: Reg/VRM lookup data :: UK/Ireland vehicle data API with 100+ identity fields plus history and valuation.
+MotorCheck Ireland :: Ireland :: Vehicle history report :: Only history provider present in both Ireland and the UK; covers imports.
+MotorCheck UK :: UK :: Vehicle history report :: UK history and valuation checks (uses Cazana/Percayso valuation data).
+MotorCheck.ie :: Ireland :: Consumer valuation / price guide :: Ireland's car-history service that also provides car valuations alongside finance/write-off/mileage checks.
+MotorK :: España :: SaaS / tecnología (datos de concesionario) :: SaaS de automoción con IA; plataforma de datos de cliente y configurador con big data.
+MotorRegistry :: Australia :: Vehicle history report :: Australian specialist in vehicle history reports and PPSR checks.
+MotorWeb :: Oceania :: Vehicle data + value :: New Zealand vehicle data/autocheck provider with valuation data.
+Motornet :: Italy :: Valuation & residual value data provider :: Italian provider of new-car price lists and used-vehicle valuations/data.
+Motors.co.uk :: UK :: Consumer valuation / price guide :: UK used-car classifieds with valuation tools; acquired the Cazoo brand in 2024.
+Motorscan :: UK :: Vehicle history report :: Free MOT/tax check with paid finance and full history.
+Motorway :: UK :: Instant-offer car buyer (valuation tool); Wholesale auction & dealer sourcing; Arbitraje / compra-venta mayorista :: Profiles your car and runs it through an online auction of 8,000+ dealers to set a sale price.
+Munic :: Europe :: Connected-car data platform / devices :: Vehicle data collection devices + edge AI platform and data monetization.
+MyCars :: Africa :: Subastas / remarketing / wholesale B2B :: South African platform for bank-repossessed and used vehicles.
+NHTSA vPIC :: North America :: Government / standards; B2B data & VIN API :: US government centralized VIN decoder, manufacturer DB and free datasets/APIs (JSON/XML/CSV).
+NICB VINCheck :: US :: Government / official registry :: Free lookup for insurance theft claims and salvage/total-loss from member insurers.
+NIRA Dynamics :: Europe :: Map / road / movement data :: Virtual-sensor software for tire/road condition data.
+NMVTIS / VehicleHistory.gov :: US :: Government / official registry :: Federal system all states, insurers and salvage yards must report to; basis of US reports.
+NVIDIA DRIVE :: North America :: AV data, simulation & foundation models :: AV compute + simulation/world-model data.
+Nauto :: North America :: AI inspection / claims / diagnostics :: AI driver-behavior and collision-prevention data.
+NeoAuto :: LATAM :: Marketplace valuation :: Peru's #1 auto marketplace with sell-your-car valuation and price comparison.
+Netradyne :: North America :: AI inspection / claims / diagnostics :: AI dashcam and driver-safety data for fleets.
+Neutral Vehicle :: North America :: Connected-car data platform / aggregator :: Neutral platform aggregating OEM and specialized vehicle data access.
+Nexar :: North America :: AV data, simulation & foundation models :: Connected-dashcam real-world driving data for AV/road intelligence.
+NextGear Capital :: North America :: Infraestructura (datos/credenciales/floorplan) :: Independent dealer floorplan financing with access to 1,000+ auction partners.
+Northgate Trade :: Europe :: Subastas / remarketing / wholesale B2B :: Spain's B2B remarketing platform for commercial and fleet vehicles.
+OLX Autos :: Southeast Asia :: Marketplace with dealer market-data tools; Arbitraje / compra-venta mayorista :: Used-car marketplace and dealer-sourcing operation with valuation/inspection data across emerging markets.
+OPENLANE :: Global :: Wholesale marketplace + valuation data; Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B; Remarketing / auction data :: Digital wholesale auction with market data and condition-based values.
+OPENLANE Europe :: Pan-European :: Wholesale / remarketing pricing data; Subastas / remarketing / wholesale B2B :: Digital B2B wholesale marketplace across 50+ countries with pricing insights and market-trend analytics.
+OTOFACTS :: Japan :: Vehicle history report :: Used-car reports spanning Japan auction sheets plus UK and USA history.
+OVE.com :: North America :: Subastas / remarketing / wholesale B2B :: 24/7 online dealer-to-dealer and commercial marketplace, part of Manheim.
+OcasiónPlus :: España :: Marketplace / portal :: Red de centros de VO; datos de stock y precios de segunda mano y km0.
+Octo Telematics :: Europe :: Insurance telematics / UBI :: Insurance telematics and IoT analytics pioneer.
+Olho no Carro :: Brazil :: Vehicle history report :: Brazilian used-car history by plate/chassis (auction, accident, mileage).
+Omnitracs :: North America :: Fleet telematics :: Trucking telematics (now Solera Fleet Solutions).
+One2car :: Asia :: Marketplace pricing :: Thailand used/new car marketplace (iCar Asia / Carsome network).
+Online Auctions Group :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Australian platform connecting motor dealers for B2B vehicle trading.
+OpenAPI :: Europe :: Reg/VRM lookup data :: Automotive API for plate/VIN lookup and technical specs, incl. German HSN/TSN, Italy and Spain endpoints.
+Orange Book Value :: Asia :: Algorithmic valuation :: India's first algorithmic used car/bike pricing engine, used by banks and insurers.
+Orange Book Value (OBV) :: Global :: Valuation & residual value data provider :: Algorithmic fair-market pricing engine for used cars/bikes/scooters, with presence spanning Asia, Europe and ANZ.
+Oto.com.vn :: Asia :: Marketplace valuation :: Vietnamese marketplace with AI-based price suggestions.
+Otonomo :: Middle East :: Vehicle data marketplace :: Pioneer connected-car data marketplace/neutral server (merged into Urgent.ly, 2023).
+OvereniAuta.cz :: Czechia / Slovakia :: Vehicle history report :: Free Czech vehicle verification by VIN and plate.
+PBS Systems :: North America :: Dealer Management System (DMS) :: Dealer management system noted for support and service-focused operations.
+PPSR :: Australia :: Government / official registry :: National register (absorbed REVS/VSR) for finance, write-off and stolen status.
+Parallel Domain :: North America :: AV data, simulation & foundation models :: Synthetic data platform for autonomy/perception.
+Paren :: North America :: EV charging & battery data :: EV charging-network data and analytics platform.
+Parkers :: UK :: Consumer valuation / price guide :: Popular UK consumer car valuations (trade/private/part-ex) and new-car prices, powered by cap hpi data.
+Percayso Vehicle Intelligence :: UK :: Valuation & residual value data provider; B2B data & VIN API :: Whole-of-market UK vehicle pricing, individual valuation, RV forecasting and risk (formerly Cazana, ~800k vehicles/day).
+Pickles :: Oceania :: Auction + valuation; Wholesale auction & dealer sourcing :: Australian auction group offering vehicle valuations and salvage/total-loss values.
+Pickles Auctions :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Australia's largest privately-owned auction group (~100k+ vehicles/yr).
+Pitstop :: North America :: Predictive maintenance :: AI predictive maintenance for fleets.
+Platform Science :: North America :: Fleet telematics :: SaaS/telematics platform for heavy trucking (OEM-embedded).
+Powerfleet :: North America :: Fleet telematics :: AIoT fleet/asset telematics (merged MiX Telematics, Fleet Complete).
+Preteckt :: North America :: Predictive maintenance :: AI prognostics/predictive maintenance for commercial vehicles.
+Price Digests :: North America :: Specialty valuation (commercial); Valuation + specs :: Valuation data for commercial trucks, marine and off-highway equipment.
+Privacy4Cars :: North America :: Data privacy / consent :: Automotive data-privacy and PII-deletion tools.
+ProMax :: North America :: Dealer Management System (DMS) :: CRM, desking and inventory management with market pricing and price-drop alerts.
+ProovStation :: France :: AI inspection -> condition/valuation; AI inspection / claims / diagnostics :: AI drive-through inspection generating condition reports that feed appraisal/valuation for fleets and dealers.
+Quartix :: Europe :: Fleet telematics :: Vehicle-tracking telematics for commercial fleets.
+Quattroruote :: Italy :: Vehicle valuation / guidebook :: Italian publisher providing Eurotax-based used-car valuation listings (listino usato).
+Quattroruote Professional / Infocar :: Italy :: Valuation & residual value data provider :: Italy's Quattroruote professional arm: used-car quotations, Infocar vehicle database/identification and new+used listini
+Quorum :: North America :: Dealer Management System (DMS) :: XSELLERATOR DMS for franchise dealers with sales and service workflows.
+RAC Car Data Check :: UK :: Vehicle history report :: RAC-branded comprehensive UK vehicle history check.
+RACC :: España :: Club automovilista / movilidad (datos) :: Club con fundación dedicada a estudios de movilidad y siniestralidad (foco metropolitano).
+RACE :: España :: Club automovilista / movilidad (datos) :: Club automovilista con fundación de investigación en seguridad vial y movilidad.
+RAW2K :: Europe :: Salvage / siniestros :: UK online car auction site with daily/weekly salvage and used auctions.
+RDC :: Netherlands :: Valuation & residual value data provider :: Dutch vehicle-data partner enabling stock/asset monitoring and valuation/marketability for the mobility industry.
+RDW :: Netherlands :: Government / official registry :: Dutch vehicle authority; free plate check with owners count and mileage assessment.
+REPUVE :: Mexico :: Government / official registry :: Mexico's public vehicle registry; free citizen check for theft and legal status.
+REVS Checker :: Australia :: Vehicle history report :: PPSR (REVS) report provider for Australian buyers.
+RTA Dubai (Vehicle Status Certificate) :: UAE/Gulf :: Government / official registry :: Dubai's Technical Vehicle Status Certificate with accidents and mileage.
+Rapid Recon :: North America :: Reconditioning workflow :: Reconditioning workflow software that compresses time-to-frontline for used inventory.
+Ravin AI :: UK :: AI inspection -> condition/valuation; AI inspection / claims / diagnostics :: AI auto damage assessment and condition reports that support appraisal, remarketing and claims.
+RecordsFinder :: US :: Vehicle history report :: GoodCar-affiliated public-records site with VIN history.
+Recurrent :: North America :: EV charging & battery data :: EV battery-health reports and used-EV data.
+RedBook :: Oceania :: Vehicle valuation authority; Vehicle specs & catalog; Vehicle valuation / guidebook :: Australia/NZ's leading vehicle valuation and residual-value authority.
+Renrenche :: Asia :: C2C valuation :: Chinese C2C used-car platform with 249-standard on-site appraisal.
+Repairify :: North America :: AI inspection / claims / diagnostics :: Remote and AI-assisted vehicle diagnostics data (merging with Opus IVS).
+Restwertbörse :: Europe :: Salvage / siniestros :: Switzerland's largest B2B exchange for residual-value and salvage vehicles.
+Revista Motor :: LATAM :: Reference price guide :: Colombia's reference price publication for new and used cars and motorcycles.
+Reynolds and Reynolds :: North America :: Dealer Management System (DMS) :: Top-three US DMS (ERA-IGNITE/POWER) with vehicle and inventory management.
+Ritchie Bros. :: Global :: Camión / maquinaria :: World's largest auctioneer of trucks and heavy equipment; parent of IAA, IronPlanet, TruckPlanet, GovPlanet.
+RumbleOn / Wholesale Express :: North America :: Arbitraje / compra-venta mayorista :: E-commerce wholesale buy/sell/trade platform (autos + powersports).
+Rødboka :: Nordics :: Valuation & residual value data provider :: Autovista's Norwegian valuation brand (the 'Red Book') for used-car values.
+S&P Global Mobility :: Pan-European :: Automotive market data & analytics; Automotive data & forecasts; VIN decode & build data; Automotive market & registration data; Proveedor de datos / inteligencia de mercado; Automotive market intelligence :: New/used vehicle registrations, Vehicles-in-Operation, demand tracking and pricing/competitive intelligence used across 
+SBT Japan :: Asia :: Arbitraje / compra-venta mayorista :: Global used-car exporter from Japan sourcing auction and dealer stock.
+SEMA Data :: North America :: Parts fitment data :: Industry-owned data warehouse for specialty/performance parts: millions of products with vehicle fitment (ACES/PIES) fro
+SERNAUTO :: España :: Asociación / patronal :: Patronal de proveedores de automoción; datos de facturación y empleo de la industria de componentes.
+SIGRAUTO :: España :: Reciclaje / fin de vida (datos) :: Entidad de coordinación del reciclado de vehículos al final de su vida; estadísticas de VFU.
+SalesHistory.org :: Global (US auctions) :: Auction & salvage history :: Free Copart/IAAI sales history by VIN with final bid and photos.
+SambaSafety :: North America :: Insurance telematics / UBI :: Driver risk and motor-vehicle-record data provider.
+Samsara :: North America :: Fleet telematics :: IoT fleet operations platform (telematics + video + sensors).
+Sandhills Global :: Global :: Specialty valuation (equipment/truck) :: Equipment Value Index and VIP valuations across TractorHouse/TruckPaper/MachineryTrader.
+Scale AI :: North America :: AV data, simulation & foundation models :: Data labeling/annotation for autonomous driving.
+Schwacke :: Germany :: Valuation & residual value data provider; B2B data & VIN API; Vehicle valuation / guidebook :: Germany's benchmark valuation brand; used-car pricing, SchwackeNet workflow, RV monitoring and TCO.
+Seez :: Asia :: Marketplace valuation :: UAE AI car-buying platform with valuation and listing aggregation.
+SellAnyCar.com :: Asia :: C2B instant valuation :: Middle East's large C2B platform with instant valuation and 30-minute purchase.
+Sentiance :: Europe :: Insurance telematics / UBI :: On-device behavioral AI for driving and mobility insights.
+ServNet :: North America :: Subastas / remarketing / wholesale B2B :: Cooperative network of leading independent US auto auctions.
+Shriram Automall (SAMIL) :: Asia :: Subastas / remarketing / wholesale B2B :: India's large physical + online auction network for used and repossessed vehicles.
+Sibros :: North America :: OEM telematics & connectivity services :: Full-stack OTA + vehicle data logging for OEMs.
+Signzy :: India :: Reg/VRM lookup data :: Vehicle RC verification API (VAHAN) returning registration/vehicle details for KYC and onboarding.
+SiriusXM Connected Vehicle Services :: North America :: OEM telematics & connectivity services :: Telematics and connected-vehicle services for OEMs.
+Slattery Auctions :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Family-owned Australian auction house (cars, trucks, machinery).
+SmartAuction :: North America :: Subastas / remarketing / wholesale B2B :: Online auction of off-lease and repossessed inventory for eligible franchised/independent dealers.
+Smartcar :: Global :: Connected-vehicle data; Connected-car data platform / aggregator :: Car API platform across 40+ brands / 177M cars exposing vehicle attributes, VIN and live data.
+Smith Broughton Auctioneers :: Asia-Pacific :: Camión / maquinaria :: Western Australian specialist in mining and construction vehicle remarketing.
+Solera :: Pan-European :: Insurance / claims valuation; AI inspection / claims / diagnostics :: Global claims-tech owner of Audatex; total-loss market valuation, vehicle market value and repair estimation.
+Solera (Audatex / HPI) :: Global :: B2B data & VIN API :: Owns HPI, cap hpi and Audatex; claims/repair data behind most UK insurance assessments.
+Solera (Audatex AutoSource) :: Global :: Total-loss / insurance valuation :: Audatex AutoSource total-loss valuation and vehicle market value, global incl. Canada.
+Sonatus :: North America :: Connected-car data platform / aggregator :: Software-defined-vehicle platform with in-vehicle data collection AI.
+Souche (大搜车) :: Asia :: Subastas / remarketing / wholesale B2B :: Chinese dealer-services group with used-car wholesale/auction capabilities.
+Spinny :: Asia :: Retailer valuation; Marketplace with dealer market-data tools :: Indian used-car retailer with a valuation tool and instant offers.
+Spoticar :: France :: Instant-offer car buyer (valuation tool); Subastas / remarketing / wholesale B2B :: Stellantis used-car brand offering online valuation and buy-back.
+Spyne :: Global :: AI inspection -> condition/valuation; Inventory merchandising & AI marketing; Dealer / retail data :: AI car-valuation tool using live market data plus automated inspection/imaging for dealers.
+Standvirtual :: Portugal :: Consumer valuation / price guide :: Portugal's leading used-car marketplace with a free 30-second listing-based valuation.
+Stat.vin :: Global (US auctions) :: Auction & salvage history :: Free Copart/IAAI bidding and sales history by VIN with damage and photos.
+StateRecords.org :: US :: Vehicle history report :: GoodCar-affiliated records portal offering VIN checks.
+Statens vegvesen :: Nordics :: Government / official registry :: Official Norwegian vehicle information lookup for buyers/sellers.
+Stockwave :: North America :: Wholesale auction & dealer sourcing :: Unified live wholesale buying across 300+ marketplaces with market and demand data per unit.
+Stratio :: Europe :: Predictive maintenance :: AI predictive fleet-maintenance platform (bus/truck).
+StreetLight Data :: North America :: Map / road / movement data :: Mobility/movement analytics from location + vehicle data.
+Subastacar :: Europe :: Subastas / remarketing / wholesale B2B :: Spanish vehicle remarketing platform with physical dealerships nationwide.
+Sumauto :: España :: Marketplace / portal :: Red de portales de motor de Vocento con laboratorio de datos de mercado.
+Superbid :: Latin America :: Subastas / remarketing / wholesale B2B :: Brazilian online auction specialist including fleet vehicles and assets.
+Surepass :: India :: Reg/VRM lookup data :: Indian vehicle data APIs resolving chassis/engine number to RC with owner, insurance and vehicle specs from RTO/VAHAN.
+Swipcar :: España :: Renting / flotas (datos) :: Marketplace y comparador de renting de coches; datos de ofertas y precios de renting.
+Syarah :: Asia :: Online retailer valuation; Arbitraje / compra-venta mayorista :: Saudi Arabian online car retailer with pricing, trade-in and financing.
+Sylndr :: Middle East :: Wholesale auction & dealer sourcing :: Egypt used-car platform with B2B dealer transactions, inspection and pricing data (1,000+ dealers).
+Synetiq :: Europe :: Salvage / siniestros :: UK's leading integrated salvage and vehicle recycling auction (now IAA UK).
+Sytner / BCA Europe Manheim Portugal & España (BCA/Cox EU brands) :: Europe :: Subastas / remarketing / wholesale B2B :: Iberian/Portuguese country operations of BCA and Cox Automotive remarketing.
+Sytner Auction :: Europe :: Subastas / remarketing / wholesale B2B :: Prestige retailer's B2B auction of 40,000+ part-exchange vehicles annually.
+TAMM (Abu Dhabi) :: UAE/Gulf :: Government / official registry :: Abu Dhabi government portal for free vehicle accident history.
+TIREA :: España :: Seguros / peritación (datos) :: Entidad tecnológica del seguro; gestiona los grandes ficheros de vehículos asegurados y siniestros.
+TRONITY :: Europe :: EV charging & battery data :: Connected-EV data and analytics aggregator.
+TWAICE :: Europe :: EV charging & battery data :: AI battery analytics for EVs and energy storage.
+Tabela FIPE :: LATAM :: Reference price index :: Brazil's reference average-price table for cars, motorcycles and trucks since 1973.
+Tactile Mobility :: Middle East :: Map / road / movement data :: Tactile virtual-sensor data for grip, tires and road condition.
+Tartiere B2B :: Europe :: Subastas / remarketing / wholesale B2B :: Spanish B2B auction platform offering weekly inspected trade-in vehicles.
+Taylor & Martin :: North America :: Camión / maquinaria :: US leader in truck and trailer auctions and equipment appraisals.
+Tchek :: France :: AI inspection -> condition/valuation; AI inspection / claims / diagnostics :: European AI vehicle inspection and damage assessment with condition reports and repair estimates.
+TecAlliance :: Global :: Parts fitment data :: Global TecDoc standard: 13M+ aftermarket parts for 220k+ vehicle types with VIN/VRM identification and ACES/PIES linkage
+TecAlliance (TecDoc) :: España :: Posventa / recambios (datos) :: Estándar de datos de recambios (TecDoc) y datos técnicos de reparación, disponible en España.
+Tekion :: North America :: Dealer Management System (DMS) :: Cloud-native Automotive Retail Cloud DMS with advanced analytics and AI agents.
+Telenav :: North America :: Connected-car data platform / aggregator :: Connected-car navigation and location-based data/services.
+Teletrac Navman :: North America :: Fleet telematics :: Global fleet telematics and GPS tracking (DIRECTOR/TN360).
+Teoalida :: Global :: Vehicle specs & catalog :: Specialist data shop selling custom car databases (year/make/model/specs), including a detailed China database.
+The Floow :: Europe :: Insurance telematics / UBI :: Telematics data + predictive analytics for motor insurance.
+Titlecheck.us :: US :: Vehicle history report :: NMVTIS-authorized title/history check provider.
+TomTom :: Europe :: Map / road / movement data :: Maps, traffic and navigation for automotive.
+Total Car Check :: UK :: Vehicle history report :: Low-cost UK car check bundling provenance, MOT and mileage.
+Toyota Connected :: Asia-Pacific :: OEM data monetization :: Toyota's connected-vehicle data and services arm.
+Tractable :: Europe :: AI inspection / claims / diagnostics :: Computer-vision AI for auto damage and claims.
+Trade Me Motors :: Oceania :: Marketplace valuation :: New Zealand's leading marketplace with a free Value My Car tool.
+TradeCarView :: Asia :: Arbitraje / compra-venta mayorista :: Japan-based global used-vehicle export marketplace.
+TradePending :: North America :: Used-car analytics & inventory management :: Trade-in valuation and market price-comparison tools that capture acquisition leads.
+TradeSales :: Europe :: Subastas / remarketing / wholesale B2B :: 24/7 UK digital vehicle trading platform with decades of remarketing experience.
+Trakm8 :: Europe :: Fleet telematics :: UK telematics manufacturer (fleet + insurance).
+TransUnion Auto / MyAutoInfo :: South Africa :: Vehicle history report :: SA vehicle verification refreshed daily from SAPS, NAAMSA, RMI and banks.
+Transportstyrelsen (Fordonsuppgifter) :: Nordics :: Government / official registry :: Official Swedish vehicle and owner data lookup.
+Trimble :: North America :: Fleet telematics :: Telematics + transportation management for fleets.
+Truck Dealers Australia :: Asia-Pacific :: Camión / maquinaria :: Australian online truck auction platform connecting 350+ dealers.
+TruckScout24 :: Europe :: Camión / maquinaria :: Europe's leading used-truck marketplace (HGV >7.5t).
+TrueCar :: North America :: Pricing marketplace; Marketplace with dealer market-data tools :: Market-average and certified upfront pricing with trade-in values.
+Turners :: Oceania :: Retailer/auction valuation; Subastas / remarketing / wholesale B2B :: New Zealand's largest used-vehicle group with free valuation and Cash Now offers.
+UK Cars Direct (Ireland) :: Europe :: Arbitraje / compra-venta mayorista :: Platform connecting Irish trade buyers with UK vehicle stock.
+UK Vehicle Data :: Europe :: Reg/VRM lookup data :: UK DVLA-database and VRM lookup APIs delivering vehicle data and specifications in JSON.
+UNESPA :: España :: Seguros / peritación (datos) :: Patronal del seguro; estadísticas de siniestralidad y del seguro de automóvil.
+USS :: Japan :: Wholesale auction & dealer sourcing; Subastas / remarketing / wholesale B2B :: Japan's largest wholesale auction network (19+ sites) with auction grades and pricing data.
+USS Co. :: Asia :: Auction price data :: Japan's largest physical used-car auction; source of grading and wholesale prices.
+UVeye :: Global :: AI inspection -> condition/valuation; AI inspection / claims / diagnostics :: 'MRI for cars' AI inspection that appraises vehicles in seconds, feeding condition intelligence into valuation/pricing.
+Upstream Security :: Middle East :: Automotive cybersecurity & data :: Connected-vehicle cybersecurity + data management platform.
+Urban Science :: North America :: Automotive market & registration data :: Near-real-time industry sales data (96% new / 99% CPO) with dealer performance analytics.
+Urban Science España :: España :: Proveedor de datos / inteligencia de mercado :: Consultora de ciencia de datos de automoción; planificación de redes y cuota de mercado.
+Uxin :: Asia :: Used-car retailer; Marketplace with dealer market-data tools; Subastas / remarketing / wholesale B2B :: Chinese used-car superstore retailer with inspection-based valuation.
+VETTX :: North America :: Wholesale auction & dealer sourcing :: Private-party vehicle acquisition aggregator with AI dealer detection and deal management.
+VIN-Info :: Europe (multi-country) :: Vehicle history report :: Multi-language European VIN history report service.
+VIN.API :: Global :: B2B data & VIN API :: Professional VIN decoder and vehicle data API.
+VINCUE :: North America :: Dealer pricing & appraisal; Used-car analytics & inventory management :: Appraisal and live-market pricing aggregating 40,000+ dealer sites daily.
+VINCheckExpert :: Europe (multi-country) :: Vehicle history report :: VIN check, decoder and vehicle history across European data sources.
+VINCheckPro :: US :: Vehicle history report :: Free on-screen VIN check plus salvage/loss records and price comparison.
+VINData :: North America :: Vehicle history & VIN data; Vehicle history report; Vehicle history / VIN data :: NMVTIS-approved provider of vehicle history and VIN data via API.
+VINSPY :: Europe (multi-country) :: Vehicle history report :: European chassis/VIN check focusing on mileage and accident damage.
+VINdocs :: South Africa :: Vehicle history report :: South African VIN number and vehicle history check.
+VPauto :: Europe :: Subastas / remarketing / wholesale B2B :: French B2B auctioneer with 450+ vehicles in permanent catalogue across 8 sites (also Portugal).
+VWE :: Netherlands :: Valuation & residual value data provider :: Dutch vehicle-data services platform delivering identification, registration data and Autotelex valuation.
+Valley Motor Auctions :: Asia-Pacific :: Subastas / remarketing / wholesale B2B :: Australia's largest regional motor vehicle auction (since 1991).
+Vehicle Databases :: Global :: VIN decode & build data; B2B data & VIN API; Vehicle history / VIN data API :: Car API provider offering VIN decode, specs, recalls, market value and plate decode across many markets.
+Vehicle Report (vehiclereport.me) :: UAE/Gulf :: Vehicle history report :: UAE vehicle history report (accidents, ownership, mileage).
+Vehicle Score :: UK :: Vehicle history report :: UK vehicle history and scoring check.
+Vehicle.report :: US :: Vehicle history report :: Free VIN-based vehicle history report alternative.
+VehicleHistory.in :: India :: Vehicle history report :: India RTO information, owner details and car history reports.
+VehicleHistoryReport.com :: US :: Vehicle history report :: NMVTIS-affiliated consumer vehicle history reports.
+VehicleInfo :: India :: Vehicle history report :: India RTO vehicle information, RC details and e-challan lookup.
+Veiko :: Europe :: Subastas / remarketing / wholesale B2B :: Spanish B2B online auction platform for automotive professionals.
+Velocity Automotive :: North America :: Reconditioning workflow :: Total recon workflow plus digital lot management and merchandising.
+VerificaTelaioAuto :: Italy :: Vehicle history report :: Italian VIN/telaio vehicle history report service.
+Verisk :: North America :: Insurance / driving data :: Insurance data analytics incl. telematics data exchange.
+Verizon Connect :: North America :: Fleet telematics :: Telematics and fleet management from Verizon.
+VinAudit :: Global :: Valuation API; VIN decode & build data; Vehicle history report; Vehicle history / market data :: Sales-based vehicle market value API and calculator for US and Canada.
+VinCheck.info :: US :: Vehicle history report :: Free VIN check and motorcycle history (VinAudit-affiliated).
+VinGurus :: US :: Vehicle history report :: EpicVIN-affiliated NMVTIS report site.
+VinInspect :: US :: Vehicle history report :: EpicVIN-affiliated NMVTIS VIN report site.
+VinLink / VINDECODER.COM :: Global :: B2B data & VIN API :: VinLink web service for HTTP/SOAP/XML VIN decoding integrations.
+VinSmart :: US :: Vehicle history report :: NMVTIS-approved consumer VIN history report provider.
+Vincario :: Europe :: VIN decode & build data; B2B data & VIN API :: European VIN decoder API returning make/model/year/trim, engine, equipment and OEM-derived data; also vindecoder.eu.
+Vinli :: North America :: Connected-car data platform / aggregator :: Connected-car data + AI platform for fleet, insurance and mobility.
+VoertuigHistorie.nl :: Netherlands :: Vehicle history report :: Dutch plate/VIN check for real mileage and history.
+Volanty :: Latin America :: Arbitraje / compra-venta mayorista :: Brazilian platform facilitating buying and selling of used vehicles.
+Voltaiq :: North America :: EV charging & battery data :: Enterprise battery intelligence and analytics software.
+WOM :: Europe :: Salvage / siniestros :: One of Europe's largest online auction platforms for damaged vehicles.
+Waabi :: North America :: AV data, simulation & foundation models :: Generative simulation + foundation model for self-driving.
+Wallapop :: España :: Marketplace / portal :: Marketplace C2C con vertical de motor; datos de oferta geolocalizada de VO.
+Wayne Reaves :: North America :: Dealer Management System (DMS) :: Browser-based PRO-DMS for independent dealers with websites and compliance.
+Wayve :: Europe :: AV data, simulation & foundation models :: Embodied-AI foundation models for autonomous driving.
+WeBuyAnyCar :: UK :: Instant-offer car buyer (valuation tool) :: Free 30-second online valuation and guaranteed purchase price via 500+ UK branches.
+WeBuyCars :: Africa :: Arbitraje / compra-venta mayorista :: South Africa's largest used-car buyer with online auctions and 'car supermarkets'.
+WebAutoBid.eu :: Europe :: Subastas / remarketing / wholesale B2B :: European B2B auction platform across AT/DE/CZ/SK/HU/BE.
+Webfleet :: Europe :: Fleet telematics :: Bridgestone-owned European fleet telematics (ex-TomTom).
+Webmotors :: LATAM :: Marketplace valuation; Marketplace with dealer market-data tools :: Major Brazilian marketplace with price estimate and Tabela Webmotors.
+Wejo :: Europe :: Vehicle data marketplace :: Former connected-car data exchange (bankrupt 2023).
+Wheels (Wheels Donlen) :: North America :: Remarketing de flotas/leasing :: Major North American fleet lessor with dedicated vehicle remarketing services.
+Wilsons Auctions :: Europe :: Subastas / remarketing / wholesale B2B :: Large independent UK & Ireland auctioneer (vehicles, fleet, asset recovery).
+WirelessCar :: Europe :: OEM telematics & connectivity services :: OEM connected-vehicle cloud and data services provider.
+Yad2 :: Asia :: Marketplace pricing :: Israel's largest classifieds with used-car listings and price estimates.
+YallaMotor :: Asia :: Portal pricing :: Middle East auto portal with new/used prices and valuation.
+Yassi :: US :: Vehicle history report :: NMVTIS reports via single checks, batch processing and API.
+Yiche :: Asia :: Auto portal valuation :: Chinese auto portal with price quotes and used-car valuation.
+Zendrive :: North America :: Insurance telematics / UBI :: Mobile driving-behavior risk intelligence (acquired by Intuit, 2024).
+Zigwheels :: Asia :: Portal pricing :: Pricing/spec portal across India and SEA for cars and two-wheelers.
+Zonar Systems :: North America :: Fleet telematics :: Commercial/transit fleet telematics (Continental-owned).
+argus-belgique.be :: Belgium :: Consumer valuation / price guide :: Free immediate Belgian car valuation ('cote') with local market, LEZ and EV specifics.
+autoDNA :: Europe :: Vehicle history & VIN data; Vehicle history report :: Vehicle history reports (since 2009) from 26+ EU countries plus US/Canada, including specs and damage history.
+autoVIN (autovin.de) :: Global (US auctions) :: Auction & salvage history :: IAAI/Copart auction history by VIN with stock number, photos and condition.
+autobiz :: Pan-European :: Valuation & residual value data provider; Vehicle valuation / guidebook; Valoración / tasación :: French-origin pan-European valuation house; B2C 'cote' plus B2B valuation, RV forecasting and pricing tools (now partner
+autoniq :: North America :: VIN-scan appraisal :: VIN-scan appraisal with market values, run lists and vehicle history for buyers.
+bähr & fess forecasts :: Germany :: Residual value forecasting / fleet TCO :: First continental-Europe RV forecaster (since 1998); residual value forecasts, analytics and risk consulting for OEMs an
+cap hpi :: UK :: Valuation & residual value data provider; Vehicle valuation data; Vehicle specs & catalog; B2B data & VIN API; Vehicle valuation / guidebook :: The most widely used UK valuation source for dealers, finance and insurers; values, future residuals and provenance.
+car.info :: Nordics :: Consumer valuation / price guide; Vehicle history report :: Swedish vehicle-data site with free valuation based on depreciation curves and current listing prices.
+carVertical :: Baltics/CEE :: Consumer valuation / price guide; VIN history + valuation; Vehicle history & VIN data; Vehicle history report; Historial de vehículo :: Lithuanian vehicle-history provider that includes a market-value estimate tool with each report.
+carsales :: Oceania :: Marketplace pricing :: Australia's largest car marketplace with price guides and RedBook integration.
+cinch :: UK :: Instant-offer car buyer (valuation tool) :: Online used-car retailer with part-exchange valuation and fixed retail pricing.
+coches.com :: España :: Marketplace / portal :: Portal de VO y medios; anuncios, fichas/precios y análisis del mercado de segunda mano.
+coches.net :: Spain :: Consumer valuation / price guide; Marketplace with dealer market-data tools; Marketplace / portal :: Major Spanish marketplace with a free personalised online valuation (tasador).
+comparis.ch :: Switzerland :: Consumer valuation / price guide :: Swiss comparison portal offering free car value calculation on a large data basis.
+datos.gob.es :: España :: Datos oficiales / sector público :: Portal nacional de datos abiertos con datasets de vehículos, transporte y movilidad.
+dubizzle :: Middle East :: Marketplace with dealer market-data tools :: UAE's leading used-car marketplace with pricing/market data and dealer tools.
+e2e Total Loss Vehicle Management :: Europe :: Salvage / siniestros :: UK salvage network matching vehicles for sale with reclaimed-parts availability.
+eDiig :: Asia :: Subastas / remarketing / wholesale B2B :: India's automobile exchange/auction platform (Mahindra First Choice division).
+heycar :: UK :: Consumer valuation / price guide :: OEM-backed used-car marketplace (UK & DE) using an in-house valuation with real-time market data.
+iCarros :: LATAM :: Marketplace valuation :: Brazilian marketplace with price table/appraisal, owned by Itaú.
+iSeeCars :: North America :: Market analytics :: Price/value analysis, deal ratings and depreciation analytics.
+iSeeCars VIN Check :: US :: Vehicle history report :: Free VIN report blending history with market value, depreciation and safety.
+km77.com :: España :: Marketplace / portal :: Portal de referencia con base de datos de fichas técnicas, precios y mediciones propias.
+mobile.de :: Germany :: Consumer valuation / price guide; Marketplace with dealer market-data tools :: Germany's largest vehicle marketplace with a valuation tool and listing-based price analysis.
+vAuto :: Global :: Dealer inventory pricing; Used-car analytics & inventory management; Dealer / retail data :: Franchise-standard used-car pricing and inventory optimization on live market data.
+vAuto Stockwave :: North America :: Infraestructura (datos/credenciales/floorplan) :: Wholesale sourcing tool aggregating live auction inventory across marketplaces.
+vindecoder.eu :: Global :: B2B data & VIN API :: Popular VIN decoder and API for European and global vehicles.
