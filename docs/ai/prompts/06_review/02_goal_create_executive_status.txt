@@ -1,0 +1,30 @@
+/goal
+Create an executive technical status report from docs/ai.
+
+Read:
+- docs/ai/audits/
+- docs/ai/findings/
+- docs/ai/control/06_RISK_REGISTER.md
+- docs/ai/reports/
+- docs/ai/tasks/TASK_QUEUE.yml
+
+Do not modify production code.
+
+Create:
+- docs/ai/reports/EXECUTIVE_STATUS.md
+
+Report:
+1. Current truth level.
+2. Runtime verification status.
+3. Critical risks.
+4. Strongest modules.
+5. Weakest modules.
+6. Gated areas.
+7. Broken areas.
+8. Unknowns.
+9. Production readiness.
+10. Product readiness.
+11. Next 10 actions.
+
+Use evidence labels:
+VERIFIED_STATIC, VERIFIED_RUNTIME, PARTIAL, NO_VERIFIED, BROKEN, CONTRADICTION, GATED.

@@ -1,0 +1,30 @@
+/goal
+Validate TASK_QUEUE.yml integrity.
+
+Do not modify production code.
+
+Read:
+- docs/ai/tasks/TASK_QUEUE.yml
+- docs/ai/control/02_EXECUTION_MODES.md
+- docs/ai/control/03_DEFINITION_OF_DONE.md
+- docs/ai/control/08_CHANGE_CONTROL.md
+
+Check:
+1. Every task has ID, title, status, mode, risk, objective.
+2. Every task has allowed_files.
+3. Every task has forbidden_files.
+4. Every task has validation.
+5. Every task has acceptance criteria.
+6. No critical task is marked READY before prerequisites.
+7. BLOCKED tasks include blocked_reason.
+8. RFC_REQUIRED tasks do not allow production modifications.
+9. TEST_ONLY tasks do not allow production code modifications.
+10. SAFE_PATCH tasks are sufficiently narrow.
+
+Create:
+- docs/ai/reports/TASK_QUEUE_INTEGRITY_CHECK.md
+
+If needed, modify only:
+- docs/ai/tasks/TASK_QUEUE.yml
+
+Report changes.

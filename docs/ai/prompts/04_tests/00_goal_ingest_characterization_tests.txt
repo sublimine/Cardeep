@@ -1,0 +1,41 @@
+/goal
+Add characterization tests for current ingest behavior.
+
+Mode:
+TEST_ONLY
+
+Read:
+- docs/ai/audits/03_INGEST_AUDIT.md
+- pipeline/ingest.py
+- tests/
+
+Allowed to modify:
+- tests/test_ingest_characterization.py
+- tests/fixtures/
+- docs/ai/findings/FINDINGS.md
+- docs/ai/control/05_EVIDENCE_LEDGER.md
+
+Forbidden:
+- pipeline/ingest.py
+- pipeline/delta.py
+- migrations/
+- services/
+
+Goal:
+Create tests that document current behavior without changing production logic.
+
+Test scenarios:
+1. new vehicle insert;
+2. existing vehicle update;
+3. price change event;
+4. km change event;
+5. photo change event;
+6. idempotent re-ingest;
+7. gone transition if supported;
+8. malformed item handling if supported;
+9. dealer/entity source update.
+
+Run:
+python -m pytest tests/test_ingest_characterization.py -q
+
+If tests fail due to current behavior, do not patch. Record finding.

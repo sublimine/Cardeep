@@ -1,0 +1,61 @@
+/goal
+Create an RFC for production architecture.
+
+Read:
+- docs/ai/audits/10_PRODUCTION_AUDIT.md
+- docs/ai/reports/PRODUCTION_GAP_REPORT.md
+- docker-compose.yml
+- Dockerfile
+- .env.example
+- pipeline/ops/
+- services/api/
+- scripts/
+- docs/runbook/
+
+Do not modify deployment files.
+Do not modify code.
+Do not modify migrations.
+
+Create:
+- docs/ai/rfcs/RFC_PRODUCTION_ARCHITECTURE.md
+
+The RFC must include two options:
+
+Option A — cheap production:
+- single VPS;
+- PostgreSQL;
+- API process;
+- scheduler/worker process;
+- local logs;
+- daily backup;
+- basic health checks;
+- limited concurrency.
+
+Option B — serious production:
+- managed/hardened PostgreSQL;
+- API service;
+- worker pool;
+- queue;
+- scheduler coordination;
+- metrics;
+- logs;
+- alerts;
+- secrets manager;
+- backups and restore tests;
+- source health;
+- rate limits;
+- staging;
+- CI/CD;
+- cost controls.
+
+For each option include:
+- architecture diagram in text;
+- components;
+- monthly cost estimate placeholder;
+- risks;
+- operational complexity;
+- failure modes;
+- migration path;
+- rollback plan.
+
+End with human decision required.

@@ -1,0 +1,36 @@
+/goal
+Apply a SAFE_PATCH for the specific issue below.
+
+Issue:
+[PASTE FINDING ID AND SUMMARY]
+
+Evidence:
+[PASTE EVIDENCE ID / TEST FAILURE / FILE PATH]
+
+Allowed files:
+[LIST EXACT FILES]
+
+Forbidden files:
+- migrations/
+- unrelated modules
+- public docs
+- dependencies
+- any file not listed as allowed
+
+Rules:
+- Minimal patch only.
+- No refactor.
+- No scope expansion.
+- No architecture change.
+- No behavior change outside the issue.
+- Add or update test if needed.
+- Run targeted validation.
+- If the fix touches ingest/delta/dedup/verification/API contract/scheduler/schema, stop and create RFC instead.
+
+Required output:
+1. What changed.
+2. Why it changed.
+3. Test run.
+4. Result.
+5. git diff --name-only.
+6. Remaining risk.

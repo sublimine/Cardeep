@@ -1,0 +1,44 @@
+/goal
+Create a complete source connector matrix.
+
+Read:
+- pipeline/sources/
+- pipeline/platform/
+- countries/ES/
+- scripts/
+- tests/
+- requirements.txt
+- docs/
+
+Do not modify connector code.
+Do not modify tests.
+Do not modify dependencies.
+
+Create:
+- docs/ai/audits/06_SCRAPING_SOURCES_AUDIT.md
+- docs/ai/audits/SOURCE_MATRIX.md
+
+For each source/connector include:
+- source name;
+- type;
+- module path;
+- fetch method;
+- parser method;
+- pagination;
+- JS/browser requirement;
+- auth requirement;
+- proxy requirement;
+- retries;
+- backoff;
+- block detection;
+- rate limiting;
+- tests;
+- runtime status;
+- status classification;
+- production score;
+- legal/compliance note.
+
+Status values:
+VERIFIED_STATIC, VERIFIED_RUNTIME, PARTIAL, BROKEN, GATED, DOCUMENTED_ONLY, NO_VERIFIED.
+
+Do not claim any source drains completely unless runtime evidence exists.

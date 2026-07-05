@@ -1,0 +1,36 @@
+/goal
+Audit identity and deduplication.
+
+Read:
+- pipeline/ids.py
+- pipeline/identity/
+- all pipeline files with dedup in name
+- migrations/
+- tests/
+
+Do not modify code.
+Do not modify tests.
+Do not modify migrations.
+
+Create:
+- docs/ai/audits/DEDUP_IDENTITY_AUDIT.md
+
+Report:
+1. Dealer identity.
+2. Entity identity.
+3. Source identity.
+4. Vehicle identity.
+5. Canonical IDs.
+6. Cluster model.
+7. Dedup scoring.
+8. Blocking keys.
+9. Merge criteria.
+10. Overmerge risks.
+11. Undermerge risks.
+12. Unmerge/recovery support.
+13. Tests existing.
+14. Tests missing.
+15. Production readiness score.
+16. Required next tasks.
+
+Any threshold/merge logic change must be RFC_REQUIRED.

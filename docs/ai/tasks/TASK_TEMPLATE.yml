@@ -1,0 +1,70 @@
+# Use this template for every new task.
+# Do not create vague tasks.
+# Every task must declare mode, risk, allowed_files, forbidden_files, validation and acceptance.
+
+TASK-XXX:
+  title: ""
+  status: READY
+  mode: AUDIT_ONLY
+  risk: LOW
+
+  objective: >
+    [Precise objective. One task only. No mixed audit + implementation unless explicitly intended.]
+
+  background: >
+    [Why this task exists. Reference prior findings, evidence IDs or audits.]
+
+  allowed_files:
+    - "docs/ai/..."
+
+  forbidden_files:
+    - "pipeline/**"
+    - "services/**"
+    - "migrations/**"
+    - "scripts/**"
+    - "tests/**"
+    - "requirements.txt"
+    - "requirements-dev.txt"
+    - "docker-compose.yml"
+    - "Dockerfile"
+    - "README.md"
+    - "PLAN.md"
+    - "PROGRESO.md"
+    - "RUNBOOK.md"
+
+  inspect:
+    - ""
+
+  commands_optional:
+    - ""
+
+  validation:
+    - "git status --short"
+    - "git diff --name-only"
+
+  acceptance:
+    - ""
+    - ""
+
+  evidence_required: true
+
+  update_required:
+    - "docs/ai/findings/FINDINGS.md"
+    - "docs/ai/control/05_EVIDENCE_LEDGER.md"
+    - "docs/ai/control/06_RISK_REGISTER.md"
+    - "docs/ai/tasks/TASK_QUEUE.yml"
+
+  stop_conditions:
+    - "Forbidden file must be modified."
+    - "Critical behavior change is needed."
+    - "Migration is needed."
+    - "Tests fail unexpectedly."
+    - "Task scope is too broad."
+    - "Human approval is required."
+
+  on_success:
+    - "Mark DONE only if acceptance criteria are met."
+
+  on_failure:
+    - "Mark BLOCKED, NEEDS_REVIEW, FAILED_VALIDATION or RFC_REQUIRED."
+    - "Do not hide failures."

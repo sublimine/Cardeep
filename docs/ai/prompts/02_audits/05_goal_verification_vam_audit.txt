@@ -1,0 +1,40 @@
+/goal
+Audit the verification and trust stack.
+
+Read:
+- pipeline/verify.py
+- pipeline/verify_ttl.py
+- pipeline/inquisition/
+- pipeline/gestionador/
+- docs/architecture/10-VERIFICATION-STACK.md
+- migrations/
+- tests/
+
+Do not modify code.
+Do not modify tests.
+Do not modify migrations.
+
+Create:
+- docs/ai/audits/05_VERIFICATION_AUDIT.md
+
+Report:
+1. Trust model.
+2. Verdict states.
+3. Quorum logic.
+4. Source independence.
+5. TTL.
+6. REFUTED behavior.
+7. TRUSTWORTHY behavior.
+8. UNVERIFIED behavior.
+9. Zero-count certification risk.
+10. Deep Ledger implementation status.
+11. Inquisition implementation status.
+12. Gestionador implementation status.
+13. Source health interaction.
+14. API exposure.
+15. Tests existing.
+16. Tests missing.
+17. Production readiness score.
+18. Required RFCs.
+
+Mark documentation-only claims as DOCUMENTED_CLAIM.

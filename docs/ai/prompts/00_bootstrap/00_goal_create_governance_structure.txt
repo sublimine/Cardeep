@@ -1,0 +1,47 @@
+/goal
+Actúa como auditor técnico institucional y ejecutor controlado dentro del repositorio Cardeep.
+
+Objetivo de esta tarea:
+Crear un sistema de gobierno interno para trabajar sobre el repo sin cambios destructivos.
+
+Reglas obligatorias:
+- No modifiques código productivo.
+- No modifiques migraciones.
+- No ejecutes refactors.
+- No borres archivos.
+- No cambies dependencias.
+- No edites README/PLAN/PROGRESO todavía.
+- Crea únicamente documentación de control dentro de docs/ai/.
+- Toda afirmación técnica debe marcarse como VERIFIED_STATIC, VERIFIED_RUNTIME, PARTIAL, NO_VERIFIED, BROKEN, CONTRADICTION o GATED.
+- Si no puedes verificar algo, escribe NO_VERIFIED.
+- Si detectas riesgo, regístralo.
+- Si una tarea requiere tocar ingest, delta, dedup, verify, scheduler, API contract, migrations o scraping Tier-1, márcala como RFC_REQUIRED.
+
+Crea esta estructura:
+docs/ai/control/
+docs/ai/tasks/
+docs/ai/audits/
+docs/ai/rfcs/
+docs/ai/findings/
+docs/ai/loops/
+docs/ai/reports/
+
+Crea estos archivos iniciales:
+docs/ai/control/00_MISSION_CONTRACT.md
+docs/ai/control/01_OPERATING_RULES.md
+docs/ai/control/02_EXECUTION_MODES.md
+docs/ai/control/03_DEFINITION_OF_DONE.md
+docs/ai/control/04_STATUS_TAXONOMY.md
+docs/ai/control/05_EVIDENCE_LEDGER.md
+docs/ai/control/06_RISK_REGISTER.md
+docs/ai/control/07_DECISION_LOG.md
+docs/ai/control/08_CHANGE_CONTROL.md
+docs/ai/control/09_GIT_POLICY.md
+docs/ai/control/10_REPORTING_PROTOCOL.md
+docs/ai/control/11_NO_GO_ZONES.md
+docs/ai/control/12_HUMAN_APPROVAL_GATES.md
+
+Entrega:
+- Lista de archivos creados.
+- Confirmación de que no se tocó código productivo.
+- Resultado de git diff --name-only.

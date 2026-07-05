@@ -1,0 +1,36 @@
+/goal
+Create an RFC for verification/VAM hardening.
+
+Read:
+- docs/ai/audits/05_VERIFICATION_AUDIT.md
+- docs/ai/findings/FINDINGS.md
+- docs/ai/findings/GATED.md
+- docs/ai/control/05_EVIDENCE_LEDGER.md
+- docs/ai/control/06_RISK_REGISTER.md
+- pipeline/verify.py
+- pipeline/verify_ttl.py
+- docs/architecture/10-VERIFICATION-STACK.md
+- tests/
+
+Do not modify production code.
+Do not modify tests.
+Do not modify migrations.
+
+Create:
+- docs/ai/rfcs/RFC_VERIFICATION_VAM_HARDENING.md
+
+The RFC must cover:
+- quorum rules;
+- independence logic;
+- zero-count trustworthy prevention;
+- TTL expiry;
+- REFUTED/TRUSTWORTHY/UNVERIFIED states;
+- Deep Ledger status;
+- Inquisition status;
+- Gestionador status;
+- source health interaction;
+- API exposure of trust state;
+- required regression tests;
+- rollback plan.
+
+End with human approval required.

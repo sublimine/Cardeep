@@ -1,0 +1,23 @@
+/goal
+Rellena los documentos de gobierno en docs/ai/control/ usando el contenido institucional proporcionado por el operador humano.
+
+Reglas:
+- Solo puedes modificar docs/ai/control/.
+- No modifiques pipeline/, services/, migrations/, tests/, scripts/, requirements.txt, docker-compose.yml, README.md, PLAN.md, PROGRESO.md ni RUNBOOK.md.
+- Mantén los documentos en Markdown.
+- No inventes estado real del repo.
+- No afirmes que algo funciona si no se ha ejecutado.
+- Diferencia siempre entre evidencia estática y evidencia runtime.
+- Añade secciones TODO donde falte información real.
+- Si un documento referencia tareas futuras, no las ejecutes.
+
+Validación:
+- Ejecuta git diff --name-only.
+- El diff solo debe contener docs/ai/control/*.
+- Reporta cualquier desviación.
+
+Entrega:
+1. Archivos modificados.
+2. Confirmación de que solo se tocó docs/ai/control/.
+3. Riesgos detectados.
+4. Próximo paso recomendado.

@@ -1,0 +1,44 @@
+/goal
+Evaluate release readiness.
+
+Read:
+- docs/ai/reports/MODULE_SCORECARD.md
+- docs/ai/reports/RUNTIME_BASELINE.md
+- docs/ai/reports/PRODUCTION_GAP_REPORT.md
+- docs/ai/reports/PRODUCTIZATION_GAP_REPORT.md
+- docs/ai/control/06_RISK_REGISTER.md
+- docs/ai/tasks/TASK_QUEUE.yml
+- tests/
+- services/api/
+- pipeline/
+
+Do not modify code.
+
+Create:
+- docs/ai/reports/RELEASE_READINESS.md
+
+Classify release readiness for:
+1. internal developer use;
+2. internal data validation;
+3. private beta API;
+4. paid pilot;
+5. public product;
+6. production system.
+
+For each:
+- status;
+- blockers;
+- risks;
+- required tasks;
+- evidence.
+
+Allowed statuses:
+- NOT_READY
+- LAB_READY
+- INTERNAL_READY
+- PRIVATE_BETA_CANDIDATE
+- PAID_PILOT_CANDIDATE
+- PRODUCTION_CANDIDATE
+- PRODUCTION_READY
+
+Do not mark PRODUCTION_READY without runtime validation, tests, observability, backups and operational recovery.
