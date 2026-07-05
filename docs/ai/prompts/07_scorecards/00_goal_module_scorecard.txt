@@ -1,0 +1,47 @@
+/goal
+Build the Cardeep module scorecard.
+
+Read:
+- docs/ai/audits/
+- docs/ai/reports/RUNTIME_BASELINE.md
+- docs/ai/findings/
+- docs/ai/control/05_EVIDENCE_LEDGER.md
+- docs/ai/control/06_RISK_REGISTER.md
+
+Do not modify production code.
+
+Create:
+- docs/ai/reports/MODULE_SCORECARD.md
+
+Score each area 0-10:
+1. Repository organization.
+2. Documentation accuracy.
+3. Data model.
+4. Migrations.
+5. Ingest.
+6. Delta/gone.
+7. Dedup/identity.
+8. Verification/VAM.
+9. Source connectors.
+10. Tier-1 scraping.
+11. API.
+12. Scheduler/ops.
+13. Tests.
+14. CI.
+15. Observability.
+16. Production readiness.
+17. Product readiness.
+18. Commercial readiness.
+
+Rules:
+- No score above 6 without runtime validation.
+- No score above 7 without meaningful tests.
+- No score above 8 without observability and operational recovery.
+- Every score must cite evidence.
+- Separate architecture score from implementation score.
+- Separate implementation score from runtime score.
+- Separate runtime score from product/commercial score.
+
+End with:
+- Continue / Cut scope / Pivot / Rebuild.
+- Next 10 actions in exact order.

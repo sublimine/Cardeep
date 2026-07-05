@@ -1,0 +1,38 @@
+/goal
+Audit tests and CI.
+
+Read:
+- tests/
+- .github/workflows/
+- pytest.ini
+- requirements-dev.txt
+- requirements.txt
+
+Do not modify tests.
+Do not modify CI.
+Do not modify dependencies.
+
+Create:
+- docs/ai/audits/09_TEST_COVERAGE_AUDIT.md
+
+If environment allows, run:
+- python -m pytest --collect-only -q
+
+Report:
+1. Test files by subsystem.
+2. Unit tests.
+3. Integration tests.
+4. DB tests.
+5. API tests.
+6. Source connector tests.
+7. Dedup tests.
+8. Delta/gone tests.
+9. Verification tests.
+10. Scheduler tests.
+11. CI workflows.
+12. Collect-only status.
+13. Known failures.
+14. Missing critical tests.
+15. Recommended TEST_ONLY tasks.
+
+Do not fix tests in this task.

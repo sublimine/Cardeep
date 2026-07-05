@@ -1,0 +1,27 @@
+/goal
+Review the last task diff as a strict technical reviewer.
+
+Do not modify files.
+
+Inspect:
+- git status --short
+- git diff --name-only
+- git diff --stat
+- git diff
+
+Check:
+1. Did the task respect allowed_files?
+2. Were forbidden files touched?
+3. Did the task expand scope?
+4. Are claims backed by evidence?
+5. Are runtime claims actually executed?
+6. Were tests required?
+7. Were tests run?
+8. Is TASK_QUEUE.yml updated correctly?
+9. Are findings/evidence/risk updated?
+10. Should this be accepted, reverted or sent to NEEDS_REVIEW?
+
+Create:
+- docs/ai/reports/LAST_TASK_REVIEW.md
+
+Do not change production code.

@@ -1,0 +1,334 @@
+# CARDEEP GOVERNED TASK QUEUE
+# Claude Code must execute exactly one READY task per loop iteration.
+
+meta:
+  project: "Cardeep"
+  queue_version: "1.0"
+  owner: "human_operator"
+  executor: "claude_code"
+  operating_model: "one_READY_task_per_iteration"
+  default_mode: "AUDIT_ONLY"
+  default_forbidden_files:
+    - "pipeline/**"
+    - "services/**"
+    - "migrations/**"
+    - "scripts/**"
+    - "tests/**"
+    - "requirements.txt"
+    - "requirements-dev.txt"
+    - "docker-compose.yml"
+    - "Dockerfile"
+    - "README.md"
+    - "PLAN.md"
+    - "PROGRESO.md"
+    - "RUNBOOK.md"
+  status_values: [READY, IN_PROGRESS, DONE, BLOCKED, NEEDS_REVIEW, RFC_REQUIRED, WAITING_FOR_HUMAN, FAILED_VALIDATION, PARTIAL_DONE]
+  modes: [AUDIT_ONLY, TEST_ONLY, SAFE_PATCH, RFC_REQUIRED, MIGRATION_REQUIRED, PRODUCTION_GATE, PRODUCT_GATE]
+
+tasks:
+
+  TASK-000:
+    title: "Verify AI governance files exist"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: LOW
+    objective: "Verify that the docs/ai governance structure exists and is internally consistent."
+    allowed_files:
+      - "docs/ai/reports/GOVERNANCE_INSTALL_CHECK.md"
+      - "docs/ai/findings/FINDINGS.md"
+      - "docs/ai/control/05_EVIDENCE_LEDGER.md"
+    forbidden_files: ["pipeline/**", "services/**", "migrations/**", "scripts/**", "tests/**", "README.md", "PLAN.md", "PROGRESO.md", "RUNBOOK.md"]
+    inspect:
+      - "docs/ai/control/00_MISSION_CONTRACT.md"
+      - "docs/ai/control/01_OPERATING_RULES.md"
+      - "docs/ai/control/02_EXECUTION_MODES.md"
+      - "docs/ai/control/03_DEFINITION_OF_DONE.md"
+      - "docs/ai/control/04_STATUS_TAXONOMY.md"
+      - "docs/ai/control/05_EVIDENCE_LEDGER.md"
+      - "docs/ai/control/06_RISK_REGISTER.md"
+      - "docs/ai/control/07_DECISION_LOG.md"
+      - "docs/ai/control/08_CHANGE_CONTROL.md"
+      - "docs/ai/control/09_GIT_POLICY.md"
+      - "docs/ai/control/10_REPORTING_PROTOCOL.md"
+      - "docs/ai/control/11_NO_GO_ZONES.md"
+      - "docs/ai/control/12_HUMAN_APPROVAL_GATES.md"
+    validation: ["git status --short", "git diff --name-only"]
+    acceptance:
+      - "Governance files are present or missing files are listed."
+      - "No production code changed."
+      - "A governance install check report exists."
+    on_failure:
+      - "Mark BLOCKED if docs/ai/control does not exist."
+      - "Mark NEEDS_REVIEW if forbidden files were modified."
+
+  TASK-001:
+    title: "Create verified repository map"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: LOW
+    objective: "Create a complete static repository map with folder purpose, entrypoints, critical modules, scripts, tests, docs, configs and unknowns."
+    allowed_files: ["docs/ai/audits/00_REPO_MAP.md", "docs/ai/findings/UNKNOWN_UNVERIFIED.md", "docs/ai/findings/FINDINGS.md", "docs/ai/control/05_EVIDENCE_LEDGER.md"]
+    forbidden_files: ["pipeline/**", "services/**", "migrations/**", "scripts/**", "tests/**", "README.md", "PLAN.md", "PROGRESO.md", "RUNBOOK.md"]
+    inspect: [".", ".github/workflows/", ".claude/", "countries/", "docs/", "migrations/", "ops/", "pipeline/", "plans/", "portal/", "scripts/", "services/", "tests/", "web/", "requirements.txt", "requirements-dev.txt", "pytest.ini", "docker-compose.yml", "Dockerfile", ".env.example"]
+    validation: ["find . -maxdepth 3 -type f | sort | sed 's#^./##' | head -500", "git status --short", "git diff --name-only"]
+    acceptance: ["Every top-level folder classified.", "Every known execution entrypoint listed.", "Every unknown marked NO_VERIFIED.", "No production code changed."]
+    output_required: ["Repository folder map.", "Entrypoint map.", "Critical module list.", "Unknowns list."]
+
+  TASK-002:
+    title: "Audit documentation claims versus repository structure"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: MEDIUM
+    objective: "Extract claims from README.md, PLAN.md, PROGRESO.md, RUNBOOK.md and docs, then compare them against static code evidence where possible."
+    allowed_files: ["docs/ai/audits/DOCS_VS_CODE_AUDIT.md", "docs/ai/findings/CONTRADICTIONS.md", "docs/ai/findings/GATED.md", "docs/ai/findings/UNKNOWN_UNVERIFIED.md", "docs/ai/findings/FINDINGS.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md"]
+    forbidden_files: ["README.md", "PLAN.md", "PROGRESO.md", "RUNBOOK.md", "pipeline/**", "services/**", "migrations/**", "tests/**"]
+    inspect: ["README.md", "PLAN.md", "PROGRESO.md", "RUNBOOK.md", "docs/", "pipeline/", "services/", "migrations/", "tests/"]
+    validation: ["git diff --name-only"]
+    acceptance:
+      - "A table exists with Documented Promise, Source Document, Code Evidence, Runtime Evidence, Verdict, Risk, Next Task."
+      - "Claims of 100% coverage, real-time, delta complete and production readiness are classified."
+      - "No source document is edited."
+    verdict_values: [VERIFIED_STATIC, VERIFIED_RUNTIME, PARTIAL, NO_VERIFIED, CONTRADICTION, ASPIRATIONAL, BROKEN, GATED]
+
+  TASK-003:
+    title: "Runtime baseline without repairs"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: MEDIUM
+    objective: "Establish what can run locally without changing code or dependencies. Do not repair failures in this task."
+    allowed_files: ["docs/ai/reports/RUNTIME_BASELINE.md", "docs/ai/findings/BROKEN.md", "docs/ai/findings/UNKNOWN_UNVERIFIED.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md"]
+    forbidden_files: ["pipeline/**", "services/**", "migrations/**", "scripts/**", "tests/**", "requirements.txt", "requirements-dev.txt", "docker-compose.yml", "Dockerfile"]
+    commands_optional:
+      - "python --version"
+      - "pip --version"
+      - "python -m pytest --collect-only -q"
+      - "python -m pytest -q"
+      - "docker compose config"
+      - "docker compose up -d cardeep-pg"
+      - "python scripts/migrate.py up"
+      - "uvicorn services.api.main:app --host 127.0.0.1 --port 8090"
+      - "python -m pipeline.ops.scheduler --help"
+    validation: ["git diff --name-only"]
+    acceptance: ["Runtime status known or explicitly blocked.", "Command outputs recorded.", "No repairs attempted.", "No code modified."]
+    on_failure:
+      - "Record command failure exactly."
+      - "Mark task DONE if baseline was captured, even if commands failed."
+      - "Mark BLOCKED only if environment prevents all meaningful commands."
+
+  TASK-004:
+    title: "Audit migrations and schema evolution"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: HIGH
+    objective: "Reconstruct database schema and migration history from migrations and migration runner."
+    allowed_files: ["docs/ai/audits/02_DATA_MODEL_AUDIT.md", "docs/ai/audits/MIGRATIONS_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/CONTRADICTIONS.md", "docs/ai/findings/TECH_DEBT.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md"]
+    forbidden_files: ["migrations/**", "scripts/**", "pipeline/**", "services/**", "tests/**"]
+    inspect: ["migrations/", "scripts/migrate.py", "docs/runbook/", "README.md", "RUNBOOK.md"]
+    validation: ["ls -1 migrations | sort", "git diff --name-only"]
+    acceptance: ["Latest migration identified.", "Runbook migration target compared to actual latest migration.", "Tables, indexes, constraints and views summarized.", "Critical table risks listed.", "No migration edited."]
+    critical_focus: ["entity", "entity_source", "vehicle", "vehicle_event", "alert", "verification_verdict", "source health", "clusters", "platform listings", "serving views"]
+
+  TASK-005:
+    title: "Audit ingestion lifecycle"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: CRITICAL
+    objective: "Audit ingestion behavior statically: dealer/entity upsert, vehicle upsert, events, last_seen, gone handling, alerts and verification interaction."
+    allowed_files: ["docs/ai/audits/03_INGEST_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/TECH_DEBT.md", "docs/ai/findings/UNKNOWN_UNVERIFIED.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/ingest.py", "pipeline/harvest_dealer.py", "pipeline/recipe.py", "pipeline/delta.py", "migrations/**", "tests/**"]
+    inspect: ["pipeline/ingest.py", "pipeline/harvest_dealer.py", "pipeline/recipe.py", "pipeline/delta.py", "tests/", "migrations/"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Functions/classes identified.", "Inputs/outputs identified.", "Tables touched identified.", "Events generated identified.", "Error handling documented.", "Tests existing/missing listed.", "No production code changed."]
+    required_sections: ["Purpose", "Entrypoints", "Data flow", "Tables touched", "Lifecycle states", "Events", "Gone guard", "Alerts", "Verification interaction", "Idempotency", "Failure modes", "Tests", "Risks", "Production score"]
+
+  TASK-006:
+    title: "Audit delta and gone guard"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: CRITICAL
+    objective: "Audit delta and gone handling, including append-only connectors, false gone protection and event generation."
+    allowed_files: ["docs/ai/audits/04_DELTA_GONE_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/BROKEN.md", "docs/ai/findings/GATED.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/delta.py", "pipeline/delta_guard.py", "pipeline/evict.py", "pipeline/ingest.py", "migrations/**", "tests/**"]
+    inspect: ["pipeline/delta.py", "pipeline/delta_guard.py", "pipeline/evict.py", "pipeline/ingest.py", "tests/", "migrations/"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Delta types mapped.", "Gone conditions mapped.", "False gone risks documented.", "Tests existing/missing identified.", "Any critical behavior change proposed as RFC_REQUIRED, not implemented."]
+
+  TASK-007:
+    title: "Audit verification stack"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: CRITICAL
+    objective: "Audit VAM, verification verdicts, TTL, source independence, Inquisition, Gestionador and ledger claims."
+    allowed_files: ["docs/ai/audits/05_VERIFICATION_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/GATED.md", "docs/ai/findings/CONTRADICTIONS.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/verify.py", "pipeline/verify_ttl.py", "pipeline/inquisition/**", "pipeline/gestionador/**", "migrations/**", "tests/**"]
+    inspect: ["pipeline/verify.py", "pipeline/verify_ttl.py", "pipeline/inquisition/", "pipeline/gestionador/", "docs/architecture/10-VERIFICATION-STACK.md", "migrations/", "tests/"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Trust states mapped.", "Quorum rules mapped.", "TTL behavior mapped.", "Independence logic mapped.", "Ledger and Inquisition implementation status classified.", "Zero-count trustworthy regression risk checked."]
+
+  TASK-008:
+    title: "Audit dedup and identity"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: CRITICAL
+    objective: "Audit dealer identity, vehicle identity, source identity, clustering and dedup behavior."
+    allowed_files: ["docs/ai/audits/DEDUP_IDENTITY_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/TECH_DEBT.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/ids.py", "pipeline/identity/**", "pipeline/**dedup**", "migrations/**", "tests/**"]
+    inspect: ["pipeline/ids.py", "pipeline/identity/", "pipeline/", "migrations/", "tests/"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Dealer identity flow mapped.", "Vehicle identity flow mapped.", "Cluster/dedup tables identified.", "Overmerge and undermerge risks documented.", "Tests existing/missing identified."]
+
+  TASK-009:
+    title: "Audit source connectors and create source matrix"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: HIGH
+    objective: "Create a source-by-source matrix for all connectors, classifying fetch method, parser, pagination, JS/browser needs, auth/proxy/rate-limit assumptions, tests and status."
+    allowed_files: ["docs/ai/audits/06_SCRAPING_SOURCES_AUDIT.md", "docs/ai/audits/SOURCE_MATRIX.md", "docs/ai/findings/GATED.md", "docs/ai/findings/BROKEN.md", "docs/ai/findings/FINDINGS.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/sources/**", "pipeline/platform/**", "countries/**", "scripts/**", "tests/**", "requirements.txt"]
+    inspect: ["pipeline/sources/", "pipeline/platform/", "countries/ES/", "scripts/", "tests/", "requirements.txt", "docs/research/"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Each connector/source classified.", "Tier-1 vs long-tail separation assessed.", "GATED dependencies recorded.", "No connector code changed."]
+
+  TASK-010:
+    title: "Audit API surface and serving contract"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: HIGH
+    objective: "Audit FastAPI application, routers, endpoints, schemas, caching, rate limiting, DB dependencies and serving semantics."
+    allowed_files: ["docs/ai/audits/07_API_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/TECH_DEBT.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["services/api/**", "tests/**", "pipeline/**"]
+    inspect: ["services/api/", "tests/", "docs/runbook/", "README.md"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Endpoint list created.", "Input/output contracts summarized.", "Verification/trust exposure checked.", "Pagination/filter/cache/rate limit behavior mapped.", "API production risks listed."]
+
+  TASK-011:
+    title: "Audit scheduler and operations"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: HIGH
+    objective: "Audit scheduler, ops scripts, health, heartbeat, locks, coverage checks, watchdogs, alerts and repair workflows."
+    allowed_files: ["docs/ai/audits/08_SCHEDULER_OPS_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/GATED.md", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/ops/**", "ops/**", "scripts/**", "tests/**"]
+    inspect: ["pipeline/ops/", "ops/", "scripts/", "docs/runbook/", "tests/"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Jobs listed.", "Entrypoints listed.", "Locks/heartbeat mapped.", "Failure recovery mapped.", "Operational gaps listed."]
+
+  TASK-012:
+    title: "Audit tests and CI"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: HIGH
+    objective: "Classify the full test suite and CI workflows. Identify critical paths lacking tests."
+    allowed_files: ["docs/ai/audits/09_TEST_COVERAGE_AUDIT.md", "docs/ai/findings/FINDINGS.md", "docs/ai/findings/TECH_DEBT.md", "docs/ai/tasks/TASK_QUEUE.yml", "docs/ai/control/05_EVIDENCE_LEDGER.md", "docs/ai/control/06_RISK_REGISTER.md"]
+    forbidden_files: ["tests/**", ".github/workflows/**", "pytest.ini", "requirements-dev.txt", "pipeline/**", "services/**"]
+    inspect: ["tests/", ".github/workflows/", "pytest.ini", "requirements-dev.txt"]
+    validation: ["python -m pytest --collect-only -q", "git diff --name-only"]
+    acceptance: ["Tests categorized by subsystem.", "CI workflows categorized.", "Critical missing tests listed.", "Collect-only result recorded if command runs."]
+
+  TASK-013:
+    title: "Create production gap report"
+    status: READY
+    mode: PRODUCTION_GATE
+    risk: HIGH
+    objective: "Evaluate production readiness without modifying production configuration."
+    allowed_files: ["docs/ai/audits/10_PRODUCTION_AUDIT.md", "docs/ai/reports/PRODUCTION_GAP_REPORT.md", "docs/ai/findings/GATED.md", "docs/ai/findings/FINDINGS.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["Dockerfile", "docker-compose.yml", ".env.example", "ops/**", "pipeline/ops/**", "scripts/**", "services/**", "migrations/**"]
+    inspect: ["Dockerfile", "docker-compose.yml", ".env.example", "docs/runbook/", "ops/", "pipeline/ops/", "services/api/", "scripts/"]
+    validation: ["docker compose config", "git diff --name-only"]
+    acceptance: ["Cheap production architecture defined.", "Serious production architecture defined.", "Backups, logs, metrics, alerts, secrets and scaling gaps listed.", "No deployment file changed."]
+
+  TASK-014:
+    title: "Create product and commercial audit"
+    status: READY
+    mode: PRODUCT_GATE
+    risk: HIGH
+    objective: "Evaluate whether Cardeep is currently a technical project, infrastructure, API, SaaS, data asset, internal tool or sellable product."
+    allowed_files: ["docs/ai/audits/11_PRODUCT_AUDIT.md", "docs/ai/reports/PRODUCTIZATION_GAP_REPORT.md", "docs/ai/findings/GATED.md", "docs/ai/findings/CONTRADICTIONS.md", "docs/ai/control/06_RISK_REGISTER.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["README.md", "PLAN.md", "PROGRESO.md", "RUNBOOK.md", "portal/**", "web/**", "services/**", "pipeline/**"]
+    inspect: ["README.md", "PLAN.md", "PROGRESO.md", "docs/", "services/api/", "portal/", "web/"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Commercial category assigned.", "Sellable MVP boundary proposed.", "Unsupported claims listed.", "Money path and self-deception path identified.", "No public docs changed."]
+
+  TASK-015:
+    title: "Build module scorecard"
+    status: READY
+    mode: AUDIT_ONLY
+    risk: MEDIUM
+    objective: "Consolidate all audit findings into a scorecard by subsystem."
+    allowed_files: ["docs/ai/reports/MODULE_SCORECARD.md", "docs/ai/reports/EXECUTIVE_STATUS.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/**", "services/**", "migrations/**", "scripts/**", "tests/**"]
+    inspect: ["docs/ai/audits/", "docs/ai/findings/", "docs/ai/control/06_RISK_REGISTER.md"]
+    validation: ["git diff --name-only"]
+    acceptance: ["Each subsystem scored 0-10.", "Each score justified by evidence.", "Runtime-unverified modules capped appropriately.", "Top 10 risks listed.", "Next 10 actions listed."]
+
+  TASK-016:
+    title: "Add characterization tests for ingest"
+    status: BLOCKED
+    mode: TEST_ONLY
+    risk: HIGH
+    blocked_reason: "Requires completion of TASK-005 ingest audit."
+    objective: "Add tests for current ingest behavior without changing production logic."
+    allowed_files: ["tests/test_ingest_characterization.py", "tests/fixtures/**", "docs/ai/findings/FINDINGS.md", "docs/ai/control/05_EVIDENCE_LEDGER.md"]
+    forbidden_files: ["pipeline/ingest.py", "pipeline/delta.py", "migrations/**", "services/**"]
+    validation: ["python -m pytest tests/test_ingest_characterization.py -q"]
+    acceptance: ["Tests document current behavior.", "Production logic unchanged.", "Failures documented if current behavior is broken."]
+
+  TASK-017:
+    title: "Add characterization tests for delta/gone"
+    status: BLOCKED
+    mode: TEST_ONLY
+    risk: HIGH
+    blocked_reason: "Requires completion of TASK-006 delta/gone audit."
+    objective: "Add tests for current delta/gone behavior without changing production logic."
+    allowed_files: ["tests/test_delta_gone_characterization.py", "tests/fixtures/**", "docs/ai/findings/FINDINGS.md", "docs/ai/control/05_EVIDENCE_LEDGER.md"]
+    forbidden_files: ["pipeline/delta.py", "pipeline/delta_guard.py", "pipeline/evict.py", "pipeline/ingest.py", "migrations/**"]
+    validation: ["python -m pytest tests/test_delta_gone_characterization.py -q"]
+    acceptance: ["False gone scenarios tested.", "Append-only scenarios tested where possible.", "Production logic unchanged."]
+
+  TASK-018:
+    title: "Add verification regression tests"
+    status: BLOCKED
+    mode: TEST_ONLY
+    risk: HIGH
+    blocked_reason: "Requires completion of TASK-007 verification audit."
+    objective: "Add regression tests for VAM/trust behavior, especially zero-count and quorum cases."
+    allowed_files: ["tests/test_verification_regressions.py", "tests/fixtures/**", "docs/ai/findings/FINDINGS.md", "docs/ai/control/05_EVIDENCE_LEDGER.md"]
+    forbidden_files: ["pipeline/verify.py", "pipeline/verify_ttl.py", "pipeline/inquisition/**", "pipeline/gestionador/**", "migrations/**"]
+    validation: ["python -m pytest tests/test_verification_regressions.py -q"]
+    acceptance: ["Zero-count not trustworthy covered.", "Single-source unverified covered.", "Quorum pass/fail covered.", "Production logic unchanged."]
+
+  TASK-019:
+    title: "RFC for ingest/delta hardening"
+    status: BLOCKED
+    mode: RFC_REQUIRED
+    risk: CRITICAL
+    blocked_reason: "Requires TASK-005, TASK-006, TASK-016 and TASK-017."
+    objective: "Create RFC for any required changes to ingest/delta/gone behavior discovered by audits and tests."
+    allowed_files: ["docs/ai/rfcs/RFC_INGEST_DELTA_HARDENING.md", "docs/ai/control/07_DECISION_LOG.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["pipeline/**", "migrations/**", "tests/**"]
+    validation: ["git diff --name-only"]
+    acceptance: ["RFC created.", "No implementation performed.", "Human approval required."]
+
+  TASK-020:
+    title: "RFC for production architecture"
+    status: BLOCKED
+    mode: RFC_REQUIRED
+    risk: HIGH
+    blocked_reason: "Requires TASK-013 production gap report."
+    objective: "Create RFC proposing cheap production and serious production architecture."
+    allowed_files: ["docs/ai/rfcs/RFC_PRODUCTION_ARCHITECTURE.md", "docs/ai/control/07_DECISION_LOG.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["Dockerfile", "docker-compose.yml", "ops/**", "pipeline/**", "services/**", "scripts/**", "migrations/**"]
+    validation: ["git diff --name-only"]
+    acceptance: ["RFC created.", "No deployment files changed.", "Human approval required."]
+
+  TASK-021:
+    title: "RFC for product MVP"
+    status: BLOCKED
+    mode: RFC_REQUIRED
+    risk: HIGH
+    blocked_reason: "Requires TASK-014 product audit and TASK-015 scorecard."
+    objective: "Create RFC defining the first sellable MVP boundary and what claims are allowed."
+    allowed_files: ["docs/ai/rfcs/RFC_PRODUCT_MVP.md", "docs/ai/control/07_DECISION_LOG.md", "docs/ai/tasks/TASK_QUEUE.yml"]
+    forbidden_files: ["README.md", "PLAN.md", "PROGRESO.md", "portal/**", "web/**", "services/**", "pipeline/**"]
+    validation: ["git diff --name-only"]
+    acceptance: ["MVP boundary defined.", "Unsupported claims excluded.", "No public product docs changed.", "Human approval required."]

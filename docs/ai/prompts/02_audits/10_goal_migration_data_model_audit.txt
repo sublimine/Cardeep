@@ -1,0 +1,43 @@
+/goal
+Audit migrations and reconstruct the data model.
+
+Read:
+- migrations/
+- scripts/migrate.py
+- README.md
+- RUNBOOK.md
+- docs/runbook/
+- pipeline/
+- services/api/
+
+Do not modify migrations.
+Do not modify code.
+Do not modify docs outside docs/ai.
+
+Create:
+- docs/ai/audits/02_DATA_MODEL_AUDIT.md
+- docs/ai/audits/MIGRATIONS_AUDIT.md
+
+Report:
+1. Migration order.
+2. Latest migration.
+3. Runbook mismatch.
+4. Tables.
+5. Columns.
+6. Indexes.
+7. Constraints.
+8. Foreign keys.
+9. Views/materialized views.
+10. Critical state fields.
+11. Event model.
+12. Verification model.
+13. Dedup/cluster model.
+14. API serving model.
+15. Growth risks.
+16. Missing indexes.
+17. Missing constraints.
+18. Corruption risks.
+19. Rollback status.
+20. Production readiness score.
+
+Any schema change must be MIGRATION_REQUIRED and RFC_REQUIRED.

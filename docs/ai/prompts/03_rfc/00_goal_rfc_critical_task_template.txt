@@ -1,0 +1,33 @@
+/goal
+Ejecuta una tarea crítica bajo control RFC.
+
+Tarea:
+[PEGAR ID Y DESCRIPCIÓN DE LA TAREA]
+
+Reglas:
+- No implementes todavía.
+- Primero crea un RFC en docs/ai/rfcs/.
+- El RFC debe incluir:
+  - problema;
+  - evidencia;
+  - comportamiento actual;
+  - cambio propuesto;
+  - alternativas;
+  - riesgos;
+  - impacto en datos;
+  - impacto en migraciones;
+  - impacto en API;
+  - impacto en tests;
+  - plan de validación;
+  - plan de rollback;
+  - archivos afectados;
+  - criterio de aceptación;
+  - decisión requerida.
+
+No modifiques código productivo hasta que el RFC sea aprobado explícitamente por el operador humano.
+
+Entrega:
+- Ruta del RFC creado.
+- Resumen de riesgos.
+- Decisión humana requerida.
+- Confirmación de que no se tocó código productivo.

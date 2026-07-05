@@ -1,0 +1,32 @@
+/goal
+Create an RFC for ingest, delta and gone hardening.
+
+Read:
+- docs/ai/CARDEEP_MASTER_BLUEPRINT.md
+- docs/ai/control/*
+- docs/ai/audits/03_INGEST_AUDIT.md
+- docs/ai/audits/04_DELTA_GONE_AUDIT.md
+- docs/ai/findings/FINDINGS.md
+- docs/ai/control/06_RISK_REGISTER.md
+
+Do not modify production code.
+Do not modify tests.
+Do not modify migrations.
+
+Create:
+- docs/ai/rfcs/RFC_INGEST_DELTA_HARDENING.md
+
+The RFC must cover:
+- current ingest lifecycle;
+- current delta behavior;
+- gone guard;
+- false gone risks;
+- event generation;
+- idempotency;
+- append-only connector behavior;
+- tests required before implementation;
+- rollback plan;
+- exact files that would be touched;
+- exact files that must not be touched.
+
+End by requesting human approval.

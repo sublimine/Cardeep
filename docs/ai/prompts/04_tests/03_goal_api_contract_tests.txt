@@ -1,0 +1,36 @@
+/goal
+Add API contract tests.
+
+Mode:
+TEST_ONLY
+
+Read:
+- docs/ai/audits/07_API_AUDIT.md
+- services/api/
+- tests/
+
+Allowed:
+- tests/test_api_contract_characterization.py
+- tests/fixtures/
+- docs/ai/findings/FINDINGS.md
+- docs/ai/control/05_EVIDENCE_LEDGER.md
+
+Forbidden:
+- services/api/
+- pipeline/
+- migrations/
+
+Test scenarios:
+1. health endpoint;
+2. invalid params;
+3. empty result;
+4. pagination if supported;
+5. filters if supported;
+6. rate limit if supported;
+7. cache behavior if supported;
+8. verified/trust field if exposed.
+
+Run:
+python -m pytest tests/test_api_contract_characterization.py -q
+
+Do not modify API implementation.

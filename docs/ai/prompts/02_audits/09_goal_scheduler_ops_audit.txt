@@ -1,0 +1,38 @@
+/goal
+Audit scheduler and operational workflows.
+
+Read:
+- pipeline/ops/
+- ops/
+- scripts/
+- docs/runbook/
+- tests/
+
+Do not modify code.
+Do not modify scripts.
+Do not modify configs.
+
+Create:
+- docs/ai/audits/08_SCHEDULER_OPS_AUDIT.md
+
+Report:
+1. Scheduler entrypoints.
+2. Jobs.
+3. Job intervals.
+4. Locks.
+5. Heartbeats.
+6. Retries.
+7. Backoff.
+8. Failure recovery.
+9. Alerts.
+10. Source health.
+11. Coverage gates.
+12. Watchdogs.
+13. Manual repair scripts.
+14. Concurrency.
+15. DB load risk.
+16. Tests existing.
+17. Tests missing.
+18. Production readiness score.
+
+Any orchestration change must be RFC_REQUIRED.

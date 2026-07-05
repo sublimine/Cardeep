@@ -1,0 +1,47 @@
+/goal
+Create production readiness audit.
+
+Read:
+- Dockerfile
+- docker-compose.yml
+- .env.example
+- services/api/
+- pipeline/ops/
+- scripts/
+- ops/
+- docs/runbook/
+- README.md
+
+Do not modify deployment files.
+Do not modify code.
+Do not modify env files.
+
+Create:
+- docs/ai/audits/10_PRODUCTION_AUDIT.md
+- docs/ai/reports/PRODUCTION_GAP_REPORT.md
+
+Report:
+1. Deployment model.
+2. API process.
+3. Worker/scheduler process.
+4. PostgreSQL.
+5. Migrations.
+6. Secrets.
+7. Logs.
+8. Metrics.
+9. Alerts.
+10. Backups.
+11. Restore.
+12. Rate limits.
+13. Concurrency.
+14. Source health.
+15. Failure recovery.
+16. Scaling vertical.
+17. Scaling horizontal.
+18. Cost risks.
+19. Legal/compliance gates.
+20. Cheap production architecture.
+21. Serious production architecture.
+22. Production readiness score.
+
+Do not implement production changes.

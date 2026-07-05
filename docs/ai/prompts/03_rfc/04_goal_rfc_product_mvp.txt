@@ -1,0 +1,38 @@
+/goal
+Create an RFC defining Cardeep's first sellable MVP.
+
+Read:
+- docs/ai/audits/11_PRODUCT_AUDIT.md
+- docs/ai/reports/PRODUCTIZATION_GAP_REPORT.md
+- docs/ai/reports/MODULE_SCORECARD.md
+- README.md
+- PLAN.md
+- PROGRESO.md
+- services/api/
+- docs/
+
+Do not modify public docs.
+Do not modify API.
+Do not modify frontend.
+Do not modify product claims.
+
+Create:
+- docs/ai/rfcs/RFC_PRODUCT_MVP.md
+
+The RFC must answer:
+- What is Cardeep today?
+- What can be sold safely?
+- What cannot be sold yet?
+- Who is the first customer?
+- What data package is credible?
+- What coverage claims are allowed?
+- What freshness claims are allowed?
+- What verification claims are allowed?
+- What must be marked GATED?
+- What must be removed from pitch?
+- What is the first paid MVP?
+- What technical work blocks selling?
+- What legal/compliance work blocks selling?
+
+End with a clear decision:
+CONTINUE / CUT_SCOPE / PIVOT / REBUILD.

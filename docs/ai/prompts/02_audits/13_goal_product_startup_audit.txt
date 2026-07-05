@@ -1,0 +1,46 @@
+/goal
+Audit Cardeep as product/startup.
+
+Read:
+- README.md
+- PLAN.md
+- PROGRESO.md
+- docs/
+- services/api/
+- portal/
+- web/
+- docs/ai/audits/
+- docs/ai/reports/MODULE_SCORECARD.md if exists
+
+Do not modify public docs.
+Do not modify API.
+Do not modify frontend.
+
+Create:
+- docs/ai/audits/11_PRODUCT_AUDIT.md
+- docs/ai/reports/PRODUCTIZATION_GAP_REPORT.md
+
+Report:
+1. What Cardeep is today.
+2. What Cardeep promises to be.
+3. What is actually sellable.
+4. What is not sellable.
+5. Target customers.
+6. Competitor category.
+7. Data asset value.
+8. API value.
+9. SaaS readiness.
+10. Internal tool value.
+11. Coverage claim risk.
+12. Freshness claim risk.
+13. Verification claim risk.
+14. Legal/compliance risk.
+15. Pricing hypothesis.
+16. MVP boundary.
+17. Money path.
+18. Self-deception path.
+19. Decision: CONTINUE / CUT_SCOPE / PIVOT / REBUILD.
+20. Next 10 actions.
+
+Use brutal, evidence-based language.
+No optimism without evidence.

@@ -1,0 +1,16 @@
+/loop
+Lee:
+- docs/ai/CARDEEP_MASTER_BLUEPRINT.md
+- docs/ai/control/00_MISSION_CONTRACT.md
+- docs/ai/control/01_OPERATING_RULES.md
+- docs/ai/control/02_EXECUTION_MODES.md
+- docs/ai/control/03_DEFINITION_OF_DONE.md
+- docs/ai/tasks/TASK_QUEUE.yml
+
+Ejecuta únicamente la siguiente tarea con status READY.
+
+Una sola tarea por iteración.
+Respeta mode, allowed_files, forbidden_files, validation y acceptance.
+Actualiza findings, evidence ledger, risk register y TASK_QUEUE.yml.
+No avances si aparece RFC_REQUIRED, NEEDS_REVIEW o FAILED_VALIDATION.
+No modifiques código productivo salvo que la tarea lo permita explícitamente.

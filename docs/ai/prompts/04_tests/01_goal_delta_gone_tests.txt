@@ -1,0 +1,40 @@
+/goal
+Add characterization tests for delta and gone behavior.
+
+Mode:
+TEST_ONLY
+
+Read:
+- docs/ai/audits/04_DELTA_GONE_AUDIT.md
+- pipeline/delta.py
+- pipeline/delta_guard.py
+- pipeline/evict.py
+- tests/
+
+Allowed:
+- tests/test_delta_gone_characterization.py
+- tests/fixtures/
+- docs/ai/findings/FINDINGS.md
+- docs/ai/control/05_EVIDENCE_LEDGER.md
+
+Forbidden:
+- pipeline/delta.py
+- pipeline/delta_guard.py
+- pipeline/evict.py
+- pipeline/ingest.py
+- migrations/
+
+Test scenarios:
+1. no change;
+2. price change;
+3. km change;
+4. photo change;
+5. missing listing;
+6. append-only connector behavior;
+7. false gone prevention;
+8. duplicate event prevention.
+
+Run:
+python -m pytest tests/test_delta_gone_characterization.py -q
+
+Do not modify production logic.

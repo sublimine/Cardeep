@@ -1,0 +1,48 @@
+/goal
+Audit documentation claims against code evidence.
+
+Read:
+- README.md
+- PLAN.md
+- PROGRESO.md
+- RUNBOOK.md
+- docs/
+- pipeline/
+- services/
+- migrations/
+- tests/
+- scripts/
+
+Do not edit source documents.
+Do not edit production code.
+Do not edit tests.
+
+Create:
+- docs/ai/audits/DOCS_VS_CODE_AUDIT.md
+- docs/ai/findings/CONTRADICTIONS.md
+- docs/ai/findings/GATED.md
+
+Build a table:
+Documented Promise | Source Document | Code Evidence | Runtime Evidence | Verdict | Risk | Next Task
+
+Classify these claims:
+- 100% points of sale;
+- full inventory;
+- real-time inventory;
+- complete delta;
+- API by entity;
+- API by geo;
+- recipe versioning;
+- raw eviction;
+- Tier-1 separation;
+- VAM quorum;
+- Deep Ledger;
+- Inquisition;
+- Gestionador;
+- source health;
+- scheduler;
+- production readiness;
+- commercial readiness.
+
+Allowed verdicts:
+VERIFIED_STATIC, VERIFIED_RUNTIME, PARTIAL, NO_VERIFIED, CONTRADICTION, ASPIRATIONAL, BROKEN, GATED.

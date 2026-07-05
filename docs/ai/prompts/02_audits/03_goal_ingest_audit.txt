@@ -1,0 +1,41 @@
+/goal
+Audit pipeline ingestion lifecycle statically.
+
+Read:
+- pipeline/ingest.py
+- pipeline/harvest_dealer.py
+- pipeline/recipe.py
+- pipeline/delta.py
+- migrations/
+- tests/
+
+Do not modify code.
+Do not modify tests.
+Do not modify migrations.
+
+Create:
+- docs/ai/audits/03_INGEST_AUDIT.md
+
+Report sections:
+1. Purpose.
+2. Entrypoints.
+3. Main functions/classes.
+4. Input data structures.
+5. Output data structures.
+6. Tables touched.
+7. Entity/dealer upsert behavior.
+8. Vehicle upsert behavior.
+9. Event generation.
+10. last_seen behavior.
+11. Gone behavior.
+12. Alert behavior.
+13. Verification/VAM interaction.
+14. Idempotency.
+15. Error handling.
+16. Silent failure risks.
+17. Tests existing.
+18. Tests missing.
+19. Production readiness score 0-10.
+20. Required next tasks.
+
+Any recommendation to change behavior must be RFC_REQUIRED.

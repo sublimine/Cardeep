@@ -1,0 +1,42 @@
+/goal
+Audit the repository structure statically.
+
+Read:
+- README.md
+- PLAN.md
+- PROGRESO.md
+- RUNBOOK.md
+- docs/
+- pipeline/
+- services/
+- migrations/
+- scripts/
+- tests/
+- .github/workflows/
+- docker-compose.yml
+- requirements.txt
+- requirements-dev.txt
+- pytest.ini
+
+Do not modify code, tests, migrations, dependencies, README, PLAN, PROGRESO or RUNBOOK.
+
+Create:
+- docs/ai/audits/00_REPO_MAP.md
+
+The report must include:
+1. top-level folder map;
+2. module map;
+3. entrypoint map;
+4. config/env map;
+5. test map;
+6. migration map;
+7. scripts map;
+8. API map;
+9. ops/scheduler map;
+10. unknowns;
+11. suspected legacy/dead code candidates;
+12. critical modules;
+13. immediate risks.
+
+Every important statement must cite file path evidence.
+Mark runtime behavior as NO_VERIFIED_RUNTIME unless executed.

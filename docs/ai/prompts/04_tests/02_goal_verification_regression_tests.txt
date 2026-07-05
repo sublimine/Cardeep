@@ -1,0 +1,39 @@
+/goal
+Add regression tests for verification/VAM.
+
+Mode:
+TEST_ONLY
+
+Read:
+- docs/ai/audits/05_VERIFICATION_AUDIT.md
+- pipeline/verify.py
+- pipeline/verify_ttl.py
+- tests/
+
+Allowed:
+- tests/test_verification_regressions.py
+- tests/fixtures/
+- docs/ai/findings/FINDINGS.md
+- docs/ai/control/05_EVIDENCE_LEDGER.md
+
+Forbidden:
+- pipeline/verify.py
+- pipeline/verify_ttl.py
+- pipeline/inquisition/
+- pipeline/gestionador/
+- migrations/
+
+Test scenarios:
+1. zero-count cannot be trustworthy;
+2. single source is unverified;
+3. quorum pass;
+4. quorum fail;
+5. refuted state;
+6. TTL expiry;
+7. source independence distinction;
+8. stale verdict supersede if supported.
+
+Run:
+python -m pytest tests/test_verification_regressions.py -q
+
+Do not modify production logic.
