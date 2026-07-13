@@ -1,0 +1,30 @@
+{
+  "userIgnoreFilters": [
+    "pipeline/",
+    "services/",
+    "web/",
+    "portal/",
+    "tests/",
+    "migrations/",
+    "scripts/",
+    "scratch/",
+    "data/",
+    "countries/",
+    "ops/",
+    "state/",
+    ".claude/",
+    ".backups/",
+    ".github/",
+    ".hypothesis/",
+    ".playwright-mcp/",
+    ".pytest_cache/",
+    ".runlogs/",
+    ".wf/",
+    "Dockerfile",
+    "docker-compose.yml",
+    "pytest.ini",
+    "requirements.txt",
+    "requirements-dev.txt",
+    "scratch_mn_"
+  ]
+}

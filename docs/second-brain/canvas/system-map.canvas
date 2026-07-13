@@ -1,0 +1,25 @@
+{
+  "nodes": [
+    {"id":"n1","type":"text","text":"DISCOVER","x":-400,"y":-200,"width":250,"height":80},
+    {"id":"n2","type":"text","text":"INGEST","x":0,"y":-200,"width":250,"height":80},
+    {"id":"n3","type":"text","text":"SEAL","x":400,"y":-200,"width":250,"height":80},
+    {"id":"n4","type":"file","file":"docs/architecture/00-TIER1-REGISTRY.md","x":-400,"y":-60,"width":300,"height":120},
+    {"id":"n5","type":"file","file":"docs/architecture/02-SCRAPING-ENGINE.md","x":0,"y":-60,"width":300,"height":120},
+    {"id":"n6","type":"file","file":"docs/architecture/05-VERIFICATION-VAM.md","x":400,"y":-60,"width":300,"height":120},
+    {"id":"n7","type":"file","file":"docs/architecture/11-IDENTITY-RESOLUTION-AUTHORITY.md","x":0,"y":100,"width":300,"height":120},
+    {"id":"n8","type":"file","file":"docs/generic-engine-bible/COUNTRY-PROOF-BUILD.md","x":400,"y":100,"width":300,"height":120},
+    {"id":"n9","type":"file","file":"docs/generic-engine-bible/COUNTRY-2-READINESS.md","x":700,"y":100,"width":300,"height":120},
+    {"id":"n10","type":"file","file":"docs/architecture/13-API-AND-DELTA.md","x":700,"y":-60,"width":300,"height":120}
+  ],
+  "edges": [
+    {"id":"e1","fromNode":"n1","fromSide":"right","toNode":"n2","toSide":"left"},
+    {"id":"e2","fromNode":"n2","fromSide":"right","toNode":"n3","toSide":"left"},
+    {"id":"e3","fromNode":"n1","fromSide":"bottom","toNode":"n4","toSide":"top"},
+    {"id":"e4","fromNode":"n2","fromSide":"bottom","toNode":"n5","toSide":"top"},
+    {"id":"e5","fromNode":"n3","fromSide":"bottom","toNode":"n6","toSide":"top"},
+    {"id":"e6","fromNode":"n5","fromSide":"bottom","toNode":"n7","toSide":"top"},
+    {"id":"e7","fromNode":"n6","fromSide":"bottom","toNode":"n8","toSide":"top"},
+    {"id":"e8","fromNode":"n8","fromSide":"right","toNode":"n9","toSide":"left"},
+    {"id":"e9","fromNode":"n3","fromSide":"right","toNode":"n10","toSide":"left"}
+  ]
+}
