@@ -128,13 +128,20 @@ Expected: `main.js` ~2.3MB, `manifest.json` and `styles.css` non-zero.
 
 Run: `mkdir -p "/c/Users/elias/projects/cardeep/.obsidian/plugins/templater-obsidian"`
 
-- [ ] **Step 2: Download the three real release assets (tag 2.23.1)**
+- [ ] **Step 2: Download the three real release assets**
+
+**Executed with tag `2.20.6`, not `2.23.1`.** `2.23.1` (the true latest tag)
+declares `minAppVersion: 1.13.0`; Obsidian stable is `1.12.7`, so it crashes with
+`TypeError: Class extends value undefined is not a constructor or null`
+(references `obsidian.ConfirmationModal`, an API added after 1.13.0). Checked
+`minAppVersion` across the last 15 releases via the GitHub API; `2.20.6` is the
+newest one with `minAppVersion: 1.12.2` (compatible).
 
 ```bash
 cd "/c/Users/elias/projects/cardeep/.obsidian/plugins/templater-obsidian"
-curl -L -o main.js https://github.com/SilentVoid13/Templater/releases/download/2.23.1/main.js
-curl -L -o manifest.json https://github.com/SilentVoid13/Templater/releases/download/2.23.1/manifest.json
-curl -L -o styles.css https://github.com/SilentVoid13/Templater/releases/download/2.23.1/styles.css
+curl -L -o main.js https://github.com/SilentVoid13/Templater/releases/download/2.20.6/main.js
+curl -L -o manifest.json https://github.com/SilentVoid13/Templater/releases/download/2.20.6/manifest.json
+curl -L -o styles.css https://github.com/SilentVoid13/Templater/releases/download/2.20.6/styles.css
 ```
 
 - [ ] **Step 3: Verify non-zero file sizes**
@@ -458,6 +465,28 @@ Run: `claude mcp list`
 Expected: an `obsidian` entry pointing at `http://127.0.0.1:27123/mcp/`.
 
 ---
+
+## Post-execution notes (real findings during the actual build)
+
+1. **Templater version pin** — see Task 4. `2.23.1`'s true latest tag is
+   incompatible with Obsidian 1.12.7 stable; `2.20.6` is the fix.
+2. **Restricted Mode toggle lives in `localStorage`, not a vault config file.**
+   `app.plugins.isEnabled()` reads `localStorage.getItem("enable-plugin-" +
+   appId)` — a per-origin Chromium Local Storage entry, not `.obsidian/*.json`.
+   Forcefully killing Obsidian (`taskkill /F`) before that write flushes to disk
+   silently reverts Restricted Mode back to on at next launch, even though
+   `community-plugins.json` still lists the plugins as "enabled" — the two are
+   separate gates. Fix applied in this session: called
+   `app.plugins.setEnable(true)` directly via a Chrome DevTools Protocol
+   connection (`--remote-debugging-port` + `--remote-allow-origins=*`, closed
+   again immediately after via a **graceful** `taskkill` once fixed) to reproduce
+   what the UI toggle does, then verified the state survives a clean restart.
+   **Going forward: always close Obsidian gracefully, never force-kill, once
+   Restricted Mode has been turned off, or the toggle may need to be redone.**
+3. Local REST API's insecure HTTP port (27123) is off by default
+   (`enableInsecureServer: false` in its `data.json`) — flipped to `true` to
+   avoid the self-signed HTTPS cert trust problem, exactly as anticipated in the
+   design spec.
 
 ## Self-review notes
 

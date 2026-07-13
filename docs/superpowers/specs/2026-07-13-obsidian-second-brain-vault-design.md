@@ -59,8 +59,20 @@ agent transcripts/sources):
 | Plugin | id | repo | version |
 |---|---|---|---|
 | Dataview | `dataview` | blacksmithgu/obsidian-dataview | release tag `0.5.70` (manifest.json internally still says `0.5.68` — a real, confirmed mainainer discrepancy, not a fetch error) |
-| Templater | `templater-obsidian` | SilentVoid13/Templater | `2.23.1` |
+| Templater | `templater-obsidian` | SilentVoid13/Templater | `2.20.6` (see version-pin note below) |
 | Local REST API with MCP | `obsidian-local-rest-api` | coddingtonbear/obsidian-local-rest-api | `4.1.7`+ (bundles its own MCP server in-process — no separate bridge needed) |
+
+**Real incompatibility found and fixed during execution (not caught by the research
+pass, which only checked "latest tag"):** Templater's true latest release, `2.23.1`,
+declares `minAppVersion: 1.13.0`. Obsidian's current stable release (confirmed via
+winget) is `1.12.7` — below that floor. Loading `2.23.1` throws
+`TypeError: Class extends value undefined is not a constructor or null` because it
+references `obsidian.ConfirmationModal`, an API class that doesn't exist yet in
+1.12.7. Checked `minAppVersion` across the last 15 Templater releases; `2.20.6` is
+the newest one declaring `minAppVersion: 1.12.2` (compatible). **Lesson for future
+re-provisioning: always check a plugin's `minAppVersion` against the actually
+installed Obsidian version before pinning "latest" — a plugin's latest tag is not
+guaranteed compatible with the currently-shipping stable app.**
 
 Headless install method (no in-app plugin browser): download each plugin's
 `main.js` + `manifest.json` + `styles.css` release assets straight into

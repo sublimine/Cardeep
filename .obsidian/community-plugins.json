@@ -1,1 +1,5 @@
-["dataview", "templater-obsidian", "obsidian-local-rest-api"]
+[
+  "dataview",
+  "templater-obsidian",
+  "obsidian-local-rest-api"
+]
