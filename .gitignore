@@ -34,3 +34,9 @@ scratch_*.py
 /_audit_*.json
 /ent*.json
 /liveseal.json
+
+# Obsidian per-session UI state (churns every time the vault opens, not shared config)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+# Local REST API plugin's generated secret (API key + TLS cert), never versioned
+.obsidian/plugins/obsidian-local-rest-api/data.json
