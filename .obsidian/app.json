@@ -25,6 +25,7 @@
     "pytest.ini",
     "requirements.txt",
     "requirements-dev.txt",
-    "scratch_mn_"
+    "scratch_mn_",
+    "__pycache__/"
   ]
 }
