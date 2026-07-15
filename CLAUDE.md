@@ -15,6 +15,8 @@ gasta con cabeza — modelos LLM locales para lo masivo y barato (clasificar, pa
 
 DEJA HUELLA: todo a GitHub (main), todo guardado y documentado — recetas, estado, decisiones — para que nada se pierda y cualquiera pueda retomarlo. Anticípate: tráeme lo que necesito antes de que lo pida, y sorpréndeme con lo que ni mencioné.
 
+MAPA DEL PROYECTO: docs/ y plans/ están indexados como vault Obsidian (raíz del vault = raíz del repo). Punto de entrada: docs/second-brain/dashboards/00-Home.md — de ahí cuelgan las hubs por carpeta (cobertura verificada de forma determinista, cero huecos) y el canvas del mapa del sistema. Cada sesión real de Claude Code en este repo se auto-registra en docs/second-brain/sessions/ vía hook SessionEnd (sin pedir nada). Si necesitas orientarte antes de actuar, empieza por ese Home.
+
 Organización impecable. Por provincia, comarcas, ciudad, etc... Cobertura al 100% y al maximo de filtrado. No quiero ruido. Además separándome absolutamente los Tier 1,  y los demás grupos. COn lógica y coherencia total.
 
   En una frase exacta: el producto final es una base de datos viva y verificada que contiene, estructurada hasta el último átomo, el 100% de los dealers y plataformas españa y todo su inventario de coches en tiempo real — el mapa completo de un mercado que hoy nadie tiene entero. Las recetas la  mantienen, el motor la late, la API la sirve.
