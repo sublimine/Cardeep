@@ -24,31 +24,36 @@ tags: [second-brain]
 - [[PROGRESO|PROGRESO.md — bitácora completa]]
 - [[PLAN|PLAN.md]]
 - [[RUNBOOK|RUNBOOK.md]]
+- [[CLAUDE|CLAUDE.md]]
+- [[INSTALL|INSTALL.md]]
+- [[README|README.md]]
 
 ## Segundo cerebro
 - [[docs/second-brain/dashboards/pendientes-owner-search|Pendientes del owner]]
 - [[docs/second-brain/dashboards/planes-por-estado|Planes por estado (Dataview)]]
 - [[docs/second-brain/canvas/system-map|Mapa del sistema (Canvas)]]
 
-## Índice exhaustivo (las 468 notas del corpus, cero huecos)
+## Índice exhaustivo (corpus completo — .md + artefactos de datos, cero huecos verificados de forma determinista)
 
-Los enlaces de arriba son una selección curada. Estos 19 hubs indexan **cada
-archivo `.md` real** de `docs/` y `plans/` (generados desde el sistema de
-archivos, cero rutas inventadas) — así el grafo conecta el corpus entero, no
-solo 15 notas sueltas.
+Los enlaces de arriba son una selección curada. Estos 20 hubs indexan **cada
+archivo real** de `docs/` y `plans/` — de cualquier extensión, no solo `.md`
+(generados desde el sistema de archivos, cero rutas inventadas, auditado con
+`scripts` de resolución de wikilinks el 2026-07-15) — así el grafo conecta el
+corpus entero, no solo una selección.
 
 ### docs/
-- [[docs/second-brain/dashboards/hubs/docs-root|docs/ (raíz) — 18]]
-- [[docs/second-brain/dashboards/hubs/docs-ai|docs/ai — 47]]
+- [[docs/second-brain/dashboards/hubs/docs-root|docs/ (raíz) — 19]]
+- [[docs/second-brain/dashboards/hubs/docs-ai|docs/ai — 86]]
 - [[docs/second-brain/dashboards/hubs/docs-architecture|docs/architecture — 92]]
-- [[docs/second-brain/dashboards/hubs/docs-archive|docs/archive — 1]]
+- [[docs/second-brain/dashboards/hubs/docs-archive|docs/archive — 4]]
 - [[docs/second-brain/dashboards/hubs/docs-design|docs/design — 4]]
 - [[docs/second-brain/dashboards/hubs/docs-frontend|docs/frontend — 9]]
 - [[docs/second-brain/dashboards/hubs/docs-generic-engine-bible|docs/generic-engine-bible — 25]]
-- [[docs/second-brain/dashboards/hubs/docs-outputs|docs/outputs — 1]]
-- [[docs/second-brain/dashboards/hubs/docs-recon|docs/recon — 13]]
-- [[docs/second-brain/dashboards/hubs/docs-research|docs/research — 17]]
+- [[docs/second-brain/dashboards/hubs/docs-outputs|docs/outputs — 5]]
+- [[docs/second-brain/dashboards/hubs/docs-recon|docs/recon — 16]]
+- [[docs/second-brain/dashboards/hubs/docs-research|docs/research — 50]]
 - [[docs/second-brain/dashboards/hubs/docs-runbook|docs/runbook — 61]]
+- [[docs/second-brain/dashboards/hubs/docs-superpowers|docs/superpowers — 2]]
 - [[docs/second-brain/dashboards/hubs/docs-workflows|docs/workflows — 16]]
 
 ### plans/
@@ -57,5 +62,5 @@ solo 15 notas sueltas.
 - [[docs/second-brain/dashboards/hubs/plans-cardeep-program|plans/cardeep-program — 11]]
 - [[docs/second-brain/dashboards/hubs/plans-country-autopilot|plans/country-autopilot — 4]]
 - [[docs/second-brain/dashboards/hubs/plans-frontend-definitivo|plans/frontend-definitivo — 3]]
-- [[docs/second-brain/dashboards/hubs/plans-intel-audit|plans/intel-audit — 116]]
+- [[docs/second-brain/dashboards/hubs/plans-intel-audit|plans/intel-audit — 127]]
 - [[docs/second-brain/dashboards/hubs/plans-road-to-13|plans/road-to-13 — 4]]

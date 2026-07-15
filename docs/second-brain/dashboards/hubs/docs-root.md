@@ -5,7 +5,7 @@ tags: [second-brain, hub]
 
 # Hub — docs/ (raíz)
 
-18 notas sueltas en la raíz de `docs` (no pertenecen a ninguna subcarpeta).
+18 notas .md + 1 artefacto no-md, sueltas en la raíz de `docs` (no pertenecen a ninguna subcarpeta).
 
 - [[docs/API_CONTRACT|API_CONTRACT]]
 - [[docs/ARCHITECTURE|ARCHITECTURE]]
@@ -25,3 +25,7 @@ tags: [second-brain, hub]
 - [[docs/RUNBOOK|RUNBOOK]]
 - [[docs/SPAIN_SEALED|SPAIN_SEALED]]
 - [[docs/SUPERPLAN|SUPERPLAN]]
+
+## (raíz, no-markdown)
+
+- [[docs/MAPA_CARDEEP.html|MAPA_CARDEEP.html]]

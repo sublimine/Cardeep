@@ -5,7 +5,7 @@ tags: [second-brain, hub]
 
 # Hub — docs/recon
 
-13 notas indexadas de forma exhaustiva (generado desde el sistema de archivos real, ninguna ruta inventada).
+16 notas indexadas de forma exhaustiva (generado desde el sistema de archivos real, ninguna ruta inventada).
 
 ## (raíz)
 
@@ -22,3 +22,9 @@ tags: [second-brain, hub]
 - [[docs/recon/SUA6_GEO_RECON|SUA6_GEO_RECON]]
 - [[docs/recon/SUA8_AUTOREPAIR_RECON|SUA8_AUTOREPAIR_RECON]]
 - [[docs/recon/SUB2_INQUISITION_RECON|SUB2_INQUISITION_RECON]]
+
+## artefactos de datos (probes)
+
+- [[docs/recon/B5_7_probe.json|B5_7_probe.json]]
+- [[docs/recon/B5_7_probe.summary.json|B5_7_probe.summary.json]]
+- [[docs/recon/b6_chapman_output.txt|b6_chapman_output.txt]]

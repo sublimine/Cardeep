@@ -5,7 +5,7 @@ tags: [second-brain, hub]
 
 # Hub — plans/intel-audit
 
-116 notas indexadas de forma exhaustiva (generado desde el sistema de archivos real, ninguna ruta inventada).
+127 notas indexadas de forma exhaustiva (generado desde el sistema de archivos real, ninguna ruta inventada).
 
 ## (raíz)
 
@@ -16,6 +16,20 @@ tags: [second-brain, hub]
 - [[plans/intel-audit/PLACEMENT-MAP|PLACEMENT-MAP]]
 - [[plans/intel-audit/PLAN|PLAN]]
 - [[plans/intel-audit/README|README]]
+
+## scripts y datos de trabajo
+
+- [[plans/intel-audit/AUDITS.json|AUDITS.json]]
+- [[plans/intel-audit/UNIVERSE.json|UNIVERSE.json]]
+- [[plans/intel-audit/UNIVERSE_tiered.json|UNIVERSE_tiered.json]]
+- [[plans/intel-audit/_audit_input.json|_audit_input.json]]
+- [[plans/intel-audit/_audit_shortlist.json|_audit_shortlist.json]]
+- [[plans/intel-audit/_canon.py|_canon.py]]
+- [[plans/intel-audit/_resume_input.json|_resume_input.json]]
+- [[plans/intel-audit/_synthesize.py|_synthesize.py]]
+- [[plans/intel-audit/_universe_compact.txt|_universe_compact.txt]]
+- [[plans/intel-audit/_wf_audit.js|_wf_audit.js]]
+- [[plans/intel-audit/_wf_audit_resume.js|_wf_audit_resume.js]]
 
 ## companies
 
