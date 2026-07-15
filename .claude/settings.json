@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:\\Users\\elias\\projects\\cardeep\\.claude\\hooks\\session_log.py\"",
+            "shell": "bash",
+            "timeout": 20,
+            "statusMessage": "Actualizando second brain..."
+          }
+        ]
+      }
+    ]
+  }
+}
