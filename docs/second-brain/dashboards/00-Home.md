@@ -45,8 +45,19 @@ código+SQL, 41.061 edges, 1.295 comunidades sobre `pipeline/`, `services/`,
 ⚠ `docs/second-brain/gf/` y `graphify-out/` son **artefactos regenerados**, no
 versionados (mismo tratamiento que `data/` — ver `.gitignore`). En un clon
 nuevo estos enlaces aparecen rotos hasta ejecutar:
-`graphify update . && graphify export obsidian --graph graphify-out/graph.json --dir docs/second-brain/gf`
-(un `graphify hook install` deja esto automático tras cada commit).
+`graphify update . && graphify export obsidian --graph graphify-out/graph.json --dir docs/second-brain/gf && python .claude/hooks/fix_graphify_dotfiles.py`
+(el `graphify hook install` ya activo deja el `graph.json` fresco solo tras
+cada commit — barato, AST-only; el export a notas Obsidian + el fix de
+dotfiles de abajo son deliberadamente manuales, no por commit, para no forzar
+un reindexado/reinicio de Obsidian en cada commit).
+
+⚠ Tras cualquier `export obsidian`, el paso `fix_graphify_dotfiles.py` es
+**obligatorio**, no opcional: graphify no sanea el punto inicial en labels
+tipo `.acquire()` (llamadas encadenadas), y Obsidian trata cualquier archivo
+con punto inicial como oculto (misma convención que `.git/`/`.obsidian/`) —
+verificado en vivo el 2026-07-15: 2.417 notas (9,2% del corpus) invisibles en
+el listado real de la API hasta aplicar este fix. El script renombra y
+reescribe los `[[wikilinks]]` afectados; es idempotente.
 
 - [[docs/second-brain/gf/graph.canvas|Grafo interactivo (Canvas, coloreado por comunidad)]]
 - Consulta directa sin abrir Obsidian: `graphify query "<pregunta>"` / `graphify explain "<símbolo>"` / `graphify path "A" "B"` sobre `graphify-out/graph.json`
