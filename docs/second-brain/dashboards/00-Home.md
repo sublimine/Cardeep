@@ -33,6 +33,24 @@ tags: [second-brain]
 - [[docs/second-brain/dashboards/planes-por-estado|Planes por estado (Dataview)]]
 - [[docs/second-brain/canvas/system-map|Mapa del sistema (Canvas)]]
 
+## Grafo de código (Graphify)
+Capa complementaria: mientras `docs/`/`plans/` es el segundo cerebro (decisiones,
+contexto, prosa), esto es el mapa **estructural real del código** — parseado
+100% local con tree-sitter (AST puro, sin LLM), sin `.env`/secretos (excluidos
+por diseño y verificado por escaneo de patrones el 2026-07-15). 25.737 nodos
+código+SQL, 41.061 edges, 1.295 comunidades sobre `pipeline/`, `services/`,
+`web/`, `scripts/`, `migrations/`, `tests/` (`portal/` excluido vía
+`.graphifyignore`, mismo criterio que el resto del vault).
+
+⚠ `docs/second-brain/gf/` y `graphify-out/` son **artefactos regenerados**, no
+versionados (mismo tratamiento que `data/` — ver `.gitignore`). En un clon
+nuevo estos enlaces aparecen rotos hasta ejecutar:
+`graphify update . && graphify export obsidian --graph graphify-out/graph.json --dir docs/second-brain/gf`
+(un `graphify hook install` deja esto automático tras cada commit).
+
+- [[docs/second-brain/gf/graph.canvas|Grafo interactivo (Canvas, coloreado por comunidad)]]
+- Consulta directa sin abrir Obsidian: `graphify query "<pregunta>"` / `graphify explain "<símbolo>"` / `graphify path "A" "B"` sobre `graphify-out/graph.json`
+
 ## Índice exhaustivo (corpus completo — .md + artefactos de datos, cero huecos verificados de forma determinista)
 
 Los enlaces de arriba son una selección curada. Estos 20 hubs indexan **cada

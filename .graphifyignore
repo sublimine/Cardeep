@@ -1,0 +1,5 @@
+# Mirrors the noise-reduction judgment already made for the Obsidian docs
+# layer (docs/superpowers/specs/2026-07-13-obsidian-second-brain-vault-design.md):
+# portal/ is 185+ mirrored static HTML pages, pure duplication, zero
+# architectural signal for a code graph.
+portal/

@@ -44,3 +44,9 @@ scratch_*.py
 
 # SessionEnd hook local state (per-machine checkpoint, not shared config)
 .claude/second-brain-session-marker.json
+
+# Graphify: 100% regenerated from the codebase (`graphify update .` +
+# `graphify export obsidian --dir docs/second-brain/gf`), same treatment as
+# data/ above — a derived build artifact, not source, never versioned.
+graphify-out/
+docs/second-brain/gf/
