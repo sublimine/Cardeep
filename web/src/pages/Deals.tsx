@@ -265,20 +265,27 @@ function DealDetailModal({
 
 // ── Deal list row ─────────────────────────────────────────────────────────────
 
-function DealRow({
-  deal, idx, onSelect, onAdvance, canAdvance,
-}: {
+interface DealRowProps {
   deal: Deal
   idx: number
   onSelect: () => void
   onAdvance: () => void
   canAdvance: boolean
-}) {
+}
+
+// forwardRef: AnimatePresence mode="popLayout" attaches a ref to each direct
+// child to measure it during exit animations — a plain function component
+// can't accept that ref, which React warns about at runtime.
+const DealRow = React.forwardRef<HTMLDivElement, DealRowProps>(function DealRow(
+  { deal, idx, onSelect, onAdvance, canAdvance },
+  ref,
+) {
   const stage = deal.stage as KanbanStage
   const prob  = STAGE_PROB[stage] ?? 0
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
@@ -340,7 +347,7 @@ function DealRow({
       )}
     </motion.div>
   )
-}
+})
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
