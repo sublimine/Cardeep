@@ -171,7 +171,7 @@ function NavItem({ to, label, icon: Icon, end, collapsed, dark, neutralAccent, o
   // brand violet, so the chrome reads as pure dark/white alongside the page.
   const acc = neutralAccent
     ? { bgD: 'rgba(34,211,238,0.16)', bgL: 'rgba(8,145,178,0.10)', bdD: 'rgba(34,211,238,0.34)', bdL: 'rgba(8,145,178,0.24)', icoD: '#67e8f9', icoL: '#0891b2', lblL: '#0e3a44', glow: 'rgba(34,211,238,0.18)', icoGlow: 'rgba(103,232,249,0.45)' }
-    : { bgD: 'rgba(59, 130, 246,0.18)', bgL: 'rgba(59, 130, 246,0.10)', bdD: 'rgba(59, 130, 246,0.36)', bdL: 'rgba(59, 130, 246,0.22)', icoD: '#c4b5fd', icoL: '#3b82f6', lblL: '#3b0764', glow: 'rgba(59, 130, 246,0.16)', icoGlow: 'rgba(196,181,253,0.50)' }
+    : { bgD: 'rgba(59, 130, 246,0.18)', bgL: 'rgba(59, 130, 246,0.10)', bdD: 'rgba(59, 130, 246,0.36)', bdL: 'rgba(59, 130, 246,0.22)', icoD: '#93c5fd', icoL: '#3b82f6', lblL: '#1e3a8a', glow: 'rgba(59, 130, 246,0.16)', icoGlow: 'rgba(147,197,253,0.50)' }
 
   return (
     <NavLink
@@ -379,7 +379,7 @@ function SidebarInner({ collapsed, dark, neutralAccent, onToggle, onClose }: Sid
                 letterSpacing: '0.18em',
                 background: neutralAccent
                   ? 'linear-gradient(120deg, #22d3ee 0%, #67e8f9 55%, #cffafe 100%)'
-                  : 'linear-gradient(120deg, #a78bfa 0%, #60a5fa 55%, #67e8f9 100%)',
+                  : 'linear-gradient(120deg, #3b82f6 0%, #60a5fa 55%, #67e8f9 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',

@@ -2,7 +2,7 @@
 > Estado por bloque. Se actualiza al cerrar cada uno. Verdad cruda: solo [x] con verificación real.
 
 - [x] **B0** Baseline — typecheck limpio + build ✓ 14.58s (2900 módulos). node_modules presente.
-- [~] **B1** Design-system → landing — **REABIERTO 2026-07-16 [VERIFICADO contra código, no contra el log]:**
+- [x] **B1** Design-system → landing — **REABIERTO y RE-CERRADO 2026-07-16 [VERIFICADO contra código]:**
       `tokens.css` sí tiene la paleta light correcta y el mesh DeFi sí está apagado por CSS
       (`.cx-mesh > div { display:none }`). PERO `Dashboard.tsx` e `Inteligencia.tsx` (y probablemente
       Arbitrage/Analitica de la misma ola) **nunca migraron** — cada uno reimplementa su propio
@@ -16,7 +16,15 @@
       main.tsx, styles/tokens.css, index.css, tailwind.config.js — esos sí están bien. Reabierto para
       migrar Dashboard/Inteligencia/Arbitrage/Analitica al sistema real (ver `05-MONETIZATION-MAP.md` +
       log de hoy abajo).
-- [ ] **B2** Shell + navegación unificada (un solo sitio, dealer-first)
+- [x] **B2** Shell + navegación unificada — **CERRADO 2026-07-16 [VERIFICADO]:** la estructura ya
+      estaba bien hecha (7 grupos dealer-first en `NAV_GROUPS`, coincide con `UNIFICATION.md`); crucé
+      por script las rutas de `App.tsx` contra `Shell.tsx` y confirmé que TODA sección real es
+      alcanzable desde el nav (únicas rutas fuera: `market`/`terminal`, el terminal DeFi viejo, excluido
+      a propósito según el log — no un hueco). Lo que sí faltaba: 2 restos de violeta que el pase de
+      marca "violeta→azul" no tocó por no ser una "página" — `NavItem` (icono activo dark `#c4b5fd` y su
+      glow `rgba(196,181,253,…)`, label activo light `#3b0764`) y el gradiente del wordmark "CARDEEP"
+      (`#a78bfa 0%…`). Los 4 corregidos a azul. Verificado: build verde, Playwright light+dark, sidebar
+      activo consistente, 0 errores nuevos (solo el /kpi 500 preexistente por backend no levantado).
 - [ ] **B3** Landing pública limpia + Login
 - [ ] **B4** Dashboard único dealer-first (unifica los 4)
 - [~] **B5** Secciones — **Inteligencia ✅ + Arbitrage ✅** (React en estilo landing, desde MATRIX/OFFERING/
