@@ -71,10 +71,12 @@ const MEMBERS: Member[] = [
   { id: 'm4', name: 'María Sánchez',  email: 'maria@garage.es',  role: 'Viewer', status: 'pending' },
 ]
 
+// Plan name/price must match pages/Pricing.tsx and pages/Api.tsx exactly —
+// same 3-plan model (05-MONETIZATION-MAP.md), not a separate demo SKU.
 const INVOICES: Invoice[] = [
-  { id: 'inv-001', date: '01 Jun 2026', description: 'Plan Professional — Jun 2026', amount: 99, status: 'paid'    },
-  { id: 'inv-002', date: '01 May 2026', description: 'Plan Professional — May 2026', amount: 99, status: 'paid'    },
-  { id: 'inv-003', date: '01 Abr 2026', description: 'Plan Professional — Abr 2026', amount: 99, status: 'paid'    },
+  { id: 'inv-001', date: '01 Jun 2026', description: 'Plan Scale — Jun 2026', amount: 199, status: 'paid'    },
+  { id: 'inv-002', date: '01 May 2026', description: 'Plan Scale — May 2026', amount: 199, status: 'paid'    },
+  { id: 'inv-003', date: '01 Abr 2026', description: 'Plan Scale — Abr 2026', amount: 199, status: 'paid'    },
 ]
 
 const INVOICE_STATUS: Record<Invoice['status'], { color: 'green' | 'yellow' | 'red'; label: string }> = {
@@ -436,11 +438,11 @@ function BillingTab() {
         <div className="p-4 rounded-lg border border-blue-500/30 bg-blue-500/5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="font-semibold text-text-primary">Professional</p>
+              <p className="font-semibold text-text-primary">Scale</p>
               <p className="text-xs text-text-muted mt-0.5">Facturado anualmente · Renovación: 1 Jul 2026</p>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-2xl font-bold text-text-primary">€99</span>
+              <span className="text-2xl font-bold text-text-primary">€199</span>
               <span className="text-xs text-text-muted">/mes</span>
             </div>
           </div>
