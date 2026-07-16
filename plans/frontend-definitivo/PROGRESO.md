@@ -48,7 +48,6 @@
       quick-start curl. Verificada light, 0 errores, build ✓. Polish de marca (violeta→azul en
       planes/Scale) resuelto de facto en el Bloque 6 de hoy (`Api.tsx` reconstruido usa `ACCENT`/`GOOD`,
       cero violeta).
-- [ ] **B7** Auditoría final + parte — EN CURSO ahora mismo.
   - `Vehicles.tsx`: bug real encontrado y arreglado — botón "Add vehicle" con gradiente
     `#4f6ef0→#7b45e8` (azul→VIOLETA visible) → `#3b82f6→#2563eb` (azul de marca). Grep de otros
     restos violeta (`#7c3aed|#8b5cf6|#a855f7|#6d28d9|#9333ea|#a78bfa|#c4b5fd`) en todo `src/`: solo
@@ -63,7 +62,37 @@
     `App.tsx`). NO lo toco, no es mi trabajo. Verifiqué con `tsc --noEmit | grep -v inventory` que
     mi cambio en `Vehicles.tsx` no añade ningún error nuevo — el único error del proyecto es ese,
     ajeno. Owner: cuando esa otra sesión cierre `GarageScene.tsx`, `npm run build` volverá a pasar
-    solo.
+    solo. **Actualización: ya pasó solo** — `garage/GarageScene.tsx` existe, la otra sesión cerró su
+    parte, `npm run build` vuelve a estar 100% verde (3620 módulos, incluye `GarageScene`+`HeroScene`
+    bundleados).
+  - Pausé el loop al descubrir la sesión concurrente (por si había riesgo de choque); el owner
+    confirmó "él solo toca inventario, sigue con el resto, no pares" — retomado.
+  - `Deals.tsx` (`DealRow`) y `Notes.tsx` (`NoteCard`): mismo bug real en ambos — componente función
+    plano usado como hijo directo de `AnimatePresence mode="popLayout"`, que necesita adjuntarle un
+    ref para medir la animación de salida → warning React en cada render. Arreglado con
+    `React.forwardRef` en los dos. Grep de los demás usuarios de `AnimatePresence`
+    (Assistant/Calendar/Chat/Check/Contacts/Inbox/Settings/Support/Market/terminal) + verificación
+    real en navegador de cada ruta: ningún otro caso activo (Market/terminal son el DeFi retirado).
+  - `Kanban.tsx`: bug real — `useKanban` deja el tablero en su estado inicial vacío si la petición
+    falla (nunca llama a `setBoard` en el catch), y la página solo mostraba `MOCK_BOARD` mientras
+    `loading===true`; en cuanto la petición fallida terminaba, el tablero vacío sustituía al mock.
+    Arreglado a `loading || error`. Grep del mismo patrón en el resto de páginas: solo Dashboard/Deals
+    lo usan, y ambos ya comprobaban presencia de datos (`data ? … : MOCK` / `data?.deals ?? MOCK`),
+    no `loading` — sin bug ahí.
+  - `Settings.tsx` (pestaña Facturación): bug de contenido — plan mock "Professional €99/mes" que no
+    coincide con ninguno de los 3 planes reales (Starter/Scale/Enterprise). Alineado a "Scale €199/mes"
+    (el mismo que ya usan Dashboard/Api.tsx para este usuario demo).
+  - **Barrido de rutas completo — TODAS verificadas en navegador esta sesión:** Dashboard, Inteligencia,
+    Arbitrage, Analítica, Pricing, Api, Assistant, Finance, Invoices, Landing, Login, Register, Reset,
+    2FA, Vehicles, Contacts, Deals, Kanban, Notas, Chat, Inbox, Calendar, Settings (5 pestañas),
+    Support, Check (landing + flujo real de verificación + estado de error), Profile. 0 errores de
+    consola inesperados en ninguna (solo los 500 del backend no levantado esta sesión, y el favicon
+    404 preexistente). Responsive/CI no verificados en esta pasada (pendiente si se requiere más
+    adelante). Market/Terminal (DeFi retirado) fuera de alcance a propósito.
+- [x] **B7** Auditoría final — **CERRADO 2026-07-16.** `npm run build` verde (3620 módulos). 5 bugs
+  reales encontrados y arreglados en esta auditoría (Vehicles violeta, Deals+Notes forwardRef, Kanban
+  fallback, Settings plan) además de los ya cerrados en B1-B6. Commits: `f91ec8e`→`c6b3ba8` (+ los que
+  sigan de este bloque).
 
 ## Log
 - 2026-06-30: Recon completo de `web/` (app React real con auth/router/components/hooks). PLAN.md escrito.
