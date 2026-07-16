@@ -26,7 +26,7 @@ export default function Card({ children, className, padding = true, hover, onCli
       } : undefined}
       transition={{ type: 'spring', stiffness: 420, damping: 28 }}
       className={cn(
-        'rounded-[10px] border border-white/[0.07]',
+        'rounded-[10px] border',
         'relative overflow-hidden',
         padding && 'p-5',
         interactive && 'cursor-pointer select-none',
@@ -34,6 +34,7 @@ export default function Card({ children, className, padding = true, hover, onCli
       )}
       style={{
         background: 'var(--bg-elevated)',
+        borderColor: 'var(--border-default)',
         boxShadow: 'var(--shadow-card)',
       }}
     >

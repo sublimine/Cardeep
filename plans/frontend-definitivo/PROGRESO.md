@@ -2,10 +2,20 @@
 > Estado por bloque. Se actualiza al cerrar cada uno. Verdad cruda: solo [x] con verificación real.
 
 - [x] **B0** Baseline — typecheck limpio + build ✓ 14.58s (2900 módulos). node_modules presente.
-- [x] **B1** Design-system → landing — General Sans + JetBrains Mono, paleta light neutra del landing
-      (#EAECEF/#FFF/#13161B/#3B82F6) con overrides `-ch` para Tailwind, light-first (main.tsx), mesh DeFi
-      aplanado (cx-mesh flat + orbes ocultos). Verificado Playwright (dashboard en estilo landing) + build ✓.
-      Ficheros: index.html, main.tsx, styles/tokens.css, index.css, tailwind.config.js.
+- [~] **B1** Design-system → landing — **REABIERTO 2026-07-16 [VERIFICADO contra código, no contra el log]:**
+      `tokens.css` sí tiene la paleta light correcta y el mesh DeFi sí está apagado por CSS
+      (`.cx-mesh > div { display:none }`). PERO `Dashboard.tsx` e `Inteligencia.tsx` (y probablemente
+      Arbitrage/Analitica de la misma ola) **nunca migraron** — cada uno reimplementa su propio
+      `tok(dark)` + `GCard` inline con hex hardcodeado (`#5b8df8`, `#60a5fa`, `#0ea5e9`...) que no son
+      los tokens del landing, ignorando el `components/Card.tsx` compartido que sí usa `var(--bg-elevated)`/
+      `var(--shadow-card)`. Efecto: glass pesado (blur 32px) en TODAS las tarjetas de una página que
+      debía ser "flat-limpia, glass SOLO en nav" (norma del propio PLAN.md). Esto es la causa raíz de
+      "el dashboard se ve de pena" (queja owner 2026-07-16), no un problema de gusto. Bug adicional
+      encontrado en el propio `Card.tsx`: borde hardcodeado `border-white/[0.07]` — invisible en light
+      mode (debería usar `var(--border-default)`). Ficheros tocados en B0/B1 original: index.html,
+      main.tsx, styles/tokens.css, index.css, tailwind.config.js — esos sí están bien. Reabierto para
+      migrar Dashboard/Inteligencia/Arbitrage/Analitica al sistema real (ver `05-MONETIZATION-MAP.md` +
+      log de hoy abajo).
 - [ ] **B2** Shell + navegación unificada (un solo sitio, dealer-first)
 - [ ] **B3** Landing pública limpia + Login
 - [ ] **B4** Dashboard único dealer-first (unifica los 4)
@@ -55,3 +65,19 @@
   Arbitrage, API&Tokens (134f30b). Theming workspace arreglado: Vehicles/Check/DossierReport dark→tokens
   (Vehicles verificado light; Inbox/Calendar ya OK). Orquestando por olas: en vuelo Landing limpia, suite Auth
   (Login/Registro/Reset/2FA), Dashboard único, Analítica.
+- **2026-07-16 (owner: "el dashboard de puta pena visualmente" + reestructurar workspace + integrar
+  auditoría de 109 empresas + definir qué info es de pago):** Recon verificado contra código (no contra
+  este log): B1 reabierto (ver arriba). Escrito `05-MONETIZATION-MAP.md` (Capa 0/1/2 de
+  `CARDEEP-OFFERING.md` → páginas/widgets concretos de `web/`, teaser vs contador+muestra vs bloqueado).
+  **Bloque 1 CERRADO+VERIFICADO:** infra compartida nueva — `hooks/useIsDark.ts` (extraído, deduplicado),
+  `lib/entitlements.ts` (Feature→Plan desde el mapa de monetización), `components/PremiumGate.tsx`
+  (blur+CTA real, no maqueta), `types.ts` (`Plan`, `User.plan`), fix de bug real en `components/Card.tsx`
+  (borde `border-white/[0.07]` hardcodeado → invisible en light mode → `var(--border-default)`).
+  `Dashboard.tsx` reconstruido íntegro sobre `Card`+tokens CSS reales (cero `tok()`/`GCard` inline, cero
+  hex arbitrario — 1 acento de marca + verde/rojo/ámbar semánticos únicamente); `PremiumGate` aplicado a
+  Oportunidades (Capa 2/sourcing-ranking); eliminado `QuickActions` (código muerto preexistente, nunca
+  montado en el grid). Verificado: `tsc --noEmit` limpio, `npm run build` verde (2926 módulos, 23.9s),
+  Playwright light+dark en `:5173/dashboard` — 0 errores nuevos (los 2 presentes son preexistentes:
+  `/api/v1/kpi` 500 por backend no levantado esta sesión, favicon 404 — ninguno introducido por este
+  cambio), gating visual confirmado (blur+lock+CTA "Desbloquear con Enterprise" en Oportunidades).
+  Siguiente (mismo patrón, infra ya lista): repetir en Inteligencia/Arbitrage/Analitica → retomar B2/B3/B7.

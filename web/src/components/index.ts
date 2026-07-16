@@ -7,6 +7,7 @@ export { default as Avatar } from './Avatar'
 // ── Layout & Surface ─────────────────────────────────────────────────────────
 export { default as Card } from './Card'
 export { default as Modal } from './Modal'
+export { default as PremiumGate } from './PremiumGate'
 
 // ── Form Controls ─────────────────────────────────────────────────────────────
 export { default as Select } from './Select'

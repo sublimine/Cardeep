@@ -1,9 +1,12 @@
+export type Plan = 'starter' | 'scale' | 'enterprise'
+
 export interface User {
   id: string
   email: string
   name: string
   tenantId: string
   role: string
+  plan: Plan
 }
 
 export interface Vehicle {

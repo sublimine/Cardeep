@@ -11,6 +11,7 @@ const DEV_USER: User = {
   name: 'Demo User',
   tenantId: 'tenant-dev',
   role: 'admin',
+  plan: 'starter',
 }
 
 interface AuthState {

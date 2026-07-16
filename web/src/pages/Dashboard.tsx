@@ -1,24 +1,27 @@
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, ArrowDownRight, Minus, Search, Zap, ClipboardList, TrendingUp, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts'
 import { PageSkeleton } from '../components/LoadingSpinner'
+import Card from '../components/Card'
+import PremiumGate from '../components/PremiumGate'
 import { useApi } from '../hooks/useApi'
+import { useIsDark } from '../hooks/useIsDark'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../auth/AuthContext'
 import type { KpiData } from '../types'
 
-// ── Theme observer ────────────────────────────────────────────────────────────
-
-function useIsDark() {
-  const [dark, setDark] = useState(() => !document.documentElement.classList.contains('light'))
-  useEffect(() => {
-    const obs = new MutationObserver(() => setDark(!document.documentElement.classList.contains('light')))
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => obs.disconnect()
-  }, [])
-  return dark
-}
+/**
+ * One brand accent (var(--c-violet), the token formerly named for the violet
+ * brand, now the blue #3b82f6) drives structure; green/rose carry meaning
+ * (trend up/down) only. Kept as literal hex — not `var(--c-*)` — because they
+ * need the `${hex}18`-style alpha-suffix trick below, which only works on hex
+ * strings. Values mirror tokens.css 1:1.
+ */
+const ACCENT = '#3b82f6'
+const GOOD = '#059669'
+const BAD = '#e11d48'
+const WARN = '#d97706'
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
@@ -50,11 +53,11 @@ const DEALER = {
   soldThisMonth: 23,
   targetSoldMonth: 30,
   dealStages: [
-    { label: 'New',         count: 15, color: '#5b8df8' },
-    { label: 'Contacted',   count: 12, color: '#60a5fa' },
-    { label: 'Offer Sent',  count: 10, color: '#f59e0b' },
-    { label: 'Negotiation', count: 10, color: '#fb923c' },
-    { label: 'Closed',      count:  8, color: '#22c55e' },
+    { label: 'New',         count: 15, color: ACCENT },
+    { label: 'Contacted',   count: 12, color: ACCENT },
+    { label: 'Offer Sent',  count: 10, color: WARN },
+    { label: 'Negotiation', count: 10, color: WARN },
+    { label: 'Closed',      count:  8, color: GOOD },
   ],
   staleStock: [
     { id: 's1', make: 'BMW',       model: '320d xDrive',  year: 2021, days: 72, price: 24_900 },
@@ -125,61 +128,21 @@ function Spark({ values, color, height = 28 }: { values: number[]; color: string
   )
 }
 
-function renderBold(text: string, color: string): React.ReactNode {
+function renderBold(text: string): React.ReactNode {
   return text.split(/\*\*(.*?)\*\*/g).map((p, i) =>
-    i % 2 === 1 ? <strong key={i} style={{ fontWeight: 700, color }}>{p}</strong> : <span key={i}>{p}</span>
+    i % 2 === 1 ? <strong key={i} className="font-bold" style={{ color: 'var(--text-primary)' }}>{p}</strong> : <span key={i}>{p}</span>
   )
 }
 
 function scoreColor(score: number): string {
-  if (score >= 85) return '#5b8df8'
-  if (score >= 70) return '#f59e0b'
+  if (score >= 85) return ACCENT
+  if (score >= 70) return WARN
   return '#94a3b8'
 }
 
-// ── Token helpers ─────────────────────────────────────────────────────────────
-
-function tok(dark: boolean) {
-  return {
-    t1:   dark ? '#f1f5f9' : '#0f172a',
-    t2:   dark ? '#cbd5e1' : '#334155',
-    t3:   dark ? '#94a3b8' : '#64748b',
-    t4:   dark ? '#475569' : '#94a3b8',
-    div:  dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
-    cardBg:   dark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.82)',
-    cardBord: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-    innerBg:  dark ? 'rgba(14,14,26,0.95)'    : 'rgba(255,255,255,0.97)',
-    subBg:    dark ? 'rgba(255,255,255,0.03)'  : 'rgba(0,0,0,0.03)',
-    subBord:  dark ? 'rgba(255,255,255,0.06)'  : 'rgba(0,0,0,0.07)',
-  }
-}
-
-// ── Glass card wrapper ────────────────────────────────────────────────────────
-
-function GCard({ dark, children, style }: { dark: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
-  const c = tok(dark)
-  return (
-    <div style={{
-      background: c.cardBg,
-      border: `1px solid ${c.cardBord}`,
-      borderRadius: 18,
-      backdropFilter: 'blur(32px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-      boxShadow: dark
-        ? '0 4px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)'
-        : '0 4px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.90)',
-      overflow: 'hidden',
-      ...style,
-    }}>
-      {children}
-    </div>
-  )
-}
-
-// ── Metric card (Pin-2 ultra-minimal style) ───────────────────────────────────
+// ── Metric card (KPI row) ──────────────────────────────────────────────────────
 
 interface MetricCardProps {
-  dark: boolean
   label: string
   value: number
   prefix?: string
@@ -189,13 +152,11 @@ interface MetricCardProps {
   trend: 'up' | 'down' | 'flat' | 'good'
   trendLabel: string
   spark: number[]
-  accent: string
   delay?: number
 }
 
-function MetricCard({ dark, label, value, prefix, suffix, decimals, sub, trend, trendLabel, spark, accent, delay = 0 }: MetricCardProps) {
-  const c = tok(dark)
-  const trendColor = trend === 'up' || trend === 'good' ? '#22c55e' : trend === 'down' ? '#f87171' : c.t4
+function MetricCard({ label, value, prefix, suffix, decimals, sub, trend, trendLabel, spark, delay = 0 }: MetricCardProps) {
+  const trendColor = trend === 'up' || trend === 'good' ? GOOD : trend === 'down' ? BAD : 'var(--text-muted)'
   const TrendIcon  = trend === 'up' || trend === 'good' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus
 
   return (
@@ -203,32 +164,24 @@ function MetricCard({ dark, label, value, prefix, suffix, decimals, sub, trend, 
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
     >
-      <GCard dark={dark} style={{ padding: '20px 22px 16px' }}>
-        {/* Label row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.11em', textTransform: 'uppercase', color: c.t3 }}>
-            {label}
-          </span>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: accent, boxShadow: `0 0 6px ${accent}` }} />
+      <Card hover className="!p-5">
+        <div className="flex items-center justify-between mb-3.5">
+          <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+          <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
         </div>
-
-        {/* Big number */}
-        <div style={{ fontSize: 44, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: c.t1, marginBottom: 4 }}>
+        <div className="text-[44px] font-extrabold leading-none tracking-[-0.03em] mb-1" style={{ color: 'var(--text-primary)' }}>
           <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />
         </div>
-        <div style={{ fontSize: 11, color: c.t4, marginBottom: 14 }}>{sub}</div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: `1px solid ${c.div}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div className="text-[11px] mb-3.5" style={{ color: 'var(--text-muted)' }}>{sub}</div>
+        <div className="flex items-center justify-between pt-2.5 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+          <div className="flex items-center gap-1">
             <TrendIcon style={{ width: 11, height: 11, color: trendColor }} />
-            <span style={{ fontSize: 10.5, fontWeight: 600, color: trendColor }}>{trendLabel}</span>
+            <span className="text-[10.5px] font-semibold" style={{ color: trendColor }}>{trendLabel}</span>
           </div>
-          <Spark values={spark} color={accent} height={22} />
+          <Spark values={spark} color={ACCENT} height={22} />
         </div>
-      </GCard>
+      </Card>
     </motion.div>
   )
 }
@@ -237,86 +190,88 @@ function MetricCard({ dark, label, value, prefix, suffix, decimals, sub, trend, 
 
 function MarginChart({ data, dark }: { data: KpiData['marginHistory']; dark: boolean }) {
   const [tab, setTab] = useState<'area' | 'bar'>('area')
-  const c = tok(dark)
   const tickColor = dark ? '#3f3f5a' : '#94a3b8'
   const gridColor = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
 
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 20px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexShrink: 0 }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_20px_14px]">
+        <div className="mb-4 flex items-center justify-between shrink-0">
           <div>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Gross Margin</h2>
-            <p style={{ fontSize: 10.5, color: c.t4 }}>6-month trend</p>
+            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Gross Margin</h2>
+            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>6-month trend</p>
           </div>
-          <div style={{ display: 'flex', gap: 3 }}>
+          <div className="flex gap-[3px]">
             {(['area', 'bar'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{
-                padding: '4px 10px', borderRadius: 7, fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                fontFamily: 'Inter, system-ui', textTransform: 'uppercase', letterSpacing: '0.04em',
-                background: tab === t ? 'rgba(91,141,248,0.14)' : 'transparent',
-                border: tab === t ? '1px solid rgba(91,141,248,0.28)' : '1px solid transparent',
-                color: tab === t ? '#5b8df8' : c.t4, transition: 'all 170ms',
-              }}>{t}</button>
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className="rounded-[7px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.04em] transition-colors"
+                style={{
+                  background: tab === t ? `${ACCENT}22` : 'transparent',
+                  border: `1px solid ${tab === t ? `${ACCENT}48` : 'transparent'}`,
+                  color: tab === t ? ACCENT : 'var(--text-muted)',
+                }}
+              >{t}</button>
             ))}
           </div>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0 }}>
+        <div className="min-h-0 flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
               <defs>
                 <linearGradient id="gm" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor="#5b8df8" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="#5b8df8" stopOpacity={0} />
+                  <stop offset="0%"   stopColor={ACCENT} stopOpacity={0.28} />
+                  <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
               <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v/1000).toFixed(0)}k`} />
               <ChartTooltip
-                contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: `1px solid ${c.cardBord}`, borderRadius: 10, fontSize: 11.5, color: c.t1, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+                contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
                 formatter={(v: number) => [`€${v.toLocaleString()}`, 'Margin']}
                 cursor={{ stroke: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}
               />
-              <Area type="monotone" dataKey="margin" stroke="#5b8df8" strokeWidth={2} fill="url(#gm)" dot={false} activeDot={{ r: 3, fill: '#5b8df8', strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="margin" stroke={ACCENT} strokeWidth={2} fill="url(#gm)" dot={false} activeDot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
 // ── Pipeline stages ───────────────────────────────────────────────────────────
 
-function PipelinePanel({ dark }: { dark: boolean }) {
-  const c = tok(dark)
+function PipelinePanel() {
   const total = DEALER.dealStages.reduce((s, d) => s + d.count, 0)
 
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 18px 16px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ marginBottom: 16, flexShrink: 0 }}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Pipeline</h2>
-          <p style={{ fontSize: 10.5, color: c.t4 }}>{total} deals total</p>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_18px_16px]">
+        <div className="mb-4 shrink-0">
+          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Pipeline</h2>
+          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{total} deals total</p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+        <div className="flex flex-1 flex-col gap-2.5">
           {DEALER.dealStages.map((stage, i) => {
             const pct = (stage.count / total) * 100
             return (
               <motion.div key={stage.label} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.07 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: c.t2 }}>{stage.label}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: c.t1, fontVariantNumeric: 'tabular-nums' }}>{stage.count}</span>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>{stage.label}</span>
+                  <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{stage.count}</span>
                 </div>
-                <div style={{ height: 4, borderRadius: 99, background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+                <div className="h-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${pct}%` }}
                     transition={{ delay: 0.3 + i * 0.08, duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-                    style={{ height: '100%', borderRadius: 99, background: stage.color, boxShadow: `0 0 6px ${stage.color}66` }}
+                    className="h-full rounded-full"
+                    style={{ background: stage.color, boxShadow: `0 0 6px ${stage.color}66` }}
                   />
                 </div>
               </motion.div>
@@ -324,200 +279,142 @@ function PipelinePanel({ dark }: { dark: boolean }) {
           })}
         </div>
 
-        {/* Conversion hint */}
-        <div style={{
-          marginTop: 14,
-          padding: '8px 10px',
-          borderRadius: 9,
-          background: 'rgba(34,197,94,0.09)',
-          border: '1px solid rgba(34,197,94,0.18)',
-        }}>
-          <span style={{ fontSize: 10.5, color: '#22c55e', fontWeight: 600 }}>
-            8 deals closing this week ↗
-          </span>
+        <div className="mt-3.5 rounded-[9px] px-2.5 py-2" style={{ background: `${GOOD}18`, border: `1px solid ${GOOD}30` }}>
+          <span className="text-[10.5px] font-semibold" style={{ color: GOOD }}>8 deals closing this week ↗</span>
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
 // ── Stale stock panel ─────────────────────────────────────────────────────────
 
-function StalePanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
-  const c = tok(dark)
-
+function StalePanel({ onNavigate }: { onNavigate: () => void }) {
   function staleColor(days: number) {
-    if (days >= 70) return '#f87171'
-    if (days >= 60) return '#fb923c'
-    return '#fbbf24'
+    if (days >= 70) return BAD
+    if (days >= 60) return WARN
+    return '#eab308'
   }
 
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 18px 14px', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_18px_14px]">
+        <div className="mb-3.5 flex shrink-0 items-center justify-between">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <AlertTriangle style={{ width: 12, height: 12, color: '#f87171' }} />
-              <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1 }}>Stale Stock</h2>
+            <div className="mb-0.5 flex items-center gap-1.5">
+              <AlertTriangle style={{ width: 12, height: 12, color: BAD }} />
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Stale Stock</h2>
             </div>
-            <p style={{ fontSize: 10.5, color: c.t4 }}>Vehicles over 60 days</p>
+            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Vehicles over 60 days</p>
           </div>
-          <button onClick={onNavigate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.t4, padding: 0 }}>
+          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
             <ChevronRight style={{ width: 14, height: 14 }} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        <div className="flex flex-1 flex-col gap-2">
           {DEALER.staleStock.map((v, i) => (
             <motion.div
               key={v.id}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + i * 0.08 }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 10px',
-                borderRadius: 10,
-                background: c.subBg,
-                border: `1px solid ${c.subBord}`,
-                borderLeft: `2px solid ${staleColor(v.days)}`,
-              }}
+              className="flex items-center gap-2.5 rounded-[10px] p-[9px_10px]"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderLeft: `2px solid ${staleColor(v.days)}` }}
             >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 600, color: c.t1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {v.make} {v.model}
-                </div>
-                <div style={{ fontSize: 10, color: c.t4, marginTop: 1 }}>
-                  {v.year} · €{v.price.toLocaleString()}
-                </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[11.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>{v.make} {v.model}</div>
+                <div className="mt-px text-[10px]" style={{ color: 'var(--text-muted)' }}>{v.year} · €{v.price.toLocaleString()}</div>
               </div>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '2px 8px', borderRadius: 99,
-                background: `${staleColor(v.days)}14`,
-                border: `1px solid ${staleColor(v.days)}30`,
-                flexShrink: 0,
-              }}>
+              <div className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5" style={{ background: `${staleColor(v.days)}14`, border: `1px solid ${staleColor(v.days)}30` }}>
                 <Clock style={{ width: 9, height: 9, color: staleColor(v.days) }} />
-                <span style={{ fontSize: 10, fontWeight: 700, color: staleColor(v.days) }}>{v.days}d</span>
+                <span className="text-[10px] font-bold" style={{ color: staleColor(v.days) }}>{v.days}d</span>
               </div>
             </motion.div>
           ))}
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
 // ── Follow-ups today ──────────────────────────────────────────────────────────
 
 const TYPE_COLOR: Record<string, string> = {
-  inquiry: '#5b8df8', call: '#22c55e', reply: '#60a5fa', note: '#f59e0b', reminder: '#fb923c',
-  drive: '#0ea5e9', offer: '#60a5fa',
+  inquiry: ACCENT, call: GOOD, reply: ACCENT, note: WARN, reminder: WARN,
+  drive: '#0891b2', offer: ACCENT,
 }
 
-function FollowUpsPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
-  const c = tok(dark)
-
+function FollowUpsPanel({ onNavigate }: { onNavigate: () => void }) {
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 18px 14px', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_18px_14px]">
+        <div className="mb-3.5 flex shrink-0 items-center justify-between">
           <div>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Today's Follow-ups</h2>
-            <p style={{ fontSize: 10.5, color: c.t4 }}>{DEALER.followUps.length} scheduled</p>
+            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Today's Follow-ups</h2>
+            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{DEALER.followUps.length} scheduled</p>
           </div>
-          <button onClick={onNavigate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.t4, padding: 0 }}>
+          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
             <ChevronRight style={{ width: 14, height: 14 }} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+        <div className="flex flex-1 flex-col gap-2">
           {DEALER.followUps.map((f, i) => (
             <motion.div
               key={f.id}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + i * 0.08 }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '9px 10px',
-                borderRadius: 10,
-                background: c.subBg,
-                border: `1px solid ${c.subBord}`,
-              }}
+              className="flex items-center gap-2.5 rounded-[10px] p-[9px_10px]"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
             >
-              <div style={{
-                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                background: `${TYPE_COLOR[f.type]}18`,
-                border: `1px solid ${TYPE_COLOR[f.type]}28`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <span style={{ fontSize: 12 }}>
-                  {f.type === 'call' ? '📞' : f.type === 'drive' ? '🚗' : '📋'}
-                </span>
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]" style={{ background: `${TYPE_COLOR[f.type]}18`, border: `1px solid ${TYPE_COLOR[f.type]}28` }}>
+                <span className="text-xs">{f.type === 'call' ? '📞' : f.type === 'drive' ? '🚗' : '📋'}</span>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 600, color: c.t1 }}>{f.name}</div>
-                <div style={{ fontSize: 10, color: c.t4, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.vehicle}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[11.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>{f.name}</div>
+                <div className="mt-px truncate text-[10px]" style={{ color: 'var(--text-muted)' }}>{f.vehicle}</div>
               </div>
-              <div style={{ fontSize: 10.5, fontWeight: 600, color: c.t3, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                {f.time}
-              </div>
+              <div className="shrink-0 text-[10.5px] font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{f.time}</div>
             </motion.div>
           ))}
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
 // ── Activity feed ─────────────────────────────────────────────────────────────
 
-function ActivityFeed({ activities, dark }: { activities: KpiData['recentActivities']; dark: boolean }) {
-  const c = tok(dark)
-
+function ActivityFeed({ activities }: { activities: KpiData['recentActivities'] }) {
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 18px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1 }}>Recent Activity</h2>
-          <span style={{ fontSize: 10.5, color: c.t4 }}>{activities.length} events</span>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_18px_14px]">
+        <div className="mb-3.5 flex shrink-0 items-center justify-between">
+          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Recent Activity</h2>
+          <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{activities.length} events</span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1, overflowY: 'auto' }}>
+        <div className="flex flex-1 flex-col gap-px overflow-y-auto">
           {activities.map((a, i) => (
             <motion.div
               key={a.id}
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.25 + i * 0.06, duration: 0.32 }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 0',
-                borderBottom: i < activities.length - 1 ? `1px solid ${c.div}` : 'none',
-              }}
+              className="flex items-center gap-2.5 py-2"
+              style={{ borderBottom: i < activities.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
             >
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: TYPE_COLOR[a.type] ?? '#5b8df8', flexShrink: 0 }} />
-              <span style={{
-                fontSize: 9.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                color: TYPE_COLOR[a.type] ?? '#5b8df8',
-                minWidth: 56, flexShrink: 0,
-              }}>
-                {a.type}
-              </span>
-              <span style={{ fontSize: 11.5, color: c.t2, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {a.body}
-              </span>
-              <span style={{ fontSize: 10, color: c.t4, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                {timeAgo(a.createdAt)}
-              </span>
+              <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: TYPE_COLOR[a.type] ?? ACCENT }} />
+              <span className="w-14 shrink-0 text-[9.5px] font-bold uppercase tracking-[0.07em]" style={{ color: TYPE_COLOR[a.type] ?? ACCENT }}>{a.type}</span>
+              <span className="flex-1 truncate text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>{a.body}</span>
+              <span className="shrink-0 text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{timeAgo(a.createdAt)}</span>
             </motion.div>
           ))}
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
@@ -542,16 +439,11 @@ function proactiveInsight(kpi: KpiData): string {
   return `✅ All metrics healthy. Gross margin +8% this month. Keep it up!`
 }
 
-function ChatCompact({ kpi, dark, username }: { kpi: KpiData; dark: boolean; username: string }) {
+function ChatCompact({ kpi, username }: { kpi: KpiData; username: string }) {
   const [msgs, setMsgs] = useState<ChatMsg[]>([])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const c = tok(dark)
-
-  const inputBg    = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'
-  const inputBord  = dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.10)'
-  const botBubble  = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)'
 
   function send(text: string) {
     const t = text.trim()
@@ -570,57 +462,43 @@ function ChatCompact({ kpi, dark, username }: { kpi: KpiData; dark: boolean; use
   }, [msgs, typing])
 
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 14px 10px', borderBottom: `1px solid ${c.div}`, flexShrink: 0 }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: 8, flexShrink: 0,
-            background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 10px rgba(59, 130, 246,0.30)',
-          }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col">
+        <div className="flex shrink-0 items-center gap-2 p-[14px_14px_10px]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <div className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-[8px]" style={{ background: `linear-gradient(135deg, ${ACCENT}, #2563eb)`, boxShadow: `0 0 10px ${ACCENT}4d` }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             </svg>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: c.t1 }}>CARDEEP AI</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <motion.span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />
-            <span style={{ fontSize: 9.5, color: '#22c55e', fontWeight: 600 }}>Online</span>
+          <div className="flex-1 text-xs font-bold" style={{ color: 'var(--text-primary)' }}>CARDEEP AI</div>
+          <div className="flex items-center gap-1">
+            <motion.span className="inline-block h-[5px] w-[5px] rounded-full" style={{ background: GOOD }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />
+            <span className="text-[9.5px] font-semibold" style={{ color: GOOD }}>Online</span>
           </div>
         </div>
 
-        {/* Proactive insight (shown when no conversation yet) */}
         {msgs.length === 0 && (
-          <div style={{ padding: '10px 12px', flexShrink: 0 }}>
-            <div style={{
-              padding: '9px 11px', borderRadius: 10,
-              background: botBubble,
-              fontSize: 11.5, lineHeight: 1.5, color: c.t1,
-            }}>
-              {renderBold(proactiveInsight(kpi), c.t1)}
+          <div className="shrink-0 p-[10px_12px]">
+            <div className="rounded-[10px] p-[9px_11px] text-[11.5px] leading-normal" style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
+              {renderBold(proactiveInsight(kpi))}
             </div>
           </div>
         )}
 
-        {/* Messages */}
-        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0 }}>
+        <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-[8px_12px]">
           <AnimatePresence initial={false}>
             {msgs.map(msg => (
-              <motion.div key={msg.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                <div style={{
-                  maxWidth: '88%', padding: '7px 10px',
-                  borderRadius: msg.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
-                  background: msg.role === 'user' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : botBubble,
-                  fontSize: 11.5, lineHeight: 1.5,
-                  color: msg.role === 'user' ? '#fff' : c.t1,
-                  boxShadow: msg.role === 'user' ? '0 3px 10px rgba(59, 130, 246,0.28)' : 'none',
-                }}>
-                  {msg.role === 'bot' ? renderBold(msg.text, c.t1) : msg.text}
+              <motion.div key={msg.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className="max-w-[88%] rounded-xl p-[7px_10px] text-[11.5px] leading-normal"
+                  style={{
+                    borderRadius: msg.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+                    background: msg.role === 'user' ? `linear-gradient(135deg, ${ACCENT}, #2563eb)` : 'var(--bg-surface)',
+                    color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
+                    boxShadow: msg.role === 'user' ? `0 3px 10px ${ACCENT}48` : 'none',
+                  }}
+                >
+                  {msg.role === 'bot' ? renderBold(msg.text) : msg.text}
                 </div>
               </motion.div>
             ))}
@@ -628,10 +506,10 @@ function ChatCompact({ kpi, dark, username }: { kpi: KpiData; dark: boolean; use
 
           <AnimatePresence>
             {typing && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: 'flex' }}>
-                <div style={{ padding: '8px 12px', borderRadius: '12px 12px 12px 3px', background: botBubble, display: 'flex', gap: 3, alignItems: 'center' }}>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex">
+                <div className="flex items-center gap-[3px] rounded-[12px_12px_12px_3px] p-[8px_12px]" style={{ background: 'var(--bg-surface)' }}>
                   {[0,1,2].map(i => (
-                    <motion.span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: c.t3, display: 'block' }} animate={{ y: [0, -4, 0] }} transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.13 }} />
+                    <motion.span key={i} className="block h-1 w-1 rounded-full" style={{ background: 'var(--text-secondary)' }} animate={{ y: [0, -4, 0] }} transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.13 }} />
                   ))}
                 </div>
               </motion.div>
@@ -639,33 +517,21 @@ function ChatCompact({ kpi, dark, username }: { kpi: KpiData; dark: boolean; use
           </AnimatePresence>
         </div>
 
-        {/* Input */}
-        <div style={{ padding: '8px 10px', borderTop: `1px solid ${c.div}`, display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+        <div className="flex shrink-0 items-center gap-1.5 p-[8px_10px]" style={{ borderTop: '1px solid var(--border-subtle)' }}>
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
             placeholder="Ask about stock, deals…"
-            style={{
-              flex: 1, padding: '6px 10px', borderRadius: 9,
-              background: inputBg, border: `1px solid ${inputBord}`,
-              color: c.t1, fontSize: 11.5, fontFamily: 'Inter, system-ui', outline: 'none',
-            }}
-            onFocus={e => (e.currentTarget.style.borderColor = 'rgba(59, 130, 246,0.38)')}
-            onBlur={e => (e.currentTarget.style.borderColor = inputBord)}
+            className="flex-1 rounded-[9px] p-[6px_10px] text-[11.5px] outline-none"
+            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
           />
           <motion.button
             onClick={() => send(input)}
             disabled={!input.trim() || typing}
             whileTap={{ scale: 0.92 }}
-            style={{
-              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: !input.trim() || typing ? 0.35 : 1,
-              transition: 'opacity 130ms',
-            }}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border-0"
+            style={{ background: `linear-gradient(135deg, ${ACCENT}, #2563eb)`, opacity: !input.trim() || typing ? 0.35 : 1 }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -673,286 +539,222 @@ function ChatCompact({ kpi, dark, username }: { kpi: KpiData; dark: boolean; use
           </motion.button>
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
-// ── Oportunidades (top chollos · deal-score) ──────────────────────────────────
+// ── Oportunidades (top chollos · deal-score) — Capa 2, gated ──────────────────
 
-function OportunidadesPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
-  const c = tok(dark)
+function OportunidadesPanel({ onNavigate, plan }: { onNavigate: () => void; plan: import('../types').Plan }) {
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 20px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_20px_14px]">
+        <div className="mb-3.5 flex shrink-0 items-center justify-between">
           <div>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Oportunidades</h2>
-            <p style={{ fontSize: 10.5, color: c.t4 }}>Top chollos · deal-score en vivo</p>
+            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Oportunidades</h2>
+            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{TOP_DEALS.length} chollos detectados hoy · deal-score en vivo</p>
           </div>
-          <button
-            onClick={onNavigate}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(91,141,248,0.10)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            style={{
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 3,
-              padding: '4px 8px', borderRadius: 7,
-              color: '#5b8df8', fontSize: 10.5, fontWeight: 600,
-              fontFamily: 'Inter, system-ui', transition: 'background 120ms',
-            }}
-          >
+          <button onClick={onNavigate} className="flex items-center gap-1 rounded-[7px] px-2 py-1 text-[10.5px] font-semibold" style={{ color: ACCENT }}>
             ver todo <ChevronRight style={{ width: 11, height: 11 }} />
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, flex: 1 }}>
-          {TOP_DEALS.map((deal, i) => {
-            const sc = scoreColor(deal.score)
-            const pctUnder = Math.round(((deal.marketPrice - deal.price) / deal.marketPrice) * 100)
-            return (
-              <motion.div
-                key={deal.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.18 + i * 0.08, duration: 0.34 }}
-                whileHover={{ y: -2, transition: { duration: 0.18 } }}
-                style={{
-                  padding: '13px 13px 11px',
-                  borderRadius: 12,
-                  background: c.subBg,
-                  border: `1px solid ${c.subBord}`,
-                  borderLeft: `2px solid ${sc}`,
-                  display: 'flex', flexDirection: 'column', gap: 8,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-                    background: `${sc}16`, border: `1px solid ${sc}28`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: sc, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                      {deal.score}
-                    </span>
+        <PremiumGate feature="sourcing-ranking" userPlan={plan} what="Ranking completo de chollos, filtros por margen/zona/segmento">
+          <div className="grid flex-1 grid-cols-3 gap-2.5">
+            {TOP_DEALS.map((deal, i) => {
+              const sc = scoreColor(deal.score)
+              const pctUnder = Math.round(((deal.marketPrice - deal.price) / deal.marketPrice) * 100)
+              return (
+                <motion.div
+                  key={deal.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.18 + i * 0.08, duration: 0.34 }}
+                  className="flex flex-col gap-2 rounded-xl p-[13px_13px_11px]"
+                  style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderLeft: `2px solid ${sc}` }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]" style={{ background: `${sc}16`, border: `1px solid ${sc}28` }}>
+                      <span className="text-[13px] font-extrabold tabular-nums tracking-[-0.02em]" style={{ color: sc }}>{deal.score}</span>
+                    </div>
+                    <span className="text-[10px] font-bold" style={{ color: sc }}>−{pctUnder}% mkt</span>
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: sc }}>−{pctUnder}% mkt</span>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 11.5, fontWeight: 600, color: c.t1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {deal.model}
+                  <div>
+                    <div className="truncate text-[11.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>{deal.model}</div>
+                    <div className="mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                      {deal.location} · {deal.daysListed}d{deal.delta < 0 ? ` · −€${Math.abs(deal.delta).toLocaleString()}` : ''}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 10, color: c.t4, marginTop: 2 }}>
-                    {deal.location} · {deal.daysListed}d
-                    {deal.delta < 0 ? ` · −€${Math.abs(deal.delta).toLocaleString()}` : ''}
-                  </div>
-                </div>
-
-                <div style={{ fontSize: 14, fontWeight: 700, color: c.t1, fontVariantNumeric: 'tabular-nums' }}>
-                  €{deal.price.toLocaleString()}
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+                  <div className="text-sm font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>€{deal.price.toLocaleString()}</div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </PremiumGate>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
-// ── Posición de mercado · mini ─────────────────────────────────────────────────
+// ── Posición de mercado · mini (Capa 1 — la métrica agregada YA es el teaser) ──
 
-function MarketPositionMini({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
-  const c = tok(dark)
+function MarketPositionMini({ onNavigate }: { onNavigate: () => void }) {
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 16px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1 }}>Posición mercado</h2>
-          <button onClick={onNavigate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.t4, padding: 0 }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_16px_14px]">
+        <div className="mb-3.5 flex shrink-0 items-center justify-between">
+          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Posición mercado</h2>
+          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
             <ChevronRight style={{ width: 13, height: 13 }} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-          {/* Price vs market */}
+        <div className="flex flex-1 flex-col gap-2.5">
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.22, duration: 0.34 }}
-            style={{ padding: '12px', borderRadius: 11, background: c.subBg, border: `1px solid ${c.subBord}` }}
+            className="rounded-[11px] p-3"
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           >
-            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: c.t4, marginBottom: 7 }}>
-              Precio vs mercado
-            </div>
-            <div style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em', color: '#22c55e', lineHeight: 1, marginBottom: 3 }}>
-              {MARKET_POS.priceVsMkt.toFixed(1)}%
-            </div>
-            <div style={{ fontSize: 10, color: c.t4, marginBottom: 7 }}>bajo la mediana UE</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <ArrowUpRight style={{ width: 10, height: 10, color: '#22c55e' }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e' }}>posición competitiva</span>
+            <div className="mb-[7px] text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-muted)' }}>Precio vs mercado</div>
+            <div className="mb-[3px] text-[28px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: GOOD }}>{MARKET_POS.priceVsMkt.toFixed(1)}%</div>
+            <div className="mb-[7px] text-[10px]" style={{ color: 'var(--text-muted)' }}>bajo la mediana UE</div>
+            <div className="flex items-center gap-[3px]">
+              <ArrowUpRight style={{ width: 10, height: 10, color: GOOD }} />
+              <span className="text-[10px] font-semibold" style={{ color: GOOD }}>posición competitiva</span>
             </div>
           </motion.div>
 
-          {/* Days vs market */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.30, duration: 0.34 }}
-            style={{ padding: '12px', borderRadius: 11, background: c.subBg, border: `1px solid ${c.subBord}`, flex: 1 }}
+            className="flex-1 rounded-[11px] p-3"
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           >
-            <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: c.t4, marginBottom: 7 }}>
-              Días stock vs mkt
+            <div className="mb-[7px] text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-muted)' }}>Días stock vs mkt</div>
+            <div className="mb-2 flex items-baseline gap-[5px]">
+              <span className="text-2xl font-extrabold leading-none tracking-[-0.02em]" style={{ color: BAD }}>{MARKET_POS.myDays}d</span>
+              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>tu dealer</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: 8 }}>
-              <span style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: '#f87171', lineHeight: 1 }}>
-                {MARKET_POS.myDays}d
-              </span>
-              <span style={{ fontSize: 10, color: c.t4 }}>tu dealer</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9.5, color: c.t4, marginBottom: 4 }}>
+            <div className="mb-1 flex justify-between text-[9.5px]" style={{ color: 'var(--text-muted)' }}>
               <span>Tu dealer</span><span>Mediana {MARKET_POS.mktDays}d</span>
             </div>
-            <div style={{ position: 'relative', height: 6, borderRadius: 99, background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)', overflow: 'visible' }}>
-              <div style={{
-                position: 'absolute',
-                left: `${(MARKET_POS.mktDays / 70) * 100}%`,
-                top: -3, width: 2, height: 12, borderRadius: 1,
-                background: '#22c55e',
-              }} />
+            <div className="relative h-1.5 overflow-visible rounded-full" style={{ background: 'var(--border-subtle)' }}>
+              <div className="absolute top-[-3px] h-3 w-0.5 rounded-sm" style={{ left: `${(MARKET_POS.mktDays / 70) * 100}%`, background: GOOD }} />
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${(MARKET_POS.myDays / 70) * 100}%` }}
                 transition={{ duration: 0.7, delay: 0.45, ease: [0.32, 0.72, 0, 1] }}
-                style={{ height: '100%', borderRadius: 99, background: '#f87171', opacity: 0.80 }}
+                className="h-full rounded-full"
+                style={{ background: BAD, opacity: 0.85 }}
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 6 }}>
-              <ArrowDownRight style={{ width: 10, height: 10, color: '#f87171' }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: '#f87171' }}>
-                +{MARKET_POS.myDays - MARKET_POS.mktDays}d sobre mediana
-              </span>
+            <div className="mt-1.5 flex items-center gap-[3px]">
+              <ArrowDownRight style={{ width: 10, height: 10, color: BAD }} />
+              <span className="text-[10px] font-semibold" style={{ color: BAD }}>+{MARKET_POS.myDays - MARKET_POS.mktDays}d sobre mediana</span>
             </div>
           </motion.div>
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
 // ── Revenue & Coste chart ─────────────────────────────────────────────────────
 
 function RevenueChart({ data, dark, onNavigate }: { data: KpiData['marginHistory']; dark: boolean; onNavigate: () => void }) {
-  const c = tok(dark)
   const tickColor = dark ? '#3f3f5a' : '#94a3b8'
   const gridColor = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
 
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 20px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexShrink: 0 }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_20px_14px]">
+        <div className="mb-4 flex shrink-0 items-center justify-between">
           <div>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Revenue & Coste</h2>
-            <p style={{ fontSize: 10.5, color: c.t4 }}>6 meses · ingresos vs coste</p>
+            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Revenue & Coste</h2>
+            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>6 meses · ingresos vs coste</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 10.5, color: c.t4 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 12, height: 2, background: '#5b8df8', display: 'inline-block', borderRadius: 1 }} />
-                Revenue
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 12, borderTop: '2px dashed rgba(248,113,113,0.65)', display: 'inline-block' }} />
-                Coste
-              </span>
+          <div className="flex items-center gap-3.5">
+            <div className="flex items-center gap-2.5 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
+              <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 rounded-sm" style={{ background: ACCENT }} />Revenue</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 border-t-2 border-dashed" style={{ borderColor: `${BAD}a6` }} />Coste</span>
             </div>
-            <button
-              onClick={onNavigate}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 2,
-                color: c.t4, fontSize: 10.5, fontFamily: 'Inter, system-ui', padding: 0,
-              }}
-            >
+            <button onClick={onNavigate} className="flex items-center gap-0.5 p-0 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
               Finance <ChevronRight style={{ width: 11, height: 11 }} />
             </button>
           </div>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0 }}>
+        <div className="min-h-0 flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
               <defs>
                 <linearGradient id="gr-rev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor="#5b8df8" stopOpacity={0.22} />
-                  <stop offset="100%" stopColor="#5b8df8" stopOpacity={0} />
+                  <stop offset="0%"   stopColor={ACCENT} stopOpacity={0.22} />
+                  <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gr-cost" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor="#f87171" stopOpacity={0.14} />
-                  <stop offset="100%" stopColor="#f87171" stopOpacity={0} />
+                  <stop offset="0%"   stopColor={BAD} stopOpacity={0.14} />
+                  <stop offset="100%" stopColor={BAD} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
               <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
               <ChartTooltip
-                contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: `1px solid ${c.cardBord}`, borderRadius: 10, fontSize: 11.5, color: c.t1, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+                contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
                 formatter={(v: number, name: string) => [`€${v.toLocaleString()}`, name === 'revenue' ? 'Revenue' : 'Coste']}
                 cursor={{ stroke: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#5b8df8" strokeWidth={2} fill="url(#gr-rev)" dot={false} activeDot={{ r: 3, fill: '#5b8df8', strokeWidth: 0 }} />
-              <Area type="monotone" dataKey="cost" stroke="#f87171" strokeWidth={1.5} strokeDasharray="4 4" fill="url(#gr-cost)" dot={false} activeDot={{ r: 3, fill: '#f87171', strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="revenue" stroke={ACCENT} strokeWidth={2} fill="url(#gr-rev)" dot={false} activeDot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} />
+              <Area type="monotone" dataKey="cost" stroke={BAD} strokeWidth={1.5} strokeDasharray="4 4" fill="url(#gr-cost)" dot={false} activeDot={{ r: 3, fill: BAD, strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
-    </GCard>
+    </Card>
   )
 }
 
 // ── Top modelos vendidos ───────────────────────────────────────────────────────
 
-function TopModelsPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () => void }) {
-  const c = tok(dark)
+function TopModelsPanel({ onNavigate }: { onNavigate: () => void }) {
   const totalSold = TOP_MODELS.reduce((s, m) => s + m.sold, 0)
 
   return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 20px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexShrink: 0 }}>
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_20px_14px]">
+        <div className="mb-3.5 flex shrink-0 items-center justify-between">
           <div>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>Top modelos vendidos</h2>
-            <p style={{ fontSize: 10.5, color: c.t4 }}>este mes · {totalSold} unidades</p>
+            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Top modelos vendidos</h2>
+            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>este mes · {totalSold} unidades</p>
           </div>
-          <button onClick={onNavigate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.t4, padding: 0 }}>
+          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
             <ChevronRight style={{ width: 13, height: 13 }} />
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+        <div className="flex flex-1 flex-col gap-2.5">
           {TOP_MODELS.map((item, i) => {
             const barW = Math.round((item.sold / MAX_MODELS_SOLD) * 100)
             return (
-              <motion.div
-                key={item.model}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.22 + i * 0.07 }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 500, color: c.t2 }}>{item.model}</span>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: c.t1, fontVariantNumeric: 'tabular-nums' }}>{item.sold} ud.</span>
-                    <span style={{ fontSize: 10, color: c.t4, fontVariantNumeric: 'tabular-nums' }}>€{(item.revenue / 1000).toFixed(0)}k</span>
+              <motion.div key={item.model} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 + i * 0.07 }}>
+                <div className="mb-[5px] flex items-baseline justify-between">
+                  <span className="text-[11.5px] font-medium" style={{ color: 'var(--text-secondary)' }}>{item.model}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{item.sold} ud.</span>
+                    <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>€{(item.revenue / 1000).toFixed(0)}k</span>
                   </div>
                 </div>
-                <div style={{ height: 5, borderRadius: 5, background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                <div className="h-[5px] overflow-hidden rounded-[5px]" style={{ background: 'var(--border-subtle)' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${barW}%` }}
                     transition={{ delay: 0.36 + i * 0.08, duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-                    style={{ height: '100%', borderRadius: 5, background: 'linear-gradient(90deg, #5b8df8, #60a5fa)', boxShadow: '0 0 6px rgba(91,141,248,0.28)' }}
+                    className="h-full rounded-[5px]"
+                    style={{ background: `linear-gradient(90deg, ${ACCENT}, #60a5fa)`, boxShadow: `0 0 6px ${ACCENT}48` }}
                   />
                 </div>
               </motion.div>
@@ -960,52 +762,7 @@ function TopModelsPanel({ dark, onNavigate }: { dark: boolean; onNavigate: () =>
           })}
         </div>
       </div>
-    </GCard>
-  )
-}
-
-// ── Quick actions ─────────────────────────────────────────────────────────────
-
-function QuickActions({ dark, onNavigate }: { dark: boolean; onNavigate: (path: string) => void }) {
-  const c = tok(dark)
-  const actions = [
-    { label: 'Add Vehicle', color: '#5b8df8', icon: <TrendingUp    style={{ width: 13, height: 13, color: '#5b8df8'  }} />, path: '/vehicles'  },
-    { label: 'New Deal',    color: '#60a5fa', icon: <ClipboardList style={{ width: 13, height: 13, color: '#60a5fa'  }} />, path: '/deals'     },
-    { label: 'Check VIN',  color: '#00d68a', icon: <Search        style={{ width: 13, height: 13, color: '#00d68a'  }} />, path: '/check'     },
-    { label: 'Kanban',     color: '#f59e0b', icon: <Zap           style={{ width: 13, height: 13, color: '#f59e0b'  }} />, path: '/kanban'    },
-  ]
-
-  return (
-    <GCard dark={dark} style={{ height: '100%' }}>
-      <div style={{ padding: '18px 16px 14px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 14, flexShrink: 0 }}>Quick Actions</h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, flex: 1 }}>
-          {actions.map(a => (
-            <motion.button
-              key={a.label}
-              onClick={() => onNavigate(a.path)}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                width: '100%', padding: '9px 11px',
-                background: c.subBg, border: `1px solid ${c.subBord}`,
-                borderRadius: 10, cursor: 'pointer',
-                transition: 'background 130ms', fontFamily: 'Inter, system-ui',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}
-              onMouseLeave={e => (e.currentTarget.style.background = c.subBg)}
-            >
-              <div style={{ width: 26, height: 26, borderRadius: 7, background: `${a.color}18`, border: `1px solid ${a.color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {a.icon}
-              </div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: c.t2 }}>{a.label}</span>
-              <ArrowUpRight style={{ width: 11, height: 11, color: c.t4, marginLeft: 'auto', opacity: 0.6 }} />
-            </motion.button>
-          ))}
-        </div>
-      </div>
-    </GCard>
+    </Card>
   )
 }
 
@@ -1020,196 +777,95 @@ export default function Dashboard() {
 
   if (loading && !data) return <PageSkeleton />
 
-  const c = tok(dark)
   const username = user?.name ?? 'User'
+  const plan = user?.plan ?? 'starter'
 
   const kpiCards = [
-    {
-      label: 'In Stock',
-      value: kpi.stockCount,
-      sub: `€${(DEALER.stockValue / 1_000_000).toFixed(2)}M capital`,
-      trend: 'up' as const,
-      trendLabel: '+12 this month',
-      accent: '#5b8df8',
-      spark: [220, 232, 245, 258, 264, kpi.stockCount],
-      delay: 0,
-    },
-    {
-      label: 'Active Deals',
-      value: kpi.activeDeals,
-      sub: '8 closing this week',
-      trend: 'flat' as const,
-      trendLabel: 'stable',
-      accent: '#60a5fa',
-      spark: [42, 48, 51, 53, 54, kpi.activeDeals],
-      delay: 0.06,
-    },
-    {
-      label: 'Month Margin',
-      value: kpi.monthMargin / 1000,
-      prefix: '€',
-      suffix: 'k',
-      decimals: 1,
-      sub: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
-      trend: 'up' as const,
-      trendLabel: '+8% vs last month',
-      accent: '#22c55e',
-      spark: kpi.marginHistory.map(m => m.margin / 1000),
-      delay: 0.12,
-    },
-    {
-      label: 'Avg Days In Stock',
-      value: DEALER.avgDaysInStock,
-      suffix: 'd',
-      sub: 'target < 45d',
-      trend: 'good' as const,
-      trendLabel: 'healthy',
-      accent: '#0ea5e9',
-      spark: [52, 48, 44, 41, 39, DEALER.avgDaysInStock],
-      delay: 0.18,
-    },
+    { label: 'In Stock',          value: kpi.stockCount,               sub: `€${(DEALER.stockValue / 1_000_000).toFixed(2)}M capital`, trend: 'up' as const,   trendLabel: '+12 this month',      spark: [220, 232, 245, 258, 264, kpi.stockCount], delay: 0 },
+    { label: 'Active Deals',      value: kpi.activeDeals,               sub: '8 closing this week',                                       trend: 'flat' as const, trendLabel: 'stable',              spark: [42, 48, 51, 53, 54, kpi.activeDeals],     delay: 0.06 },
+    { label: 'Month Margin',      value: kpi.monthMargin / 1000, prefix: '€', suffix: 'k', decimals: 1, sub: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), trend: 'up' as const, trendLabel: '+8% vs last month', spark: kpi.marginHistory.map(m => m.margin / 1000), delay: 0.12 },
+    { label: 'Avg Days In Stock', value: DEALER.avgDaysInStock, suffix: 'd', sub: 'target < 45d', trend: 'good' as const, trendLabel: 'healthy', spark: [52, 48, 44, 41, 39, DEALER.avgDaysInStock], delay: 0.18 },
   ]
 
   return (
-    <div style={{ padding: '24px 24px 40px', maxWidth: 1360, margin: '0 auto' }}>
+    <div className="mx-auto p-[24px_24px_40px]" style={{ maxWidth: 1360 }}>
 
       {/* Page header */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-        style={{ marginBottom: 22, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}
+        className="mb-[22px] flex items-end justify-between"
       >
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: c.t1, lineHeight: 1, marginBottom: 4 }}>
-            Overview
-          </h1>
-          <p style={{ fontSize: 11.5, color: c.t4 }}>
+          <h1 className="mb-1 text-[22px] font-extrabold leading-none tracking-[-0.02em]" style={{ color: 'var(--text-primary)' }}>Overview</h1>
+          <p className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
 
-        {/* Sold this month progress */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10.5, color: c.t4, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>
-              Units Sold
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: c.t1 }}>
-              {DEALER.soldThisMonth} / {DEALER.targetSoldMonth}
-            </div>
+        <div className="flex items-center gap-2.5">
+          <div className="text-right">
+            <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--text-muted)' }}>Units Sold</div>
+            <div className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{DEALER.soldThisMonth} / {DEALER.targetSoldMonth}</div>
           </div>
-          <div style={{ width: 80, height: 6, borderRadius: 99, background: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+          <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${(DEALER.soldThisMonth / DEALER.targetSoldMonth) * 100}%` }}
               transition={{ duration: 0.8, delay: 0.3, ease: [0.32, 0.72, 0, 1] }}
-              style={{ height: '100%', borderRadius: 99, background: '#22c55e', boxShadow: '0 0 6px rgba(34,197,94,0.5)' }}
+              className="h-full rounded-full"
+              style={{ background: GOOD, boxShadow: `0 0 6px ${GOOD}80` }}
             />
           </div>
         </div>
       </motion.div>
 
-      {/* Bento grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      {/* Bento grid — dealer-first order (PLAN.md B4): KPIs → oportunidades/mercado → margen/pipeline/AI → revenue/modelos → stale/actividad */}
+      <div className="grid grid-cols-4 gap-3.5">
 
-        {/* Row 1 — KPI metric cards */}
         {kpiCards.map(card => (
-          <MetricCard key={card.label} dark={dark} {...card} />
+          <MetricCard key={card.label} {...card} />
         ))}
 
-        {/* Row 2 — Oportunidades (3 cols) + Posición mercado mini (1 col) */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '1 / 4', gridRow: '2', minHeight: 200 }}
-        >
-          <OportunidadesPanel dark={dark} onNavigate={() => navigate('/arbitrage')} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1 / 4', gridRow: '2', minHeight: 200 }}>
+          <OportunidadesPanel plan={plan} onNavigate={() => navigate('/arbitrage')} />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '4', gridRow: '2' }}
-        >
-          <MarketPositionMini dark={dark} onNavigate={() => navigate('/inteligencia')} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '4', gridRow: '2' }}>
+          <MarketPositionMini onNavigate={() => navigate('/inteligencia')} />
         </motion.div>
 
-        {/* Row 3 — Gross Margin (2 cols) + Pipeline (1 col) + AI Chat (1 col) */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.30, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '1 / 3', gridRow: '3', minHeight: 260 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.30, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1 / 3', gridRow: '3', minHeight: 260 }}>
           <MarginChart data={kpi.marginHistory} dark={dark} />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.34, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '3', gridRow: '3' }}
-        >
-          <PipelinePanel dark={dark} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '3', gridRow: '3' }}>
+          <PipelinePanel />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.38, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '4', gridRow: '3' }}
-        >
-          <ChatCompact kpi={kpi} dark={dark} username={username} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '4', gridRow: '3' }}>
+          <ChatCompact kpi={kpi} username={username} />
         </motion.div>
 
-        {/* Row 4 — Revenue & Coste (2 cols) + Top modelos (2 cols) */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.40, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '1 / 3', gridRow: '4', minHeight: 240 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1 / 3', gridRow: '4', minHeight: 240 }}>
           <RevenueChart data={kpi.marginHistory} dark={dark} onNavigate={() => navigate('/finance')} />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.44, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '3 / 5', gridRow: '4' }}
-        >
-          <TopModelsPanel dark={dark} onNavigate={() => navigate('/finance')} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '3 / 5', gridRow: '4' }}>
+          <TopModelsPanel onNavigate={() => navigate('/finance')} />
         </motion.div>
 
-        {/* Row 5 — Stale (1) + Activity (2) + Follow-ups (1) */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.46, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '1', gridRow: '5' }}
-        >
-          <StalePanel dark={dark} onNavigate={() => navigate('/vehicles')} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.46, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1', gridRow: '5' }}>
+          <StalePanel onNavigate={() => navigate('/vehicles')} />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.48, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '2 / 4', gridRow: '5' }}
-        >
-          <ActivityFeed activities={kpi.recentActivities} dark={dark} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.48, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '2 / 4', gridRow: '5' }}>
+          <ActivityFeed activities={kpi.recentActivities} />
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.50, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-          style={{ gridColumn: '4', gridRow: '5' }}
-        >
-          <FollowUpsPanel dark={dark} onNavigate={() => navigate('/inbox')} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.50, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '4', gridRow: '5' }}>
+          <FollowUpsPanel onNavigate={() => navigate('/inbox')} />
         </motion.div>
 
       </div>
