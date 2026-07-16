@@ -25,8 +25,13 @@ export default function PremiumGate({ feature, userPlan, what, children }: Premi
   const plan = requiredPlan(feature)
 
   return (
-    <div className="relative">
-      <div className="pointer-events-none select-none blur-[6px] opacity-60" aria-hidden>
+    <div className="relative h-full">
+      {/*
+        h-full on both wrappers matters: recharts' ResponsiveContainer sizes
+        itself to 100% of its parent chain, so an extra div here without an
+        explicit height silently collapses gated charts to 0px.
+      */}
+      <div className="pointer-events-none h-full select-none blur-[6px] opacity-60" aria-hidden>
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center p-3">

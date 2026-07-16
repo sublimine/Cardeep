@@ -80,4 +80,15 @@
   Playwright light+dark en `:5173/dashboard` — 0 errores nuevos (los 2 presentes son preexistentes:
   `/api/v1/kpi` 500 por backend no levantado esta sesión, favicon 404 — ninguno introducido por este
   cambio), gating visual confirmado (blur+lock+CTA "Desbloquear con Enterprise" en Oportunidades).
-  Siguiente (mismo patrón, infra ya lista): repetir en Inteligencia/Arbitrage/Analitica → retomar B2/B3/B7.
+  **Bloque 2 CERRADO+VERIFICADO:** `lib/theme.ts` extraído (ACCENT/GOOD/BAD/WARN, ya no duplicado por
+  página). `Inteligencia.tsx` reconstruido igual que Dashboard (cero `tok()`/`GCard`) + gating real por
+  el mapa: Valor residual (España libre, comparativa vs UE tras `cross-border-compare`), Días en stock
+  (stat propio libre, comparativa completa tras `market-position-detail`), Delta en vivo (3 eventos
+  libres, resto tras `delta-feed-full`), Demanda por región sin gate (agregado nacional YA es el teaser
+  libre, por diseño del mapa). Bug real encontrado y arreglado en el propio `PremiumGate.tsx`: el wrapper
+  sin `h-full` colapsaba a 0px los charts de recharts gateados (Días en stock se veía vacío tras el
+  candado) — recharts `ResponsiveContainer` necesita altura explícita en toda la cadena de ancestros.
+  Verificado: build 2927 módulos, Playwright `:5173/inteligencia` 0 errores consola (esta página no
+  llama a `/kpi`), light+dark, blur+CTA visibles y legibles. Sin regresión en Dashboard tras el fix.
+  Siguiente (mismo patrón, infra ya lista): Arbitrage.tsx (799 líneas) → Analitica.tsx (771) → retomar
+  B2/B3/B7.

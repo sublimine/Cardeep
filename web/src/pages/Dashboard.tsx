@@ -10,18 +10,7 @@ import { useIsDark } from '../hooks/useIsDark'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../auth/AuthContext'
 import type { KpiData } from '../types'
-
-/**
- * One brand accent (var(--c-violet), the token formerly named for the violet
- * brand, now the blue #3b82f6) drives structure; green/rose carry meaning
- * (trend up/down) only. Kept as literal hex — not `var(--c-*)` — because they
- * need the `${hex}18`-style alpha-suffix trick below, which only works on hex
- * strings. Values mirror tokens.css 1:1.
- */
-const ACCENT = '#3b82f6'
-const GOOD = '#059669'
-const BAD = '#e11d48'
-const WARN = '#d97706'
+import { ACCENT, GOOD, BAD, WARN } from '../lib/theme'
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
