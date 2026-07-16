@@ -325,15 +325,15 @@ function NoteEditorModal({
 
 // ── Note card ─────────────────────────────────────────────────────────────────
 
-function NoteCard({
-  note,
-  onEdit,
-  onPin,
-}: { note: Note; onEdit: () => void; onPin: () => void }) {
+// forwardRef: AnimatePresence mode="popLayout" attaches a ref to each direct
+// child to measure it during exit animations (same fix as Deals' DealRow).
+const NoteCard = React.forwardRef<HTMLDivElement, { note: Note; onEdit: () => void; onPin: () => void }>(
+  function NoteCard({ note, onEdit, onPin }, ref) {
   const cfg = COLOR_CONFIG[note.color]
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, scale: 0.95, y: 8 }}
       animate={{ opacity: 1, scale: 1,    y: 0 }}
@@ -389,7 +389,7 @@ function NoteCard({
       </div>
     </motion.div>
   )
-}
+})
 
 // ── Empty editor state ────────────────────────────────────────────────────────
 
