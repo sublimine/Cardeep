@@ -28,3 +28,5 @@ QUIERO VER WORKFLOWS DISEÑADOS CON PRECISIÓN ÁTOMO PARA CADA COSA. PARA EL EN
   CLASIFICARLO EN GITHUB TODO. CADA INVENTARIO CONSEGUIDO, GUARDAMOS CONFIG Y ELIMINAMOS POR CAPACIDAD DEL PC. QUIERO QUE ESTES AL PUTO MANDO COMO TE
   EMENCIONE EN EL PUTO MENSAJE INICIAL. MONTA LOS WORKFLOWS BAJO CONTEXTO Y INVESTIGACIÓN A NIVEL ÁTOMO, MAXIMA EFICIENCIA Y INSTITUCIONALIDAD DE ELITE
   AVANZADO DE GRADO SUPERIOR Y ORQUESTRACION DE OTRO NIVEL. LO QUIERO TODO QUE LO MONTA FABLE 5 Y USANDO SU MAXIMA CAPACIDAD.
+
+ENRUTADO DE MODELOS (aclaración 2026-07-16, confirmada por el owner): "que lo monte Fable 5" significa PENSAR, no ejecutar. Fable 5 (o Opus si Fable 5 no aplica) se invoca vía subagente — desde dentro de la sesión de Sonnet, sin que el owner tenga que cambiar su `/model` — exclusivamente para planificar, arquitectura, y razonamiento a profundidad átomo. TODA ejecución (código, archivos, comandos, commits) la hace siempre Sonnet, para no quemar tokens caros en trabajo mecánico. Sonnet decide cuándo delegar el pensamiento profundo; el owner no tiene que pedirlo cada vez.
