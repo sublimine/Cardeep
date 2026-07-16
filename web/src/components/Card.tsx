@@ -10,9 +10,12 @@ interface CardProps {
   onClick?: () => void
   /** Accent glow variant on hover */
   glow?: boolean
+  /** Escape hatch for one-off overrides (e.g. a highlighted pricing tier's
+   * accent border) — merged on top of the default surface, not a replacement. */
+  style?: React.CSSProperties
 }
 
-export default function Card({ children, className, padding = true, hover, onClick, glow }: CardProps) {
+export default function Card({ children, className, padding = true, hover, onClick, glow, style }: CardProps) {
   const interactive = hover || !!onClick
 
   return (
@@ -36,6 +39,7 @@ export default function Card({ children, className, padding = true, hover, onCli
         background: 'var(--bg-elevated)',
         borderColor: 'var(--border-default)',
         boxShadow: 'var(--shadow-card)',
+        ...style,
       }}
     >
       {/* Subtle top-edge highlight */}

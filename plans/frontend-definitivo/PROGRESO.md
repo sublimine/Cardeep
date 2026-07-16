@@ -110,5 +110,16 @@
   `Invoices.tsx`, `Pricing.tsx`. Las 4 de este barrido (Dashboard/Inteligencia/Arbitrage/Analítica) —
   las que estaban en el nav activo de INTELIGENCIA/PRINCIPAL y las que motivaron la queja del owner —
   sí están limpias y verificadas. Las 5 restantes quedan para la próxima iteración del loop.
-  Siguiente: (a) las 5 páginas restantes con `tok()`/`GCard`, (b) B2 (Shell+nav unificada), (c) B3
-  (Landing pública+Auth), (d) B7 (auditoría final, barrido todas las rutas + responsive + CI).
+  **Bloque 5 CERRADO+VERIFICADO — hallazgo mayor:** al abrir `Pricing.tsx` para el mismo fix mecánico
+  de `tok()`/`GCard`, resultó que vendía un producto DISTINTO al real: 4 planes SaaS genéricos por
+  asiento/nº-vehículos (Starter/Pro/Scale/Enterprise) sin una sola mención a inteligencia de mercado o
+  arbitrage — cero relación con `05-MONETIZATION-MAP.md`/`CARDEEP-OFFERING.md`. Reescrito de raíz: 3
+  planes (coincide exacto con `types.ts` `Plan`) — Starter gratis (CRM propio + Capa 0 + 1 métrica
+  agregada), Scale 199€/mes (Capa 1: precio real/delta/micro-geo/cross-border/VAM — "el hook"),
+  Enterprise a medida (Capa 2: deal-score/sourcing/alertas/API alta cuota — "el billete"). Añadido
+  `style?` opcional a `components/Card.tsx` (escape hatch controlado para el borde-acento del plan
+  destacado, no reabre el patrón de estilos inline que se venía eliminando). Verificado: build verde,
+  Playwright `:5173/pricing` 0 errores, light+dark.
+  Siguiente: (a) Api.tsx/Assistant.tsx/Finance.tsx/Invoices.tsx (aún con `tok()`/`GCard` — revisar
+  también si alguna, como Pricing, vende/describe algo desalineado con el modelo real), (b) B2
+  (Shell+nav unificada), (c) B3 (Landing pública+Auth), (d) B7 (auditoría final).
