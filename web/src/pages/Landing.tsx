@@ -1,32 +1,39 @@
-import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { LANDING_HTML, initLanding } from './portal/landingPortal'
+import { useLandingStats } from '../api/useCardeepStats'
+import { useLandingMotion } from './landing/useLandingMotion'
+import './landing/cinematic.css'
+import LandingHero from './landing/LandingHero'
+import TrustStrip from './landing/TrustStrip'
+import IntelligenceTeaser from './landing/IntelligenceTeaser'
+import Bento from './landing/Bento'
+import ComparisonBand from './landing/ComparisonBand'
+import CTAFooter from './landing/CTAFooter'
 
 /**
- * Landing — exact mirror of the :8777 portal landing (portal/index.html).
+ * Public landing (`/landing`, and `/` for anonymous visitors via `RootRedirect`).
  *
- * The markup + vanilla engine live in ./portal/landingPortal.ts (verbatim from
- * the Claude-Design port). This is the thin React seam:
- *   - injects the portal markup via dangerouslySetInnerHTML,
- *   - runs the portal engine exactly once (StrictMode double-invokes effects;
- *     the once-guard keeps init from attaching listeners twice on the same DOM),
- *   - hands the engine a stable `navigate` so internal `/...` anchors become
- *     client-side SPA navigation instead of full reloads.
+ * Deliberately dark/cinematic — a distinct visual identity from the light app
+ * shell (Dashboard, Inteligencia, ...), scoped entirely under `.cx-landing`
+ * (see `cinematic.css`). This is the owner's explicit, twice-stated reference
+ * standard (`docs/frontend/03-MOTIONSITES-AUDIT.md`: "así quiero que sea mi
+ * frontend", reaffirmed live 2026-07-16): motionsites.io-grade execution — real
+ * GSAP/ScrollTrigger/SplitText choreography, not CSS fade-ins. Same brand
+ * cobalt (#3B82F6) as the light app, so it still reads as one product.
  *
- * No destructive cleanup: every listener the engine attaches lives on nodes
- * inside this div, so React's unmount removes them with the subtree.
+ * No 3D map of Spain in the hero (explicit, forceful owner directive this
+ * session — that idiom stays exclusive to `/explore` and `/cobertura`).
  */
 export default function Landing() {
-  const navigate = useNavigate()
-  const navRef = useRef(navigate)
-  navRef.current = navigate
-  const didInit = useRef(false)
+  const { stats, coverage } = useLandingStats()
+  useLandingMotion()
 
-  useEffect(() => {
-    if (didInit.current) return
-    didInit.current = true
-    initLanding((to: string) => navRef.current(to))
-  }, [])
-
-  return <div dangerouslySetInnerHTML={{ __html: LANDING_HTML }} />
+  return (
+    <div className="cx-landing min-h-screen">
+      <LandingHero stats={stats} />
+      <TrustStrip stats={stats} coverage={coverage} />
+      <IntelligenceTeaser />
+      <Bento stats={stats} />
+      <ComparisonBand coverage={coverage} />
+      <CTAFooter />
+    </div>
+  )
 }

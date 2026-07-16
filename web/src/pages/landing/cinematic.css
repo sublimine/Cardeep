@@ -1,0 +1,83 @@
+/*
+ * Cinematic dark identity for the public landing ONLY. Scoped under
+ * `.cx-landing` so it never leaks into the light app shell (Dashboard,
+ * Inteligencia, etc. stay on `tokens.css` / General Sans / light-by-default —
+ * see `plans/frontend-definitivo/PLAN.md`). Palette is the sealed brand from
+ * `docs/frontend/05-CINEMATIC-ART-DIRECTION.md` (cobalt #3B82F6 · charcoal
+ * #0A0E17/#111B27 · white) — same accent blue as the rest of the app, so the
+ * brand still reads as one product even though the marketing surface is dark
+ * and the product surface is light.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+.cx-landing {
+  --cx-ink: #0a0e17;
+  --cx-surface-1: #121826;
+  --cx-surface-2: #1a2234;
+  --cx-surface-3: #232c42;
+  --cx-line: rgba(255, 255, 255, 0.08);
+  --cx-line-strong: rgba(255, 255, 255, 0.14);
+  --cx-text-1: #eaeef7;
+  --cx-text-2: #9aa6be;
+  --cx-text-3: #5c6883;
+  --cx-accent: #3b82f6;
+  --cx-accent-hi: #5b96f8;
+  --cx-emerald: #22c55e;
+  --cx-amber: #f5b33c;
+  --cx-rose: #f0556b;
+  --cx-glass: rgba(26, 34, 52, 0.55);
+  --cx-glass-border: rgba(255, 255, 255, 0.1);
+  --cx-shadow: 0 24px 64px -24px rgba(0, 0, 0, 0.65);
+
+  position: relative;
+  background: var(--cx-ink);
+  color: var(--cx-text-1);
+  font-family: 'Outfit', 'General Sans', system-ui, sans-serif;
+  overflow-x: clip;
+}
+
+.cx-landing .cx-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.cx-landing ::selection {
+  background: var(--cx-accent);
+  color: #fff;
+}
+
+/* Reusable glass surface for cinematic panels — real depth, not a flat card. */
+.cx-panel {
+  background: var(--cx-glass);
+  border: 1px solid var(--cx-glass-border);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: var(--cx-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.cx-glow-border {
+  position: relative;
+}
+.cx-glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), transparent 40%, transparent 60%, rgba(59, 130, 246, 0.25));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.cx-glow-border:hover::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-landing * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

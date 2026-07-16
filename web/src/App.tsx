@@ -40,58 +40,15 @@ function RootRedirect() {
 }
 
 /**
- * Global colored mesh — fixed behind every page.
- * Two orbs come from .cx-mesh ::before/::after (violet + blue).
- * Two extra orbs (teal + fuchsia) are mounted as inline divs since CSS only
- * grants two pseudo-elements per node.
+ * Fixed flat backdrop behind every page (tokens.css `.cx-mesh` sets `background: var(--bg-base)`).
+ * The colored-orb mesh this used to render is permanently disabled by a global
+ * `!important` CSS rule (`.cx-mesh > div { display: none }`) — dead on every route,
+ * including /terminal, whose own override rule is redundant for the same reason.
+ * Kept as an unstyled div (no JS children) rather than deleted outright: several
+ * glass surfaces (`--glass-*`, `backdrop-filter`) are authored assuming this layer exists.
  */
 function GlobalMesh() {
-  return (
-    <div className="cx-mesh" aria-hidden>
-      {/* Orb 3 — teal, bottom-center */}
-      <div
-        className="cx-orb"
-        style={{
-          position: 'absolute',
-          bottom: '6%',
-          left: '32%',
-          width: 560,
-          height: 560,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(8,145,178,0.48) 0%, rgba(8,145,178,0) 70%)',
-          filter: 'blur(80px)',
-          animation: 'cxFloat3 12s ease-in-out infinite',
-        }}
-      />
-      {/* Orb 4 — fuchsia, mid-left */}
-      <div
-        className="cx-orb"
-        style={{
-          position: 'absolute',
-          top: '55%',
-          left: '-4%',
-          width: 480,
-          height: 480,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(192,38,211,0.42) 0%, rgba(192,38,211,0) 70%)',
-          filter: 'blur(70px)',
-          animation: 'cxFloat4 18s ease-in-out infinite',
-        }}
-      />
-      {/* Grain overlay — adds texture to break the gradient banding */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          opacity: 0.18,
-          mixBlendMode: 'overlay',
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.35 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
-        }}
-      />
-    </div>
-  )
+  return <div className="cx-mesh" aria-hidden />
 }
 
 export default function App() {
