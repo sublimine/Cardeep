@@ -120,6 +120,12 @@
   `style?` opcional a `components/Card.tsx` (escape hatch controlado para el borde-acento del plan
   destacado, no reabre el patrón de estilos inline que se venía eliminando). Verificado: build verde,
   Playwright `:5173/pricing` 0 errores, light+dark.
-  Siguiente: (a) Api.tsx/Assistant.tsx/Finance.tsx/Invoices.tsx (aún con `tok()`/`GCard` — revisar
-  también si alguna, como Pricing, vende/describe algo desalineado con el modelo real), (b) B2
-  (Shell+nav unificada), (c) B3 (Landing pública+Auth), (d) B7 (auditoría final).
+  **Bloque 6 CERRADO+VERIFICADO:** `Api.tsx` migrado igual (`Card`+tokens+`lib/theme.ts`). Su contenido
+  (catálogo de endpoints valuation/history/market/deal-score/inventory+VAM) SÍ estaba alineado con
+  `CARDEEP-OFFERING.md` — pero su `PlansPanel` interno tenía SU PROPIO precio (Starter €49/Scale €149)
+  distinto al que acabo de fijar en `Pricing.tsx` (Starter €0/Scale €199). Corregido: ambas páginas
+  cotizan ahora exactamente igual (Starter €0 sandbox sin INVENTORY / Scale €199 200k tokens+INVENTORY
+  / Enterprise a medida). Verificado: build verde, Playwright `:5173/api` 0 errores, light+dark.
+  Siguiente: (a) Assistant.tsx/Finance.tsx/Invoices.tsx (aún con `tok()`/`GCard` — revisar también
+  contenido, no solo estilo, por el mismo motivo), (b) B2 (Shell+nav unificada), (c) B3 (Landing
+  pública+Auth), (d) B7 (auditoría final).
