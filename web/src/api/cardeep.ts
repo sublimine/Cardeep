@@ -131,6 +131,32 @@ export interface VehicleHistoryEvent {
   new_value: unknown;
   observed_at: string;
 }
+export interface DeltaEvent extends VehicleHistoryEvent {
+  entity_ulid: string;
+}
+export interface VehiclePlatformListing {
+  cdp_code: string;
+  trade_name: string | null;
+  website: string | null;
+  is_tier1: boolean;
+  listing_ref: string | null;
+  listing_url: string | null;
+  platform_price: number | null;
+  status: string;
+  first_seen: string;
+  last_seen: string;
+}
+export interface VehiclePlatforms {
+  vehicle: {
+    vehicle_ulid: string;
+    make: string | null;
+    model: string | null;
+    year: number | null;
+    deep_link: string;
+    owning_dealer: { cdp_code: string; name: string | null; kind: EntityKind };
+  };
+  platforms: VehiclePlatformListing[];
+}
 
 export const cardeep = {
   stats: (signal?: AbortSignal) => getData<{ counts: Stats }>('/stats', undefined, signal).then((d) => d.counts),
@@ -140,6 +166,9 @@ export const cardeep = {
   entity: (cdp: string) => getData<EntityDetail>(`/entities/${cdp}`),
   entityInventory: (cdp: string, page = 1, size = 50) =>
     getPaged<VehicleListItem>(`/entities/${cdp}/inventory`, { page, size }),
+  entityDelta: (cdp: string, page = 1, size = 50, since?: string) =>
+    getPaged<DeltaEvent>(`/entities/${cdp}/delta`, { page, size, since }),
   vehicleHistory: (ulid: string, page = 1, size = 100) =>
     getPaged<VehicleHistoryEvent>(`/vehicles/${ulid}/history`, { page, size }),
+  vehiclePlatforms: (ulid: string) => getData<VehiclePlatforms>(`/vehicles/${ulid}/platforms`),
 };

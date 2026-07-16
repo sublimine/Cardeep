@@ -15,6 +15,8 @@ export interface TimelineItem {
 interface TimelineProps {
   items: TimelineItem[]
   emptyMessage?: string
+  /** No backdrop-filter — for use inside an already-blurred container (drawer/modal), avoids stacking blur. */
+  flat?: boolean
 }
 
 const dotColorMap: Record<NonNullable<TimelineItem['accent']>, string> = {
@@ -25,7 +27,7 @@ const dotColorMap: Record<NonNullable<TimelineItem['accent']>, string> = {
   gray:   'bg-text-muted ring-border-subtle',
 }
 
-export default function Timeline({ items, emptyMessage = 'Sin datos disponibles.' }: TimelineProps) {
+export default function Timeline({ items, emptyMessage = 'Sin datos disponibles.', flat = false }: TimelineProps) {
   if (items.length === 0) {
     return (
       <p className="text-sm text-text-muted italic py-4">{emptyMessage}</p>
@@ -62,7 +64,7 @@ export default function Timeline({ items, emptyMessage = 'Sin datos disponibles.
               aria-hidden
             />
             {/* Content */}
-            <div className="glass rounded-md p-3">
+            <div className={cn('rounded-md p-3', flat ? 'bg-glass-xs border border-border-subtle' : 'glass')}>
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <time className="text-xs text-text-muted tabular-nums">{item.date}</time>
                 {item.badge}

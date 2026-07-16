@@ -24,13 +24,15 @@ interface DropdownProps {
   trigger: React.ReactNode
   items: DropdownEntry[]
   align?: 'start' | 'center' | 'end'
+  /** Solid surface instead of glass — for menus that overlay dense data rows (no backdrop-filter over repeated content). */
+  solid?: boolean
 }
 
 function isSeparator(e: DropdownEntry): e is DropdownSeparator {
   return (e as DropdownSeparator).type === 'separator'
 }
 
-export function Dropdown({ trigger, items, align = 'end' }: DropdownProps) {
+export function Dropdown({ trigger, items, align = 'end', solid = false }: DropdownProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -50,7 +52,10 @@ export function Dropdown({ trigger, items, align = 'end' }: DropdownProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.97, y: -4 }}
                 transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                className="z-[100] min-w-[160px] glass-strong rounded-lg shadow-elevation-3 p-1 outline-none"
+                className={cn(
+                  'z-[100] min-w-[160px] rounded-lg shadow-elevation-3 p-1 outline-none',
+                  solid ? 'bg-bg-elevated border border-border-subtle' : 'glass-strong'
+                )}
               >
                 {items.map((entry, idx) =>
                   isSeparator(entry) ? (

@@ -4,7 +4,7 @@ import { ChevronRight, Home } from 'lucide-react'
 import { cn } from '../lib/cn'
 
 const ROUTE_LABELS: Record<string, string> = {
-  vehicles: 'Vehicles',
+  vehicles: 'Inventario',
   kanban: 'Kanban',
   contacts: 'Contacts',
   deals: 'Deals',

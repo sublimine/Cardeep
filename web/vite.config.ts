@@ -21,6 +21,7 @@ export default defineConfig({
           vendor: ['react', 'react-dom', 'react-router-dom'],
           charts: ['recharts'],
           dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          three: ['three', '@react-three/fiber', '@react-three/drei'],
         },
       },
     },
