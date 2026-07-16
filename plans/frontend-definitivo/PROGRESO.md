@@ -137,5 +137,15 @@
   (P&L, cashflow, gastos, tabla de márgenes por vehículo) = 100% dato propio, sin gating, coincide con
   el mapa. Verificado: build verde, Playwright `:5173/finance` 0 errores, tabla+alertas+gráficos
   renderizados correctamente.
-  Siguiente: (a) Invoices.tsx (única página que falta con `tok()`/`GCard`), (b) B2 (Shell+nav
-  unificada), (c) B3 (Landing pública+Auth), (d) B7 (auditoría final).
+  **Bloque 9 CERRADO+VERIFICADO — barrido completo de las 9 páginas:** `Invoices.tsx` migrado igual.
+  Contenido = dato propio del dealer (facturación), sin gating, coincide con el mapa. Verificado
+  funcionalmente: build verde, Playwright `:5173/invoices` 0 errores, modal "Nueva factura" abre con
+  validación real (botón deshabilitado hasta rellenar campos), tabla+filtros+búsqueda+badges
+  renderizados correctos, cerrado con Escape sin problema.
+  **B1 (design-system→landing) CERRADO DE VERDAD ahora** — verificado con
+  `grep -rl "function GCard\|function tok(dark" src/pages/` → 0 resultados. Las 9 páginas
+  (Dashboard/Inteligencia/Arbitrage/Analitica/Pricing/Api/Assistant/Finance/Invoices) migradas,
+  verificadas build+Playwright, y 2 de ellas con hallazgos de fondo corregidos (Pricing vendía el
+  producto equivocado; Api tenía precios contradictorios con Pricing).
+  Siguiente: B2 (Shell+nav unificada), B3 (Landing pública+Auth), B7 (auditoría final: todas las
+  rutas, responsive 390/768/1280, CI) — de `PLAN.md`.
