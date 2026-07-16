@@ -214,11 +214,14 @@ function KanbanColumn({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Kanban() {
-  const { board: apiBoard, loading, moveCard } = useKanban()
+  const { board: apiBoard, loading, error, moveCard } = useKanban()
   const [activeId,    setActiveId]    = useState<string | null>(null)
   const [activeStage, setActiveStage] = useState<KanbanStage | null>(null)
 
-  const board = loading ? MOCK_BOARD : apiBoard
+  // useKanban leaves `board` at its empty initial state on fetch failure (it
+  // never calls setBoard in the catch branch) — falling back on `loading`
+  // alone hides the demo data the moment the failed request settles.
+  const board = loading || error ? MOCK_BOARD : apiBoard
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
