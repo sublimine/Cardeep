@@ -19,6 +19,13 @@
 > config snippets. §3 **Upgrades vs current code** — the concrete deltas against
 > what CARDEEP runs today. §4 dead tools banned on sight. §5 adoption phasing.
 > §6 source index.
+>
+> **Addendum (2026-07-15/16):** [`ADDENDUM-2026-07-scraping-10repos.md`](ADDENDUM-2026-07-scraping-10repos.md)
+> re-evaluates ten externally-suggested scraping repos against this BOM and confirms A3/A4
+> (Scrapling/patchright) were never executed — shipped code runs `camoufox` direct instead
+> (commits `c28d385`/`c5e2b90`, 2026-06-20) — and surfaces an unreconciled A2 conflict
+> (`rnet`/`wreq-python` here vs. `primp` in `02-extraction.md`). Both are open items for this
+> document's owner to close; this master BOM's own picks are not altered pending that.
 
 ---
 

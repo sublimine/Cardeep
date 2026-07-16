@@ -3660,3 +3660,35 @@
   legal PENDING-OWNER), prerequisitos EUR0 (SearXNG p/DORK, axesor+paginas_amarillas en registry, R runtime p/Trust).
 - PROXIMO: ejecutar el programa por waves (Wave 0 = Discovery + Extraction). Cada cambio servido: dry-run :5434 +
   golden + Ferrari + CI. PENDIENTE OWNER sigue: reiniciar uvicorn :8090 (+scheduler) -> activa /stats honesto + fixes.
+
+## 2026-07-16 — AUDITORÍA DE TOOLING DE SCRAPING: 10 repos externos evaluados + reconciliación TOOLING.md
+- Owner pidió valorar 10 repos de GitHub (firecrawl, crawl4ai, browser-use, crawlee, scrapy,
+  markitdown, scrapling, scrcpy, autoscraper, curl-impersonate) para el sistema de scraping.
+  Workflow de investigación (11 agentes paralelos: auditoría interna + 10 repos, luego síntesis)
+  sufrió DOS incidentes reales, ambos documentados sin maquillaje:
+  1. Bug de interpolación de plantilla propio (`${'${x}'}` en vez de `${x}`) rompió la síntesis;
+     un agente sustituyó en silencio el alcance investigado en vez de fallar limpio — detectado
+     antes de escribir nada a disco, corregido.
+  2. Tras la corrección, el agente de auditoría interna (cardex-scraper) quedó atascado — 4
+     reintentos en ~14h sin completar — task detenido manualmente (`TaskStop`). Resultados
+     salvados directamente del journal del workflow (25 resultados completos, 0 errores lógicos).
+- DESCUBRIMIENTO no buscado: existe `docs/architecture/tooling/TOOLING.md` (Bill of Materials
+  maestro, 16 auditorías T01-T16, compilado 2026-06-12) que mi propia auditoría inicial no conocía
+  — reconciliado, no duplicado, en el documento final.
+- ENTREGADO: `docs/architecture/tooling/ADDENDUM-2026-07-scraping-10repos.md`. Veredicto: 0/10
+  ADOPT limpio, 2 PARTIAL_ADOPT (browser-use para recipe-hunt semi-desatendido fuera del hot path;
+  markitdown para el hueco real de censo PDF SIGRAUTO 595+25 CATs), 8 ALREADY_SUPERSEDED/REJECT —
+  CARDEEP ya tiene equivalentes propios más ceñidos a VAM para casi todo lo evaluado.
+- DOS discrepancias de prior-art confirmadas y con recomendación: (a) TOOLING.md (06-12) quería
+  patchright-vía-Scrapling como Tier-1 default; el código shippeado usa camoufox directo desde
+  commits c28d385/c5e2b90 (2026-06-20) — recomendado: instalar patchright directo en
+  tier1/browser.py, NO el paquete Scrapling completo; (b) conflicto sin resolver entre TOOLING.md
+  (rnet/wreq-python) y 02-extraction.md (primp) para el mismo rol de cliente Tier-0 alternativo —
+  ninguno instalado, dejado como ítem abierto explícito para el dueño de TOOLING.md.
+- Verificación cruzada directa (no delegada) de las 4 afirmaciones internas más cargadas del
+  documento: browser.py:67, requirements.txt:34/42-44, commits c28d385/c5e2b90 (mensaje literal),
+  SOURCES_ES.md:147 — las 4 exactas. Documentado en el propio addendum §11.
+- Puntero añadido en TOOLING.md (Reading order). Commit + push a main pendiente de cierre de sesión.
+- PRÓXIMO: si el owner autoriza, ejecutar roadmap del addendum (7 ítems, EUR0, cada uno ~1 PR) —
+  empezar por el fix trivial de requirements.txt:42-44 (camoufox[geoip] sin pinar rompe instalación
+  limpia de Tier-1 hoy).
