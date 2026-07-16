@@ -90,5 +90,14 @@
   candado) — recharts `ResponsiveContainer` necesita altura explícita en toda la cadena de ancestros.
   Verificado: build 2927 módulos, Playwright `:5173/inteligencia` 0 errores consola (esta página no
   llama a `/kpi`), light+dark, blur+CTA visibles y legibles. Sin regresión en Dashboard tras el fix.
-  Siguiente (mismo patrón, infra ya lista): Arbitrage.tsx (799 líneas) → Analitica.tsx (771) → retomar
-  B2/B3/B7.
+  **Bloque 3 CERRADO+VERIFICADO:** `Arbitrage.tsx` reconstruido igual (cero `tok()`/`GCard`). Decisión de
+  diseño (no en el mapa original, añadida aquí): en vez de 4 candados repetidos sobre Chollos/Cross-
+  platform/Spread/Time-arbitrage, UN solo `PremiumGate` envuelve el grid de 4 paneles — Capa 2 es un
+  bundle Enterprise, no 4 features sueltas a micro-cobrar; el KPI band (chollos hoy/margen medio/mejor
+  deal-score/gaps) queda libre como agregado, igual que el resto de teasers. Además: `SpreadPanel`
+  reescrito para NO fingir un dato que no existe — antes mostraba spreads retail/wholesale como si
+  fueran reales; ahora dice explícitamente "pendiente de partnership wholesale, no es un dato inventado"
+  (fiel a `ARBITRAGE.md` §4 "Honestidad de alcance" — el spread necesita feed de un socio, cardeep solo
+  tiene la pata retail). Verificado: build verde (2927 módulos), Playwright `:5173/arbitrage` 0 errores
+  consola, gate visible y legible sobre los 4 paneles a la vez.
+  Siguiente (mismo patrón, infra ya lista): Analitica.tsx (771 líneas) → retomar B2/B3/B7.
