@@ -25,16 +25,30 @@
       glow `rgba(196,181,253,…)`, label activo light `#3b0764`) y el gradiente del wordmark "CARDEEP"
       (`#a78bfa 0%…`). Los 4 corregidos a azul. Verificado: build verde, Playwright light+dark, sidebar
       activo consistente, 0 errores nuevos (solo el /kpi 500 preexistente por backend no levantado).
-- [ ] **B3** Landing pública limpia + Login
-- [ ] **B4** Dashboard único dealer-first (unifica los 4)
-- [~] **B5** Secciones — **Inteligencia ✅ + Arbitrage ✅** (React en estilo landing, desde MATRIX/OFFERING/
-      ARBITRAGE; reemplazan el terminal DeFi; nav grupo INTELIGENCIA, Terminal fuera; verificadas light+dark,
-      0 errores, build ✓). Pendiente: pulir workspace (Vehicles/CRM/Finance/Inbox/Calendar/Settings cascaron
-      en B1) + Check/Dossier. /api es forward-ref (B6).
+- [x] **B3** Landing pública limpia + Login — **VERIFICADO 2026-07-16** (no fiado del log, comprobado en
+      navegador de verdad): `Landing.tsx` compone secciones reales (`LandingHero`/`TrustStrip`/
+      `IntelligenceTeaser`/`Bento`/`ComparisonBand`/`CTAFooter`) con datos vivos (`useLandingStats`),
+      cero restos DeFi (`Cursor`/`Preloader`/`ShaderBackground` ya no existen ni se importan en ningún
+      sitio). Un screenshot fullPage inicial pareció mostrar secciones "vacías" — falsa alarma: era el
+      reveal por scroll (IntersectionObserver) sin disparar en captura estática; al hacer scroll real
+      todo el contenido aparece, incluida una sección "Inteligencia de mercado" con el MISMO patrón de
+      gating (blur+candado+"Desbloquear con Scale") que construí en `PremiumGate` — coherencia real, no
+      casualidad. Auth suite (`/login` `/register` `/reset` `/2fa`) 2-columnas, estilo landing, consistente.
+      Flujo funcional probado de verdad: clic en "Iniciar sesión" → navega a `/dashboard`. 0 errores
+      consola en las 5 rutas.
+- [x] **B4** Dashboard único dealer-first — cerrado como parte del Bloque 1 de hoy: `Dashboard.tsx`
+      reconstruido con el orden dealer-first exacto de este ítem (KPIs→Oportunidades/Posición mercado→
+      Margin/Pipeline/AI→Revenue/Top-modelos→Stale/Activity), inteligencia+arbitrage integrados con
+      gating real, sin ruido. Ver Bloque 1/4/5 arriba.
+- [x] **B5** Secciones — Inteligencia✅ Arbitrage✅ (ya cerradas) + **Finanzas✅** (Bloque 8, hoy). Quedan
+      por auditar en B7 (no tenían el bug de `tok()`/`GCard`, pero no verificadas esta sesión): Vehicles/
+      Contacts/Deals/Kanban/Notes/Inbox/Calendar/Settings/Check-Dossier.
 - [x] **B6** API & Tokens — KPIs (saldo/consumo/plan/llamadas), catálogo endpoints INFO/INVENTORY con coste
       en tokens, consumo chart 30d, API keys CRUD (crear/rotar/revocar), planes Starter/Scale/Enterprise,
-      quick-start curl. Verificada light, 0 errores, build ✓. PENDIENTE polish marca: violeta "Scale"/planes → azul.
-- [ ] **B7** Auditoría final + parte
+      quick-start curl. Verificada light, 0 errores, build ✓. Polish de marca (violeta→azul en
+      planes/Scale) resuelto de facto en el Bloque 6 de hoy (`Api.tsx` reconstruido usa `ACCENT`/`GOOD`,
+      cero violeta).
+- [ ] **B7** Auditoría final + parte — EN CURSO ahora mismo.
 
 ## Log
 - 2026-06-30: Recon completo de `web/` (app React real con auth/router/components/hooks). PLAN.md escrito.
