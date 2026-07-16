@@ -82,7 +82,7 @@ corpus entero, no solo una selección.
 - [[docs/second-brain/dashboards/hubs/docs-recon|docs/recon — 16]]
 - [[docs/second-brain/dashboards/hubs/docs-research|docs/research — 50]]
 - [[docs/second-brain/dashboards/hubs/docs-runbook|docs/runbook — 61]]
-- [[docs/second-brain/dashboards/hubs/docs-superpowers|docs/superpowers — 2]]
+- [[docs/second-brain/dashboards/hubs/docs-superpowers|docs/superpowers — 3]]
 - [[docs/second-brain/dashboards/hubs/docs-workflows|docs/workflows — 16]]
 
 ### plans/

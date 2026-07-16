@@ -5,7 +5,7 @@ tags: [second-brain, hub]
 
 # Hub — docs/superpowers
 
-2 notas indexadas de forma exhaustiva (generado desde el sistema de archivos real, ninguna ruta inventada).
+3 notas indexadas de forma exhaustiva (generado desde el sistema de archivos real, ninguna ruta inventada).
 
 ## plans
 
@@ -14,3 +14,4 @@ tags: [second-brain, hub]
 ## specs
 
 - [[docs/superpowers/specs/2026-07-13-obsidian-second-brain-vault-design|2026-07-13-obsidian-second-brain-vault-design]]
+- [[docs/superpowers/specs/2026-07-15-graphify-integration-design|2026-07-15-graphify-integration-design]]
