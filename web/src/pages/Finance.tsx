@@ -1,7 +1,7 @@
-// Finance — Fleet P&L · Cashflow · Expenses · 6-month view
-// Pattern: tok() + GCard + AnimNum + Spark (mirrors Dashboard.tsx)
+// Finance — Fleet P&L · Cashflow · Expenses · 6-month view (dealer's own data,
+// no gating per 05-MONETIZATION-MAP.md).
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import {
   AreaChart, Area, BarChart, Bar,
@@ -9,122 +9,31 @@ import {
 } from 'recharts'
 import { TrendingDown, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { Badge } from '../components'
+import Card from '../components/Card'
+import { useIsDark } from '../hooks/useIsDark'
+import { ACCENT, GOOD, BAD } from '../lib/theme'
 import type { FinanceRow } from '../types'
 
-// ── Theme helpers ─────────────────────────────────────────────────────────────
-
-function useIsDark() {
-  const [dark, setDark] = useState(() => !document.documentElement.classList.contains('light'))
-  useEffect(() => {
-    const obs = new MutationObserver(() =>
-      setDark(!document.documentElement.classList.contains('light'))
-    )
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => obs.disconnect()
-  }, [])
-  return dark
-}
-
-function tok(dark: boolean) {
-  return {
-    t1:       dark ? '#f1f5f9' : '#0f172a',
-    t2:       dark ? '#cbd5e1' : '#334155',
-    t3:       dark ? '#94a3b8' : '#64748b',
-    t4:       dark ? '#475569' : '#94a3b8',
-    div:      dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)',
-    cardBg:   dark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.82)',
-    cardBord: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-    subBg:    dark ? 'rgba(255,255,255,0.03)'  : 'rgba(0,0,0,0.03)',
-    subBord:  dark ? 'rgba(255,255,255,0.06)'  : 'rgba(0,0,0,0.07)',
-  }
-}
-
-function GCard({
-  dark,
-  children,
-  style,
-}: {
-  dark: boolean
-  children: React.ReactNode
-  style?: React.CSSProperties
-}) {
-  const c = tok(dark)
-  return (
-    <div
-      style={{
-        background: c.cardBg,
-        border: `1px solid ${c.cardBord}`,
-        borderRadius: 14,
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        boxShadow: dark
-          ? '0 4px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)'
-          : '0 4px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.90)',
-        overflow: 'hidden',
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function AnimNum({
-  to,
-  prefix = '',
-  suffix = '',
-  decimals = 0,
-}: {
-  to: number
-  prefix?: string
-  suffix?: string
-  decimals?: number
-}) {
+function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; prefix?: string; suffix?: string; decimals?: number }) {
   const mv = useMotionValue(0)
   const sp = useSpring(mv, { stiffness: 55, damping: 14 })
-  const d = useTransform(sp, (v) =>
-    `${prefix}${decimals > 0 ? v.toFixed(decimals) : Math.round(v).toLocaleString()}${suffix}`,
-  )
+  const d = useTransform(sp, v => `${prefix}${decimals > 0 ? v.toFixed(decimals) : Math.round(v).toLocaleString()}${suffix}`)
   useEffect(() => { mv.set(to) }, [to, mv])
   return <motion.span>{d}</motion.span>
 }
 
-function Spark({
-  values,
-  color,
-  height = 28,
-}: {
-  values: number[]
-  color: string
-  height?: number
-}) {
+function Spark({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
   if (values.length < 2) return null
-  const max = Math.max(...values)
-  const min = Math.min(...values)
-  const range = max - min || 1
-  const W = 64
-  const H = height
-  const pts = values.map((v, i): [number, number] => [
-    (i / (values.length - 1)) * W,
-    H - ((v - min) / range) * (H - 4) + 2,
-  ])
+  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1
+  const W = 64, H = height
+  const pts = values.map((v, i): [number, number] => [(i / (values.length - 1)) * W, H - ((v - min) / range) * (H - 4) + 2])
   const line = pts.map(([x, y]) => `${x},${y}`).join(' ')
   const last = pts[pts.length - 1]
-  const area =
-    `M${pts[0][0]},${H} ` +
-    pts.map(([x, y]) => `L${x},${y}`).join(' ') +
-    ` L${last[0]},${H} Z`
+  const area = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${last[0]},${H} Z`
   return (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
       <path d={area} fill={color} fillOpacity={0.12} />
-      <polyline
-        points={line}
-        fill="none"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <polyline points={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -149,7 +58,7 @@ const EXPENSES = [
   { category: 'Other',            amount:   265_900, pct: 10.1 },
 ]
 
-const EXPENSE_COLORS = ['#3b82f6', '#0891b2', '#059669', '#d97706', '#e11d48', '#94a3b8']
+const EXPENSE_COLORS = [ACCENT, '#0891b2', GOOD, '#d97706', BAD, '#94a3b8']
 
 const TOP_VEHICLES: FinanceRow[] = [
   { vehicleId: 'v1',  vehicleName: 'BMW X5 2021',        buyPrice: 38000, sellPrice: 46500, margin:  8500, marginPct: 22.4, soldAt: '2026-04-15' },
@@ -164,13 +73,12 @@ const TOP_VEHICLES: FinanceRow[] = [
   { vehicleId: 'v10', vehicleName: 'Citroën C3 2019',     buyPrice:  7500, sellPrice:  7100, margin:  -400, marginPct:  -5.3, soldAt: '2026-04-11' },
 ]
 
-const ALERTS = TOP_VEHICLES.filter((r) => r.margin < 0)
+const ALERTS = TOP_VEHICLES.filter(r => r.margin < 0)
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Finance() {
   const dark = useIsDark()
-  const c = tok(dark)
 
   const totalRevenue  = MONTHLY.reduce((s, m) => s + m.revenue,  0)
   const totalCost     = MONTHLY.reduce((s, m) => s + m.cost,     0)
@@ -181,227 +89,63 @@ export default function Finance() {
   const tickColor  = dark ? '#475569' : '#94a3b8'
   const gridColor  = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'
   const tooltipBg  = dark ? '#0e0e1a' : '#fff'
+  const tooltipFg  = dark ? '#f1f5f9' : '#0f172a'
   const cursorFill = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'
 
   const kpis = [
-    {
-      label: 'Revenue (6mo)',
-      value: totalRevenue / 1000,
-      prefix: '€', suffix: 'k',
-      sub: `Cost base €${(totalCost / 1_000_000).toFixed(2)}M`,
-      trendUp: true,
-      trendLabel: '+14% vs prior',
-      spark: MONTHLY.map((m) => m.revenue / 1000),
-      accent: '#3b82f6',
-    },
-    {
-      label: 'Gross Margin',
-      value: totalMargin / 1000,
-      prefix: '€', suffix: 'k',
-      sub: `Avg ${avgMarginPct.toFixed(1)}% rate`,
-      trendUp: true,
-      trendLabel: '+8% vs prior',
-      spark: MONTHLY.map((m) => m.margin / 1000),
-      accent: '#059669',
-    },
-    {
-      label: 'Net Cashflow',
-      value: totalCashflow / 1000,
-      prefix: '€', suffix: 'k',
-      sub: 'After all operating costs',
-      trendUp: true,
-      trendLabel: '+11% vs prior',
-      spark: MONTHLY.map((m) => m.cashflow / 1000),
-      accent: '#0891b2',
-    },
-    {
-      label: 'Margin Alerts',
-      value: ALERTS.length,
-      prefix: '', suffix: ' vehicles',
-      sub: 'Sold below purchase cost',
-      trendUp: false,
-      trendLabel: ALERTS.length > 0 ? 'Action needed' : 'All clear',
-      spark: [0, 1, 2, 1, 2, ALERTS.length],
-      accent: ALERTS.length > 0 ? '#e11d48' : '#059669',
-    },
+    { label: 'Revenue (6mo)', value: totalRevenue / 1000, prefix: '€', suffix: 'k', sub: `Cost base €${(totalCost / 1_000_000).toFixed(2)}M`, trendUp: true, trendLabel: '+14% vs prior', spark: MONTHLY.map(m => m.revenue / 1000), accent: ACCENT },
+    { label: 'Gross Margin', value: totalMargin / 1000, prefix: '€', suffix: 'k', sub: `Avg ${avgMarginPct.toFixed(1)}% rate`, trendUp: true, trendLabel: '+8% vs prior', spark: MONTHLY.map(m => m.margin / 1000), accent: GOOD },
+    { label: 'Net Cashflow', value: totalCashflow / 1000, prefix: '€', suffix: 'k', sub: 'After all operating costs', trendUp: true, trendLabel: '+11% vs prior', spark: MONTHLY.map(m => m.cashflow / 1000), accent: '#0891b2' },
+    { label: 'Margin Alerts', value: ALERTS.length, prefix: '', suffix: ' vehicles', sub: 'Sold below purchase cost', trendUp: false, trendLabel: ALERTS.length > 0 ? 'Action needed' : 'All clear', spark: [0, 1, 2, 1, 2, ALERTS.length], accent: ALERTS.length > 0 ? BAD : GOOD },
   ]
 
   return (
-    <div
-      style={{
-        padding: 'clamp(16px, 3vw, 24px)',
-        maxWidth: 1200,
-        margin: '0 auto',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
-      }}
-    >
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}
-      >
+    <div className="mx-auto flex flex-col gap-5" style={{ padding: 'clamp(16px, 3vw, 24px)', maxWidth: 1200 }}>
+
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="flex items-end justify-between">
         <div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              color: c.t1,
-              lineHeight: 1,
-            }}
-          >
-            Finance
-          </h1>
-          <p style={{ fontSize: 12, color: c.t3, marginTop: 4 }}>
-            Fleet P&L · Cashflow · Expenses · 6-month view
-          </p>
+          <h1 className="text-[22px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>Finance</h1>
+          <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>Fleet P&L · Cashflow · Expenses · 6-month view</p>
         </div>
-        <div
-          style={{
-            padding: '5px 12px',
-            borderRadius: 8,
-            background: 'rgba(59,130,246,0.10)',
-            border: '1px solid rgba(59,130,246,0.22)',
-            fontSize: 11,
-            fontWeight: 700,
-            color: '#3b82f6',
-          }}
-        >
-          Apr 2026
-        </div>
+        <div className="rounded-lg px-3 py-1.5 text-[11px] font-bold" style={{ background: `${ACCENT}1a`, border: `1px solid ${ACCENT}38`, color: ACCENT }}>Apr 2026</div>
       </motion.div>
 
-      {/* KPI cards — 4 columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+      <div className="grid grid-cols-4 gap-3.5">
         {kpis.map(({ label, value, prefix, suffix, sub, trendUp, trendLabel, spark, accent }, i) => (
-          <motion.div
-            key={label}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07, duration: 0.40, ease: [0.32, 0.72, 0, 1] }}
-            whileHover={{ y: -2, transition: { duration: 0.18 } }}
-          >
-            <GCard dark={dark} style={{ padding: '18px 20px 14px' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 12,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 9.5,
-                    fontWeight: 700,
-                    letterSpacing: '0.11em',
-                    textTransform: 'uppercase',
-                    color: c.t3,
-                  }}
-                >
-                  {label}
-                </span>
-                <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: accent,
-                    boxShadow: `0 0 6px ${accent}`,
-                    display: 'inline-block',
-                  }}
-                />
+          <motion.div key={label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}>
+            <Card hover className="!p-[18px_20px_14px]">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />
               </div>
-              <div
-                style={{
-                  fontSize: 36,
-                  fontWeight: 800,
-                  letterSpacing: '-0.03em',
-                  lineHeight: 1,
-                  color: c.t1,
-                  marginBottom: 3,
-                }}
-              >
+              <div className="mb-[3px] text-4xl font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
                 <AnimNum to={value} prefix={prefix} suffix={suffix} />
               </div>
-              <div style={{ fontSize: 10, color: c.t4, marginBottom: 12 }}>{sub}</div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingTop: 10,
-                  borderTop: `1px solid ${c.div}`,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {trendUp ? (
-                    <ArrowUpRight style={{ width: 10, height: 10, color: '#22c55e' }} />
-                  ) : (
-                    <ArrowDownRight style={{ width: 10, height: 10, color: '#f87171' }} />
-                  )}
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: trendUp ? '#22c55e' : '#f87171',
-                    }}
-                  >
-                    {trendLabel}
-                  </span>
+              <div className="mb-3 text-[10px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>
+              <div className="flex items-center justify-between border-t pt-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
+                <div className="flex items-center gap-1">
+                  {trendUp ? <ArrowUpRight style={{ width: 10, height: 10, color: GOOD }} /> : <ArrowDownRight style={{ width: 10, height: 10, color: BAD }} />}
+                  <span className="text-[10px] font-semibold" style={{ color: trendUp ? GOOD : BAD }}>{trendLabel}</span>
                 </div>
                 <Spark values={spark} color={accent} height={22} />
               </div>
-            </GCard>
+            </Card>
           </motion.div>
         ))}
       </div>
 
-      {/* P&L chart + Expense breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 14 }}>
-        {/* AreaChart */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.30, duration: 0.38 }}
-        >
-          <GCard dark={dark} style={{ padding: '18px 20px 14px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 14,
-              }}
-            >
+      <div className="grid gap-3.5" style={{ gridTemplateColumns: '3fr 2fr' }}>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.30, duration: 0.38 }}>
+          <Card className="!p-[18px_20px_14px]">
+            <div className="mb-3.5 flex items-center justify-between">
               <div>
-                <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>
-                  Revenue vs Cost — P&L
-                </h2>
-                <p style={{ fontSize: 10.5, color: c.t4 }}>6-month trend</p>
+                <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Revenue vs Cost — P&L</h2>
+                <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>6-month trend</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 10, color: c.t4 }}>
-                {(
-                  [
-                    ['#3b82f6', 'Revenue'],
-                    ['#f87171', 'Cost'],
-                    ['#22c55e', 'Margin'],
-                  ] as [string, string][]
-                ).map(([col, lbl]) => (
-                  <span key={lbl} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span
-                      style={{
-                        width: 10,
-                        height: 2,
-                        background: col,
-                        display: 'inline-block',
-                        borderRadius: 1,
-                      }}
-                    />
+              <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                {([[ACCENT, 'Revenue'], [BAD, 'Cost'], [GOOD, 'Margin']] as [string, string][]).map(([col, lbl]) => (
+                  <span key={lbl} className="flex items-center gap-1">
+                    <span className="inline-block h-0.5 w-2.5 rounded-sm" style={{ background: col }} />
                     {lbl}
                   </span>
                 ))}
@@ -410,408 +154,136 @@ export default function Finance() {
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={MONTHLY} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="fgRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.22} />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="fgCost" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f87171" stopOpacity={0.14} />
-                    <stop offset="100%" stopColor="#f87171" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="fgMar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22c55e" stopOpacity={0.22} />
-                    <stop offset="100%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
+                  <linearGradient id="fgRev" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={ACCENT} stopOpacity={0.22} /><stop offset="100%" stopColor={ACCENT} stopOpacity={0} /></linearGradient>
+                  <linearGradient id="fgCost" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={BAD} stopOpacity={0.14} /><stop offset="100%" stopColor={BAD} stopOpacity={0} /></linearGradient>
+                  <linearGradient id="fgMar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={GOOD} stopOpacity={0.22} /><stop offset="100%" stopColor={GOOD} stopOpacity={0} /></linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 9.5, fill: tickColor }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 9.5, fill: tickColor }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => `€${(v / 1000).toFixed(0)}k`}
-                />
+                <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `€${(v / 1000).toFixed(0)}k`} />
                 <Tooltip
-                  contentStyle={{
-                    background: tooltipBg,
-                    border: `1px solid ${c.cardBord}`,
-                    borderRadius: 10,
-                    fontSize: 11.5,
-                    color: c.t1,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-                  }}
-                  formatter={(v: number, name: string) => [
-                    `€${v.toLocaleString()}`,
-                    name === 'revenue' ? 'Revenue' : name === 'cost' ? 'Cost' : 'Margin',
-                  ]}
+                  contentStyle={{ background: tooltipBg, border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: tooltipFg, boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+                  formatter={(v: number, name: string) => [`€${v.toLocaleString()}`, name === 'revenue' ? 'Revenue' : name === 'cost' ? 'Cost' : 'Margin']}
                   cursor={{ stroke: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fill="url(#fgRev)"
-                  dot={false}
-                  activeDot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="cost"
-                  stroke="#f87171"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 4"
-                  fill="url(#fgCost)"
-                  dot={false}
-                  activeDot={{ r: 3, fill: '#f87171', strokeWidth: 0 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="margin"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  fill="url(#fgMar)"
-                  dot={false}
-                  activeDot={{ r: 3, fill: '#22c55e', strokeWidth: 0 }}
-                />
+                <Area type="monotone" dataKey="revenue" stroke={ACCENT} strokeWidth={2} fill="url(#fgRev)" dot={false} activeDot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} />
+                <Area type="monotone" dataKey="cost" stroke={BAD} strokeWidth={1.5} strokeDasharray="4 4" fill="url(#fgCost)" dot={false} activeDot={{ r: 3, fill: BAD, strokeWidth: 0 }} />
+                <Area type="monotone" dataKey="margin" stroke={GOOD} strokeWidth={2} fill="url(#fgMar)" dot={false} activeDot={{ r: 3, fill: GOOD, strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
-          </GCard>
+          </Card>
         </motion.div>
 
-        {/* Expense breakdown */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.38 }}
-          style={{ display: 'flex' }}
-        >
-          <GCard dark={dark} style={{ padding: '18px 18px 16px', flex: 1 }}>
-            <div style={{ marginBottom: 14 }}>
-              <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>
-                Expense Breakdown
-              </h2>
-              <p style={{ fontSize: 10.5, color: c.t4 }}>
-                6mo · €{(totalCost / 1_000_000).toFixed(2)}M total
-              </p>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.38 }} className="flex">
+          <Card className="flex-1 !p-[18px_18px_16px]">
+            <div className="mb-3.5">
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Expense Breakdown</h2>
+              <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>6mo · €{(totalCost / 1_000_000).toFixed(2)}M total</p>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <div className="flex flex-col gap-2.5">
               {EXPENSES.map((exp, i) => (
-                <motion.div
-                  key={exp.category}
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.45 + i * 0.06 }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: 4,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: 2,
-                          background: EXPENSE_COLORS[i],
-                          display: 'inline-block',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span style={{ fontSize: 11, color: c.t2 }}>{exp.category}</span>
+                <motion.div key={exp.category} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.45 + i * 0.06 }}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-sm" style={{ background: EXPENSE_COLORS[i] }} />
+                      <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{exp.category}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: c.t1,
-                          fontVariantNumeric: 'tabular-nums',
-                        }}
-                      >
-                        €{(exp.amount / 1000).toFixed(0)}k
-                      </span>
-                      <span style={{ fontSize: 9.5, color: c.t4 }}>{exp.pct}%</span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>€{(exp.amount / 1000).toFixed(0)}k</span>
+                      <span className="text-[9.5px]" style={{ color: 'var(--text-muted)' }}>{exp.pct}%</span>
                     </div>
                   </div>
-                  <div
-                    style={{
-                      height: 4,
-                      borderRadius: 99,
-                      background: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${exp.pct}%` }}
-                      transition={{
-                        delay: 0.55 + i * 0.07,
-                        duration: 0.6,
-                        ease: [0.32, 0.72, 0, 1],
-                      }}
-                      style={{
-                        height: '100%',
-                        borderRadius: 99,
-                        background: EXPENSE_COLORS[i],
-                      }}
-                    />
+                  <div className="h-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${exp.pct}%` }} transition={{ delay: 0.55 + i * 0.07, duration: 0.6, ease: [0.32, 0.72, 0, 1] }} className="h-full rounded-full" style={{ background: EXPENSE_COLORS[i] }} />
                   </div>
                 </motion.div>
               ))}
             </div>
-          </GCard>
+          </Card>
         </motion.div>
       </div>
 
-      {/* Cashflow bar chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.40, duration: 0.38 }}
-      >
-        <GCard dark={dark} style={{ padding: '18px 20px 14px' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 14,
-            }}
-          >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40, duration: 0.38 }}>
+        <Card className="!p-[18px_20px_14px]">
+          <div className="mb-3.5 flex items-center justify-between">
             <div>
-              <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1, marginBottom: 2 }}>
-                Net Cashflow
-              </h2>
-              <p style={{ fontSize: 10.5, color: c.t4 }}>
-                Monthly net after all operating expenses
-              </p>
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Net Cashflow</h2>
+              <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Monthly net after all operating expenses</p>
             </div>
-            <div
-              style={{
-                padding: '4px 10px',
-                borderRadius: 7,
-                background: 'rgba(8,145,178,0.12)',
-                border: '1px solid rgba(8,145,178,0.22)',
-                fontSize: 10.5,
-                fontWeight: 700,
-                color: '#0891b2',
-              }}
-            >
+            <div className="rounded-lg px-2.5 py-1 text-[10.5px] font-bold" style={{ background: 'rgba(8,145,178,0.12)', border: '1px solid rgba(8,145,178,0.22)', color: '#0891b2' }}>
               €{(totalCashflow / 1000).toFixed(0)}k YTD
             </div>
           </div>
           <ResponsiveContainer width="100%" height={130}>
-            <BarChart
-              data={MONTHLY}
-              margin={{ top: 0, right: 0, left: -24, bottom: 0 }}
-              barSize={22}
-            >
+            <BarChart data={MONTHLY} margin={{ top: 0, right: 0, left: -24, bottom: 0 }} barSize={22}>
               <CartesianGrid strokeDasharray="1 8" stroke={gridColor} vertical={false} />
-              <XAxis
-                dataKey="month"
-                tick={{ fontSize: 9.5, fill: tickColor }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 9.5, fill: tickColor }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(v: number) => `€${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: tooltipBg,
-                  border: `1px solid ${c.cardBord}`,
-                  borderRadius: 10,
-                  fontSize: 11.5,
-                  color: c.t1,
-                }}
-                formatter={(v: number) => [`€${v.toLocaleString()}`, 'Cashflow']}
-                cursor={{ fill: cursorFill }}
-              />
-              <Bar dataKey="cashflow" fill="#0891b2" radius={[4, 4, 0, 0]} fillOpacity={0.80} />
+              <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `€${(v / 1000).toFixed(0)}k`} />
+              <Tooltip contentStyle={{ background: tooltipBg, border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: tooltipFg }} formatter={(v: number) => [`€${v.toLocaleString()}`, 'Cashflow']} cursor={{ fill: cursorFill }} />
+              <Bar dataKey="cashflow" fill="#0891b2" radius={[4, 4, 0, 0]} fillOpacity={0.8} />
             </BarChart>
           </ResponsiveContainer>
-        </GCard>
+        </Card>
       </motion.div>
 
-      {/* Negative margin alerts */}
       {ALERTS.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.44, duration: 0.38 }}
-        >
-          <GCard dark={dark} style={{ padding: '16px 18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 8,
-                  background: 'rgba(225,29,72,0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <TrendingDown style={{ width: 13, height: 13, color: '#e11d48' }} />
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44, duration: 0.38 }}>
+          <Card className="!p-[16px_18px]">
+            <div className="mb-3 flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ background: `${BAD}1f` }}>
+                <TrendingDown style={{ width: 13, height: 13, color: BAD }} />
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: c.t1 }}>
-                Negative Margin Alerts
-              </span>
+              <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Negative Margin Alerts</span>
               <Badge color="red">{ALERTS.length}</Badge>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {ALERTS.map((r) => (
-                <div
-                  key={r.vehicleId}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 13px',
-                    borderRadius: 10,
-                    background: 'rgba(225,29,72,0.06)',
-                    border: '1px solid rgba(225,29,72,0.18)',
-                  }}
-                >
+            <div className="flex flex-col gap-2">
+              {ALERTS.map(r => (
+                <div key={r.vehicleId} className="flex items-center justify-between rounded-[10px] p-[10px_13px]" style={{ background: `${BAD}0f`, border: `1px solid ${BAD}2e` }}>
                   <div>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: c.t1 }}>{r.vehicleName}</p>
-                    <p style={{ fontSize: 10, color: c.t4, marginTop: 2 }}>
-                      Sold {r.soldAt ?? '—'} · Buy €{r.buyPrice.toLocaleString()} → Sell €
-                      {r.sellPrice.toLocaleString()}
-                    </p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{r.vehicleName}</p>
+                    <p className="mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>Sold {r.soldAt ?? '—'} · Buy €{r.buyPrice.toLocaleString()} → Sell €{r.sellPrice.toLocaleString()}</p>
                   </div>
-                  <Badge color="red">
-                    −€{Math.abs(r.margin).toLocaleString()} ({r.marginPct.toFixed(1)}%)
-                  </Badge>
+                  <Badge color="red">−€{Math.abs(r.margin).toLocaleString()} ({r.marginPct.toFixed(1)}%)</Badge>
                 </div>
               ))}
             </div>
-          </GCard>
+          </Card>
         </motion.div>
       )}
 
-      {/* Vehicle margin table */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.48, duration: 0.38 }}
-      >
-        <GCard dark={dark} style={{ padding: 0 }}>
-          <div
-            style={{
-              padding: '14px 18px',
-              borderBottom: `1px solid ${c.div}`,
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-            }}
-          >
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.48, duration: 0.38 }}>
+        <Card className="!p-0">
+          <div className="flex items-baseline justify-between p-[14px_18px]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
             <div>
-              <h2 style={{ fontSize: 13, fontWeight: 700, color: c.t1 }}>Vehicle Margin Detail</h2>
-              <p style={{ fontSize: 10.5, color: c.t4, marginTop: 1 }}>
-                Last 10 sold · sorted by margin
-              </p>
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Vehicle Margin Detail</h2>
+              <p className="mt-px text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Last 10 sold · sorted by margin</p>
             </div>
-            <span style={{ fontSize: 10, color: c.t4 }}>10 records</span>
+            <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>10 records</span>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table
-              style={{ width: '100%', minWidth: 540, fontSize: 12, borderCollapse: 'collapse' }}
-            >
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-xs" style={{ minWidth: 540 }}>
               <thead>
-                <tr style={{ borderBottom: `1px solid ${c.div}` }}>
-                  {['Vehicle', 'Buy price', 'Sell price', 'Margin', 'Rate', 'Sold'].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        padding: '9px 16px',
-                        textAlign: 'left',
-                        fontSize: 9.5,
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.09em',
-                        color: c.t4,
-                      }}
-                    >
-                      {h}
-                    </th>
+                <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                  {['Vehicle', 'Buy price', 'Sell price', 'Margin', 'Rate', 'Sold'].map(h => (
+                    <th key={h} className="p-[9px_16px] text-left text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-muted)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {TOP_VEHICLES.map((r, i) => (
-                  <tr
-                    key={r.vehicleId}
-                    style={{
-                      borderBottom:
-                        i < TOP_VEHICLES.length - 1 ? `1px solid ${c.div}` : 'none',
-                      background: r.margin < 0 ? 'rgba(225,29,72,0.04)' : 'transparent',
-                    }}
-                  >
-                    <td style={{ padding: '10px 16px', fontWeight: 600, color: c.t1 }}>
-                      {r.vehicleName}
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 16px',
-                        color: c.t3,
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
-                      €{r.buyPrice.toLocaleString()}
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 16px',
-                        color: c.t3,
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
-                      €{r.sellPrice.toLocaleString()}
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 16px',
-                        fontWeight: 700,
-                        fontVariantNumeric: 'tabular-nums',
-                        color: r.margin < 0 ? '#e11d48' : '#22c55e',
-                      }}
-                    >
-                      {r.margin < 0 ? '−' : '+'}€{Math.abs(r.margin).toLocaleString()}
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 16px',
-                        fontSize: 10.5,
-                        color: r.marginPct < 0 ? '#e11d48' : c.t4,
-                        fontVariantNumeric: 'tabular-nums',
-                      }}
-                    >
-                      {r.marginPct.toFixed(1)}%
-                    </td>
-                    <td style={{ padding: '10px 16px', color: c.t4, fontSize: 10.5 }}>
-                      {r.soldAt ?? '—'}
-                    </td>
+                  <tr key={r.vehicleId} style={{ borderBottom: i < TOP_VEHICLES.length - 1 ? '1px solid var(--border-subtle)' : 'none', background: r.margin < 0 ? `${BAD}0a` : 'transparent' }}>
+                    <td className="p-[10px_16px] font-semibold" style={{ color: 'var(--text-primary)' }}>{r.vehicleName}</td>
+                    <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>€{r.buyPrice.toLocaleString()}</td>
+                    <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>€{r.sellPrice.toLocaleString()}</td>
+                    <td className="p-[10px_16px] font-bold tabular-nums" style={{ color: r.margin < 0 ? BAD : GOOD }}>{r.margin < 0 ? '−' : '+'}€{Math.abs(r.margin).toLocaleString()}</td>
+                    <td className="p-[10px_16px] text-[10.5px] tabular-nums" style={{ color: r.marginPct < 0 ? BAD : 'var(--text-muted)' }}>{r.marginPct.toFixed(1)}%</td>
+                    <td className="p-[10px_16px] text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{r.soldAt ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </GCard>
+        </Card>
       </motion.div>
     </div>
   )

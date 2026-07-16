@@ -133,5 +133,9 @@
   visualmente: build verde, Playwright `:5173/assistant`, clic real en una sugerencia → mensaje de
   usuario + respuesta del bot con negritas + historial actualizado, todo renderizado correcto, 0
   errores consola.
-  Siguiente: (a) Finance.tsx/Invoices.tsx (aún con `tok()`/`GCard`), (b) B2 (Shell+nav unificada),
-  (c) B3 (Landing pública+Auth), (d) B7 (auditoría final).
+  **Bloque 8 CERRADO+VERIFICADO:** `Finance.tsx` migrado igual (`Card`+tokens+`lib/theme.ts`). Contenido
+  (P&L, cashflow, gastos, tabla de márgenes por vehículo) = 100% dato propio, sin gating, coincide con
+  el mapa. Verificado: build verde, Playwright `:5173/finance` 0 errores, tabla+alertas+gráficos
+  renderizados correctamente.
+  Siguiente: (a) Invoices.tsx (única página que falta con `tok()`/`GCard`), (b) B2 (Shell+nav
+  unificada), (c) B3 (Landing pública+Auth), (d) B7 (auditoría final).
