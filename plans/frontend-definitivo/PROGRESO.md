@@ -100,4 +100,15 @@
   (fiel a `ARBITRAGE.md` §4 "Honestidad de alcance" — el spread necesita feed de un socio, cardeep solo
   tiene la pata retail). Verificado: build verde (2927 módulos), Playwright `:5173/arbitrage` 0 errores
   consola, gate visible y legible sobre los 4 paneles a la vez.
-  Siguiente (mismo patrón, infra ya lista): Analitica.tsx (771 líneas) → retomar B2/B3/B7.
+  **Bloque 4 CERRADO+VERIFICADO — barrido completo:** `Analitica.tsx` reconstruido igual (cero
+  `tok()`/`GCard`, paleta `lib/theme.ts`). Sin gating — confirmado en el mapa: 100% dato propio del
+  dealer (ventas/marketing/stock/canales), ninguna cifra viene del censo de mercado. Verificado: build
+  verde, Playwright `:5173/analitica` 0 errores consola.
+  **B1 sigue ABIERTO, corrigiendo mi propia afirmación previa:** verifiqué con
+  `grep -rl "function GCard\|function tok(dark" src/pages/` ANTES de dar el barrido por cerrado y
+  quedan 5 páginas más con la misma duplicación: `Api.tsx`, `Assistant.tsx`, `Finance.tsx`,
+  `Invoices.tsx`, `Pricing.tsx`. Las 4 de este barrido (Dashboard/Inteligencia/Arbitrage/Analítica) —
+  las que estaban en el nav activo de INTELIGENCIA/PRINCIPAL y las que motivaron la queja del owner —
+  sí están limpias y verificadas. Las 5 restantes quedan para la próxima iteración del loop.
+  Siguiente: (a) las 5 páginas restantes con `tok()`/`GCard`, (b) B2 (Shell+nav unificada), (c) B3
+  (Landing pública+Auth), (d) B7 (auditoría final, barrido todas las rutas + responsive + CI).
