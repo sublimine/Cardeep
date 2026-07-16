@@ -1,7 +1,13 @@
 # cardeep · portal
 
-The cardeep product frontend, materialized from the **Claude Design** project
-"Cardeep" (`claude.ai/design/p/cd99ab8f-851c-47e9-90ee-da85cae146df`).
+> ⚠ **Not the running app.** The canonical frontend is [`web/`](../web) (React +
+> Vite, `npm run dev` → `http://localhost:5173`). This folder is a **static
+> design-reference sandbox** — screens get prototyped here first, then ported
+> into real, API-wired components in `web/`. Nobody should point a user, a demo,
+> or CI at anything under `portal/`.
+
+Design source materialized from the **Claude Design** project "Cardeep"
+(`claude.ai/design/p/cd99ab8f-851c-47e9-90ee-da85cae146df`).
 
 ## What this is
 Each screen designed in Claude Design ships as a `*.dc.html` **Design Component**
@@ -27,16 +33,29 @@ python -m http.server 8777
 # open http://localhost:8777/analitica.html   (index.html = landing, once ported)
 ```
 
-## Roadmap (so this becomes the real portal)
-1. Port all 10 screens to standalone HTML (see PROGRESO.md).
-2. Pull referenced assets (`assets/`, hero media) for the screens that use them.
-3. Wire live census data via the API client `web/src/api/cardeep.ts` → `:8090`
-   (`/stats`, `/geo/seal`, `/geo/{prov}/entities`, `/entities/{cdp}/inventory`, …).
-   Today's figures are the design's prototype values — clearly placeholder until wired.
-4. Promote this portal to the canonical frontend and retire the synthetic `web/`
-   (which carries a dead census client + a fabricated-numbers landing).
+## Roadmap (superseded 2026-07-16 — kept for history, see note below)
+~~1. Port all 10 screens to standalone HTML.~~ Done.
+~~2. Pull referenced assets for the screens that use them.~~ Done.
+~~3. Wire live census data via the API client `web/src/api/cardeep.ts` → `:8090`.~~
+~~4. Promote this portal to the canonical frontend and retire `web/`.~~
+
+**This plan was reversed in practice, not on paper.** Starting 2026-06-30
+(`8614f69` — mirror the portal landing + marketplace into React), work went
+the other way: portal screens were ported *into* `web/`, which kept the live
+API wiring and became canonical. This README's roadmap said "retire `web/`"
+for two weeks after that had already stopped being the plan — a stale doc, not
+a fact. Corrected 2026-07-16 after the owner asked why several frontends
+existed.
+
+## What this folder is *for*, now
+A design-reference sandbox: new Claude Design screens and the mirrored
+TailAdmin/Spike template libraries (`app/`) live here as source material to
+mine when building or restyling a page in `web/`. It also still previews
+fine standalone (`python -m http.server 8777`) for eyeballing a design before
+porting it — that's it.
 
 ## Source of truth
-The Claude Design project is the design source; this folder is the running
-implementation. Re-pull a screen with the `DesignSync` tool (`get_file`) when the
-design changes, then re-port.
+The Claude Design project (`claude.ai/design`) is the design source; **`web/`
+is the running implementation.** Re-pull a screen here with `DesignSync`
+(`get_file`) when the design changes, port what's needed into `web/`, then
+leave the copy here as reference.

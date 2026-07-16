@@ -32,6 +32,10 @@ python -m pipeline.ops.scheduler                     # 7. motor durable
   long-tail en datos, código y operación.
 - **Huella total:** recetas, estado y decisiones commiteadas en `main`; cualquiera
   puede retomar el proyecto desde este repo.
+- **Un solo frontend:** [`web/`](web) (React + Vite, `npm run dev` → `:5173`) es
+  el único que se ejecuta y habla con la API. `portal/` es cantera de diseño
+  estática (Claude Design + plantillas TailAdmin/Spike espejadas) — nunca el
+  producto; ver [`portal/README.md`](portal/README.md).
 
 ## Mapa del proyecto (para retomar)
 
