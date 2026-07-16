@@ -395,7 +395,7 @@ export default function Vehicles() {
         <motion.button
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
           transition={{ type: 'spring', stiffness: 420, damping: 22 }}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #4f6ef0, #7b45e8)', border: 'none', cursor: 'pointer', boxShadow: '0 0 20px rgba(91,141,248,0.2)' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', border: 'none', cursor: 'pointer', boxShadow: '0 0 20px rgba(59,130,246,0.25)' }}
         >
           <Plus style={{ width: 15, height: 15 }} />
           Add vehicle

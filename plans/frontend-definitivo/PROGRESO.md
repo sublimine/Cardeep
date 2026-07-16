@@ -49,6 +49,21 @@
       planes/Scale) resuelto de facto en el Bloque 6 de hoy (`Api.tsx` reconstruido usa `ACCENT`/`GOOD`,
       cero violeta).
 - [ ] **B7** Auditoría final + parte — EN CURSO ahora mismo.
+  - `Vehicles.tsx`: bug real encontrado y arreglado — botón "Add vehicle" con gradiente
+    `#4f6ef0→#7b45e8` (azul→VIOLETA visible) → `#3b82f6→#2563eb` (azul de marca). Grep de otros
+    restos violeta (`#7c3aed|#8b5cf6|#a855f7|#6d28d9|#9333ea|#a78bfa|#c4b5fd`) en todo `src/`: solo
+    aparecen en `Market.tsx`/`terminal/*` (el terminal DeFi retirado a propósito, fuera de nav) — no
+    tocados. Verificado vía dev server + Playwright (HMR), no vía `npm run build`.
+  - ⚠ **Hallazgo externo, no mío:** apareció en disco `web/src/pages/inventory/` — directorio SIN
+    historial git (untracked), con timestamps de esta misma franja horaria (otra sesión/proceso
+    construyendo en paralelo una vista de garaje/inventario: `DealerHeader`/`FilterRail`/
+    `VehicleGrid`/`VehicleTable`/`garage/GarageCard`/`GarageHud`...). Está incompleto —
+    `garage/GarageScene.tsx` no existe aún, lo que rompe `tsc --noEmit` a nivel de proyecto entero
+    (`npm run build` falla) aunque no afecta el bundle real (nadie importa `pages/inventory` desde
+    `App.tsx`). NO lo toco, no es mi trabajo. Verifiqué con `tsc --noEmit | grep -v inventory` que
+    mi cambio en `Vehicles.tsx` no añade ningún error nuevo — el único error del proyecto es ese,
+    ajeno. Owner: cuando esa otra sesión cierre `GarageScene.tsx`, `npm run build` volverá a pasar
+    solo.
 
 ## Log
 - 2026-06-30: Recon completo de `web/` (app React real con auth/router/components/hooks). PLAN.md escrito.
