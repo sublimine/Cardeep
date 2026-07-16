@@ -126,6 +126,12 @@
   distinto al que acabo de fijar en `Pricing.tsx` (Starter €0/Scale €199). Corregido: ambas páginas
   cotizan ahora exactamente igual (Starter €0 sandbox sin INVENTORY / Scale €199 200k tokens+INVENTORY
   / Enterprise a medida). Verificado: build verde, Playwright `:5173/api` 0 errores, light+dark.
-  Siguiente: (a) Assistant.tsx/Finance.tsx/Invoices.tsx (aún con `tok()`/`GCard` — revisar también
-  contenido, no solo estilo, por el mismo motivo), (b) B2 (Shell+nav unificada), (c) B3 (Landing
-  pública+Auth), (d) B7 (auditoría final).
+  **Bloque 7 CERRADO+VERIFICADO:** `Assistant.tsx` migrado igual. Su contenido (valoración VIN,
+  descripción de anuncio, chat de negocio, generación de imagen) ya estaba bien alineado — sin
+  contradicciones que corregir esta vez. Limpieza extra: `useIsDark` quedó importado sin uso tras
+  migrar todo el color a CSS vars — eliminado (menos ruido). Verificado funcionalmente, no solo
+  visualmente: build verde, Playwright `:5173/assistant`, clic real en una sugerencia → mensaje de
+  usuario + respuesta del bot con negritas + historial actualizado, todo renderizado correcto, 0
+  errores consola.
+  Siguiente: (a) Finance.tsx/Invoices.tsx (aún con `tok()`/`GCard`), (b) B2 (Shell+nav unificada),
+  (c) B3 (Landing pública+Auth), (d) B7 (auditoría final).

@@ -3,88 +3,23 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   MessageSquare, FileText, Search, Image as ImageIcon, Send, Plus, ChevronRight,
 } from 'lucide-react'
+import Card from '../components/Card'
 import { useAuthContext } from '../auth/AuthContext'
-
-// ── Theme observer ─────────────────────────────────────────────────────────────
-function useIsDark() {
-  const [dark, setDark] = useState(() => !document.documentElement.classList.contains('light'))
-  useEffect(() => {
-    const obs = new MutationObserver(() => setDark(!document.documentElement.classList.contains('light')))
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => obs.disconnect()
-  }, [])
-  return dark
-}
-
-// ── Token helper ───────────────────────────────────────────────────────────────
-function tok(dark: boolean) {
-  return {
-    t1:        dark ? '#f1f5f9'                    : '#0f172a',
-    t2:        dark ? '#cbd5e1'                    : '#334155',
-    t3:        dark ? '#94a3b8'                    : '#64748b',
-    t4:        dark ? '#475569'                    : '#94a3b8',
-    div:       dark ? 'rgba(255,255,255,0.07)'     : 'rgba(0,0,0,0.07)',
-    cardBg:    dark ? 'rgba(255,255,255,0.04)'     : 'rgba(255,255,255,0.82)',
-    cardBord:  dark ? 'rgba(255,255,255,0.08)'     : 'rgba(0,0,0,0.08)',
-    subBg:     dark ? 'rgba(255,255,255,0.03)'     : 'rgba(0,0,0,0.03)',
-    subBord:   dark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.07)',
-    inputBg:   dark ? 'rgba(255,255,255,0.06)'     : 'rgba(0,0,0,0.05)',
-    inputBord: dark ? 'rgba(255,255,255,0.10)'     : 'rgba(0,0,0,0.10)',
-    botBubble: dark ? 'rgba(255,255,255,0.07)'     : 'rgba(0,0,0,0.05)',
-  }
-}
-
-// ── Glass card ─────────────────────────────────────────────────────────────────
-function GCard({
-  dark, children, style,
-}: { dark: boolean; children: React.ReactNode; style?: React.CSSProperties }) {
-  const c = tok(dark)
-  return (
-    <div style={{
-      background: c.cardBg,
-      border: `1px solid ${c.cardBord}`,
-      borderRadius: 18,
-      backdropFilter: 'blur(32px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(32px) saturate(180%)',
-      boxShadow: dark
-        ? '0 4px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)'
-        : '0 4px 20px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.90)',
-      overflow: 'hidden',
-      ...style,
-    }}>
-      {children}
-    </div>
-  )
-}
+import { ACCENT, GOOD } from '../lib/theme'
 
 // ── renderBold — **text** → <strong> ──────────────────────────────────────────
-function renderBold(text: string, color: string): React.ReactNode {
+function renderBold(text: string): React.ReactNode {
   return text.split(/\*\*(.*?)\*\*/g).map((part, i) =>
-    i % 2 === 1
-      ? <strong key={i} style={{ fontWeight: 700, color }}>{part}</strong>
-      : <span key={i}>{part}</span>
+    i % 2 === 1 ? <strong key={i} className="font-bold" style={{ color: 'var(--text-primary)' }}>{part}</strong> : <span key={i}>{part}</span>
   )
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Mode = 'ask' | 'listing' | 'vin' | 'image'
 
-interface ChatMsg {
-  id: string
-  role: 'user' | 'bot'
-  text: string
-  imageUrl?: string
-}
+interface ChatMsg { id: string; role: 'user' | 'bot'; text: string; imageUrl?: string }
+interface Conversation { id: string; title: string; mode: Mode; messages: ChatMsg[]; updatedAt: string }
 
-interface Conversation {
-  id: string
-  title: string
-  mode: Mode
-  messages: ChatMsg[]
-  updatedAt: string
-}
-
-// ── Mode config ────────────────────────────────────────────────────────────────
 const MODES: { id: Mode; label: string; desc: string }[] = [
   { id: 'ask',     label: 'Preguntar',              desc: 'Stock · precios · mercado EU'  },
   { id: 'listing', label: 'Descripción de anuncio', desc: 'Genera texto de venta'          },
@@ -92,7 +27,6 @@ const MODES: { id: Mode; label: string; desc: string }[] = [
   { id: 'image',   label: 'Imagen de coche',         desc: 'Genera imagen desde descripción'},
 ]
 
-// ── Suggested prompts per mode ─────────────────────────────────────────────────
 const SUGGESTIONS: Record<Mode, string[]> = {
   ask: [
     '¿Cuántos coches tengo en stock?',
@@ -124,7 +58,6 @@ const SUGGESTIONS: Record<Mode, string[]> = {
   ],
 }
 
-// ── Empty-state copy ───────────────────────────────────────────────────────────
 const EMPTY: Record<Mode, { heading: string; body: string }> = {
   ask:     { heading: 'Pregunta sobre tu negocio',           body: 'Consulta stock, márgenes, pipeline y alertas del mercado EU en tiempo real.' },
   listing: { heading: 'Genera una descripción de anuncio',   body: 'Indica marca, modelo, año y km. Obtendrás un texto profesional listo para publicar.' },
@@ -132,11 +65,8 @@ const EMPTY: Record<Mode, { heading: string; body: string }> = {
   image:   { heading: 'Describe el coche a visualizar',      body: 'Marca, color y ángulo. Recibirás una imagen optimizada para anuncio.' },
 }
 
-const NEW_TITLE: Record<Mode, string> = {
-  ask: 'Nueva consulta', listing: 'Nuevo anuncio', vin: 'Nueva valoración', image: 'Nueva imagen',
-}
+const NEW_TITLE: Record<Mode, string> = { ask: 'Nueva consulta', listing: 'Nuevo anuncio', vin: 'Nueva valoración', image: 'Nueva imagen' }
 
-// ── Car images for mock image generation ───────────────────────────────────────
 const CAR_IMAGES = [
   'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=480&h=270&fit=crop',
   'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=480&h=270&fit=crop',
@@ -145,7 +75,6 @@ const CAR_IMAGES = [
   'https://images.unsplash.com/photo-1620891549027-942fdc95d3f5?w=480&h=270&fit=crop',
 ]
 
-// ── Mock bot replies ───────────────────────────────────────────────────────────
 function botReply(mode: Mode, text: string): { text: string; imageUrl?: string } {
   const q = text.toLowerCase()
 
@@ -182,16 +111,12 @@ function botReply(mode: Mode, text: string): { text: string; imageUrl?: string }
 
   if (mode === 'image') {
     const idx = Math.floor(Math.random() * CAR_IMAGES.length)
-    return {
-      text: `Imagen generada para:\n*"${text}"*\n\nResolución **1920×1080** · Fondo neutro · Optimizada para anuncio. Lista para descargar.`,
-      imageUrl: CAR_IMAGES[idx],
-    }
+    return { text: `Imagen generada para:\n*"${text}"*\n\nResolución **1920×1080** · Fondo neutro · Optimizada para anuncio. Lista para descargar.`, imageUrl: CAR_IMAGES[idx] }
   }
 
   return { text: 'No entendí la consulta. Intenta de nuevo.' }
 }
 
-// ── Mode icon ──────────────────────────────────────────────────────────────────
 function ModeIcon({ mode, size = 13 }: { mode: Mode; size?: number }) {
   const p = { width: size, height: size }
   if (mode === 'ask')     return <MessageSquare {...p} />
@@ -200,25 +125,19 @@ function ModeIcon({ mode, size = 13 }: { mode: Mode; size?: number }) {
   return <ImageIcon {...p} />
 }
 
-// ── Bot avatar SVG ─────────────────────────────────────────────────────────────
 function BotAvatar({ size = 24 }: { size?: number }) {
   return (
-    <div style={{
-      width: size, height: size, borderRadius: Math.round(size * 0.29), flexShrink: 0,
-      background: 'linear-gradient(135deg, #3B82F6, #2563eb)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: '0 2px 8px rgba(59,130,246,0.30)',
-      alignSelf: 'flex-start',
-    }}>
-      <svg width={size * 0.42} height={size * 0.42} viewBox="0 0 24 24" fill="none"
-        stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <div
+      className="flex shrink-0 items-center justify-center self-start"
+      style={{ width: size, height: size, borderRadius: Math.round(size * 0.29), background: `linear-gradient(135deg, ${ACCENT}, #2563eb)`, boxShadow: `0 2px 8px ${ACCENT}4d` }}
+    >
+      <svg width={size * 0.42} height={size * 0.42} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
     </div>
   )
 }
 
-// ── timeAgo ────────────────────────────────────────────────────────────────────
 function timeAgo(iso: string): string {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
   if (m < 1)  return 'ahora'
@@ -229,10 +148,7 @@ function timeAgo(iso: string): string {
 
 // ── Assistant page ─────────────────────────────────────────────────────────────
 export default function Assistant() {
-  const dark = useIsDark()
   const { user } = useAuthContext()
-  const c = tok(dark)
-  const BLUE = '#3B82F6'
 
   const [mode, setMode] = useState<Mode>('ask')
   const [conversations, setConversations] = useState<Conversation[]>([{
@@ -249,12 +165,10 @@ export default function Assistant() {
   const activeConv = conversations.find(cv => cv.id === activeConvId) ?? conversations[0]
   const msgs = activeConv?.messages ?? []
 
-  // Scroll to bottom on new messages or typing indicator
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [msgs.length, typing])
 
-  // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -264,7 +178,6 @@ export default function Assistant() {
 
   function handleModeChange(m: Mode) {
     setMode(m)
-    // Reuse existing empty conversation for this mode, else create one
     const existing = conversations.find(cv => cv.mode === m && cv.messages.length === 0)
     if (existing) { setActiveConvId(existing.id); return }
     const id = `conv-${Date.now()}`
@@ -293,9 +206,7 @@ export default function Assistant() {
       const reply = botReply(mode, t)
       const botMsg: ChatMsg = { id: `b-${Date.now()}`, role: 'bot', text: reply.text, imageUrl: reply.imageUrl }
       setConversations(prev => prev.map(cv =>
-        cv.id === activeConvId
-          ? { ...cv, messages: [...cv.messages, botMsg], updatedAt: new Date().toISOString() }
-          : cv
+        cv.id === activeConvId ? { ...cv, messages: [...cv.messages, botMsg], updatedAt: new Date().toISOString() } : cv
       ))
       setTyping(false)
     }, 720 + Math.random() * 380)
@@ -304,170 +215,96 @@ export default function Assistant() {
   const username = user?.name?.split(' ')[0] ?? 'Usuario'
 
   return (
-    <div style={{ padding: '24px 24px 32px', maxWidth: 1360, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="mx-auto flex flex-col gap-4" style={{ padding: '24px 24px 32px', maxWidth: 1360 }}>
 
-      {/* ── Page header ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.36, ease: [0.32, 0.72, 0, 1] }}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${BLUE}, #2563eb)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(59,130,246,0.30)', flexShrink: 0,
-          }}>
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.36, ease: [0.32, 0.72, 0, 1] }} className="flex shrink-0 items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px]" style={{ background: `linear-gradient(135deg, ${ACCENT}, #2563eb)`, boxShadow: `0 0 20px ${ACCENT}4d` }}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             </svg>
           </div>
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: c.t1, lineHeight: 1 }}>CARDEEP AI</h1>
-            <p style={{ fontSize: 11, color: c.t4, marginTop: 3 }}>Asistente inteligente para dealers · mercado EU</p>
+            <h1 className="text-xl font-extrabold leading-none tracking-[-0.02em]" style={{ color: 'var(--text-primary)' }}>CARDEEP AI</h1>
+            <p className="mt-[3px] text-[11px]" style={{ color: 'var(--text-muted)' }}>Asistente inteligente para dealers · mercado EU</p>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <motion.span
-            style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}
-            animate={{ opacity: [1, 0.4, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
-          <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 600 }}>Online · {username}</span>
+        <div className="flex items-center gap-1.5">
+          <motion.span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: GOOD }} animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }} />
+          <span className="text-[11px] font-semibold" style={{ color: GOOD }}>Online · {username}</span>
         </div>
       </motion.div>
 
-      {/* ── Mode chips ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.07, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-        style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}
-      >
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07, duration: 0.32, ease: [0.32, 0.72, 0, 1] }} className="flex shrink-0 flex-wrap gap-2">
         {MODES.map(m => {
           const active = mode === m.id
           return (
             <button
               key={m.id}
               onClick={() => handleModeChange(m.id)}
+              className="flex items-center gap-[7px] rounded-full px-4 py-2 text-[12.5px] transition-colors"
               style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '8px 16px', borderRadius: 99,
-                background: active ? 'rgba(59,130,246,0.13)' : (dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'),
-                border: active ? '1px solid rgba(59,130,246,0.36)' : `1px solid ${c.cardBord}`,
-                color: active ? BLUE : c.t3,
-                fontSize: 12.5, fontWeight: active ? 700 : 500,
-                fontFamily: 'General Sans, Inter, system-ui',
-                cursor: 'pointer', transition: 'all 140ms',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                background: active ? `${ACCENT}21` : 'var(--bg-surface)',
+                border: `1px solid ${active ? `${ACCENT}5c` : 'var(--border-subtle)'}`,
+                color: active ? ACCENT : 'var(--text-secondary)',
+                fontWeight: active ? 700 : 500,
               }}
             >
               <ModeIcon mode={m.id} size={12} />
               <span>{m.label}</span>
-              <span style={{ fontSize: 10, color: active ? 'rgba(59,130,246,0.65)' : c.t4, fontWeight: 400 }}>
-                {m.desc}
-              </span>
+              <span className="text-[10px] font-normal" style={{ color: active ? `${ACCENT}a6` : 'var(--text-muted)' }}>{m.desc}</span>
             </button>
           )
         })}
       </motion.div>
 
-      {/* ── Main layout: chat + sidebar ── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.13, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}
-        style={{ display: 'grid', gridTemplateColumns: '1fr 276px', gap: 14, minHeight: 580 }}
+        className="grid gap-3.5"
+        style={{ gridTemplateColumns: '1fr 276px', minHeight: 580 }}
       >
 
-        {/* ── Chat panel ── */}
-        <GCard dark={dark} style={{ display: 'flex', flexDirection: 'column' }}>
+        <Card className="!p-0 flex flex-col">
 
-          {/* Chat header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 18px 12px', borderBottom: `1px solid ${c.div}`, flexShrink: 0,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 9,
-                background: 'rgba(59,130,246,0.11)', border: '1px solid rgba(59,130,246,0.22)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: BLUE,
-              }}>
+          <div className="flex shrink-0 items-center justify-between p-[14px_18px_12px]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+            <div className="flex items-center gap-[9px]">
+              <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px]" style={{ background: `${ACCENT}1c`, border: `1px solid ${ACCENT}38`, color: ACCENT }}>
                 <ModeIcon mode={mode} size={13} />
               </div>
               <div>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: c.t1 }}>
-                  {MODES.find(m => m.id === mode)?.label}
-                </div>
-                <div style={{ fontSize: 10, color: c.t4 }}>
-                  {MODES.find(m => m.id === mode)?.desc}
-                </div>
+                <div className="text-[12.5px] font-bold" style={{ color: 'var(--text-primary)' }}>{MODES.find(m => m.id === mode)?.label}</div>
+                <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{MODES.find(m => m.id === mode)?.desc}</div>
               </div>
             </div>
             <button
               onClick={startNew}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '5px 12px', borderRadius: 8,
-                background: 'rgba(59,130,246,0.09)', border: '1px solid rgba(59,130,246,0.22)',
-                color: BLUE, fontSize: 11, fontWeight: 600,
-                fontFamily: 'General Sans, Inter, system-ui', cursor: 'pointer', transition: 'all 130ms',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.17)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.09)' }}
+              className="flex items-center gap-[5px] rounded-lg px-3 py-1 text-[11px] font-semibold transition-colors"
+              style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
             >
               <Plus style={{ width: 11, height: 11 }} />
               Nueva
             </button>
           </div>
 
-          {/* Messages area */}
-          <div
-            ref={scrollRef}
-            style={{
-              flex: 1, overflowY: 'auto', padding: '18px 18px 10px',
-              display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0,
-            }}
-          >
-            {/* Empty state */}
+          <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-[18px_18px_10px]">
             {msgs.length === 0 && !typing && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
-                  justifyContent: 'center', flex: 1, gap: 14, padding: '40px 24px',
-                }}
-              >
-                <div style={{
-                  width: 54, height: 54, borderRadius: 16,
-                  background: 'rgba(59,130,246,0.09)', border: '1px solid rgba(59,130,246,0.18)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: BLUE,
-                }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-1 flex-col items-center justify-center gap-3.5 p-[40px_24px]">
+                <div className="flex h-[54px] w-[54px] items-center justify-center rounded-2xl" style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}2e`, color: ACCENT }}>
                   <ModeIcon mode={mode} size={22} />
                 </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: c.t1, marginBottom: 6 }}>
-                    {EMPTY[mode].heading}
-                  </div>
-                  <div style={{ fontSize: 12, color: c.t4, maxWidth: 300, lineHeight: 1.65 }}>
-                    {EMPTY[mode].body}
-                  </div>
+                <div className="text-center">
+                  <div className="mb-1.5 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{EMPTY[mode].heading}</div>
+                  <div className="mx-auto max-w-[300px] text-xs leading-[1.65]" style={{ color: 'var(--text-muted)' }}>{EMPTY[mode].body}</div>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 400 }}>
+                <div className="flex max-w-[400px] flex-wrap justify-center gap-1.5">
                   {SUGGESTIONS[mode].slice(0, 3).map((s, i) => (
                     <button
                       key={i}
                       onClick={() => send(s)}
-                      style={{
-                        padding: '6px 12px', borderRadius: 99, fontSize: 11, cursor: 'pointer',
-                        background: c.subBg, border: `1px solid ${c.subBord}`, color: c.t3,
-                        fontFamily: 'General Sans, Inter, system-ui', transition: 'all 120ms',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.08)'; e.currentTarget.style.color = BLUE; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.22)' }}
-                      onMouseLeave={e => { e.currentTarget.style.background = c.subBg; e.currentTarget.style.color = c.t3; e.currentTarget.style.borderColor = c.subBord }}
+                      className="rounded-full px-3 py-1.5 text-[11px] transition-colors"
+                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
                     >
                       {s.length > 36 ? s.slice(0, 34) + '…' : s}
                     </button>
@@ -476,53 +313,31 @@ export default function Assistant() {
               </motion.div>
             )}
 
-            {/* Message list */}
             <AnimatePresence initial={false}>
               {msgs.map(msg => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.22 }}
-                  style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 8 }}
-                >
+                <motion.div key={msg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   {msg.role === 'bot' && <BotAvatar size={26} />}
 
-                  <div style={{ maxWidth: '78%', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    <div style={{
-                      padding: '9px 13px',
-                      borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
-                      background: msg.role === 'user' ? `linear-gradient(135deg, ${BLUE}, #2563eb)` : c.botBubble,
-                      border: msg.role === 'bot' ? `1px solid ${c.subBord}` : 'none',
-                      fontSize: 12.5, lineHeight: 1.62, color: msg.role === 'user' ? '#fff' : c.t1,
-                      boxShadow: msg.role === 'user' ? '0 3px 12px rgba(59,130,246,0.28)' : 'none',
-                      whiteSpace: 'pre-wrap',
-                    }}>
-                      {msg.role === 'bot' ? renderBold(msg.text, c.t1) : msg.text}
+                  <div className="flex max-w-[78%] flex-col gap-[7px]">
+                    <div
+                      className="whitespace-pre-wrap p-[9px_13px] text-[12.5px] leading-[1.62]"
+                      style={{
+                        borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
+                        background: msg.role === 'user' ? `linear-gradient(135deg, ${ACCENT}, #2563eb)` : 'var(--bg-surface)',
+                        border: msg.role === 'bot' ? '1px solid var(--border-subtle)' : 'none',
+                        color: msg.role === 'user' ? '#fff' : 'var(--text-primary)',
+                        boxShadow: msg.role === 'user' ? `0 3px 12px ${ACCENT}48` : 'none',
+                      }}
+                    >
+                      {msg.role === 'bot' ? renderBold(msg.text) : msg.text}
                     </div>
 
                     {msg.imageUrl && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.96 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.12, duration: 0.32 }}
-                        style={{
-                          borderRadius: 12, overflow: 'hidden',
-                          border: `1px solid ${c.cardBord}`, maxWidth: 400,
-                        }}
-                      >
-                        <img src={msg.imageUrl} alt="Imagen generada" style={{ width: '100%', display: 'block' }} />
-                        <div style={{
-                          padding: '7px 12px', background: c.subBg, borderTop: `1px solid ${c.subBord}`,
-                          fontSize: 10, color: c.t4, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        }}>
+                      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.12, duration: 0.32 }} className="max-w-[400px] overflow-hidden rounded-xl" style={{ border: '1px solid var(--border-default)' }}>
+                        <img src={msg.imageUrl} alt="Imagen generada" className="block w-full" />
+                        <div className="flex items-center justify-between p-[7px_12px] text-[10px]" style={{ background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
                           <span>Imagen generada · CARDEEP AI</span>
-                          <span style={{
-                            padding: '2px 7px', borderRadius: 99, fontSize: 9.5, fontWeight: 600,
-                            background: 'rgba(59,130,246,0.10)', color: BLUE, border: '1px solid rgba(59,130,246,0.20)',
-                          }}>
-                            1920×1080
-                          </span>
+                          <span className="rounded-full px-[7px] py-0.5 text-[9.5px] font-semibold" style={{ background: `${ACCENT}1a`, color: ACCENT, border: `1px solid ${ACCENT}33` }}>1920×1080</span>
                         </div>
                       </motion.div>
                     )}
@@ -531,28 +346,13 @@ export default function Assistant() {
               ))}
             </AnimatePresence>
 
-            {/* Typing indicator */}
             <AnimatePresence>
               {typing && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  style={{ display: 'flex', gap: 8, alignItems: 'center' }}
-                >
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-2">
                   <BotAvatar size={26} />
-                  <div style={{
-                    padding: '10px 14px', borderRadius: '4px 14px 14px 14px',
-                    background: c.botBubble, border: `1px solid ${c.subBord}`,
-                    display: 'flex', gap: 4, alignItems: 'center',
-                  }}>
+                  <div className="flex items-center gap-1 rounded-[4px_14px_14px_14px] p-[10px_14px]" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                     {[0, 1, 2].map(i => (
-                      <motion.span
-                        key={i}
-                        style={{ width: 5, height: 5, borderRadius: '50%', background: c.t3, display: 'block' }}
-                        animate={{ y: [0, -5, 0] }}
-                        transition={{ duration: 0.55, repeat: Infinity, delay: i * 0.14 }}
-                      />
+                      <motion.span key={i} className="block h-[5px] w-[5px] rounded-full" style={{ background: 'var(--text-secondary)' }} animate={{ y: [0, -5, 0] }} transition={{ duration: 0.55, repeat: Infinity, delay: i * 0.14 }} />
                     ))}
                   </div>
                 </motion.div>
@@ -560,15 +360,11 @@ export default function Assistant() {
             </AnimatePresence>
           </div>
 
-          {/* ── Composer ── */}
-          <div style={{ padding: '10px 14px 14px', borderTop: `1px solid ${c.div}`, flexShrink: 0 }}>
-            <div style={{
-              display: 'flex', gap: 10, alignItems: 'flex-end',
-              background: c.inputBg,
-              border: `1px solid ${composerFocused ? 'rgba(59,130,246,0.38)' : c.inputBord}`,
-              borderRadius: 14, padding: '8px 8px 8px 14px',
-              transition: 'border-color 150ms',
-            }}>
+          <div className="shrink-0 p-[10px_14px_14px]" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+            <div
+              className="flex items-end gap-2.5 rounded-2xl p-[8px_8px_8px_14px] transition-colors"
+              style={{ background: 'var(--bg-input)', border: `1px solid ${composerFocused ? `${ACCENT}61` : 'var(--border-default)'}` }}
+            >
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -583,105 +379,63 @@ export default function Assistant() {
                   mode === 'vin'     ? 'Pega el VIN de 17 dígitos o matrícula…' :
                                        'Describe el coche: marca, color, ángulo, fondo…'
                 }
-                style={{
-                  flex: 1, resize: 'none', outline: 'none', border: 'none',
-                  background: 'transparent', color: c.t1, fontSize: 12.5,
-                  fontFamily: 'General Sans, Inter, system-ui', lineHeight: 1.55,
-                  overflowY: 'hidden',
-                }}
+                className="flex-1 resize-none overflow-y-hidden border-0 bg-transparent text-[12.5px] leading-[1.55] outline-none"
+                style={{ color: 'var(--text-primary)' }}
               />
               <motion.button
                 onClick={() => send(input)}
                 disabled={!input.trim() || typing}
                 whileTap={{ scale: 0.89 }}
+                className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] border-0 transition-colors"
                 style={{
-                  width: 34, height: 34, borderRadius: 10, flexShrink: 0, border: 'none',
-                  background: input.trim() && !typing
-                    ? `linear-gradient(135deg, ${BLUE}, #2563eb)`
-                    : (dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'),
+                  background: input.trim() && !typing ? `linear-gradient(135deg, ${ACCENT}, #2563eb)` : 'var(--bg-surface)',
                   cursor: input.trim() && !typing ? 'pointer' : 'default',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 140ms',
-                  boxShadow: input.trim() && !typing ? '0 3px 10px rgba(59,130,246,0.28)' : 'none',
+                  boxShadow: input.trim() && !typing ? `0 3px 10px ${ACCENT}48` : 'none',
                 }}
               >
-                <Send style={{ width: 14, height: 14, color: input.trim() && !typing ? '#fff' : c.t4, transition: 'color 140ms' }} />
+                <Send style={{ width: 14, height: 14, color: input.trim() && !typing ? '#fff' : 'var(--text-muted)' }} />
               </motion.button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 5 }}>
-              <span style={{ fontSize: 10, color: c.t4 }}>Enter para enviar · Shift+Enter nueva línea</span>
+            <div className="mt-1.5 flex justify-end">
+              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Enter para enviar · Shift+Enter nueva línea</span>
             </div>
           </div>
-        </GCard>
+        </Card>
 
-        {/* ── Right sidebar ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-col gap-3">
 
-          {/* Suggested prompts */}
-          <GCard dark={dark} style={{ flexShrink: 0 }}>
-            <div style={{ padding: '14px 16px' }}>
-              <div style={{
-                fontSize: 9.5, fontWeight: 700, letterSpacing: '0.10em',
-                textTransform: 'uppercase', color: c.t4, marginBottom: 11,
-              }}>
-                Sugerencias
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <AnimatePresence mode="wait">
-                  {SUGGESTIONS[mode].map((s, i) => (
-                    <motion.button
-                      key={`${mode}-${i}`}
-                      initial={{ opacity: 0, x: 8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -6 }}
-                      transition={{ delay: i * 0.04, duration: 0.20 }}
-                      onClick={() => send(s)}
-                      disabled={typing}
-                      style={{
-                        textAlign: 'left', width: '100%', display: 'flex', alignItems: 'flex-start', gap: 7,
-                        padding: '7px 10px', borderRadius: 9,
-                        background: c.subBg, border: `1px solid ${c.subBord}`,
-                        color: c.t2, fontSize: 11,
-                        fontFamily: 'General Sans, Inter, system-ui',
-                        cursor: typing ? 'default' : 'pointer',
-                        lineHeight: 1.45, transition: 'all 120ms',
-                      }}
-                      onMouseEnter={e => {
-                        if (!typing) {
-                          e.currentTarget.style.background = dark ? 'rgba(59,130,246,0.08)' : 'rgba(59,130,246,0.06)'
-                          e.currentTarget.style.borderColor = 'rgba(59,130,246,0.20)'
-                          e.currentTarget.style.color = c.t1
-                        }
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.background = c.subBg
-                        e.currentTarget.style.borderColor = c.subBord
-                        e.currentTarget.style.color = c.t2
-                      }}
-                    >
-                      <ChevronRight style={{ width: 10, height: 10, color: BLUE, flexShrink: 0, marginTop: 2 }} />
-                      <span>{s}</span>
-                    </motion.button>
-                  ))}
-                </AnimatePresence>
-              </div>
+          <Card className="shrink-0">
+            <div className="mb-[11px] text-[9.5px] font-bold uppercase tracking-[0.10em]" style={{ color: 'var(--text-muted)' }}>Sugerencias</div>
+            <div className="flex flex-col gap-[5px]">
+              <AnimatePresence mode="wait">
+                {SUGGESTIONS[mode].map((s, i) => (
+                  <motion.button
+                    key={`${mode}-${i}`}
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -6 }}
+                    transition={{ delay: i * 0.04, duration: 0.20 }}
+                    onClick={() => send(s)}
+                    disabled={typing}
+                    className="flex w-full items-start gap-[7px] rounded-lg p-[7px_10px] text-left text-[11px] leading-[1.45] transition-colors"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: typing ? 'default' : 'pointer' }}
+                  >
+                    <ChevronRight style={{ width: 10, height: 10, color: ACCENT, flexShrink: 0, marginTop: 2 }} />
+                    <span>{s}</span>
+                  </motion.button>
+                ))}
+              </AnimatePresence>
             </div>
-          </GCard>
+          </Card>
 
-          {/* Conversation history */}
-          <GCard dark={dark} style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-            <div style={{ padding: '14px 16px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: 11, flexShrink: 0,
-              }}>
-                <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase', color: c.t4 }}>
-                  Historial
-                </div>
-                <span style={{ fontSize: 10, color: c.t4 }}>{conversations.length}</span>
+          <Card className="min-h-0 flex-1 overflow-hidden">
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="mb-[11px] flex shrink-0 items-center justify-between">
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.10em]" style={{ color: 'var(--text-muted)' }}>Historial</div>
+                <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{conversations.length}</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, overflowY: 'auto', flex: 1, minHeight: 0 }}>
+              <div className="flex min-h-0 flex-1 flex-col gap-[5px] overflow-y-auto">
                 {conversations.map((conv, i) => {
                   const isActive = conv.id === activeConvId
                   return (
@@ -691,43 +445,23 @@ export default function Assistant() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
                       onClick={() => { setActiveConvId(conv.id); setMode(conv.mode) }}
-                      style={{
-                        textAlign: 'left', width: '100%', padding: '8px 10px', borderRadius: 9,
-                        background: isActive ? 'rgba(59,130,246,0.09)' : c.subBg,
-                        border: isActive ? '1px solid rgba(59,130,246,0.22)' : `1px solid ${c.subBord}`,
-                        cursor: 'pointer', fontFamily: 'General Sans, Inter, system-ui',
-                        transition: 'all 120ms', display: 'flex', flexDirection: 'column', gap: 3,
-                      }}
-                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
-                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = c.subBg }}
+                      className="flex w-full flex-col gap-[3px] rounded-lg p-[8px_10px] text-left transition-colors"
+                      style={{ background: isActive ? `${ACCENT}17` : 'var(--bg-surface)', border: `1px solid ${isActive ? `${ACCENT}38` : 'var(--border-subtle)'}` }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                          <span style={{ color: isActive ? BLUE : c.t4, flexShrink: 0 }}>
-                            <ModeIcon mode={conv.mode} size={10} />
-                          </span>
-                          <span style={{
-                            fontSize: 11, fontWeight: isActive ? 700 : 500,
-                            color: isActive ? c.t1 : c.t2,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {conv.title}
-                          </span>
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="shrink-0" style={{ color: isActive ? ACCENT : 'var(--text-muted)' }}><ModeIcon mode={conv.mode} size={10} /></span>
+                          <span className="truncate text-[11px]" style={{ fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{conv.title}</span>
                         </div>
-                        <span style={{ fontSize: 9.5, color: c.t4, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                          {timeAgo(conv.updatedAt)}
-                        </span>
+                        <span className="shrink-0 text-[9.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{timeAgo(conv.updatedAt)}</span>
                       </div>
-                      <div style={{ fontSize: 10, color: c.t4, paddingLeft: 15 }}>
-                        {conv.messages.length}{' '}
-                        {conv.messages.length === 1 ? 'mensaje' : 'mensajes'}
-                      </div>
+                      <div className="pl-[15px] text-[10px]" style={{ color: 'var(--text-muted)' }}>{conv.messages.length} {conv.messages.length === 1 ? 'mensaje' : 'mensajes'}</div>
                     </motion.button>
                   )
                 })}
               </div>
             </div>
-          </GCard>
+          </Card>
 
         </div>
       </motion.div>
