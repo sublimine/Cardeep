@@ -160,9 +160,13 @@ Applied to every endpoint that can return unbounded rows
 
 ## 4. Endpoint catalogue
 
-Live path list from `GET /openapi.json` `[VERIFIED]` (17 routes). Every data
-endpoint depends on `require_api_key` (§5) and carries a rate-limit decorator
-(§7). Cache eligibility is §6.
+Live path list from `GET /openapi.json` `[VERIFIED]` (17 routes at the original
+2026-06-23 seal). **Stale as a total** — the surface has grown since via
+parallel pillar work not yet folded into this count (AUTH-0's `/auth/*` router,
+02-history-reports' `/vehicles/{ulid}/lifetime` below); re-run the
+`GET /openapi.json` count before quoting a total. Every data endpoint depends on
+`require_api_key` (§5) and carries a rate-limit decorator (§7). Cache
+eligibility is §6.
 
 > **Live divergence (must replicate consciously).** `/geo/seal` is in code
 > (`geo.py:92`) AND live. `/geo/exhaustiveness` is in code (`geo.py:147`) but the
@@ -313,6 +317,67 @@ here, unlike `/delta`). Live `[VERIFIED]` shows the real lifecycle of one car:
 ```
 `meta` carries `vehicle_ulid` plus pagination. 404 when the ulid is absent from
 `vehicle`.
+
+### 4.8b `GET /vehicles/{vehicle_ulid}/lifetime` — **"Vida en mercado"** (02-history-reports F2)
+
+`vehicles.py` (appended after `/history`). Un-paginated (`meta.count` = episode
+count); not cached (measured p95 ≈241ms for a single-episode vehicle over 20
+live requests — under the threshold that would justify caching per this
+pillar's own F2 close-out rule: "la decisión de cachear se toma con medición,
+no antes"); `RATE_DEFAULT`. 404 when the ulid is absent from `vehicle`; served
+for non-canonical aliases too (same contract as `/history` above — aliasing is
+entity-level dedup, not an erasure of this vehicle's own lifetime).
+
+Walks `v_vehicle_lifetime` (migrations/0075, the F1 overlay — **only the most
+recent `lifetime_link_run` with `vam_verified=TRUE` is ever read**; today no
+run has been gated TRUE, see plans/cardeep-omni/02-history-reports.md §11, so
+this view serves 0 rows and every vehicle degrades honestly to
+`chain_verified:false`) outward from `vehicle_ulid` in both directions via a
+bounded recursive CTE, then computes the C1-C10 aggregates from
+`services/api/lifetime_aggregates.py` (pure functions, zero DB imports, 26 unit
+tests) over each chain member's own `vehicle_event` rows.
+
+Response shape — `data`:
+```jsonc
+{
+  "vehicle_ulid": "…",
+  "chain_verified": false,               // true only once an F1 run is vam_verified
+  "episodes": [                          // 1 today whenever chain_verified=false
+    {
+      "vehicle_ulid": "…", "entity_ulid": "…",
+      "c1_days": 34, "c1_suppressed": false, "c1_suppression_reason": null,
+      "c3_price_drops": 0, "c3_price_increases": 1, "c4_pct_drop": -0.68,
+      "c8a_km_retreats": [],             // [{old_km,new_km,delta,observed_at}] when >1000km
+      "make": "SEAT", "model": "Arona", "year": 2023,
+      "price": 13773.0, "km": 69695, "status": "available",
+      "first_seen": "…", "last_seen": "…",
+      "dealer_cdp_code": "CDP-ES-28-…", "dealer_name": "…"
+    }
+  ],
+  "links": [],                            // F1's lifetime_link edges in this chain
+  "aggregates": {                         // C2/C6/C7/C8b — null/false/[] whenever chain_verified=false
+    "chain_verified": false, "c2_total_days": null,
+    "c6_dealer_count": null, "c7_episode_count": 1, "c7_rebotado": false,
+    "c8b_km_retreats": []                 // reuses F1's per-edge evidence.km_retreat_flagged verbatim
+  },
+  "semaforo": { "label": "sin_senales", "triggers": [] },  // C9, taxative closed list
+  "freshness": "visto hace 20 días"       // C10
+}
+```
+Live `[VERIFIED]` against a real vehicle (`curl http://127.0.0.1:8090/vehicles/{ulid}/lifetime`),
+2026-07-18: byte-correct UTF-8 (verified with a binary-safe `-o file` capture —
+a terminal-codepage mojibake red herring was ruled out, not a wire-format bug).
+
+**C1 dual-path suppression** (§7 of the pillar letter): C1 compares
+`vehicle.first_seen`/`last_seen` against the `NEW`/`GONE` event timestamps; a
+divergence > 24h suppresses `c1_days` (`c1_suppressed:true`, with a named
+`c1_suppression_reason`) rather than serving a number only one path agrees on.
+
+**Non-canonical alias / no-chain parity test**: `tests/test_api_lifetime.py`
+covers 404, envelope shape, alias service, a vehicle with no verified chain
+(the v1 default for every vehicle today), and skips (never fails) the
+verified-chain assertion while no run is gated TRUE — an honest skip, not a
+silenced failure.
 
 ### 4.9 `GET /vehicles/{vehicle_ulid}/platforms` — platforms a car is listed on
 

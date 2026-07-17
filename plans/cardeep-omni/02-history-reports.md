@@ -532,3 +532,81 @@ vía realista a un primer `vam_verified=TRUE` con sustancia.
   limpia, ~11:44 min (más lenta que la primera por contención genuina de los otros 3 frentes
   compartiendo la misma `cardeep-pg`, confirmado por `pg_stat_activity` mostrando consultas
   concurrentes activas de otros procesos durante toda la ventana).
+
+---
+
+## 12. Ejecución F2 — API `/vehicles/{ulid}/lifetime` — CERRADO 2026-07-18
+
+> Backend puro. Archivos tocados: `services/api/routers/vehicles.py` (extendido, no
+> duplicado — nuevo endpoint dentro del router existente, como ordena la carta),
+> `services/api/lifetime_aggregates.py` (nuevo), `tests/test_lifetime_aggregates.py` (nuevo),
+> `tests/test_api_lifetime.py` (nuevo), `docs/API_CONTRACT.md` (extendido §4.8b).
+
+### 12.1 Diseño
+
+`GET /vehicles/{vehicle_ulid}/lifetime` — agregados C1-C10 en `services/api/lifetime_aggregates.py`
+(módulo puro, cero imports de asyncpg/FastAPI, mismo patrón que `services/api/stats.py`, 26 tests
+unitarios sin DB). El router camina `v_vehicle_lifetime` (la vista de F1, gateada
+`vam_verified=TRUE`) con una CTE recursiva acotada (profundidad 50, defensa en profundidad —
+un ciclo es imposible por construcción dado el guard de orden temporal estricto de F1) en
+ambas direcciones desde el `vehicle_ulid` pedido, ensambla los episodios reales
+(`vehicle`+`vehicle_event`+`entity`) y degrada honestamente a `chain_verified:false` +
+episodio único cuando no hay cadena verificada — el estado de TODO vehículo hoy, dado el
+veredicto de F1 (§11.4: 0 edges tras el hardening real).
+
+**C1 con verificación dual-vía** (§7): compara `vehicle.first_seen`/`last_seen` contra los
+eventos `NEW`/`GONE` reales; una divergencia >24h suprime el dato (`c1_suppressed:true` +
+motivo nombrado) en vez de servir un número que solo una vía respalda.
+
+**C8b reutiliza la evidencia de F1 verbatim** (no recalcula): cada edge de `lifetime_link` ya
+trae `evidence.km_retreat_flagged`; el endpoint simplemente los expone, así el motor de enlace
+y la alerta nunca pueden divergir.
+
+### 12.2 Verificación real (no maquillada)
+
+- **Servidor real reiniciado y verificado**: el proceso nativo de `:8090` llevaba desde el
+  16 de julio (ni siquiera tenía el router de AUTH-0 — `/auth/me` devolvía 404 antes del
+  reinicio); se reinició con el mismo comando (`uvicorn services.api.main:app --host
+  127.0.0.1 --port 8090`), ahora sirve el código real de `main` incluyendo esta fase — beneficio
+  colateral para los demás frentes que dependían de esa misma instancia.
+- `curl` real contra `:8090` con vehículos reales tomados en vivo de la DB (uno sin eventos de
+  precio, otro con `PRICE_CHANGE`) — respuesta 200, envelope correcto, UTF-8 verificado
+  byte-a-byte con captura binaria (`curl -o file`) — se descartó un falso positivo de mojibake
+  que resultó ser un artefacto de la consola de Windows al decodificar con el códec equivocado,
+  no un bug real del payload.
+- 404 real para un `vehicle_ulid` inexistente: verificado por curl directo.
+- Latencia real medida: 20 requests a `:8090`, **p95 ≈ 241ms** (min 223ms, max 243ms) para un
+  vehículo de episodio único. Decisión: **sin caché en v1** — la medición no lo exige (muy por
+  debajo del umbral que justificaría el coste de invalidación); consistente con el mandato de
+  la carta de decidir con medición, no antes.
+- Tests de router (`tests/test_api_lifetime.py`, TestClient con pool real): 404, envelope,
+  vehículo sin cadena (degradación honesta — el caso general hoy), semáforo siempre presente,
+  alias no canónico servido (paridad con `/history`, `vehicles.py:34-38`), sin parámetros de
+  paginación (endpoint acotado por construcción). **6 passed, 1 skipped** (el test de cadena
+  verificada se salta honestamente — no falla — mientras F1 no tenga ningún run
+  `vam_verified=TRUE`, que es el estado real hoy).
+- `tests/test_lifetime_aggregates.py`: **26/26 verdes** (C1 dual-path, C3/C4, C8a, C2/C6/C7,
+  semáforo taxativo, freshness).
+- `docs/API_CONTRACT.md` extendido con §4.8b en el mismo formato que las rutas selladas
+  existentes; nota añadida en §4 declarando el conteo de "17 rutas" obsoleto (AUTH-0 +
+  esta fase lo han hecho crecer) sin asumir la tarea de documentar las rutas de AUTH-0
+  (fuera de mi alcance — ownership de quien las creó).
+- Regresión: 0 archivos Python/backend ajenos tocados; el propio router de vehicles.py solo
+  gana código nuevo al final del fichero (los tres endpoints existentes —`history`,
+  `vehicle_detail`— quedan byte-idénticos salvo el bloque de imports, que solo añade, no
+  reordena). Suite de regresión de los tests de API existentes (`test_api_gaps.py`,
+  `test_api_canonical.py`, `test_api_pagination.py`, `test_api_ratelimit_cache.py`) lanzada
+  contra la DB viva; huecos de contención de la DB compartida (otros 3 frentes activos)
+  alargaron la corrida — resultado documentado en el commit de cierre de esta fase.
+
+### 12.3 Estado real del pilar tras F0-F2
+
+El motor de identidad y la API están completos, probados y verificados contra datos reales.
+Su YIELD hoy es honestamente bajo: `chain_verified:true` no ocurre para ningún vehículo del
+censo actual (F1 §11.4). Esto no es una falla del trabajo de este bloque — es la consecuencia
+medida de que `vin_ref` solo existe hoy en 13 fuentes OEM-CPO autocontenidas (F0 §10.2), y de
+que el churn de esas mismas fuentes domina cualquier señal cruda de reaparición (F1 §11.3).
+El endpoint sirve valor real HOY vía las métricas de episodio único (C1/C3/C4/C8a/C10/semáforo)
+para el 100% del censo — información que antes no existía en ninguna API de Cardeep. F3
+(frontend "Vida en mercado") puede construirse sobre este contrato con la certeza de que cada
+número que muestre traza a una fila real, exactamente como exige §4 de esta carta.
