@@ -79,7 +79,7 @@ from services.api.deps import (  # noqa: F401
     resolve_cluster,
 )
 from services.api.ratelimit import limiter, rate_limit_handler
-from services.api.routers import auth, entities, geo, ops, platforms, vehicles
+from services.api.routers import auth, entities, geo, market, ops, platforms, vehicles
 
 # Prod-gated fail-fast: in CARDEEP_ENV=prod, refuse to start on the dev-default DSN OR without an
 # API key configured. No-op in dev/test (CARDEEP_ENV unset) — startup stays byte-identical.
@@ -154,6 +154,7 @@ app.include_router(geo.router)
 app.include_router(vehicles.router)
 app.include_router(platforms.router)
 app.include_router(auth.router)
+app.include_router(market.router)
 
 
 if __name__ == "__main__":

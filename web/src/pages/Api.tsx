@@ -25,13 +25,21 @@ const MONTH_CONSUMED = 115_800
 const MONTH_LIMIT    = 200_000
 const CALLS_TODAY    = 1_847
 
+// Real, live endpoints only (services/api/routers/*.py, re-verified line-by-line
+// 2026-07-18 against `grep -rn "@router\.get" services/api/routers/`). The prior
+// catalog listed /v1/valuation, /v1/history, /v1/market/{model} and /v1/deal-score —
+// none of which exist; "valuation by VIN" stays PROHIBITED until a validated pricing
+// model exists (01-market-intelligence.md §4), and "deal-score" has no backing
+// endpoint at all. This list is a curated subset of the real catalog (26 endpoints
+// total across entities/geo/market/platforms/vehicles/auth/ops) — the ones with
+// direct external-consumer value; /health, /auth/*, /ops/* are platform-internal.
 const ENDPOINTS: Endpoint[] = [
-  { id: 'val', path: 'GET /v1/valuation/{vin}',       type: 'INFO',      description: 'Retail, trade & residual value with confidence score', tokens: '5 tokens' },
-  { id: 'his', path: 'GET /v1/history/{vin}',          type: 'INFO',      description: 'Mileage history, accident records & ownership chain', tokens: '8 tokens' },
-  { id: 'mkt', path: 'GET /v1/market/{model}',         type: 'INFO',      description: 'Price-position vs live market, days-to-sell, p25 / p75 distribution', tokens: '3 tokens' },
-  { id: 'ds',  path: 'GET /v1/deal-score/{listing}',   type: 'INFO',      description: 'Deal score 0–100 with margin, rotation & arbitrage breakdown', tokens: '4 tokens' },
-  { id: 'inv', path: 'GET /v1/inventory',              type: 'INVENTORY', description: 'Live stock feed — filterable by make, model, region & price range', tokens: '1 / 100 results' },
-  { id: 'inv1',path: 'GET /v1/inventory/{id}',         type: 'INVENTORY', description: 'Full listing detail with VAM-verified multi-source provenance', tokens: '1 token' },
+  { id: 'mkt', path: 'GET /market/segments/{make}/{model}/stats', type: 'INFO',      description: 'Price distribution (p25/p50/p75), rotation, momentum & seller-pressure for a market segment', tokens: '3 tokens' },
+  { id: 'dmd', path: 'GET /market/provinces/demand',              type: 'INFO',      description: 'Provincial demand ranking — absorption rate (removed listings vs. available stock)', tokens: '2 tokens' },
+  { id: 'his', path: 'GET /vehicles/{ulid}/history',              type: 'INFO',      description: 'Full event history for one physical vehicle (NEW / GONE / PRICE_CHANGE / PHOTO_CHANGE / KM_CHANGE)', tokens: '2 tokens' },
+  { id: 'lif', path: 'GET /vehicles/{ulid}/lifetime',             type: 'INFO',      description: 'Verified cross-platform lifetime chain plus C1-C10 market-life aggregates', tokens: '4 tokens' },
+  { id: 'inv', path: 'GET /entities/{cdp_code}/inventory',        type: 'INVENTORY', description: 'Live, canonically-deduped stock feed for one dealer or platform', tokens: '1 / 100 results' },
+  { id: 'delta', path: 'GET /entities/{cdp_code}/delta',          type: 'INVENTORY', description: 'Append-only delta feed: new listings, removals, price/photo/km changes', tokens: '1 token' },
 ]
 
 const INITIAL_KEYS: ApiKey[] = [
@@ -71,23 +79,34 @@ const C_RAW: [number, number, number, number, number][] = [
 ]
 const CONSUMPTION_DATA = C_RAW.map((d, i) => ({ day: String(i + 1), market: d[0], valuation: d[1], history: d[2], dealScore: d[3], inventory: d[4] }))
 
+// Real endpoint, real segment, real numbers — captured from the live published
+// market_stat run (01-market-intelligence F2, run_id 01KXS6Q4TJKCWM19KKQN2SJ2J1,
+// re-verified 2026-07-18). No "valuation by VIN" example: that endpoint is
+// PROHIBITED until a validated pricing model exists (01-market-intelligence.md §4).
 const CURL_EXAMPLE = `curl -s -X GET \\
-  "https://api.cardeep.eu/v1/valuation/WVWZZZ3CZME123456" \\
-  -H "Authorization: Bearer cdp_live_••••3f9a" \\
+  "https://api.cardeep.eu/market/segments/Peugeot/208/stats?year=2024&fuel=Gasolina" \\
+  -H "X-API-Key: cdp_live_••••3f9a" \\
   -H "Accept: application/json"`
 
 const RESPONSE_EXAMPLE = `{
-  "vin": "WVWZZZ3CZME123456",
-  "make": "Volkswagen",
-  "model": "Golf",
-  "year": 2021,
-  "retail": 18450,
-  "trade": 16200,
-  "residual": { "1yr": 15200, "2yr": 12400, "3yr": 10100 },
-  "price_position": -4.2,
-  "confidence": 0.94,
-  "tokens_used": 5,
-  "tokens_remaining": 84195
+  "ok": true,
+  "data": {
+    "make": "Peugeot",
+    "model": "208",
+    "year": 2024,
+    "fuel": "Gasolina",
+    "metrics": {
+      "M1": { "n": 7026, "p25": 11990, "p50": 13500, "p75": 14770, "scope": "nat" },
+      "M3": { "n": 451, "value": 10.2, "scope": "nat",
+              "detail": { "unit": "days_to_listing_removal", "window_days": 35.2 } },
+      "M4": { "n": 7026, "value": 547.7, "scope": "nat",
+              "detail": { "gone_n": 451, "available_n": 7026 } },
+      "M9": { "n": 7026, "value": 17.9, "scope": "nat",
+              "detail": { "n_cut": 1261, "median_cut_pct": 2.1 } }
+    }
+  },
+  "error": null,
+  "meta": { "run_id": "01KXS6Q4TJKCWM19KKQN2SJ2J1", "window_description": "..." }
 }`
 
 const ENDPOINT_COLORS: Record<string, string> = { market: ACCENT, valuation: WARN, history: '#60a5fa', dealScore: GOOD, inventory: '#0891b2' }
@@ -403,7 +422,7 @@ function CodeExample() {
       <div className="mb-3.5 flex items-center justify-between">
         <div>
           <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Quick Start</h2>
-          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Call the valuation endpoint in under 60 seconds</p>
+          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Call the market segment endpoint in under 60 seconds</p>
         </div>
         <button
           onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 2200) }}
@@ -423,7 +442,7 @@ function CodeExample() {
           <pre className="m-0 overflow-x-auto rounded-[10px] p-[14px_16px] font-mono text-[11.5px] leading-[1.7]" style={{ background: '#0f172a', color: '#e2e8f0' }}>{CURL_EXAMPLE}</pre>
         </div>
         <div>
-          <div className="mb-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>Response · 200 OK · 5 tokens</div>
+          <div className="mb-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>Response · 200 OK · 3 tokens</div>
           <pre className="m-0 overflow-x-auto rounded-[10px] p-[14px_16px] font-mono text-[11.5px] leading-[1.7]" style={{ background: '#0f172a', color: '#e2e8f0' }}>{RESPONSE_EXAMPLE}</pre>
         </div>
       </div>

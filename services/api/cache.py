@@ -59,6 +59,9 @@ CACHEABLE_PATH_PREFIXES: tuple[str, ...] = (
                       # /geo/{p}/municipalities/{m}/entities
     "/entities/",     # /entities/{cdp}/inventory — changes only after harvest runs
     "/platforms/",    # /platforms/{cdp}/inventory — stable within a harvest window
+    "/market/",       # /market/segments/.../stats, /market/provinces/demand — change
+                      # only when a NEW market_stat_run is published (batch cadence,
+                      # not per-request), 01-market-intelligence F3.
 )
 
 # Paths that MUST NOT be cached regardless of prefix match.
