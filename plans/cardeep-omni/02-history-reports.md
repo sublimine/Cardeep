@@ -1,8 +1,9 @@
 # Carta de sub-proyecto — Pilar 02: Historial de vehículo ("Cardeep Report", estilo Carvertical/Carfax)
 
 > Programa: cardeep-omni · Clave: `02-history-reports` · Fecha: 2026-07-17
-> Fase: SYNTHESIS (arquitectura). Este documento es la fuente de verdad del pilar
-> hasta que una fase de ejecución lo enmiende con evidencia nueva.
+> Fase: **EJECUCIÓN F0-F2 CERRADA 2026-07-18** (commits `main` `36bf903`/`2fcf1f9`/`c99ade6`
+> — ver §10/§11/§12 para la evidencia real que enmienda el diseño original de §1-§9).
+> F3 (frontend) y F4 (blindaje continuo) quedan abiertas, no ejecutadas en esta sesión.
 > Doctrina aplicada: antialucinación tolerancia cero — cada afirmación lleva
 > [VERIFICADO] (leída en código/doc real, con archivo:línea) o [ASUMIDO]
 > (declarada como suposición, jamás disfrazada de certeza).
