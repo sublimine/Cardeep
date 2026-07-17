@@ -274,3 +274,138 @@ Regla de presentación: todo dato servible lleva su evidencia recuperable (las f
 ## Resumen
 
 El pilar 02 hoy es una fachada Carfax sin un byte real detrás (Check/Dossier, cliente y proxy huérfanos, tipos alineados a un backend Go que no existe) más un activo genuino enterrado: el delta append-only `vehicle_event` servido por `/vehicles/{ulid}/history`. La jugada no es imitar a Carfax —sin acceso institucional sería mentir, y GANVAM ya ocupa el passthrough DGT— sino construir el historial que nadie tiene: la **vida en mercado por unidad física** (re-identificación GONE→reaparición con doble señal y gate VAM, días en mercado, bajadas, rebotes entre dealers, km declarado que retrocede), 100% trazable a filas reales, con semáforo taxativo estilo DGT y handoff honesto al informe oficial. Camino crítico determinista, LLM barato solo para señales auxiliares y el modelo caro solo para gatear cadenas ambiguas; cinco fases con demolición del mock en F0 y verificación dual-path de cada dato antes de mostrarlo.
+
+---
+
+## 10. Ejecución F0 — CERRADO 2026-07-18 (evidencia real, enmienda esta carta)
+
+> Ejecutado en sesión backend-only, cero colisión declarada con los otros 3 frentes de
+> Bloque 1 (01-market-intelligence, AUTH-0, 00-F3/F4). DB viva verificada directamente
+> (`docker exec cardeep-pg psql`), no re-uso ciego de cifras ajenas.
+
+### 10.1 Corrección de cifras heredadas de C-9 (master) — el código manda
+
+El master (C-9) hereda de 04 "VIN17 solo 17.730 (de ~2,3M)". Re-medido HOY por SQL directo
+sobre `vehicle` (2.670.827 filas totales, `last_seen` máximo = 2026-07-17 16:22 — el motor
+revivido en Bloque 0 ya está escribiendo, el censo NO está congelado a 06-28 como asumía la
+carta original de 02 antes de esta sesión):
+
+| Métrica | Valor medido AHORA | Query |
+|---|---|---|
+| `vehicle` filas totales | 2.670.827 | `SELECT COUNT(*) FROM vehicle` |
+| `vin_ref` no nulo | 2.520.623 (94,4%) | `... WHERE vin_ref IS NOT NULL AND vin_ref<>''` |
+| `vin_ref` con longitud=17 | 44.727 | `LENGTH(TRIM(vin_ref))=17` |
+| `vin_ref` longitud=17 **y patrón VIN válido** (`^[A-HJ-NPR-Z0-9]{17}$`, excluye I/O/Q) | **25.777** | ver query en `10.2` |
+| `photo_hash` no nulo | **0** (confirma la carta original) | `... WHERE photo_hash IS NOT NULL AND photo_hash<>''` |
+
+**Discrepancia declarada, no maquillada**: mi cifra (25.777 patrón-válido / 44.727 longitud-17)
+difiere de la heredada (17.730). No re-hago el barrido completo de 04 para reconciliar el
+origen exacto de la diferencia (podría ser DB drift desde 06-27, o un filtro de longitud vs
+patrón distinto en la query de 04) — declaro la diferencia, uso MI cifra (verificada en esta
+sesión, contra la DB viva de HOY) como base de F1, y dejo registrado que la cifra de 04 debe
+re-conciliarse si 04-F6 la consume literalmente.
+
+### 10.2 Hallazgo estructural NO declarado por ninguna carta previa: `vin_ref` está contaminado
+
+`vin_ref` NO es un campo VIN limpio. El 94,4% de no-nulos (2.520.623 filas) tiene longitudes
+de 5 a 36 caracteres — la inmensa mayoría (916.346 en longitud=12, 578.677 en longitud=8,
+563.502 en longitud=9, 348.200 en longitud=36) son IDs internos de plataforma, no VINs.
+Causa raíz identificada por lectura de fuente: `pipeline/sources/autoscout24.py:208` —
+`vin_ref=str(raw.get("id") or raw.get("identifier") or "")` — puebla `vin_ref` con el ID de
+listing de AutoScout24 (nunca un VIN real). El único extractor que pone un VIN genuino es
+`pipeline/platform/generic_dealer_site.py` (`vehicleIdentificationNumber` de JSON-LD/microdata
+schema.org, líneas 393/409/498/510).
+
+Consecuencia medida por host (`regexp_replace(deep_link, host)` cruzado con el patrón VIN
+estricto): **el 100% de los 25.777 VIN patrón-válido proviene EXCLUSIVAMENTE de programas
+OEM de vehículo de ocasión certificado** — Toyota (8.508), BMW Premium Selection (4.083),
+Hyundai (3.234/5.593), Audi (3.052/4.086), Volvo Selekt (2.489), Renew.auto (1.233/6.887),
+Mini (1.160), Lexus (986), Land Rover Approved (509), Subastacar (300/301), BMW (180/516),
+Jaguar Approved (41), Nissan Ocasión (1/1.526+1/1.685). **CERO** VIN patrón-válido proviene de
+wallapop, milanuncios, coches.net, autoscout24.es o autocasion.com — las plataformas de masa
+donde ocurre el grueso del "coche rebotado entre compraventas" que este pilar quiere medir.
+
+**Implicación arquitectónica para F1** (no estaba en el diseño original de esta carta): la
+señal `vin_ref exacto` del protocolo §7, tal y como el censo está poblado HOY, solo puede
+enlazar coches procedentes de las 13 fuentes OEM-CPO listadas arriba — un universo real pero
+pequeño, geográfica y comercialmente distinto del caso de uso principal (compraventas/
+particulares en marketplaces de masa). El motor F1 se construye GENÉRICO (no hardcodea esta
+limitación), de modo que el día que `photo_hash` se pueble (04-F6) el mismo código capture
+más eslabones sin tocar una línea. Se documenta como hueco honesto, no se disimula.
+
+### 10.3 Universo de pares candidato GONE→NEW medido (ventana 0-12 meses, señal vin_ref-estricto)
+
+```sql
+WITH clean_vin AS (
+  SELECT vehicle_ulid, entity_ulid, TRIM(vin_ref) AS vin, status, first_seen, last_seen
+  FROM vehicle
+  WHERE LENGTH(TRIM(vin_ref))=17 AND TRIM(vin_ref) ~ '^[A-HJ-NPR-Z0-9]{17}$'
+)
+SELECT COUNT(DISTINCT g.vehicle_ulid), COUNT(*)
+FROM clean_vin g JOIN clean_vin n
+  ON g.vin = n.vin AND g.vehicle_ulid <> n.vehicle_ulid
+WHERE g.status='gone' AND n.first_seen > g.last_seen
+  AND n.first_seen <= g.last_seen + INTERVAL '12 months';
+```
+
+- Total (mismo dealer o distinto): **351 vehículos GONE con ≥1 candidato** / 441 pares.
+- Solo cross-dealer (`entity_ulid` distinto — el caso de valor real, "coche rebotado"):
+  **344 vehículos GONE con ≥1 candidato** / 434 pares.
+
+Universo pequeño pero real y suficiente para TDD + muestra manual N=50 de §7 (344 < 350,
+la muestra cubriría prácticamente el universo cross-dealer entero en v1).
+
+### 10.4 Distribución de `vehicle_event` (confirma §1 de la carta original, cifras actualizadas)
+
+| `event_type` | count |
+|---|---|
+| NEW | 2.671.824 |
+| GONE | 567.858 |
+| PRICE_CHANGE | 323.587 |
+| PHOTO_CHANGE | 155.949 |
+| KM_CHANGE | 30.142 |
+
+`vehicle.status`: `available`=2.124.671, `gone`=546.156.
+
+### 10.5 Corrección de alcance §5 punto 4 — `web/src/api/client.ts` NO se elimina
+
+La carta original ordenaba eliminar `useCheck.ts`, `useDossier.ts`, `DossierReport.tsx` **y**
+`web/src/api/client.ts`. Verificado por grep antes de tocar nada: `client.ts` tiene **5
+consumidores fuera del alcance de este pilar** — `web/src/auth/AuthContext.tsx`,
+`web/src/hooks/useApi.ts`, `useDeals.ts`, `useInbox.ts`, `useKanban.ts`. `AuthContext.tsx` es
+territorio explícito de **AUTH-0** (frente paralelo de este mismo Bloque 1, master C-3); los
+cuatro hooks son territorio de 06-CRM. Borrar `client.ts` habría roto el build de 5 archivos
+ajenos — colisión directa con "cero colisión con los otros 3 frentes de este bloque" del
+mandato. **Se corrige**: `client.ts` queda intacto; solo se eliminan `useCheck.ts`,
+`useDossier.ts` y `DossierReport.tsx` (uso exclusivo de la fachada Check/Dossier, verificado
+0 consumidores externos antes de borrar). Nota para quien ejecute AUTH-0/06: `client.ts` sigue
+siendo infraestructura muerta funcionalmente (apunta a un proxy que nunca sirvió nada), pero
+su retirada corresponde a quien migre esos 5 consumidores a un cliente real — fuera del
+alcance de esta carta.
+
+### 10.6 Cambios ejecutados
+
+- Borrados: `web/src/hooks/useCheck.ts`, `web/src/hooks/useDossier.ts`,
+  `web/src/pages/check/DossierReport.tsx`.
+- `web/src/pages/Check.tsx`: reescrito a placeholder honesto ("En reconstrucción", sin datos
+  inventados); ya no importa los 3 ficheros borrados. `CheckLanding.tsx`/`CheckReport.tsx`
+  quedan intactos, sin importadores hasta F3 (compilan solos, no dependen de lo borrado).
+- `web/src/App.tsx`: rutas `/check` y `/check/:vin` retiradas (comentario apunta a F3).
+- `web/src/layout/Shell.tsx`: entrada de nav "VIN Check" retirada + import `FileSearch`
+  huérfano limpiado.
+- `web/vite.config.ts`: proxy `/api` → puerto huérfano eliminado.
+- `web/src/types/check.ts`/`dossier.ts` — **NO tocados** (la carta los reserva para F3, ya
+  quedan sin importador vivo salvo `check.ts` que aún usan `CheckReport.tsx`/`AlertCard.tsx`/
+  `SourceBadge.tsx`).
+
+### 10.7 Verificación real (no maquillada)
+
+- `npm run build` (`tsc --noEmit && vite build`) → **verde**, 3.591 módulos, sin errores.
+- `grep -r "8506" web/src` → 0 resultados. `grep -r "useDossier" web/src` → 0 resultados.
+- No existe test runner JS automatizado en este repo (`package.json` sin script `test`; los
+  `*.test.ts` existentes son módulos de auto-verificación invocados manualmente, no un CI) —
+  el gate real de "sin regresión" en el lado web es el build, que pasa. F0 no tocó ningún
+  archivo Python/backend, así que no hay superficie de regresión en la suite pytest (195
+  ficheros) que auditar en esta fase.
+- Coverage SQL de §10.1-10.4 medido en vivo contra `cardeep-pg` (puerto 5433, sano) con las
+  queries citadas arriba, reproducibles por cualquiera.

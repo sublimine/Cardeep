@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Car, KanbanSquare, Users, GitPullRequest,
-  MessageSquare, Calendar, BarChart3, Settings, FileSearch,
+  MessageSquare, Calendar, BarChart3, Settings,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
   TrendingUp, Zap, Code2, LineChart, StickyNote, Receipt, CreditCard, UserCircle, LifeBuoy,
   MessagesSquare, Bot,
@@ -63,7 +63,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/api',       label: 'API & Tokens', icon: Code2,      end: false },
       { to: '/assistant', label: 'Asistente IA', icon: Bot,        end: false },
-      { to: '/check',     label: 'VIN Check',    icon: FileSearch, end: false },
+      // '/check' nav entry removed (02-history-reports F0): route quarantined until F3.
     ],
   },
   {

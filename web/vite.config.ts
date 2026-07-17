@@ -5,12 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     allowedHosts: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8506',
-        changeOrigin: true,
-      },
-    },
+    // No dev proxy: the real API client (web/src/api/cardeep.ts) calls VITE_API_BASE
+    // (:8090) directly. The previous '/api' proxy target was orphaned — nothing in
+    // this repo ever served that port (docker-compose.yml defines cardeep-pg/api/
+    // autopilot only); it only fed the now-quarantined report/dossier hooks.
+    // Removed 02-history-reports F0 (2026-07-18).
   },
   build: {
     outDir: 'dist',

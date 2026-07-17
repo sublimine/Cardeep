@@ -46,15 +46,49 @@ Orden fijado por `00-MASTER.md` §4, "serie, corto":
      hacerlo en vivo violaría la doctrina single-producer mientras el motor ya cosecha).
 2. **Barrido documental único** — corregir `docs/frontend/00-PLATFORM-BLUEPRINT-E2E.md` §3.5/3.10/3.11
    + cifra de migraciones en `05-multiposting.md` (C-13), aplicando las decisiones de ownership ya
-   tomadas por el master (C-2, C-4, C-5, C-7).
+   tomadas por el master (C-2, C-4, C-5, C-7). **EJECUTADO 2026-07-17, commit `3956e4a`.**
 3. **09-Fase0** — demoler `Market.tsx`+`terminal/intelligence.ts` (incluye el artefacto `carNews()`
    que fabrica titulares falsos atribuidos a marcas reales), rescatar `indicators.ts`+tests+
    `MarketChart.tsx`+`drawings.tsx` en cuarentena. Desbloquea la demolición de 01-F6.
+   **EJECUTADO 2026-07-17, commit `672259f`**: build web verde, 0 imports rotos a los archivos
+   borrados, `/terminal` confirmado fuera del nav (ya lo estaba). Motor de 53 indicadores +
+   `MarketChart.tsx`+`drawings.tsx` en cuarentena, no borrados.
+
+## BLOQUE 0 — CERRADO 2026-07-17 (3/3, 0 errores)
+
+Commits en `main`/`origin`: `5635811` (motor), `3956e4a` (docs), `672259f` (demolición).
+Huecos honestos que quedan abiertos y declarados (no bloquean el resto del programa):
+supervivencia de 24h del motor sin verificar dentro de sesión (mecanismo sí verificado),
+1/6 breaker (`group_vo_chains_carplus`) sigue caído por migración del sitio a Next.js RSC
+(requiere receta nueva), replay de arranque en frío no completado (36+ fuentes exceden una
+sesión, sigue drenando solo), `validation_matrix.json` no refrescado a propósito (doctrina
+single-producer).
+
+## BLOQUE 1 — EN CURSO (lanzado 2026-07-17, 4 frentes en paralelo, task wkzzck2q4)
+
+1. 01-market-intelligence F0-F5 (market_stat, M1-M10, market.py, DGT, price-position)
+2. 02-history-reports F0-F2 (cuarentena Check/Dossier, motor lifetime_link, API)
+   - **F0 EJECUTADO 2026-07-18** (evidencia completa en `02-history-reports.md` §10 — leer
+     ahí, no re-auditar): coverage SQL real medida en vivo (censo NO congelado — motor de
+     Bloque 0 ya escribe, `last_seen` máx = 2026-07-17; `photo_hash`=0/2.670.827 confirmado;
+     `vin_ref` contaminado — 94,4% no-nulo pero solo 25.777 filas de patrón-VIN-válido, y ese
+     25.777 proviene EXCLUSIVAMENTE de 13 fuentes OEM-CPO, cero de wallapop/milanuncios/
+     coches.net/AS24/autocasion — causa raíz: `pipeline/sources/autoscout24.py:208` puebla
+     `vin_ref` con el listing-id de AS24, no un VIN; corrige y refina la cifra heredada de
+     C-9/04, 17.730→25.777, discrepancia declarada no reconciliada con 04). Universo de pares
+     candidato GONE→NEW cross-dealer en ventana 0-12m: 344 vehículos/434 pares. Cuarentena
+     Check/Dossier ejecutada: `useCheck.ts`/`useDossier.ts`/`DossierReport.tsx` borrados, ruta
+     `/check` retirada de `App.tsx`/`Shell.tsx`, proxy huérfano de `vite.config.ts` limpiado.
+     **Corrección de alcance**: `web/src/api/client.ts` NO se borra (5 consumidores fuera de
+     02: `AuthContext.tsx`=AUTH-0, `useApi/useDeals/useInbox/useKanban.ts`=06 — borrarlo
+     rompía su build, colisión directa con el mandato de cero-colisión de Bloque 1). Build web
+     verde (`tsc --noEmit && vite build`), greps `8506`/`useDossier`→0. Commit atómico
+     pendiente de este cierre.
+3. AUTH-0 (fusión 03-F1+05-F3+06-F1-tenancy+08-F1 en un esquema único, security review obligatoria)
+4. 00-F3/F4 (circuit breaker half-open, cadencia adaptativa por fuente)
 
 ## Próximos bloques (no empezar sin cerrar el anterior — ver 00-MASTER.md §4)
 
-- BLOQUE 1: 01-market-intelligence (F0-F5) + 02-history-reports (F0-F2) + AUTH-0 (fusión de 03/05/06/08)
-  + 00-F3/F4, en paralelo entre sí.
 - BLOQUE 2: 03-garage-fleet + 04-arbitrage + 05-multiposting (frente A), tras AUTH-0 y 01.
 - BLOQUE 3: 06-CRM + 07-marketing + 09 (resto) + 00-F5/F6.
 - BLOQUE 4 (último a propósito): 08-forum-community — requiere OK explícito del owner (gate duro

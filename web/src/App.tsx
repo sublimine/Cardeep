@@ -5,7 +5,6 @@ import ProtectedRoute from './auth/ProtectedRoute'
 import LoginPage from './auth/LoginPage'
 import Landing from './pages/Landing'
 import Marketplace from './pages/Marketplace'
-import CheckPage from './pages/Check'
 import Dashboard from './pages/Dashboard'
 import Vehicles from './pages/inventory'
 import Kanban from './pages/Kanban'
@@ -62,8 +61,9 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/reset"    element={<ResetPassword />} />
         <Route path="/2fa"      element={<TwoStep />} />
-        <Route path="/check"    element={<CheckPage />} />
-        <Route path="/check/:vin" element={<CheckPage />} />
+        {/* /check route deliberately removed (02-history-reports F0): the page
+            (web/src/pages/Check.tsx) is quarantined until F3 rewires it to real
+            data. Re-add here when F3 lands. */}
 
         {/* Protected app shell */}
         <Route
