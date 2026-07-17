@@ -141,6 +141,11 @@ GESTIONADOR_DETECT_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_GESTIONADOR_
 # hot-path dedup key, is always set). Self-verifying (writes only on re-hash match) → €0, zero-risk.
 CANONICAL_KEY_BACKFILL_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_CANONKEY_CADENCE_HOURS", "24"))
 
+# F4 adaptive cadence (00-marketplace-engine.md): recompute every registered source's change-
+# rate estimate daily from its own harvest_run/vehicle_event history. €0 (DB reads + targeted
+# UPDATEs of the estimate columns only, migration 0076) — never flips cadence_mode.
+CADENCE_ESTIMATE_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_CADENCE_ESTIMATE_CADENCE_HOURS", "24"))
+
 # Circuit breaker: skip sources with consecutive_fails >= this threshold
 BREAKER_TRIP_AT: int = 3
 
@@ -188,24 +193,75 @@ UNMAPPED_KEYS: frozenset[str] = frozenset()  # populated dynamically in _gap_rep
 # DB query helpers (synchronous psycopg2 — scheduler context is sync)
 # ---------------------------------------------------------------------------
 
+def _breaker_decision(
+    breaker_state: str | None,
+    cooldown_until: datetime | None,
+    now: datetime,
+) -> str:
+    """Pure Hystrix-style half-open decision (F3, closes the gap vs. Hystrix 2011 documented
+    in plans/cardeep-omni/00-marketplace-engine.md §3) for one source_health/source_breaker
+    pair. No DB access — trivially unit-testable, and reused identically by _due_sources().
+
+    Returns:
+      "allow" — breaker CLOSED (or no source_breaker row at all — never tripped): schedule
+                normally, same as before F3.
+      "probe" — breaker OPEN and its cooldown_until has elapsed: eligible for a probe this
+                tick. This function only decides ELIGIBILITY (read-only) — the actual
+                atomic claim (source_breaker 'open' -> 'half_open') happens inside
+                pipeline.ops.health.is_open(), called by the connector itself once
+                launched. Deliberately NOT claimed here or in _prepare_launch(): see
+                _prepare_launch()'s docstring for the double-claim bug that design would
+                cause (caught live during F3's rollout).
+      "skip"  — breaker OPEN and still cooling, OR breaker HALF_OPEN (a probe is already
+                outstanding elsewhere, Hystrix's "exactly one request in flight"): do not
+                schedule this tick.
+
+    Before F3, exclusion was decided from source_health.consecutive_fails >= BREAKER_TRIP_AT
+    alone — permanently, with no time dimension, so a tripped breaker could never again be
+    scheduled even long after its cooldown had elapsed (the mechanism health.py already
+    implements via source_breaker + is_open() was simply never consulted by the scheduler).
+    """
+    if breaker_state is None or breaker_state == "closed":
+        return "allow"
+    if breaker_state == "half_open":
+        return "skip"
+    # breaker_state == "open"
+    if cooldown_until is None or now < cooldown_until:
+        return "skip"
+    return "probe"
+
+
 def _due_sources(
     conn: "psycopg2.connection",
     countries: list[str] | None = None,
 ) -> list[tuple[str, int, datetime | None, datetime | None]]:
-    """Return (source_key, harvest_interval_hours, last_ok, last_fail) for sources that are
+    """Return (source_key, effective_interval_hours, last_ok, last_fail) for sources that are
     DUE for harvesting, ordered by most-overdue first.
 
     DUE condition:
       now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
-        >= harvest_interval_hours * interval '1 hour'
+        >= effective_interval_hours * interval '1 hour'
 
     Scoped to ``country_code = ANY(countries)`` (OI-10); ``countries`` defaults to
     active_countries() == ['ES'], so for the single ES tenant the due set is byte-identical to
     the pre-scope query (every existing source_health row is ES).
 
-    Sources with open circuit breakers (consecutive_fails >= BREAKER_TRIP_AT)
-    are excluded — the breaker check is done here to avoid the extra round-trip
-    to source_breaker (consecutive_fails mirrors the streak in source_health).
+    Circuit breaker (F3): LEFT JOINs source_breaker and applies _breaker_decision() per row.
+    A CLOSED breaker (or no source_breaker row) is included as before. An OPEN breaker whose
+    cooldown_until has elapsed is included too — as a half-open PROBE candidate, the fix for
+    the gap where a tripped source stayed excluded forever. An OPEN-and-cooling or HALF_OPEN
+    (probe already outstanding) breaker is excluded. The external 4-tuple contract is
+    unchanged — the breaker columns are consumed internally, never leaked to callers. The
+    actual half-open probe claim happens inside pipeline.ops.health.is_open(), called by
+    the connector itself once launched — never here or in _prepare_launch() (see that
+    function's docstring for why the scheduler must not also claim the slot).
+
+    Adaptive cadence (F4): effective_interval_hours is harvest_interval_hours UNLESS the
+    source has been explicitly flipped to cadence_mode='adaptive' AND has a non-null
+    computed_interval_hours (pipeline/ops/cadence_estimator.py), in which case the estimated
+    interval is used instead — for BOTH the DUE comparison and the ORDER BY. Every source not
+    deliberately opted in (cadence_mode defaults to 'static' for all rows, migration 0076)
+    behaves exactly as before F4.
     """
     if countries is None:
         countries = active_countries()
@@ -213,33 +269,117 @@ def _due_sources(
         cur.execute(
             """
             SELECT
-                source_key,
-                harvest_interval_hours,
-                last_ok,
-                last_fail,
-                consecutive_fails
-            FROM source_health
+                sh.source_key,
+                -- F4: use the adaptive computed_interval_hours when the source has been
+                -- explicitly flipped to cadence_mode='adaptive' AND has a real estimate;
+                -- every other source (the default 'static' for every pre-F4 row) falls
+                -- through to harvest_interval_hours unchanged — byte-identical DUE timing
+                -- to before F4 for any source not deliberately opted in.
+                CASE
+                    WHEN sh.cadence_mode = 'adaptive' AND sh.computed_interval_hours IS NOT NULL
+                    THEN sh.computed_interval_hours
+                    ELSE sh.harvest_interval_hours
+                END AS effective_interval_hours,
+                sh.last_ok,
+                sh.last_fail,
+                sh.consecutive_fails,
+                sb.state,
+                sb.cooldown_until
+            FROM source_health sh
+            LEFT JOIN source_breaker sb ON sb.source_key = sh.source_key
             WHERE
-                country_code = ANY(%(countries)s)
-                AND now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz)
-                    >= harvest_interval_hours * interval '1 hour'
+                sh.country_code = ANY(%(countries)s)
+                AND now() - COALESCE(sh.last_ok, sh.last_fail, '1970-01-01'::timestamptz)
+                    >= (CASE
+                            WHEN sh.cadence_mode = 'adaptive' AND sh.computed_interval_hours IS NOT NULL
+                            THEN sh.computed_interval_hours
+                            ELSE sh.harvest_interval_hours
+                        END) * interval '1 hour'
             ORDER BY
-                now() - COALESCE(last_ok, last_fail, '1970-01-01'::timestamptz) DESC
+                now() - COALESCE(sh.last_ok, sh.last_fail, '1970-01-01'::timestamptz) DESC
             """,
             {"countries": countries},
         )
         rows = cur.fetchall()
 
+    now = datetime.now(timezone.utc)
     result = []
-    for source_key, interval_h, last_ok, last_fail, consecutive_fails in rows:
-        if consecutive_fails >= BREAKER_TRIP_AT:
+    for source_key, interval_h, last_ok, last_fail, consecutive_fails, breaker_state, cooldown_until in rows:
+        decision = _breaker_decision(breaker_state, cooldown_until, now)
+        if decision == "skip":
             log.info(
-                "skip %s — breaker open (consecutive_fails=%d >= %d)",
-                source_key, consecutive_fails, BREAKER_TRIP_AT,
+                "skip %s — breaker %s (consecutive_fails=%d, cooldown_until=%s)",
+                source_key, breaker_state, consecutive_fails, cooldown_until,
             )
             continue
+        if decision == "probe":
+            log.info(
+                "PROBE-ELIGIBLE %s — half-open window reached (cooldown elapsed at %s); "
+                "will attempt exactly one probe this tick",
+                source_key, cooldown_until,
+            )
         result.append((source_key, interval_h, last_ok, last_fail))
     return result
+
+
+def _prepare_launch(source_key: str) -> bool:
+    """Re-check a source's breaker immediately before launching its subprocess (F3).
+
+    READ-ONLY — never mutates source_breaker. _due_sources() already decided ELIGIBILITY
+    (including half-open probe eligibility) from a snapshot read; this is a freshness
+    re-check for sources deep in a long due-list, where earlier sources in the SAME tick
+    may have each taken up to SUBPROCESS_TIMEOUT_SEC to finish, so a source's breaker could
+    have changed since _due_sources() read it hours earlier in the same tick.
+
+    Deliberately does NOT perform its own CAS claim of the half-open slot (a first version
+    did, and a live rollout caught the real bug that causes: pipeline.ops.health.is_open()
+    — called BY THE CONNECTOR ITSELF as its own internal pre-flight check — is the ONE
+    place the half-open claim happens (see is_open()'s docstring). If the scheduler ALSO
+    claimed the slot here first, the connector's own subsequent is_open() call would see
+    the slot already 'half_open' and treat ITS OWN authorized probe as a second, blocked,
+    concurrent caller — aborting the probe before it ever attempted real work, and leaving
+    the breaker stuck in 'half_open' forever (nothing left to call record_run() and resolve
+    it). Observed live 2026-07-17/18 for all 7 probe-eligible sources in the first tick
+    after deploy; see 00-marketplace-engine.md F3 for the full incident. Single-producer
+    serialization (heartbeat_tick never overlaps itself) already provides the "exactly one
+    subprocess at a time" guarantee this function's read-only re-check needs; the ACTUAL
+    Hystrix single-probe-in-flight enforcement lives entirely in is_open()'s CAS, exercised
+    by whichever connectors call it (tests/test_breaker_jitter_and_half_open.py).
+
+    Uses its own short-lived psycopg2 connection (same idiom as _harvest_run_max_id).
+    Fails CLOSED (returns False, blocking the launch) on any connection error: a health
+    check we cannot trust must never be treated as a green light to hammer a fragile source.
+    """
+    try:
+        conn = psycopg2.connect(_RAW_DSN)
+    except psycopg2.Error as exc:
+        log.error(
+            "breaker re-check failed to connect for %s: %s — skipping this tick",
+            source_key, exc,
+        )
+        return False
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT state, cooldown_until FROM source_breaker WHERE source_key=%s",
+                (source_key,),
+            )
+            row = cur.fetchone()
+    finally:
+        conn.close()
+
+    if row is None:
+        return True  # never tripped
+    breaker_state, cooldown_until = row
+    decision = _breaker_decision(breaker_state, cooldown_until, datetime.now(timezone.utc))
+    if decision == "skip":
+        log.info(
+            "skip %s — breaker state changed since _due_sources() read (now %s); "
+            "no longer eligible this tick",
+            source_key, breaker_state,
+        )
+        return False
+    return True
 
 
 def _all_source_keys(conn: "psycopg2.connection") -> list[str]:
@@ -405,6 +545,8 @@ def heartbeat_tick() -> None:
                 source_key, interval_h, last_ok,
             )
             continue
+        if not _prepare_launch(source_key):
+            continue  # breaker state changed since _due_sources() read it — logged in _prepare_launch
         pre_max_id = _harvest_run_max_id(source_key)   # high-water before launch (H7 safety net)
         exit_code = _run_source(source_key)
         if exit_code != 0:
@@ -574,6 +716,61 @@ def canonical_key_backfill_job() -> None:
     except Exception as exc:  # noqa: BLE001
         log.error("canonical_key_backfill: unexpected error: %s", exc)
     log.info("=== canonical_key_backfill END ===")
+
+
+def cadence_estimate_job() -> None:
+    """Daily job (F4, 00-marketplace-engine.md): recompute observed_change_rate /
+    computed_interval_hours for EVERY registered source from its own harvest_run +
+    vehicle_event history (pipeline/ops/cadence_estimator.py).
+
+    Writes ONLY the estimate columns (migration 0076) via apply_cadence_estimate() — it
+    NEVER flips cadence_mode. Flipping a source to 'adaptive' is a deliberate, gradual,
+    operator-driven rollout step (scripts/enable_adaptive_cadence.py), never an automatic
+    side effect of estimation; this job keeps the estimate FRESH for every source
+    (including ones still in 'static' mode) so an operator reviewing a rollout candidate
+    always sees a current number, not a stale one from whenever it was last computed by
+    hand. A source with insufficient sample (estimate_change_rate returns None) is simply
+    skipped this cycle — its columns stay whatever they were (or NULL). Never raises: a
+    per-source or connection error is logged and the job continues to the next source /
+    exits cleanly so the scheduler is never brought down by this job.
+    """
+    import asyncio
+
+    import asyncpg
+
+    from pipeline.ops.cadence_estimator import apply_cadence_estimate, estimate_change_rate
+
+    log.info("=== cadence_estimate START ===")
+
+    async def _run() -> dict:
+        conn = await asyncpg.connect(_ASYNCPG_DSN)
+        try:
+            rows = await conn.fetch("SELECT source_key FROM source_health ORDER BY source_key")
+            computed = 0
+            skipped = 0
+            for row in rows:
+                source_key = row["source_key"]
+                try:
+                    estimate = await estimate_change_rate(conn, source_key)
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("cadence_estimate: %s failed: %s", source_key, exc)
+                    skipped += 1
+                    continue
+                if estimate is None:
+                    skipped += 1
+                    continue
+                await apply_cadence_estimate(conn, estimate)
+                computed += 1
+            return {"computed": computed, "skipped_insufficient_or_error": skipped}
+        finally:
+            await conn.close()
+
+    try:
+        summary = asyncio.run(_run())
+        log.info("cadence_estimate: %s", summary)
+    except Exception as exc:  # noqa: BLE001
+        log.error("cadence_estimate: unexpected error: %s", exc)
+    log.info("=== cadence_estimate END ===")
 
 
 # ---------------------------------------------------------------------------
@@ -878,6 +1075,21 @@ def _start_scheduler() -> None:
         hours=CANONICAL_KEY_BACKFILL_CADENCE_HOURS,
         id="canonical_key_backfill",
         name="cardeep canonical_key forward-coverage",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
+    )
+
+    # F4 (00-marketplace-engine.md): daily per-source change-rate re-estimate. Writes ONLY
+    # the estimate columns (migration 0076); never flips cadence_mode (a separate, deliberate
+    # operator rollout step). Additive job id; touches no SourceEntry/connector key.
+    scheduler.add_job(
+        cadence_estimate_job,
+        trigger="interval",
+        hours=CADENCE_ESTIMATE_CADENCE_HOURS,
+        id="cadence_estimate",
+        name="cardeep F4 adaptive cadence estimate",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

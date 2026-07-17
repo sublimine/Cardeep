@@ -133,17 +133,31 @@ single-producer).
    `AND e.country_code = 'ES'` antes de cerrar. Huecos declarados (no bloqueantes): sin job de
    purga de `user_session` expiradas, sin ruta de auto-registro para `role='staff'` (YAGNI hasta
    que exista un consumidor real). Commit atómico pendiente de este cierre.
-4. 00-F3/F4 (circuit breaker half-open, cadencia adaptativa por fuente) — **✅ CERRADAS
-   2026-07-17/18** (registro completo en `00-marketplace-engine.md` §9 F3/F4 — leer ahí, no
-   re-auditar): F3 — el mecanismo half-open Hystrix YA existía en `pipeline/ops/health.py`
+4. 00-F3/F4 (circuit breaker half-open, cadencia adaptativa por fuente) — **✅ AMBAS
+   CERRADAS 2026-07-17/18, F3 con verificación en vivo confirmada por dos ticks reales**
+   (registro completo en `00-marketplace-engine.md` §9 F3/F4 — leer ahí, no re-auditar):
+   F3 — el mecanismo half-open Hystrix YA existía en `pipeline/ops/health.py`
    (`source_breaker`, 0013) pero `scheduler.py::_due_sources()` nunca lo consultaba
    (excluía por `consecutive_fails` sin dimensión temporal, dejándolo inalcanzable). Cero
-   migración nueva: `_breaker_decision`/`_prepare_launch` (CAS atómico) + jitter ±20% en el
-   backoff + corrección de `is_open()` (antes admitía más de una sonda concurrente en
-   half-open). 27 tests nuevos + 3 reescritos, TDD RED→GREEN, 0 regresión en 85 tests del
-   subconjunto de impacto. Desplegado en vivo vía `docker cp` (NO rebuild — habría horneado
-   el trabajo en curso sin commitear de 01/02, ver nota de aislamiento en la carta) +
-   `docker restart cardeep-autopilot`. F4 — migración `0076_adaptive_cadence.sql`
+   migración nueva: `_breaker_decision` + jitter ±20% en el backoff + corrección de
+   `is_open()` (antes admitía más de una sonda concurrente en half-open).
+   **Bug real cazado y corregido en vivo**: el primer despliegue tenía `_prepare_launch`
+   haciendo su PROPIO CAS del cupo half-open en el scheduler — que chocaba con el CAS que
+   cada conector YA hace por su cuenta vía `is_open()`, causando que las 7 sondas
+   legítimamente autorizadas se auto-bloquearan y quedaran `half_open` PERMANENTE (peor que
+   el bug original). Diagnosticado con SQL directo tras el primer tick (cero filas nuevas en
+   `harvest_run`, las 7 estancadas en `half_open`), corregido (`_prepare_launch` ahora
+   solo-lectura, la reclamación real vive únicamente en `is_open()`), datos reparados
+   (`half_open`→`open`), redesplegado. **Segundo tick real confirmó el fix**: las 7 fuentes
+   se reintentaron solas, ninguna se auto-bloqueó, las 7 completaron un intento real y
+   resolvieron a `open` con backoff más profundo (6 fallos por causas ajenas al breaker —
+   playwright/camoufox/fichero de receta ausentes, SSL expirado, HTTP 400 externo — cero
+   quedó en `half_open`). 28 tests nuevos (F3) + 21 tests nuevos (F4) + 3 reescritos, TDD
+   RED→GREEN, 0 regresión en 86 tests del subconjunto de impacto. Desplegado en vivo vía
+   `docker cp` (NO rebuild — habría
+   horneado el trabajo en curso sin commitear de 01/02, ver nota de aislamiento en la
+   carta) + `docker restart cardeep-autopilot` (×2, tras el fix). F4 — migración
+   `0076_adaptive_cadence.sql`
    (aditiva, `cadence_mode` default `static`); estimador Cho&G-M en
    `pipeline/ops/cadence_estimator.py` (21 tests); backtest real
    (`scripts/backtest_adaptive_cadence.py`) contra 90 días de historia real: de 56 fuentes,

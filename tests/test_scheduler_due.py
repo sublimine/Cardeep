@@ -55,8 +55,13 @@ def _row(
     last_ok: datetime | None,
     last_fail: datetime | None,
     consecutive_fails: int = 0,
-) -> tuple[str, int, datetime | None, datetime | None, int]:
-    return (source_key, interval_h, last_ok, last_fail, consecutive_fails)
+    breaker_state: str | None = None,
+    cooldown_until: datetime | None = None,
+) -> tuple[str, int, datetime | None, datetime | None, int, str | None, datetime | None]:
+    """breaker_state/cooldown_until default to None (no source_breaker row — i.e. the
+    breaker never tripped), matching the LEFT JOIN's shape for a healthy source (F3)."""
+    return (source_key, interval_h, last_ok, last_fail, consecutive_fails,
+            breaker_state, cooldown_until)
 
 
 NOW = datetime.now(timezone.utc)
@@ -107,19 +112,30 @@ class TestDueSourcesPredicate:
         assert "family_unreachable" in keys
 
     def test_breaker_open_source_skipped(self) -> None:
-        """A source with consecutive_fails >= BREAKER_TRIP_AT is excluded (breaker open)."""
+        """A source whose breaker is OPEN and still within its cooldown is excluded.
+
+        Post-F3: exclusion is decided from source_breaker.state/cooldown_until (the real
+        breaker), not from source_health.consecutive_fails alone — consecutive_fails has no
+        time dimension and used to leave a tripped source excluded forever (see
+        test_scheduler_half_open.py for the half-open recovery transition tests).
+
+        cooldown_until is hours (not minutes) in the future: _due_sources() compares
+        against a FRESH datetime.now() internally, while this file's NOW is frozen at
+        import time — a small offset would flake on a slow/full-suite run."""
         last_ok = NOW - timedelta(hours=200)
         conn = _fake_conn([
-            _row("coches_net_wholesale", 24, last_ok, None, BREAKER_TRIP_AT),
+            _row("coches_net_wholesale", 24, last_ok, None, BREAKER_TRIP_AT,
+                 breaker_state="open", cooldown_until=NOW + timedelta(hours=2)),
         ])
         due = _due_sources(conn)
         keys = [r[0] for r in due]
         assert "coches_net_wholesale" not in keys, (
-            f"Source with consecutive_fails={BREAKER_TRIP_AT} should be skipped (breaker open)"
+            "Source with an OPEN breaker still cooling down should be skipped"
         )
 
     def test_breaker_below_threshold_not_skipped(self) -> None:
-        """A source with consecutive_fails < BREAKER_TRIP_AT is NOT skipped."""
+        """A source with consecutive_fails < BREAKER_TRIP_AT (breaker never tripped, no
+        source_breaker row) is NOT skipped."""
         last_ok = NOW - timedelta(hours=200)
         conn = _fake_conn([
             _row("coches_net_wholesale", 24, last_ok, None, BREAKER_TRIP_AT - 1),
@@ -143,11 +159,12 @@ class TestDueSourcesPredicate:
         )
 
     def test_multiple_sources_mixed_breaker_state(self) -> None:
-        """Mix of due+open and due+closed: only closed ones appear in result."""
+        """Mix of due+open-cooling and due+closed: only the closed one appears in result."""
         last_ok_old = NOW - timedelta(hours=200)
         conn = _fake_conn([
             _row("autocasion_wholesale", 24, last_ok_old, None, 0),         # due, breaker closed
-            _row("coches_com_wholesale", 24, last_ok_old, None, BREAKER_TRIP_AT),  # due, breaker OPEN
+            _row("coches_com_wholesale", 24, last_ok_old, None, BREAKER_TRIP_AT,
+                 breaker_state="open", cooldown_until=NOW + timedelta(hours=2)),  # due, OPEN+cooling
             _row("wallapop_wholesale", 24, last_ok_old, None, 1),           # due, breaker closed (1 fail)
         ])
         due = _due_sources(conn)

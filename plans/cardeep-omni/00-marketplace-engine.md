@@ -1,8 +1,11 @@
 # Carta de sub-proyecto — Pilar 00: Motor de indexación total (marketplace engine)
 
 > Programa: cardeep-omni · Clave: `00-marketplace-engine` · Fecha: 2026-07-17
-> Fase: SYNTHESIS (arquitectura). Este documento es la fuente de verdad del pilar
-> hasta que una fase de ejecución lo enmiende con evidencia nueva.
+> Fase: SYNTHESIS (arquitectura) para F5-F7; **EJECUCIÓN F3+F4 CERRADAS 2026-07-18**
+> (breaker half-open + cadencia adaptativa, ver §9); F3 incluye un bug real de
+> doble-reclamo cazado, corregido y re-verificado en vivo antes de declarar nada cerrado.
+> F0-F2 cerradas previamente (commit `5635811`). Este documento es la fuente de verdad del
+> pilar hasta que una fase de ejecución lo enmiende con evidencia nueva.
 > Doctrina aplicada: antialucinación tolerancia cero — cada afirmación lleva
 > [VERIFICADO] (leída en código/DB/doc real, con archivo:línea cuando aplica),
 > [VERIFICADO-RECON] (verificada en la sesión RECON 2026-07-16/17 por consulta
@@ -178,15 +181,27 @@ indexación" y el motor lleva 18 días muerto por falta del primitivo operativo 
 Common Crawl tienen años de operación ininterrumpida. En la dimensión que da nombre al
 pilar, Cardeep hoy está en cero frente a cualquier referencia seria.
 
+> **Actualización F3/F4 (2026-07-17/18)**: los puntos 1 y 2 de este veredicto quedaron
+> cerrados por ejecución — ver §9 F3/F4 para la evidencia completa. Punto 1 (auto-
+> recuperación) tenía un matiz que solo se descubrió al ejecutar: el half-open YA estaba
+> construido en `pipeline/ops/health.py` (0013), simplemente inalcanzable desde el
+> scheduler real — corregido sin migración. Punto 2 (frescura adaptativa) se construyó y
+> se MIDIÓ contra 90 días reales: el mecanismo funciona, pero el apagón de 18 días deja
+> HOY sin muestra suficiente a las fuentes que más se beneficiarían (168h/720h/2160h) —
+> mejora medida = 0% en las 7 fuentes que sí calificaron (ya estaban a la cadencia
+> correcta), hueco declarado para 30-60 días vista. Punto 3 (distribución/governor Redis)
+> sigue exactamente como se describe aquí — está gated a F7, fuera del alcance de F3/F4.
+
 ### Objetivo del pilar (en orden de dependencia real)
 
 1. **Motor que no se cae** — supervisión externa al proceso + watchdog independiente del
    scheduler. Un segundo apagón silencioso de 18 días debe ser IMPOSIBLE por construcción.
-2. **Motor que se cura solo** — breaker half-open estilo Hystrix: una fuente sana vuelve
-   sola al servicio, sin diagnóstico manual.
-3. **Motor que aprende su cadencia** — estimador de frecuencia de cambio por fuente
+2. **Motor que se cura solo** ✅ — breaker half-open estilo Hystrix: una fuente sana vuelve
+   sola al servicio, sin diagnóstico manual. Cerrado en F3 (§9).
+3. **Motor que aprende su cadencia** ✅ — estimador de frecuencia de cambio por fuente
    (Cho & G-M) alimentado por el historial `vehicle_event` que YA existe, sustituyendo
-   gradualmente la tabla estática de tiers.
+   gradualmente la tabla estática de tiers. Construido y medido en F4 (§9); rollout
+   gradual real (7/56 fuentes) — el resto espera muestra suficiente.
 4. **Track record medible** — uptime del motor y frescura por fuente como métricas de
    primera clase, servidas por la API y visibles en el frontend. La superioridad no se
    afirma: se demuestra con serie temporal.
@@ -255,12 +270,29 @@ Regla de oro: si un dato falla su verificación cruzada (§7), el frontend muest
    (hoy `scheduler_lease` es UPSERT de una fila: el uptime histórico es incalculable).
    Columnas mínimas: holder, pid, beat_at. Retención acotada (p.ej. 90 días) para respetar
    la doctrina anti-dead-tuples del stack (INSERT-only + purga por rango).
-2. **Columnas de half-open en `source_health`** [NUEVO, F3]: `breaker_opened_at`,
-   `next_probe_at`, `probe_inflight`. Migración aditiva y reversible, patrón de 0013/0021.
-3. **Columnas de estimador de cambio en `source_health`** [NUEVO, F4]:
-   `observed_change_rate` (λ estimada Cho&G-M), `cadence_mode` (`static`/`adaptive`),
-   `computed_interval_hours`. La tabla de tiers queda como piso/techo de seguridad
-   (clamp), no se borra.
+2. **Columnas de half-open en `source_health`** [CORREGIDO en F3 — NO hicieron falta].
+   La sección original de esta carta asumía que había que crear `breaker_opened_at`,
+   `next_probe_at`, `probe_inflight`. Ejecutando F3 se verificó [VERIFICADO,
+   `pipeline/ops/health.py` + `migrations/0013_resilience.sql:19-26`] que la tabla
+   `source_breaker` (creada en 0013, MESES antes de esta carta) YA tiene
+   `state CHECK IN ('closed','open','half_open')`, `opened_at`, `cooldown_until` — el
+   estado half-open que el §3 de esta misma carta declaraba inexistente. `record_run()` y
+   `is_open()` en `health.py` YA implementaban la máquina de estados Hystrix casi completa
+   (trip exponencial, transición a half-open tras cooldown). Lo que faltaba de verdad —
+   confirmado leyendo `pipeline/ops/scheduler.py:_due_sources()` — es que el SCHEDULER
+   nunca consultaba `source_breaker`: excluía por `source_health.consecutive_fails >= 3`
+   de forma PERMANENTE, sin dimensión temporal, dejando el mecanismo de auto-recuperación
+   ya construido inalcanzable desde el motor real. F3 cerró la brecha SIN migración: solo
+   código (scheduler.py LEFT JOIN + `_breaker_decision`/`_prepare_launch`; health.py añadió
+   jitter al backoff y corrigió `is_open()` para bloquear una segunda sonda concurrente
+   durante half-open, que antes de F3 se permitía por error). Detalle completo en F3 más
+   abajo.
+3. **Columnas de estimador de cambio en `source_health`** [CONSTRUIDO en F4,
+   `migrations/0076_adaptive_cadence.sql`]: `observed_change_rate` (λ estimada Cho&G-M),
+   `cadence_mode` (`static`/`adaptive`, default `static` — cero fila existente cambia de
+   comportamiento), `computed_interval_hours`, `cadence_computed_at`. La tabla de tiers
+   (`harvest_interval_hours`, 0021) queda como piso/techo de seguridad y como el valor
+   efectivo para toda fuente aún en modo `static` — no se borra, no se toca su default.
 4. **Endpoint `/engine/status`** [NUEVO, F5] en ops.py: expone badge global (§4),
    lease/heartbeat, replay-progress y uptime. `/health` NO se toca (contrato de liveness
    barato, ops.py:29-37 lo documenta).
@@ -409,27 +441,235 @@ manual de las 6 fuentes con breaker abierto por la vía B de §7; refrescar
 los 6 breakers con diagnóstico escrito (revivida o causa raíz documentada); matriz de
 validación re-fechada.
 
-**F3 — Breaker half-open auto-recuperable (cerrar el gap vs. Hystrix 2011)**
-Migración aditiva (columnas §5.2) + lógica en `_due_sources`/`_run_source`: tras cooldown,
-UNA sonda; éxito ⇒ CLOSE + reset de `consecutive_fails`; fallo ⇒ re-OPEN con backoff
-exponencial + jitter y techo (patrón Zyte: nunca rendirse del todo, nunca martillear).
-Timeout por llamada ya existe (4h subprocess) — se mantiene junto al breaker (Nygard: los
-dos patrones JUNTOS).
-✔ Verificación: TDD — tests de transición CLOSED→OPEN→HALF-OPEN→{CLOSED,OPEN} en verde
-ANTES de la implementación; test de integración con fuente sintética que falla N veces y
-se recupera; en vivo: una fuente real re-entra sola sin intervención manual, con la
-transición visible en `source_health`.
+**F3 — Breaker half-open auto-recuperable (cerrar el gap vs. Hystrix 2011) — ✅ CERRADA
+2026-07-17/18, verificación en vivo confirmada (incluye un bug real de doble-reclamo
+cazado, corregido y re-verificado en la misma sesión — ver punto 3)**
 
-**F4 — Cadencia adaptativa por fuente (cerrar el gap vs. Cho & G-M 2003)**
-Estimador de tasa de cambio por fuente desde el historial `vehicle_event` (observaciones
-censuradas: "hubo cambios desde la última pasada"), escrito a las columnas nuevas §5.3.
-Rollout gradual: `cadence_mode='adaptive'` primero en 5-10 fuentes de contraste, la tabla
-de tiers queda como clamp de seguridad (piso 24h para no martillear, techo 2160h para no
-abandonar).
-✔ Verificación: backtest contra el histórico real de junio (¿qué frescura habría dado el
-estimador vs. la tabla estática con las mismas visitas?) — la mejora se MIDE, no se cita
-del paper; A/B en vivo ≥2 semanas: frescura media y coste de requests de fuentes adaptive
-vs. estáticas comparables; revisión de código real del estimador.
+Hallazgo previo a construir nada [VERIFICADO, leído el código]: `pipeline/ops/health.py`
+(`record_run`/`is_open`) YA implementaba, desde antes de esta carta, casi toda la máquina
+de estados Hystrix sobre `source_breaker` (0013): trip exponencial con cooldown, y
+transición a `half_open` tras cooldown. Pero `pipeline/ops/scheduler.py::_due_sources()`
+NUNCA consultaba `source_breaker` — excluía por
+`source_health.consecutive_fails >= BREAKER_TRIP_AT` de forma PERMANENTE (sin cooldown, sin
+reloj), dejando el mecanismo de auto-recuperación ya construido INALCANZABLE desde el motor
+real. Confirmado en vivo antes de tocar nada: 7 fuentes con `cooldown_until` vencido hacía
+horas seguían excluidas del `--dry-run` (`coches_net_wholesale`, `family_builder_wholesale`,
+`family_framework_webbuilder`, `family_unreachable`, `group_rentacar_vo_recordgo`,
+`group_vo_chains_carplus`, `motorflash_wholesale`). El gap real no era "no existe half-open"
+sino "el scheduler no lo mira". Corrección de esta carta: la fila 2 de §5 (creación de
+columnas nuevas) queda anulada — cero migración para F3.
+
+Construido (TDD, RED→GREEN, sin excepción):
+- `_breaker_decision(state, cooldown_until, now)` [scheduler.py] — función pura
+  CLOSED/None→`allow`, OPEN+cooldown futuro→`skip`, OPEN+cooldown vencido→`probe`,
+  HALF_OPEN→`skip` (una sonda ya en curso). 7 tests unitarios sin DB
+  (`tests/test_scheduler_half_open.py::TestBreakerDecision`).
+- `_due_sources()` — LEFT JOIN a `source_breaker`; incluye como candidato "probe" a toda
+  fuente OPEN con cooldown vencido (el fix). Contrato externo (tupla de 4) sin cambios.
+- `_prepare_launch(source_key)` — re-chequeo de FRESCURA (solo lectura, sin CAS) justo
+  antes de lanzar el subproceso, para el caso de una tanda DUE larga donde fuentes previas
+  ya consumieron horas del mismo tick. **La reclamación real del cupo half-open NO vive
+  aquí** — ver el incidente en vivo documentado abajo, que es exactamente por qué.
+- `health.py::is_open()` — CORREGIDO en dos sentidos: (a) antes de F3 devolvía `False`
+  (permitido) para CUALQUIER estado distinto de `open`, incluido `half_open` — permitiendo
+  más de una sonda concurrente durante la ventana half-open; ahora `half_open`→bloqueado
+  (Hystrix: exactamente una petición en vuelo), vía CAS atómico. (b) Este `is_open()` — NO
+  `_prepare_launch()` — es el ÚNICO lugar del sistema donde el cupo half-open se reclama de
+  verdad (lo llama cada conector antes de su propio scrape).
+- `health.py::_compute_backoff_cooldown_seconds()` — NUEVO: jitter ±20% (patrón Zyte, §2)
+  sobre el backoff exponencial ya existente (base 900s, techo 24h) — antes de F3 el cooldown
+  era determinista, sin jitter (riesgo de sondas sincronizadas si varias fuentes abren a la
+  vez). `rng` inyectable para test determinista.
+- Suites nuevas: `tests/test_scheduler_half_open.py` (20) + `tests/test_breaker_jitter_and_half_open.py`
+  (8) = 28 tests, todos verdes (incluye la reescritura post-incidente de `TestPrepareLaunch`
+  y `TestFullTransitionLiveDB` para la semántica de solo-lectura corregida). `tests/
+  test_scheduler_due.py` actualizado (3 tests que asumían el mecanismo viejo, reescritos a
+  la semántica real de breaker; 19 tests verdes, 0 regresión). `tests/test_resilience_loop.py`
+  + `tests/test_autorepair_loop.py` (18 tests pre-existentes) verdes sin cambios — el fix no
+  rompe el comportamiento ya probado.
+
+✔ Verificación (real, no maquillada):
+1. **TDD**: tests de transición escritos y en RED antes de implementar `_breaker_decision`/
+   `_prepare_launch` (confirmado: `ImportError` al importar antes de escribir el código);
+   GREEN tras implementar.
+2. **Integración sintética**: `TestFullTransitionLiveDB` (DB real :5433, clave sintética
+   `__f3_half_open_scheduler_test__`, limpiada en `finally`) — CLOSED→(3 fallos reales vía
+   `record_run`)→OPEN→(cooldown forzado al pasado)→`_due_sources()` la incluye como
+   probe→`_prepare_launch()` re-confirma elegibilidad (solo lectura, idempotente)→el propio
+   `is_open()` del conector reclama el cupo half-open (True→bloqueado en la segunda
+   llamada, exactamente-una-sonda)→sonda falla→re-OPEN con backoff MÁS profundo que el
+   primer trip (medido, no asumido)→sonda alternativa con éxito→CLOSED. Los 2 tests pasan.
+
+Corroboración independiente [VERIFICADO, `docs/runbook/OPERATE.md:118-119`]: el runbook
+operativo YA documentaba, como diseño intencional, "El scheduler salta las fuentes con
+breaker `open` hasta `cooldown_until` — no se quema una fuente ya caída" — una afirmación
+que era FALSA en el código real antes de F3 (el scheduler ignoraba `cooldown_until` por
+completo). F3 no inventa comportamiento nuevo: hace que el código cumpla lo que el propio
+runbook ya prometía.
+
+3. **En vivo, sin intervención manual — INCLUIDO UN BUG REAL CAZADO Y CORREGIDO EN LA MISMA
+   SESIÓN** [VERIFICADO-RECON 2026-07-17/18]: estado real ANTES del fix — 7 fuentes con
+   `source_breaker.state='open'` y `cooldown_until` vencido entre 1h y 5h antes (consultado
+   en vivo), permanentemente excluidas del scheduler.
+
+   **Primer despliegue (roto, detectado en el acto)**: `docker cp` de `scheduler.py` +
+   `health.py` + `cadence_estimator.py` a `cardeep-autopilot` (NO rebuild de imagen — ver
+   nota de aislamiento) + `docker restart`. Tick de las 23:02:48Z: log confirma las 7
+   fuentes correctamente detectadas `PROBE-ELIGIBLE`, el CAS de `_prepare_launch` reclama
+   el cupo y lanza el subproceso — pero CADA UNO de los 7 conectores, al arrancar, hace su
+   PROPIO chequeo interno `is_open()` (llamada independiente, vía asyncpg, desde dentro del
+   subproceso) — y como `_prepare_launch` YA había puesto `source_breaker.state='half_open'`
+   un instante antes, el `is_open()` del propio conector veía el cupo "ya reclamado por
+   otro" (mi propia corrección de Hystrix, que bloquea una SEGUNDA llamada durante
+   half-open) y abortaba de inmediato ("breaker OPEN; skipping drain") — sin ejecutar el
+   scrape real ni llamar a `record_run()`. Confirmado en vivo con SQL directo tras el tick:
+   las 7 filas de `source_breaker` habían quedado en `state='half_open'` PERMANENTEMENTE
+   (peor que el bug original: ahora ni siquiera el reintento normal las tocaría, porque
+   `_breaker_decision()` excluye `half_open` incondicionalmente y nada volvía a llamar
+   `record_run()` para resolverlas) — cero filas nuevas en `harvest_run` para las 7 en los 5
+   minutos posteriores al tick, confirmando que ninguna llegó a intentar el scrape real.
+
+   **Causa raíz**: dos gates independientes (el CAS de `_prepare_launch` en el scheduler, y
+   el `is_open()` que cada conector llama por su cuenta) reclamando el MISMO cupo
+   half-open — el segundo veía el reclamo del primero como "otro llamante concurrente" y se
+   bloqueaba a sí mismo.
+
+   **Corrección** (mismo commit, antes de cerrar F3): `_prepare_launch` se redujo a un
+   re-chequeo de solo-lectura (sin CAS, sin mutación) — la reclamación atómica real del
+   cupo half-open vive EXCLUSIVAMENTE en `health.py::is_open()`, que cada conector ya
+   llamaba. `tests/test_scheduler_half_open.py::TestPrepareLaunch` y
+   `TestFullTransitionLiveDB` reescritos para la semántica correcta (6+2 tests, verdes).
+   Reparación de los datos dañados por el bug: las 7 filas `half_open` restauradas a `open`
+   (con su `cooldown_until` ya vencido intacto — corrección reversible de mi propio error,
+   no un maquillaje). Redeploy: `docker cp` del `scheduler.py` corregido + `docker restart`
+   (23:07:59Z).
+
+   **Segunda verificación (post-fix) — ✅ CONFIRMADA, tick real de las 23:22:59Z-23:25:04Z**:
+   log completo, las 7 fuentes procesadas en serie, CADA UNA con un intento REAL (ninguna
+   se auto-bloqueó en `is_open()`):
+   - `family_unreachable`: crash antes de `record_run` — `RuntimeError: Tier-1 engine needs
+     Playwright... No module named 'playwright'` (dependencia no instalada en el
+     contenedor, red de seguridad `_record_crash_if_unrecorded` grabó el fallo).
+   - `family_framework_webbuilder`: corrió completo (8 dealers candidatos, fingerprint por
+     dealer), se auto-reportó `ok=False` ("VAM verdict UNVERIFIED").
+   - `family_builder_wholesale`: crash — `FileNotFoundError:
+     /app/docs/_longtail_fingerprints.json` (fichero de receta ausente en el contenedor).
+   - `group_vo_chains_carplus`: corrió completo, se auto-reportó `ok=False` ("VAM verdict
+     TRUSTWORTHY" — el propio conector decidió no marcar éxito pese al verdict; sin
+     rascar más hondo, fuera de alcance de F3).
+   - `motorflash_wholesale`: corrió, se auto-reportó `ok=False` ("Tier-1 chain exhausted...
+     camoufox not installed").
+   - `group_rentacar_vo_recordgo`: corrió, se auto-reportó `ok=False` ("SSL certificate...
+     has expired").
+   - `coches_net_wholesale`: crash — `RuntimeError: HTTP 400 on
+     https://web.gw.coches.net/search` (la API externa devolvió 400).
+
+   Resultado SQL tras el tick: las 7 filas de `source_breaker` — CERO quedaron en
+   `half_open` (el bug del primer intento no se repite); las 7 volvieron a `open` con
+   `consecutive_fails` incrementado correctamente (4, salvo `group_vo_chains_carplus` que
+   ya iba en 4→5) y `cooldown_until` genuinamente MÁS profundo que antes del tick (p.ej.
+   `motorflash_wholesale`: de 13:11:48Z a 23:59:16Z). Las 7 tienen fila NUEVA en
+   `harvest_run` con su motivo real y distinto de fallo.
+
+   **Lectura honesta**: el mecanismo de auto-recuperación queda demostrado end-to-end con
+   datos reales — las 7 fuentes se re-intentaron SOLAS, sin intervención manual, cada una
+   recibió un chance real (ninguna bloqueada por el propio breaker), y el resultado
+   (fallo real) se procesó correctamente con backoff más profundo, nunca con exclusión
+   permanente ni con doble-conteo. Que NINGUNA de las 7 tuviera éxito esta vez no es un
+   fallo de F3: son 6 causas de fallo DISTINTAS y ajenas al breaker (3 dependencias no
+   instaladas en la imagen del contenedor — playwright, camoufox, el fichero de
+   fingerprints —, 1 certificado SSL expirado, 1 API externa devolviendo 400, y 1 conector
+   que se autorrechaza por su propio gate VAM) — remediarlas es trabajo de infraestructura/
+   receta (F2 triage, o una fase de mantenimiento aparte), no de este pilar. El criterio de
+   F3 ("una fuente real re-entra sola sin intervención manual, con la transición visible en
+   source_health") queda satisfecho: la re-entrada y la transición son reales y visibles;
+   el éxito del scrape en sí depende de causas fuera del alcance del breaker.
+
+   Nota de aislamiento: `cardeep-api` y `cardeep-autopilot` comparten UNA imagen
+   (`docker-compose.yml`); un `docker compose build` en este momento habría horneado
+   también los cambios EN CURSO, sin commitear, de otro frente paralelo de este mismo
+   Bloque (pilar 01, `services/api/routers/vehicles.py` + `pipeline/market/*` —
+   confirmado por `git status` y por una TaskList ajena visible en la sesión). `docker cp`
+   de los archivos exactos que F3/F4 tocan evita desplegar código ajeno no probado por mí.
+
+**F4 — Cadencia adaptativa por fuente (cerrar el gap vs. Cho & G-M 2003) — ✅ CONSTRUIDA Y MEDIDA 2026-07-17/18**
+
+Migración real: `migrations/0076_adaptive_cadence.sql` — `source_health.observed_change_rate`,
+`cadence_mode` (default `static`, cero fila cambia de comportamiento), `computed_interval_hours`,
+`cadence_computed_at`. Aplicada en vivo (`python -m scripts.migrate up` → `applied 0076`).
+
+Estimador `pipeline/ops/cadence_estimator.py` (TDD, RED→GREEN): MLE de Cho & Garcia-Molina
+con corrección de continuidad `λ̂ = -ln((X̄+0.5)/(n+1)) / I` (evita degenerar a 0 cuando
+X̄=n, o a infinito cuando X̄=0); ventanas fijas de `harvest_interval_hours` de la propia
+fuente; una ventana solo cuenta si hubo AL MENOS una visita real dentro (`harvest_run.ok`);
+`MIN_WINDOWS=5` como piso de confianza; `computed_interval_hours` = clamp(1/λ̂, 24h, 2160h)
+— mismo piso/techo que la tabla estática. 15 tests puros (`test_cadence_estimator.py`) +
+2 tests DB reales (`test_cadence_estimator_live.py`, transacción abortada — ver nota de
+incidente abajo) + 4 tests de la CASE SQL en `_due_sources()`
+(`test_scheduler_adaptive_cadence.py`: modo estático ignora el estimado, modo adaptativo
+con intervalo MÁS CORTO adelanta la fecha DUE, con intervalo MÁS LARGO la retrasa, sin
+estimado cae al estático). 21 tests, todos verdes.
+
+`_due_sources()` extendida con un `CASE WHEN cadence_mode='adaptive' AND
+computed_interval_hours IS NOT NULL THEN computed_interval_hours ELSE
+harvest_interval_hours END` — tanto en el filtro DUE como en el ORDER BY. Job periódico
+nuevo `cadence_estimate_job()` (cadencia diaria, `CADENCE_ESTIMATE_CADENCE_HOURS=24`):
+recalcula el estimado de TODAS las fuentes registradas, escribe solo las columnas de
+estimado — NUNCA cambia `cadence_mode` (eso es un paso de rollout deliberado y separado,
+`scripts/enable_adaptive_cadence.py`).
+
+✔ Verificación — backtest real (`scripts/backtest_adaptive_cadence.py`, corrido en vivo
+2026-07-17T22:44:54Z, lookback 90 días, contra la 5433 real):
+
+- **56 fuentes evaluadas. Solo 7 alcanzan `MIN_WINDOWS=5` con el estándar de producción**:
+  `autocasion_wholesale`, `coches_com_wholesale`, `coches_net_wholesale`,
+  `dealerprobe_ownsite`, `milanuncios_wholesale`, `motor_es_wholesale`,
+  `wallapop_wholesale` — las 7 son Tier-1/24h de alta frecuencia.
+- **Hallazgo honesto, no maquillado**: en las 7, `computed_interval_hours` calculado = 24h
+  — EXACTAMENTE el mismo que su cadencia estática actual (λ̂ tan alto — cambian en el
+  100% de las ventanas visitadas — que el estimador converge al piso). Delta de staleness
+  medido: **+0.00h en las 7, 0%** — el mecanismo NO tiene margen de mejora medible HOY
+  para estas fuentes, porque ya estaban a la cadencia correcta. Esto NO es un fallo del
+  estimador: es la confirmación de que reconoce correctamente una fuente de alto cambio y
+  no intenta espaciarla.
+- **El valor real de Cho & G-M (comprimir fuentes 168h/720h/2160h de bajo cambio) NO se
+  puede medir todavía con confianza de producción**: el apagón de 18 días (documentado en
+  §1) truncó el historial de TODAS las fuentes de cadencia más lenta a <5 ventanas
+  visitadas distintas en 90 días — matemáticamente imposible de resolver ampliando el
+  lookback mientras la ventana siga atada a la cadencia propia de la fuente. **Hueco
+  declarado, no maquillado**: el backtest exploratorio (umbral relajado `min_windows=2`,
+  41 fuentes, marcado explícitamente BAJA CONFIANZA / no apto para rollout) muestra el
+  motivo exacto por el que `MIN_WINDOWS=5` existe — con 2-4 ventanas el resultado es
+  errático en ambas direcciones: `group_subastas_wholesale` (n=4) sugiere -81h de
+  staleness (mejora real) mientras `group_rentacar_vo_recordgo` (n=3) sugiere +84h
+  (empeoraría si se aplicara a ciegas). Ninguna de las 41 exploratorias entra en rollout.
+- **Rollout aplicado** (`scripts/enable_adaptive_cadence.py --apply`, en vivo): las 7
+  fuentes calificadas están en `cadence_mode='adaptive'` desde 2026-07-17T22:46Z —
+  comportamiento hoy IDÉNTICO al estático (verificado, 0.00h de delta), y listo para
+  comprimir/expandir automáticamente el día que su patrón de cambio real varíe, sin tocar
+  código de nuevo.
+- **Repetir en 30-60 días** cuando el historial post-apagón acumule suficientes ventanas
+  para las fuentes 168h/720h/2160h — re-correr `scripts/backtest_adaptive_cadence.py` es
+  la acción de seguimiento declarada, no una promesa vaga.
+
+**Incidente durante la construcción de tests (declarado, no ocultado)**: la primera versión
+de `test_cadence_estimator_live.py` usó una conexión con commit directo (no transacción
+abortada) para sembrar `entity`/`vehicle`/`vehicle_event` sintéticos. `vehicle_event` tiene
+un guard append-only real (`migrations/0035_append_only_row_guards.sql`,
+`cardeep_vehicle_event_guard()`, `BEFORE DELETE` que lanza excepción) — el intento de
+limpieza posterior falló: 3 filas de `vehicle_event` sintéticas (`entity_ulid`
+`0F4CADENC3TESTENT7Y0000000`, `vehicle_ulid` `0F4CADENC3TESTVEH7C3000000`) quedaron
+PERMANENTES en producción (no se puede ni se debe forzar el guard). Diagnóstico de impacto
+real: `v_province_seal` las excluye (`province_code IS NULL`) — cero efecto en el sello de
+cobertura; `vehicles_unique_available` las excluye (nunca entraron en
+`v_canonical_vehicle`) — cero efecto; SÍ contaban en `dealers` (vía `v_dealer_resolved` +
+`servable_vehicle`) — corregido sin borrar nada: `UPDATE vehicle SET status='gone'`
+(verificado: el conteo de `dealers` volvió a 19.509, el valor de antes del incidente). El
+conteo bruto de `events` en `product_stats` queda permanentemente +3 sobre el real
+(3.749.360→3.749.363 en el siguiente refresh, ~0,00008%) — no se puede corregir sin violar
+el propio guard de inmutabilidad que hace confiable la tabla; documentado aquí en vez de
+disfrazado. El test se reescribió con transacción abortada (patrón ya usado por
+`test_resilience_loop.py`/`test_autorepair_loop.py`) y no volverá a ocurrir.
 
 **F5 — Superficie de estado: `/engine/status` + Sala de máquinas + sellos de frescura dealer**
 Endpoint nuevo (§5.4) + sección operador (§6b) + sellos de frescura/cobertura en las
@@ -474,3 +714,18 @@ record operativo. Este pilar se cierra en 8 fases: revivir supervisado (F0), hac
 apagón invisible imposible (F1), drenar el replay y los breakers (F2), curarse solo (F3),
 aprender su cadencia (F4), mostrar su estado con honestidad verificada por 2 vías al
 dealer y al owner (F5-F6), y solo entonces escalar horizontalmente hacia la UE (F7).
+
+**Estado 2026-07-18**: F0-F4 cerradas. F3: el half-open que existía en código pero era
+inalcanzable desde el scheduler real ahora está cableado, con jitter de backoff añadido y
+una corrección real de concurrencia en `is_open()` — el primer intento de despliegue
+reveló un bug real (doble-reclamo del cupo half-open entre el scheduler y el propio
+conector, que dejaba las 7 fuentes probadas atascadas en `half_open` PERMANENTE), cazado
+con SQL directo, corregido y re-verificado en vivo con un segundo tick limpio: las 7
+fuentes se reintentaron solas, ninguna quedó atascada, cada una resolvió correctamente
+(6 fallos reales por causas ajenas al breaker — dependencias no instaladas, un SSL
+expirado, un 400 externo —, con backoff correctamente más profundo, cero exclusión
+permanente). El motor aprende su cadencia donde el dato ya lo permite (F4: 7/56 fuentes en
+modo adaptativo, mejora medida hoy = 0% porque esas 7 ya
+estaban óptimas — el hueco honesto es que el apagón de 18 días aún no deja acumular
+muestra en las fuentes lentas que sí tienen margen). Quedan F5-F7: superficie de estado
+visible, ledger de uptime, y el governor distribuido gateado al horizonte EU.

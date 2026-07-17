@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -48,6 +49,9 @@ DOWN_AT = 3             # 3 consecutive fails -> down (matches the 3-retry fetch
 RECOVER_OK = 1          # one clean run resets fails and climbs status
 BREAKER_TRIP_AT = 3     # consecutive fails that trip the circuit breaker OPEN
 BREAKER_COOLDOWN_SEC = 900   # base cool-down after a trip; exponential per re-trip (§5.1)
+BREAKER_JITTER_FRAC = 0.2    # +/-20% jitter on the exponential cooldown (F3; Zyte pattern —
+                             # 00-marketplace-engine.md §2 — avoids a synchronized thundering-herd
+                             # re-probe when several sources trip in the same cycle)
 
 # Closed vocabulary of repair actions (must match migrations/0013 CHECK constraint).
 ACTION_REFINGERPRINT = "refingerprint"
@@ -79,6 +83,30 @@ def _tuning_int(tuning: dict | None, key: str, default: int) -> int:
         return default
     val = tuning.get(key)
     return int(val) if isinstance(val, (int, float)) else default
+
+
+def _compute_backoff_cooldown_seconds(
+    depth: int,
+    *,
+    base: int = BREAKER_COOLDOWN_SEC,
+    cap: int = 86400,
+    jitter_frac: float = BREAKER_JITTER_FRAC,
+    rng: random.Random | None = None,
+) -> float:
+    """Exponential backoff with jitter (F3; Zyte pattern, 00-marketplace-engine.md §2):
+    ``base * 2**depth``, capped at *cap* seconds, then jittered by +/-``jitter_frac`` so that
+    several sources tripping in the same cycle do not all re-probe at the exact same instant
+    (the thundering-herd re-probe both Hystrix and Zyte warn against). ``depth=0`` is the
+    first trip past the threshold; each further consecutive fail doubles the nominal cooldown.
+
+    ``rng`` is injectable so tests can assert deterministic bounds; production calls leave it
+    None and use the module-level ``random`` (real jitter). The result is floored at ``base``
+    so jitter can never produce a cooldown shorter than the un-jittered first-trip window.
+    """
+    r = rng if rng is not None else random
+    nominal = min(base * (2 ** depth), cap)
+    jitter = nominal * jitter_frac
+    return max(base, nominal + r.uniform(-jitter, jitter))
 
 
 async def record_run(
@@ -222,7 +250,7 @@ async def record_run(
             new_breaker_state = "open"
             breaker_tripped = prior_breaker != "open"
             depth = new_fails - trip_at            # 0 on the first trip, +1 per extra fail
-            cool = min(cooldown_sec * (2 ** depth), 86400)   # base on first trip, x2 each deeper fail, cap 24h
+            cool = _compute_backoff_cooldown_seconds(depth, base=cooldown_sec)  # F3: base * 2^depth +/- jitter, cap 24h
             await conn.execute(
                 """INSERT INTO source_breaker (source_key, state, consecutive_fails,
                        opened_at, cooldown_until)
@@ -444,23 +472,41 @@ async def is_open(conn: asyncpg.Connection, source_key: str) -> bool:
     """Has this source's circuit breaker tripped OPEN (and not yet cooled down)?
 
     Harvest code calls this BEFORE running a source. True -> skip the source gracefully
-    (the system continues serving the last good snapshot — "no se cae"). The breaker is
-    treated as half_open (one probe allowed) once cooldown_until has passed; the caller
-    that gets a False after cool-down is the canary probe (06 §5.1).
+    (the system continues serving the last good snapshot — "no se cae"). This is the Hystrix
+    half-open gate (F3, closing the gap vs. Hystrix 2011 documented in
+    plans/cardeep-omni/00-marketplace-engine.md §3): once cooldown_until has elapsed, the
+    FIRST caller atomically claims the single half-open probe slot — a CAS UPDATE
+    (state 'open' -> 'half_open', gated on ``WHERE state='open'`` so only one concurrent
+    caller's write can match) — and is let through (returns False). Any OTHER caller is
+    blocked (returns True): either the cooldown has not elapsed yet, or a probe is ALREADY
+    outstanding (state already 'half_open') — Hystrix's rule of exactly one request in
+    flight during half-open. record_run() is the only writer that resolves 'half_open':
+    ok=True closes the breaker, ok=False re-opens it with a deeper backoff
+    (_compute_backoff_cooldown_seconds). A probe subprocess that never calls record_run is
+    caught by the scheduler's crash-safety-net (_record_crash_if_unrecorded), which
+    eventually re-opens the breaker — so a stuck half_open cannot last forever (bounded by
+    the subprocess timeout).
     """
     row = await conn.fetchrow(
         "SELECT state, cooldown_until FROM source_breaker WHERE source_key=$1", source_key)
-    if row is None or row["state"] != "open":
+    if row is None or row["state"] == "closed":
         return False
+    if row["state"] == "half_open":
+        # A probe is already outstanding — block concurrent re-entry until record_run()
+        # resolves it (Hystrix: exactly ONE request admitted during half-open).
+        return True
+    # row["state"] == "open"
     cooldown_until = row["cooldown_until"]
     if cooldown_until is None:
-        return True
-    # cool-down elapsed -> move to half_open so exactly one probe is allowed through.
-    now_past_cooldown = await conn.fetchval(
-        "SELECT now() >= $1", cooldown_until)
-    if now_past_cooldown:
-        await conn.execute(
-            "UPDATE source_breaker SET state='half_open' WHERE source_key=$1 AND state='open'",
-            source_key)
-        return False
-    return True
+        return True  # no cooldown recorded yet — stay blocked (conservative default)
+    now_past_cooldown = await conn.fetchval("SELECT now() >= $1", cooldown_until)
+    if not now_past_cooldown:
+        return True  # still cooling down
+    # Cooldown elapsed: atomically claim the single probe slot. Only the caller whose UPDATE
+    # actually matches (state was still 'open' at write time) wins the race; a concurrent
+    # caller evaluated after the winner's commit sees state already 'half_open' and is blocked.
+    claimed = await conn.fetchval(
+        "UPDATE source_breaker SET state='half_open' "
+        "WHERE source_key=$1 AND state='open' RETURNING true",
+        source_key)
+    return not bool(claimed)
