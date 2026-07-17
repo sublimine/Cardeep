@@ -207,7 +207,7 @@ cálculo en front sobre cache) · señal → ficha con chart · export CSV. **Da
 score normalizado (near); GANVAM/Eurotax, ML (future). **Comparable:** Indicata + TradingView + Carfax;
 superamos en censo completo + historial individual + deep-link. **Fase:** ver distribución arriba.
 
-### 3.5 Terminal de análisis técnico `/terminal` — [NOW core / NEAR screener]
+### 3.5 Terminal de análisis técnico `/terminal` — [NOW: motor de indicadores rescatado / NEAR: agregación backend + router `/terminal/*` / FUTURE: fundamental real]
 **Propósito:** TradingView del coche — charts precio/volumen/evento por make·model·provincia, screener,
 watchlist, sobre el delta real. El producto diferenciador absoluto. **Secciones:** TopBar command rail
 (SymbolSearch + período + alertas) · workspace split 3 columnas redimensionables · WatchlistPanel
@@ -216,10 +216,22 @@ InspectorPanel (dealer/vehículo) · ScreenerPanel · HeatmapPanel (D3 treemap) 
 SourceHealthBar (`/sources`, admin). **Media estrella:** el **ChartPanel OHLC** construido agregando
 PRICE_CHANGE del delta en buckets temporales — el dato ES el medio, estilo Bloomberg. **Botones clave:**
 SymbolSearch (debounce 300ms) · período 7d/30d/90d/1y (recalcula since) · pausar feed · export PNG/CSV.
-**Data:** todos los endpoints verificados now (`/stats`, `/geo/*`, `/entities/{cdp}/*`, `/vehicles/{ulid}/*`,
-`/alerts`, `/sources`); facetas globales + auth watchlist = near; market intelligence + LLM = future.
-**Comparable:** TradingView + Indicata + Bloomberg (densidad, no fealdad). **Fase:** ChartPanel+EventFeed+
-Inspector+Heatmap+Watchlist+Alerts = now; screener completo + persistencia = near; Indicata-style = future.
+**Estado real (dueño único: pilar 09, `plans/cardeep-omni/09-trading-terminal.md`; `00-MASTER.md` C-1/C-11):**
+los dos terminales previos (`Market.tsx` + `Terminal.tsx`/carpeta `terminal/`) eran 100% sintéticos, fuera
+del nav, y mueren en Fase 0 — incluido el artefacto tóxico `carNews()` (titulares fabricados atribuidos a
+proveedores reales del sector, que NO sobrevive ni como esqueleto). Único rescate real: el motor de 53
+indicadores técnicos (`indicators.ts`+`indicators.test.ts`). **Cero capa de agregación de mercado existe
+hoy en backend** (ni tabla `market_*`, ni router). **Data:** `/stats`, `/geo/*`, `/entities/{cdp}/*`,
+`/vehicles/{ulid}/*`, `/alerts`, `/sources` son infraestructura API genérica ya viva — insumo reutilizable,
+no endpoints de terminal; agregación diaria (`market_bucket_daily`) + router propio **`/terminal/*`**
+(namespace reservado a este pilar — `/market/*` y `services/api/routers/market.py` son de pilar 01, `market.py`
+mismo archivo NO se comparte) + ChartPanel/EventFeed/Inspector reales = near; screener completo + watchlist
+persistente = near/future; facetas globales + auth watchlist = near; fundamental real (noticias
+SMMT/KBA/DGT/ACEA) + LLM = future. **Comparable:** TradingView + Indicata + Bloomberg (densidad, no
+fealdad). **Fase:** demolición de sintéticos + rescate de indicadores (Fase 0) = now; agregación backend +
+router `/terminal/*` + ChartPanel/EventFeed/Inspector/Heatmap reales (Fase 1-3) = near; screener+watchlist
+persistente = near/future; inferencia de venta+deal-rating (Fase 4) = near/future; fundamental externo
+(Fase 5) + Indicata-style = future.
 
 ### 3.6 Comunidad / Foro / Red social `/community` — [NOW UI+sidebar / FUTURE social layer]
 **Propósito:** el foro de inteligencia donde el dato se vuelve conversación verificada — posts anclados
@@ -283,24 +295,44 @@ lista+hilo · conexión de plataformas (OAuth/key) · analytics (cobertura semá
 **PublishLog en tiempo real** (SSE, stagger de progreso por plataforma) + cobertura semáforo (inventory vs
 platform_listing). **Sin 3D** — herramienta de productividad. **Botones clave:** publicar selección (POST
 batch + suscribe SSE) · conectar plataforma · responder (enruta a plataforma) · despublicar/re-publicar.
-**Data:** estado de publicación + deep_links + cobertura = now (`platform_listing` en DB); publish_job +
-platform_credentials + inbox_thread/message = near (migraciones 0033-0035). **Comparable:** Hootsuite/Buffer
-(inbox split, disparo multi) + Indicata (analytics); superamos: inventario ya indexado + deep_link real day-1.
-**Fase:** inventario+tracker+semáforo+shell = now; publish+inbox+conexión = near; typing/impresiones/LLM-desc = future.
+**Ownership (`00-MASTER.md` C-10):** `/pro/publish` = pilar 05 (`plans/cardeep-omni/05-multiposting.md`);
+`/pro/inbox` = dueño único pilar 06 (`plans/cardeep-omni/06-unified-crm-chat.md`), consumido aquí, no
+reconstruido por 05. **Data:** estado de publicación + deep_links + cobertura = now (`platform_listing`
+en DB, cero credencial); `publish_job`/`platform_credential`/`feed_export` (pilar 05) = near, con
+numeración de migración real asignada en el momento de ejecutar (`max(ls migrations/)+1`, nunca un rango
+fijo pre-reservado: los números `0033`-`0035` ya pertenecen a `0033_evict.sql`/`0034_truncate_guards.sql`/
+`0035_append_only_row_guards.sql`, guards de auditoría del pipeline de vehículos sin relación con este
+pilar); inbox real = `crm_conversation`/`crm_message` de pilar 06 (canal email primero, WhatsApp gateado a
+fase de gasto) — `inbox_thread`/`message` NO los crea 05 (diferido: sin evidencia de API de mensajería en
+las 4 plataformas objetivo). **Comparable:** Hootsuite/Buffer (inbox split, disparo multi) + Indicata
+(analytics); superamos: inventario ya indexado + deep_link real day-1. **Fase:** inventario+tracker+
+semáforo+shell = now; publish (pilar 05) + conexión de plataformas = near; inbox real (pilar 06, canal
+email) = near; typing/impresiones/LLM-desc + WhatsApp = future.
 
-### 3.11 Finanzas + CRM + Gestión de flota `/pro/finanzas` `/pro/crm` `/pro/flota` — [NOW core / NEAR auth+P&L+CRM]
+### 3.11 Finanzas + CRM + Gestión de flota `/pro/finanzas` `/pro/crm` `/pro/flota` — [NEAR: auth (AUTH-0) + motor de comparables sobre censo real / FUTURE: cross-posting+financiación+previsión]
 **Propósito:** terminal de inteligencia financiera y operativa: P&L vivo sobre inventario real, pipeline
 CRM con contexto CARDEEP, gestión de flota con delta. Monetización natural del backend. **Secciones:**
-shell + nav módulos · overview command-center (bento KPIs) · **gestión de flota** (tabla densa: precio
-VAM, Δ vs mercado, días en stock, plataformas + kanban + row expandible con historial) · CRM kanban
-(leads + sugerencias alternativas del stock propio) · finanzas (P&L + simulador latente + benchmark) ·
-mercado (observatorio + radar competidores) · config. **Media estrella:** el **simulador de P&L latente**
-(treemap: capital inmovilizado por stock >45d vs precio VAM real) — no existe en ningún competidor.
+shell + nav módulos · overview command-center (bento KPIs) · **gestión de flota** (tabla densa: mediana
+de comparables, Δ vs mercado, días en stock, plataformas + kanban de VEHÍCULO (Entrada→Preparación→
+Publicado→Reservado→Vendido→Entregado, sobre `fleet_ops`/`fleet_ops_event`) + row expandible con historial)
+· **CRM kanban de DEALS** (leads + sugerencias alternativas del stock propio) · finanzas (P&L + simulador
+latente + benchmark) · mercado (observatorio + radar competidores, MDS ventana única 45 días) · config.
+**Ownership (`00-MASTER.md` C-4/C-5/C-7):** `/pro/flota` (tabla de flota + kanban de vehículo,
+`fleet_ops`/`fleet_ops_event`) = dueño único pilar 03 (`plans/cardeep-omni/03-garage-fleet.md`); `/pro/crm`
+(schema `crm_*`, kanban de deals, Contacts/Deals) = dueño único pilar 06
+(`plans/cardeep-omni/06-unified-crm-chat.md`) — 03 CONSUME `crm_deal` de 06, no crea `dealer_lead`/
+`dealer_deal` propio; Market Days Supply usa la ventana única de 45 días (fórmula vAuto, `01-market-intelligence.md`),
+no los 90 días citados antes en 03-K10. **Media estrella:** el **simulador de P&L latente** (treemap:
+capital inmovilizado por stock >45d vs mediana de comparables real) — no existe en ningún competidor.
 **Botones clave:** repricing lote · marcar vendido · sugerir alternativas al lead · calcular P&L latente ·
-radar competidores · crear alerta de mercado. **Data:** flota+historial+VAM+radar+observatorio+CSV = now;
-auth+coste/P&L+CRM+alertas+scoring = near; cross-posting+financiación+previsión = future. **Comparable:**
-LaCentrale Pilot + AutoScout HändlerIQ + mobile.de Sale Probability; superamos: censo total + delta + P&L
-latente sobre VAM real + dark cinematográfico. **Fase:** ver data.
+radar competidores · crear alerta de mercado. **Data:** las rutas `/pro/*` NO existen hoy en `App.tsx`
+(solo páginas genéricas mockeadas: `/kanban /deals /finance...`); motor de comparables (K9-K11) sobre censo
+real es construible ahora mismo (dato ya vivo), pendiente de escribirse — auth (AUTH-0) + escritura
+`fleet_ops` + coste/P&L + CRM real (consumiendo 06) = near; cross-posting+financiación+previsión = future.
+**Comparable:** LaCentrale Pilot + AutoScout HändlerIQ + mobile.de Sale Probability; superamos: censo total
++ delta + P&L latente sobre mediana de comparables real + dark cinematográfico. **Fase:** auth→dealer +
+"Mi flota" solo lectura = near; escritura `fleet_ops` + motor de comparables + CRM mínimo (consumiendo 06) =
+near; garaje 3D fase 2 = future.
 
 ### 3.12 API marketplace + Pricing `/pro/api` — [NOW]
 **Propósito:** vender el inventario vivo como producto de datos SaaS — acceso por API key (por dealer, por

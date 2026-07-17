@@ -28,8 +28,9 @@ aspiracional desalineada con el código real. Este pilar es **net-new al 100%**.
   `status listing_status DEFAULT 'listed'`, `first_seen`, `last_seen`, `removed_at`.
   PK `(vehicle_ulid, platform_entity_ulid)`. Índice parcial por fingerprint (líneas 36-37). [VERIFICADO]
 - No existe columna ni tabla de cola de publicación, credenciales de plataforma, ni job de
-  publicación en ninguna de las 72 migraciones (`0001`→`0072_vehicle_cluster_country_proof.sql`,
-  listado completo re-verificado 2026-07-17). [VERIFICADO]
+  publicación en ninguna de las **66 migraciones existentes** (`0001`→`0072_vehicle_cluster_country_proof.sql`,
+  numeración con huecos — cifra canónica fijada en `00-MASTER.md` C-13, re-contada aquí por
+  `ls migrations/*.sql | wc -l` 2026-07-17). [VERIFICADO]
 - `graphify explain "platform_listing"` → degree=1: el nodo solo conecta con su propia
   migración; ningún módulo Python escribe outbound sobre él. [VERIFICADO en RECON]
 
@@ -47,7 +48,7 @@ aspiracional desalineada con el código real. Este pilar es **net-new al 100%**.
 ### 1.3 Autenticación — el prerrequisito duro NO existe
 
 - El backend **no tiene sistema de auth de dealer/tenant en absoluto**: ni router, ni
-  archivo, ni tabla `user`/`tenant`/`account` en las 72 migraciones. [VERIFICADO en RECON,
+  archivo, ni tabla `user`/`tenant`/`account` en las 66 migraciones existentes. [VERIFICADO en RECON,
   listado de routers re-verificado 2026-07-17: `entities.py, geo.py, ops.py, platforms.py, vehicles.py`]
 - `web/src/auth/AuthContext.tsx:48` llama `GET /auth/me` y `:74` llama `POST /auth/login` —
   **endpoints que no existen en el backend real**. El frontend funciona hoy solo por el
