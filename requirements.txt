@@ -11,6 +11,17 @@ psycopg2-binary>=2.9,<3            # sync PG driver. REQUIRED on the durable-sch
                                    # AND the jobstore URL is postgresql+psycopg2:// (SQLAlchemy DBAPI).
                                    # NOT pulled by apscheduler[sqlalchemy] (SQLAlchemy core only).
 
+numpy>=2,<3             # pipeline/geocode.py ProvinceGeocoder/MunicipalityGeocoder (module-level
+                        # `import numpy as np`, nearest-centroid KNN) — its OWN docstring already
+                        # claimed "numpy only (already installed)" but it was declared ONLY in
+                        # requirements-dev.txt (mis-scoped there as test-only: "vector / geo math
+                        # in tests/test_evict.py, tests/test_geo_reverse.py"). Undeclared here meant
+                        # every connector that imports pipeline.geocode — 11 modules incl. all OEM-VO
+                        # portal harvesters (audi/ford/hyundai/nissan/seat/toyota/volvo/spoticar) and
+                        # both wallapop modules — crash-looped with ModuleNotFoundError on a clean
+                        # `pip install -r requirements.txt` (reproduced live in cardeep-autopilot,
+                        # F0 rebuild verification, 2026-07-17: oem_hyundai_wholesale exit=1).
+
 rapidfuzz>=3,<4         # pipeline/geo.py Tier-B fuzzy municipality match (WRatio>=88). Lazy-imported +
                         # guarded, so the resolver still runs without it but SILENTLY skips fuzzy
                         # resolution (alt spellings: Orense->Ourense, Palma de Mallorca -> None). Declared

@@ -1,0 +1,287 @@
+# 08 — Foro / Red social: peticiones de compra/venta + comunidad anclada a dato
+
+> Carta de sub-proyecto institucional. Pilar `08-forum-community` del programa cardeep-omni.
+> Fecha: 2026-07-17 · HEAD verificado en esta sesión: `7d494dc` · Fase: SYNTHESIS (pensar/arquitectura, cero código ejecutado).
+> Doctrina: cada afirmación es [VERIFICADO] (leída en código/fuente real, con archivo:línea o procedencia declarada) o [ASUMIDO] (declarado como tal, nunca disfrazado).
+> **Protocolo de esta versión:** cada archivo:línea citado en esta carta fue RELEÍDO en la sesión de síntesis del 2026-07-17 contra `7d494dc` — no se heredó ninguna etiqueta [VERIFICADO] de sesiones previas sin repetir la lectura. Las afirmaciones cuya evidencia procede del RECON de campaña (y no de relectura directa en esta sesión) se marcan explícitamente "[VERIFICADO en RECON]".
+> Esta versión SUPERSEDE los borradores previos del mismo archivo y **reconcilia la procedencia del research**: un borrador anterior citaba criterios (Wilson z de Reddit "best", tabla de reputación de Stack Overflow, gate de llamada de coches.net, TTL de StockX, Motorway, ban C2C de Facebook Marketplace) que NO constan en el payload de la fase RESEARCH de esta campaña (17 referencias). Aquí, todo criterio de §2 traza al research verificado; lo heredado sin re-verificar se degrada a [ASUMIDO] declarado o se elimina.
+
+---
+
+## 1. Estado actual
+
+**Veredicto: CERO implementación real. Pilar 100% net-new en las tres capas.** Confirmado por el RECON de campaña y re-verificado en esta sesión de síntesis por caminos independientes (grep directo, lectura de fuente cruda, ls, git).
+
+### 1.1 Base de datos — [VERIFICADO en esta sesión]
+- 66 archivos `migrations/*.sql` (re-contados: `ls migrations/*.sql | wc -l` → 66; numeración `0001_geo.sql` → `0072_vehicle_cluster_country_proof.sql` con huecos — la última migración es `0072` [VERIFICADO ls tail]).
+- Grep de `CREATE TABLE` re-ejecutado en esta sesión: **47 tablas reales** (48 nombres únicos menos 1 falso positivo — la palabra `only` capturada de un comentario). El RECON de campaña decía 46: **corregido por camino independiente en esta sesión.** Lista completa: `alert, audit_eviction, canonical_dedup, canonical_dedup_run, capacity_ledger, country_campaign, country_campaign_transition, country_pack_audit_verdict, denominator_estimate, discovery_capture, discovery_list, discovery_splink_cluster, entity, entity_alias, entity_cluster, entity_cluster_run, entity_completion, entity_resolution, entity_resolution_run, entity_source, exhaustiveness_estimate, geo_comarca, geo_municipality, geo_province, gestion_item, gestion_transition, harvest_run, inquisition_claim, inquisition_skeptic, inquisition_verdict, organization, platform_listing, platform_meta, product_stats, repair_attempt, sample_event, scheduler_lease, source_breaker, source_coverage, source_health, vehicle, vehicle_cluster, vehicle_cluster_run, vehicle_event, verdict_audit, verification_contract, verification_verdict`.
+- **Ninguna** es de post/thread/reply/voto/reputación/perfil/wanted-listing. **No existe tabla `user`/`account`/`session`.** Las tablas "de personas" (`entity`, `organization`) son dominio del pipeline (dealers descubiertos), no usuarios de plataforma.
+- `alert` — esquema LEÍDO COMPLETO en esta sesión (`migrations/0004_verification_health.sql:34-43`): `origin, severity(info|warning|critical), message, payload JSONB, created_at, resolved_at`. Es infraestructura de alerta OPERATIVA del pipeline, **sin columna de destinatario/usuario**. Consecuencia de diseño en §5.1.
+
+### 1.2 Backend — [VERIFICADO en esta sesión]
+- `services/api/main.py:114` — `FastAPI(title="Cardeep API", version="0.2.0")`. Routers registrados en `main.py:146-150`: exactamente 5 — `ops`, `entities`, `geo`, `vehicles`, `platforms` (ls de `services/api/routers/` re-ejecutado: `entities.py, geo.py, ops.py, platforms.py, vehicles.py`). Cero endpoint de comunidad, foro, posts o auth.
+- `services/api/` contiene además (ls re-verificado): `cache.py`, `codes.py`, `deps.py`, `ratelimit.py`, `stats.py`, `tax_id.py` — infraestructura reutilizable (§5), nada social.
+- Rate limiting real ya montado: `main.py:125-127` — `app.state.limiter` + `SlowAPIMiddleware` + handler 429 con envelope `{ok, data, error, meta}` (comentario `main.py:121-122`) [VERIFICADO].
+- `web/src/hooks/useInbox.ts:18-44` (releído completo en esta sesión) apunta a `/inbox`, `/inbox/{id}`, `/inbox/{id}/reply`, `/inbox/{id}` PATCH — endpoints que NO existen en el backend real; `Inbox.tsx` corre sobre `MOCK_CONVS` por caída silenciosa al fallback [VERIFICADO en RECON, `web/src/pages/Inbox.tsx:14-19,89`].
+
+### 1.3 Frontend — [VERIFICADO en esta sesión]
+- `web/src/App.tsx:58-101` — todas las rutas del SPA releídas: no existe `/community` ni variante. Las páginas de auth (`/login`, `/register`, `/reset`, `/2fa` — `App.tsx:63-66`) existen pero cuelgan de un bypass.
+- `web/src/auth/AuthContext.tsx:6` — `const DEV_BYPASS = true`, cortocircuitos releídos en líneas 34, 46, 61 y 68: usuario fijo `DEV_USER` (id `dev-001`, `AuthContext.tsx:8-15`), sin backend de auth. **Prerequisito duro de cualquier capa social, y no existe.**
+- `web/src/layout/Shell.tsx:20-77` — `NAV_GROUPS` releído completo: 7 grupos (raíz, INTELIGENCIA, CRM & VENTAS, OPERACIÓN, FINANZAS, HERRAMIENTAS, CUENTA): ninguna entrada Comunidad/Foro.
+- Falsos positivos descartados uno a uno en el RECON (leídos, no asumidos): `Chat.tsx` = chat interno de equipo 100% `SEED` hardcodeado; `Inbox.tsx` = bandeja de leads B2B mock; `Marketplace.tsx` + `portal/marketplacePortal.ts` = motor de OFERTA sin mecanismo de demanda; "Community support" en `Api.tsx:48` = texto de tier de pricing; "comunidad" en `pipeline/sources/dgt_cat.py:68` = campo gubernamental "Comunidad Autónoma".
+- `graphify query "forum OR community OR thread OR wanted_listing"` sobre `graphify-out/graph.json` [VERIFICADO en RECON]: cero nodo de código real.
+
+### 1.4 El único artefacto: un documento de visión — [VERIFICADO en esta sesión], con contradicción doc-vs-código
+- `docs/frontend/00-PLATFORM-BLUEPRINT-E2E.md:77-80` — sitemap: `/community` (etiqueta `[NOW UI / FUTURE social layer]`), `/community/thread/:id`, `/community/user/:handle`, `/community/inbox`.
+- Ídem `:224-236` — §3.6: posts anclados a vehículo/dealer/provincia real vía anchor cards (`VehicleAnchorCard`/`DealerAnchorCard` con sparkline), heatmap de actividad, voto optimista, reputación, comparable "Hacker News + Reddit + Carfax".
+- **CONTRADICCIÓN (Regla de 3 Capas aplicada):** la línea 224 etiqueta `[NOW UI+sidebar / FUTURE social layer]` y las líneas 235-236 afirman "UI + componentes de dato CARDEEP funcionan day-1 contra API real". **FALSO contra el código en `7d494dc`**: no existe ni un componente, ni una ruta, ni un stub. El "NOW" del blueprint es aspiracional. Esta carta corrige ese registro.
+- La campaña activa `plans/frontend-definitivo/` (PLAN, PROGRESO, UNIFICATION, 05-MONETIZATION-MAP — grepeados en RECON): **cero hits** de foro/comunidad. El pilar no está en ningún backlog cercano.
+
+### 1.5 Vacío de diseño adicional — [VERIFICADO]
+El ángulo "peticiones de compra/venta" (tablón "busco tal coche", distinto del motor de oferta que ya sirve `/marketplace`) **no está descrito ni en el documento de visión**: el §3.6 del blueprint describe foro-conversación, no un mecanismo de solicitud como entidad de producto. Esta carta lo diseña (§3, §4.4, §5.2).
+
+---
+
+## 2. Investigación competitiva/adversarial
+
+**Procedencia:** fase RESEARCH de esta campaña, completada — **17 referencias estudiadas**. Los criterios de esta sección son **[VERIFICADO — research de campaña contra fuentes externas]**; se transcriben EXACTOS, no genéricos. Lo que un borrador previo citaba y NO consta en ese payload se marca o se retira (nota de cabecera).
+
+### 2.1 Mecánica de ranking (fórmulas públicas exactas)
+- **Reddit (ranking "hot", fórmula exacta):** `score = log10(max(1, |ups−downs|)) + sign(ups−downs)·(seconds−1134028003)/45000` — escala logarítmica de votos + boost temporal lineal. Criterio exacto: *el voto número 100 vale menos que el número 10; la magnitud se amortigua en log*.
+- **Hacker News (fórmula exacta):** `score = (points−1) / (hours_age+2)^1.8` — decaimiento por gravedad exponencial (G=1.8) que fuerza el reemplazo de la portada. Criterio exacto: *la relevancia decae polinomialmente; la cabeza del feed no se fosiliza*.
+- Nota de procedencia: el borrador previo usaba el Wilson lower bound de Reddit "best" (z=1.281551565545); ese dato NO está en el research de esta campaña y **no se hereda como verificado**. Las dos fórmulas de arriba sí lo están y bastan para §4.1.
+
+### 2.2 Progresión de confianza por comportamiento (umbrales públicos exactos)
+- **Discourse TL1 (automático):** entrar en ≥5 temas, leer ≥30 posts, ≥10 minutos totales de lectura.
+- **Discourse TL2:** visitar ≥15 días no consecutivos, dar ≥1 like, recibir ≥1 like, responder en ≥3 temas distintos, entrar en ≥20 temas, leer ≥100 posts, ≥60 min de lectura.
+- **Discourse TL3 (ventana móvil de 100 días):** visitar ≥50% de los días, responder en ≥10 temas no-PM, ver ≥25% de temas nuevos (tope 500), leer ≥25% de posts nuevos (tope 20.000), recibir ≥20 likes Y dar ≥30, ≤5 flags de spam/ofensivo recibidos, período de gracia de 2 semanas antes de degradar.
+- **Discourse TL4:** promoción 100% manual por staff — la única excepción deliberada al automatismo. Criterio exacto: *los privilegios se ganan con comportamiento medido en ventana móvil, y el poder máximo nunca es automático*.
+- **Stack Overflow / Stack Exchange:** referencia canónica de reputación como llave de privilegios graduados (voto, edición, cierre, flag) ligada a comportamiento verificado por pares. **El research de esta campaña NO extrajo su tabla numérica exacta** — el borrador previo la citaba (+5/+10/+15/−2/−1); esos valores quedan degradados a [ASUMIDO] donde se usen (§4.5).
+
+### 2.3 Reputación transaccional y confianza entre desconocidos (mecanismos exactos)
+- **eBay Feedback Score (fórmula exacta):** +1 positivo, 0 neutral, −1 negativo; score = positivos − negativos; % = positivos/(positivos+negativos)×100 sobre **ventana móvil de 12 meses**, **deduplicando feedback repetido del mismo comprador dentro de la misma semana calendario** (anti-inflado). Detailed Seller Ratings: exactamente 4 dimensiones puntuables 1-5★ por separado. Criterios exactos: *la reputación caduca; los pares repetidos no la inflan; la valoración nace de una transacción, no de una opinión suelta*.
+- **Airbnb double-blind (validado en paper académico, Fradkin et al.):** ninguna reseña es visible para la otra parte hasta que AMBAS la envían o expira la ventana de **14 días**; tras la revelación no se puede editar. Efecto medido en experimento controlado: **+7% en tasa de envío y +2% en reseñas negativas** al eliminar el sesgo de represalia. Criterio exacto: *la reseña honesta exige eliminar el miedo a la contra-reseña*.
+- **OfferUp TruYou (proceso exacto):** móvil + 2 fotos de ID gubernamental + selfie con liveness-check vía proveedor externo (Onfido); badge binario superpuesto a rating 1-5★ + **4 atributos de comportamiento nombrados y puntuables por separado** (puntual / amable / tal-como-se-describe / fiable). Criterio exacto: *identidad verificada = badge binario; comportamiento = ejes nombrados, no una nota única*.
+- **Nextdoor (verificación + moderación, exactos):** residencia verificada por dirección+postal físico O teléfono ligado a esa dirección O registro municipal — nada autodeclarado sin cruce. Moderación: ~300.000 voluntarios vecinales votan sobre lo reportado; **~90% del contenido reportado revisado por un humano en <6 horas**; categorías sensibles escalan DIRECTO a staff pagado de Trust & Safety, sin pasar por voluntarios. Criterios exactos: *identidad ligada a algo físico verificable; SLA de revisión humana medible; lo sensible nunca se delega a la multitud*.
+
+### 2.4 Mecánica de "petición" y clasificados (el análogo del tablón "Se busca")
+- **eBay "Want It Now" (histórico, descontinuado):** el comprador publica lo que busca; los vendedores filtran esas peticiones y responden con oferta. **Precedente directo del concepto — y fracasó/se retiró**: dependía de que humanos-vendedores navegaran la demanda. Criterio adversarial exacto: *una petición sin matching automático es un tablón que nadie lee*.
+- **Craigslist:** la categoría "wanted" es de **primer nivel** (no un tag sobre un post de venta). Flagging comunitario: requiere múltiples usuarios ÚNICOS y el umbral exacto se mantiene **deliberadamente no público**, variando por categoría/localización, para evitar gaming. Criterios exactos: *demanda y oferta son entidades separadas de producto; el umbral de flag no se publica*.
+- **CarWow "Sell my car" (mecánica exacta):** valoración algorítmica instantánea → reserva del vendedor → pool de subasta diaria cerrado a 6.000+ dealers → cierre a hora fija (15:30) → puja proxy automática en incrementos de £1 sobre la reserva → **veto total del vendedor**, sin coste para él. LÍMITE CLAVE: empareja solo contra su red cerrada de dealers.
+- **AutoTrader (alertas de búsqueda guardada, exacto):** delta = bajada de precio O inventario nuevo coincidente O oferta añadida; entrega en **batch 1 vez/día** (no tiempo real); opt-in por canal (email/SMS); **limitado al inventario propio de la plataforma, sin cruce cross-platform**. Este es el listón directo a batir en §4.4.
+- **Foros de motor (gating anti-abuso, exacto):** **PistonHeads** — subforos bloqueados exactamente **14 días** para cuentas nuevas (desbloqueo automático); discusión comercial prohibida fuera de Marketplace/Business bajo riesgo de ban; **reglas distintas y separadas para dealer vs particular**. **Rennlist** — SOLO miembros de pago pueden publicar compra/venta/intercambio: fricción económica pura en lugar de algoritmo. **Facebook Buy-Sell Groups** — admisión filtrada por preguntas de membresía + tags de categoría + enforcement de keywords prohibidas.
+
+### 2.5 Comunidad anclada a dato y casos de escala
+- **Bring a Trailer:** el hilo de comentarios está **anclado 1:1 a cada subasta** (no es foro general) y vive solo durante la ventana de ~7 días; señal de fraude documentada por la propia comunidad: *"10 personas preguntando lo mismo = red flag"*; la plataforma publica una métrica de confianza a nivel de sistema (**97.7% de tasa de éxito en subastas completadas**) como KPI público. Criterios exactos: *la conversación de más valor cuelga del objeto real, con vida acotada; y la confianza del sistema se publica como un número auditable*.
+- **Edmunds "Values & Prices Paid":** subforo persistente **desde 1996** dedicado exclusivamente a que la comunidad valide si un precio pagado/pedido es justo, anclado a hilos por modelo — el análogo textual directo de lo que un anchor card de vehículo debe soportar en Cardeep.
+- **Reddit (r/whatcarshouldibuy):** subreddit especializado con AutoModerator forzando estructura de post — la plantilla obligatoria vence al texto libre.
+- **Forocoches (CASO NEGATIVO):** el foro generalista español más grande, con subforo de Compra-Venta activo, acumula **años de demandas de sus propios usuarios pidiendo moderación real** ("Hay que moderar el subforo de compraventa de coches, ¡¡ya!!") sin que la plataforma lo resuelva. Criterio adversarial exacto: *ni el líder español con dos décadas de masa ha resuelto la confianza P2P en compraventa de coches; el volumen no la compra*.
+
+### 2.6 Síntesis adversarial — dónde hay foso y dónde no (veredicto honesto, dos ejes)
+1. **EJE EMPAREJAMIENTO — foso REAL y único.** Ninguna referencia cruza plataformas en tiempo real contra un censo deduplicado: BaT/Forocoches/Craigslist son texto puro sin enlace a inventario vivo; AutoTrader alerta solo sobre SU inventario y en batch diario; CarWow empareja solo contra su red cerrada; eBay Want It Now murió por falta de matching automático. Cardeep, con `vehicle`/`vehicle_event` como censo vivo con delta ([VERIFICADO en esta sesión] `migrations/0003_vehicles_events.sql:4-26,33-42`), es la única entidad que puede emparejar "busco Golf VII diésel <120.000 km en Málaga" contra el stock cross-platform completo. (La amplitud multi-portal del censo procede del snapshot de memoria de proyecto 2026-06-23 — [ASUMIDO como contexto, no re-verificado en esta sesión]; las tablas y endpoints que lo sirven sí están verificados.)
+2. **EJE CONFIANZA ENTRE PERSONAS — cero foso; partida desde cero, peor que TODAS las referencias.** Cada referencia de primer nivel invirtió su ingeniería más dura aquí: ID+liveness (OfferUp/Onfido), residencia física (Nextdoor), 300k moderadores con SLA (Nextdoor), double-blind validado en paper (Airbnb), meses de comportamiento medido (Discourse/SO), o fricción económica (Rennlist) y temporal (PistonHeads 14 días). Cardeep: `DEV_BYPASS=true`, cero tabla de usuario, cero historial. **VAM verifica VEHÍCULOS y entidades comerciales, no PERSONAS** — ejes ortogonales; confundirlos sería el error que ninguna referencia comete.
+3. **Cero foso en efecto de red.** Forocoches = dos décadas de masa. Un tablón con censo perfecto y cero usuarios publicando es un tablón vacío: el censo resuelve "qué ofrecer como respuesta", no "quién viene a preguntar".
+4. **Cero capacidad de garantizar el cierre.** CarWow vincula al dealer contractualmente; un match de Cardeep solo entrega un `deep_link` a un anuncio de un tercero, con latencia scraping→clic y sin forzar la venta. Se declara, no se maquilla (mitigación §7.3).
+5. **La mecánica de foro/ranking es commodity.** Fórmulas hot/gravedad, niveles Discourse: dominio público, replicable por cualquiera. Se copia lo mejor (§4), NO se vende como diferenciador.
+
+---
+
+## 3. Objetivo Cardeep para este pilar y por qué puede superar a la referencia
+
+**Objetivo en una frase:** el punto de encuentro del gremio del motor español donde cada petición de compra/venta y cada conversación está clavada a dato verificado del mercado completo — el "busco un Golf VII diésel por menos de 15.000€ en Málaga" recibe en segundos los N que existen ahora mismo en TODO el mercado, con su historial de precio, porque Cardeep es el único que tiene el mapa entero.
+
+**Dos productos en un pilar, con prioridad invertida respecto al blueprint:**
+1. **Tablón "Se busca" (peticiones de compra/venta)** — PRIORIDAD 1. Explota el único foso real (§2.6.1) y esquiva la causa de muerte de eBay Want It Now (§2.4): el "otro lado" del match no son usuarios que naveguen la demanda, es el matcher automático contra el inventario del mercado entero. Valor con UN solo usuario.
+2. **Foro anclado a dato** — PRIORIDAD 2. Hilos con anchor cards que incrustan vehículo/dealer/provincia real con sparkline de `vehicle_event` (patrón BaT/Edmunds §2.5: la conversación cuelga del objeto real). Necesita masa crítica; se construye sobre la infraestructura del tablón (auth, perfiles, votos) y NO se abre hasta que la plataforma tenga usuarios reales.
+
+**Por qué puede superar a la referencia (en su sub-pieza):** AutoTrader alerta en batch diario sobre una sola plataforma — Cardeep puede alertar en tiempo real (hook sobre `vehicle_event NEW`) sobre el mercado completo. CarWow empareja contra 6.000 dealers propios — Cardeep contra el censo total. Forocoches tiene masa pero cero dato. Los cimientos existen y están verificados: `/geo/seal`, `/geo/exhaustiveness` (`services/api/routers/geo.py:105,168` [VERIFICADO en esta sesión]) y el historial por vehículo (`/vehicles/{ulid}/history` — `services/api/routers/vehicles.py:24` [VERIFICADO]).
+
+**Límite honesto (del veredicto §2.6 — no se vende lo contrario):**
+- **Confianza entre personas:** no se puede ganar a eBay/OfferUp/Nextdoor a corto plazo — no hay ni usuarios. Estrategia: copiar los mecanismos verificados desde el día 1 (gate transaccional eBay, double-blind Airbnb, ejes nombrados OfferUp, sensible-a-staff Nextdoor) para no cavar deuda, sin prometer paridad. La verificación de identidad con ID+liveness (estándar OfferUp/Nextdoor) NO entra en v1: se declara como hueco conocido, con rol dealer verificado contra censo como sucedáneo parcial (§4.7).
+- **Efecto de red:** contra Forocoches en volumen no se compite; se compite en densidad de dato por post. El foro (F4-F5) queda detrás del tablón precisamente para no exhibir un foro fantasma.
+- **Cierre de transacción:** v1 entrega descubrimiento + alerta + `deep_link`; NO custodia, NO garantiza disponibilidad al clic (mitigación §7.3), NO fuerza el cierre. Monetizar la transacción es otra carta.
+- **Prerequisito estructural:** todo cuelga de auth real, hoy `DEV_BYPASS = true` (`web/src/auth/AuthContext.tsx:6` [VERIFICADO]). Auth es Fase 1 innegociable.
+
+---
+
+## 4. Criterios de evaluación CONCRETOS (cada número/badge/sección trazado)
+
+Nada en pantalla sin criterio explícito en esta tabla. Si un elemento no puede trazarse aquí, no se renderiza. Toda constante es nombrada en config, nunca número mágico inline.
+
+### 4.1 Orden del feed de hilos — `rank_score`
+```
+V          = sign(net) · log10(max(1, |net|))        net = upvotes − downvotes del hilo
+rank_score = (V + ANCHOR_BOOST·A) / (h + 2)^1.8
+  A = nº de anchors VERIFICADOS del hilo (anchor cuya entidad existe y responde en API), cap = 3
+  h = horas desde created_at del hilo
+  ANCHOR_BOOST = 0.4   (config nombrada)
+```
+- Trazabilidad: amortiguación logarítmica de votos = fórmula "hot" de Reddit (§2.1, exacta); gravedad `(h+2)^1.8` = fórmula de HN (§2.1, exacta); el término `ANCHOR_BOOST·A` codifica la doctrina del pilar — *un post con dato verificado vale estructuralmente más que uno sin él* — y es el único término de cosecha propia: [ASUMIDO como hipótesis de producto, ajustable tras medir].
+- Retirados respecto al borrador previo (procedencia no verificada en esta campaña): el Wilson lower bound y el amortiguador de controversia de HN. Si se quieren en v2, se re-verifican primero.
+- Cálculo: SQL sobre `post_vote` agregado + `post_anchor` con check de existencia; cacheado 60s vía `services/api/cache.py` [VERIFICADO ls].
+
+### 4.2 Badge "DATO VERIFICADO" en anchor card
+Se muestra **solo si** las dos condiciones se cumplen en el momento del render (protocolo §7.1):
+1. El `vehicle_ulid`/`cdp_code` anclado existe y responde en `/vehicles/{ulid}` o `/entities/{cdp}` (`vehicles.py:71`, `entities.py:53` [VERIFICADO en esta sesión]).
+2. El precio mostrado coincide con la reconstrucción desde `vehicle_event` (§7.1).
+Si falla (1) → card en estado "dato retirado del mercado" (gris, sin badge, sin precio). Si falla (2) → sin badge, precio con marca "última observación" + flag automático a ops (§7.6). **Nunca badge por defecto.** (Patrón OfferUp §2.3: lo verificado es un badge binario, no un matiz.)
+
+### 4.3 Sparkline de precio en anchor card
+- Fuente: eventos `PRICE_CHANGE` + `NEW` de `vehicle_event` (`migrations/0003_vehicles_events.sql:37-38` [VERIFICADO: el CHECK de `event_type` incluye ambos]), servidos por `/vehicles/{ulid}/history` (`vehicles.py:24`).
+- Regla: se dibuja **solo con ≥2 puntos reales**. Con 1: precio plano sin sparkline. Con 0: nada. Prohibido interpolar, suavizar o inventar puntos.
+
+### 4.4 Match score del tablón "Se busca" — `match_score` (0-100)
+```
+match_score = 35·make_model + 15·year + 15·km + 20·price + 15·geo
+  make_model: 1 si make y model exactos (normalizados por el mismo normalizador del pipeline); 0 si no. Sin fuzzy en v1.
+  year:       1 si |year − year_pedido| ≤ 1; 0.5 si ≤ 2; 0 resto
+  km:         1 si km ≤ km_max; 0.5 si ≤ km_max·1.2; 0 resto
+  price:      1 si price ≤ price_max; 0.5 si ≤ price_max·1.1; 0 resto
+  geo:        1 misma provincia; 0.6 provincia limítrofe (tabla de adyacencia nueva, §5.2); 0.3 resto de España
+```
+- Umbral de notificación: `match_score ≥ 70` alerta al autor. Umbral de listado: ≥ 50 aparece en "coincidencias". Cada componente re-computable desde columnas reales de `vehicle` (`make, model, year, km, price, fuel, transmission` — `0003:9-16` [VERIFICADO]) y `geo_province`. Los pesos son [ASUMIDO como hipótesis inicial, ajustables]; la estructura (match determinista SQL, sin ML en v1) es decisión firme trazada a §7.3.
+- **Cadencia de alerta — el criterio que bate a la referencia:** AutoTrader entrega en batch 1 vez/día sobre su propia plataforma (§2.4, exacto). Cardeep dispara sobre el hook incremental `vehicle_event NEW` → latencia = ciclo de scraping, cross-platform. Este delta es EL argumento del producto y se muestra como tal ("detectado hace 2h", timestamp real de `observed_at`).
+- **TTL de la petición:** el autor elige caducidad 7/14/30/60 días; al vencer, `status='expired'` y deja de matchear. Sin TTL infinito: una demanda vieja es ruido. (Decisión de producto propia [ASUMIDO]; el borrador previo la atribuía a StockX — cita no verificada en esta campaña, se retira la atribución, se conserva la decisión.)
+- **Gating anti-spam:** cuentas nuevas no publican peticiones hasta pasar verificación de email + `WANTED_COOLDOWN_DAYS = 2` desde el registro (patrón de fricción temporal PistonHeads §2.4 — su valor exacto es 14 días para subforos; el nuestro es config propia [ASUMIDO], más laxo porque el matching automático reduce el incentivo de spam). Cuotas: `WANTED_MAX_OPEN = 5` abiertas simultáneas y `WANTED_MAX_MONTH = 8` creadas/mes [ASUMIDO, config nombrada]; renovar una expirada cuenta contra la cuota mensual.
+
+### 4.5 Reputación de usuario — `rep` + niveles de confianza
+- Ledger append-only `reputation_event` (§5.2); `rep = Σ deltas`. Valores v1 (config nombrada, TODOS [ASUMIDO como hipótesis inicial] — el research de esta campaña no extrajo la tabla numérica de SO, §2.2): **+10** upvote recibido en post con anchor verificado; **+4** upvote en post sin anchor; **+15** petición cerrada como "comprado vía match"; **−2** downvote recibido; **−1** emitir un downvote (principio *el poder de dañar se paga* — principio de diseño propio inspirado en el modelo SO, sin cita numérica verificada). Tope diario `REP_DAILY_CAP = 100` por votos [ASUMIDO], cierres de petición fuera del tope.
+- **Anti-inflado de pares** (criterio eBay §2.3, exacto — dedup del mismo comprador en la misma semana): los votos del mismo votante al mismo autor dentro de una ventana de 7 días cuentan una sola vez para `rep` (el voto se registra igual para el ranking del post).
+- **Privilegios por nivel** (patrón Discourse §2.2 — umbrales de referencia exactos arriba; los de Cardeep son adaptación propia, config nombrada [ASUMIDO]): publicar petición/post = email verificado + cooldown §4.4 (≈TL0-1); votar = `rep ≥ 10`; downvote = `rep ≥ 50`; flag = `rep ≥ 100`; **moderar/borrar = SIEMPRE manual de staff** (regla TL4 de Discourse, exacta: el poder máximo nunca es automático).
+- **Umbral de flags para ocultar contenido en cola:** requiere N usuarios ÚNICOS con privilegio y **N no se publica en la UI** (criterio Craigslist §2.4, exacto: el umbral de flag se mantiene opaco para evitar gaming).
+- El número mostrado en perfil DEBE coincidir con la suma del ledger (check §7.4).
+
+### 4.6 Valoración de dealer post-match — gate transaccional + double-blind
+- **Gate:** un usuario solo puede valorar a un dealer si existe un `wanted_match` suyo con ese dealer marcado "comprado vía Cardeep" o con click-through registrado (`clicked_at`) al `deep_link` (criterio eBay §2.3: *la valoración nace de una transacción registrada, no de una opinión suelta*). Sin interacción probada → el botón de valorar no existe (constraint en BD, §5.2).
+- **Double-blind** (criterio Airbnb §2.3, exacto): si el dealer es usuario de la plataforma y contra-valora, ninguna de las dos reseñas es visible hasta que ambas se envían o expira la ventana `REVIEW_REVEAL_DAYS = 14` (valor exacto de Airbnb); tras revelarse, inmutables.
+- **Ejes nombrados** (criterio OfferUp §2.3, exacto en estructura — 4 atributos separados; nombres adaptados al dominio): `trato`, `anuncio veraz`, `disponibilidad real`, `agilidad` — cada uno 1-5★ independiente, además del veredicto global.
+- **Ventana:** el % positivo del dealer se calcula sobre ventana móvil de **12 meses** excluyendo neutros (criterio eBay §2.3, exacto).
+
+### 4.7 Identidad de rol — anti dealer-disfrazado
+`app_user.role IN ('dealer','particular','staff')`; el rol `dealer` exige `cdp_code` verificado contra el censo (`entity`) vía `services/api/tax_id.py` [VERIFICADO ls]. Las peticiones y posts muestran SIEMPRE el rol. Trazado al criterio PistonHeads §2.4 (exacto: reglas distintas y separadas para dealer vs particular). Hueco declarado: sin verificación de identidad con ID+liveness (estándar OfferUp/Nextdoor §2.3) en v1 — el rol `particular` solo tiene email+teléfono; se documenta como límite, no se disfraza de paridad.
+
+### 4.8 Heatmap de actividad por provincia (SpainMap colorMode=activity)
+- Métrica: `hilos_activos_7d + peticiones_abiertas` por provincia, normalizado al máximo nacional. Fuente: agregados sobre `forum_thread.province_code` y `wanted_listing.province_code` (FK a `geo_province`, tabla real §1.1). Cero actividad = provincia sin color, **no** color mínimo decorativo.
+
+### 4.9 Números del hero ("pulso vivo")
+Tres y solo tres, cada uno con query trazada: (a) hilos con actividad 24h — `COUNT(DISTINCT thread_id) WHERE last_reply_at > now()−'24h'`; (b) peticiones abiertas — `COUNT(*) FROM wanted_listing WHERE status='open'`; (c) coincidencias servidas 7d — `COUNT(*) FROM wanted_match WHERE notified_at > now()−'7d'`. Si el valor real es 0, se muestra 0. Prohibido el maquillaje de cifras en frío.
+
+### 4.10 KPI público de confianza del sistema — `match_liveness_rate`
+`matches con vehicle.status='available' en el momento del clic / clics totales`, ventana 30 días, publicado en la propia página del tablón. Trazado al criterio BaT §2.5 (exacto: publicar la tasa de éxito del sistema — 97.7% en su caso — como número auditable). Si la tasa es mala, se muestra mala: es el termómetro honesto de la latencia scraping→clic declarada en §3.
+
+---
+
+## 5. Modelo de datos + almacenamiento backend
+
+### 5.1 Reutilización — nombres REALES verificados en el repo
+| Pieza existente | Ubicación [VERIFICADO en esta sesión] | Rol en este pilar |
+|---|---|---|
+| `vehicle` | `migrations/0003_vehicles_events.sql:4-26` | Objetivo de anchors y del matcher (`make, model, year, km, price, fuel, transmission, status(available/gone), deep_link, first_seen, last_seen`) |
+| `vehicle_event` | `migrations/0003_vehicles_events.sql:33-42` | Serie del sparkline (`PRICE_CHANGE`/`NEW`) y trigger del matcher incremental (evento `NEW` → re-match) |
+| `entity`, `entity_alias`, `organization` | migraciones 0001-0002 (lista §1.1, re-grepeada) | DealerAnchorCard; identidad del dealer citado; verificación de rol dealer (§4.7) |
+| `geo_province`, `geo_comarca`, `geo_municipality` | `migrations/0001_geo.sql` | Anclaje geográfico de posts/peticiones; heatmap |
+| `alert` | `migrations/0004_verification_health.sql:34-43` — esquema LEÍDO: `origin, severity, message, payload, created_at, resolved_at`, SIN destinatario | Se reutiliza SOLO como canal de flags operativos del protocolo §7 (`origin='community.anchor_drift'`, `'community.rep_mismatch'`, etc.) — encaja sin tocar el esquema. Las notificaciones A USUARIOS no caben aquí (no hay destinatario): van por `wanted_match.notified_at` + tabla `user_notification` nueva (§5.2) |
+| `/vehicles/{ulid}`, `/vehicles/{ulid}/history` | `services/api/routers/vehicles.py:71,24` | Render y verificación de VehicleAnchorCard |
+| `/entities/{cdp}`, `/entities/{cdp}/inventory`, `/entities/{cdp}/delta` | `services/api/routers/entities.py:53,94,171` | DealerAnchorCard + panel lateral de datos vivos |
+| `/geo/*` (completeness, seal, exhaustiveness, entities, tree) | `services/api/routers/geo.py:32,105,168,260,398` | Heatmap y árbol geográfico del composer |
+| `services/api/ratelimit.py` + middleware SlowAPI | `main.py:125-127` | Rate limiting de posting/voto (anti-spam), mismo envelope 429 |
+| `services/api/cache.py` | existe [VERIFICADO ls] | Cache de feed ranking (60s) y agregados de heatmap |
+| `services/api/codes.py`, `deps.py`, `tax_id.py` | existen [VERIFICADO ls] | Validación de `cdp_code` en anchors y rol dealer; inyección de sesión DB |
+| Frontend: React 18.3.1 + react-router-dom 6.26 + Shell | `web/package.json:40-42`, `web/src/layout/Shell.tsx:20-77` | Páginas nuevas montadas en el Shell existente, mismo sistema de diseño |
+
+### 5.2 Nuevo — no existe nada de esto (numeración desde `0073_`; la `0072` es la última [VERIFICADO ls tail])
+Nombres propuestos (NO existen aún; esta carta es su acta de nacimiento):
+- **`app_user`** — auth real: email, hash argon2id, estado, `role IN ('dealer','particular','staff')`, `cdp_code` opcional verificado (§4.7). Prerequisito compartido con la Capa 1 del blueprint (`00-PLATFORM-BLUEPRINT-E2E.md:94-98`, marcada FUTURE y sin implementar [VERIFICADO en esta sesión]).
+- **`user_session`** — sesiones server-side revocables (token opaco httpOnly; cero JWT sin revocación).
+- **`user_notification`** — notificaciones a usuario (destinatario, tipo, payload, read_at); el canal que `alert` no puede ser (§5.1).
+- **`forum_thread`**, **`forum_post`** — hilo y posts (el primer post es el cuerpo); `province_code` FK opcional a `geo_province`.
+- **`post_anchor`** — ancla polimórfica controlada: `anchor_type IN ('vehicle','entity','province')` + ULID/código + snapshot JSONB del dato al momento de anclar (detección de drift, §7.5). Patrón BaT §2.5: la conversación cuelga del objeto real.
+- **`post_vote`** — un voto por (user, post), valor ±1, UNIQUE; cambio de voto deja rastro en `reputation_event`.
+- **`reputation_event`** — ledger append-only (§4.5). Nunca UPDATE/DELETE — mismo patrón que `vehicle_event` (comentario "NEVER updated or deleted" en `0003:32` [VERIFICADO]; doctrina MVCC del proyecto: cero UPDATE de filas no mutadas).
+- **`wanted_listing`** — la petición: `make, model, year_min/max, km_max, price_max, fuel, transmission, province_code, free_text, expires_at, status IN ('open','matched','closed','expired')` + motivo de cierre. Campos estructurados 1:1 con columnas de `vehicle` para que el matcher sea SQL puro. Tipo de entidad SEPARADO del post de foro (criterio Craigslist §2.4: "wanted" es primer nivel, no un tag).
+- **`wanted_match`** — `(wanted_id, vehicle_ulid, match_score, matched_at, notified_at, clicked_at)`; re-computable siempre (§7.3); `clicked_at` alimenta el gate de valoración (§4.6) y el KPI §4.10.
+- **`dealer_review`** — valoración post-match: FK obligatoria al `wanted_match` habilitante (sin match probado no hay fila posible — constraint, no convención), 4 ejes nombrados 1-5 (§4.6), campos de double-blind (`submitted_at`, `revealed_at`).
+- **`geo_province_adjacency`** — dato estático de provincias limítrofes ([ASUMIDO — el nº de pares se verifica contra el mapa oficial al poblarla en F2, por dos caminos: fuente cartográfica + suma de grados del grafo]); alimenta el componente `geo` de §4.4.
+- **`moderation_flag`** — flags de usuarios con privilegio (§4.5) + cola de revisión humana; umbral de ocultación en config no publicada (§4.5, criterio Craigslist).
+- **Routers nuevos:** `services/api/routers/auth.py` y `services/api/routers/community.py`, registrados en `main.py` junto a los 5 existentes (`main.py:146-150` [VERIFICADO]).
+- **Matcher:** job incremental que escucha `vehicle_event.event_type='NEW'` y peticiones nuevas; SQL determinista, sin LLM (§8).
+
+---
+
+## 6. Especificación de pantalla/sección en el frontend (en la piel del dealer)
+
+Rutas nuevas bajo el Shell autenticado (`App.tsx:70-101` [VERIFICADO]), entrada nueva en sidebar — grupo propio **COMUNIDAD** entre OPERACIÓN y FINANZAS (`Shell.tsx:45-60` [VERIFICADO: posiciones actuales de ambos grupos]), dos ítems: "Se busca" y "Foro".
+
+### 6.1 `/community/wanted` — el tablón "Se busca" (la pantalla que paga el pilar)
+El compraventa de Málaga piensa: *"necesito un Golf VII diésel de menos de 120.000 km que pueda vender en 3 semanas"*. Hoy eso es llamar a cuatro conocidos y vigilar tres webs. Aquí:
+- **Botón "Publicar búsqueda"**: formulario en su idioma — marca, modelo, años, km tope, precio tope, provincia, combustible, y cuánto tiempo la mantiene viva (7/14/30/60 días, §4.4). Ningún texto libre obligatorio: la petición ES el filtro (patrón AutoModerator §2.5: la plantilla vence al texto libre).
+- **En el instante de publicar**, debajo del formulario: *"Ahora mismo hay **37** que encajan en tu zona"* — matching en vivo contra `vehicle` (§4.4), cada uno con precio, km, dealer con su rol visible (§4.7), provincia, sparkline si hay historial (§4.3) y `deep_link` al anuncio origen (doctrina deep-links del proyecto: jamás dominio raíz).
+- **Después**: cuando el pipeline detecta stock nuevo que cuadra (`vehicle_event NEW`), le llega la notificación — *"Ha entrado un Golf 2.0 TDI en Antequera, 14.200€, detectado hace 2h"*. El dealer ve el mercado moverse hacia su petición, no al revés. AutoTrader se lo daría mañana y solo de su propia casa (§2.4); aquí es hoy y de todo el mercado.
+- **La cara pública del tablón**: demanda agregada — *"3 compradores buscan SUV diésel en Sevilla este mes"* — inteligencia de demanda que hoy no existe en ningún sitio. Cada cifra trazada a `COUNT` real (§4.9); si es 0, se ve 0. Al pie, el KPI de confianza del sistema (§4.10) — el número que BaT enseña y Forocoches no puede enseñar.
+- **Cierre de petición** con motivo ("comprado vía Cardeep" / "comprado fuera" / "ya no interesa") — alimenta §4.5, habilita la valoración del dealer (§4.6) y mantiene honestas las métricas.
+- Cuotas visibles sin burocracia: si toca techo (§4.4), el mensaje dice cuántas tiene abiertas y cuándo caduca la más vieja.
+
+### 6.2 `/community` — feed del foro (fase posterior, tras masa de usuarios)
+- Hero con el pulso (3 números de §4.9) + SpainMap en modo actividad (§4.8). Feed ordenado por `rank_score` (§4.1) con toggle "recientes". Filtro por provincia clicando el mapa.
+- Cada hilo: título, autor con `rep` y rol, provincia, nº respuestas, y miniatura del anchor si lo hay — el hilo "¿Por qué caen los precios de eléctricos en Barcelona?" lleva incrustada la evidencia, no un pantallazo. El hilo-por-modelo de validación de precio (patrón Edmunds §2.5) es un tipo de hilo de primera clase: "¿Es buen precio?" con anchor obligatorio.
+
+### 6.3 `/community/thread/:id` — hilo con anchor cards
+- **VehicleAnchorCard**: foto, título, precio actual, sparkline real (§4.3), badge "DATO VERIFICADO" solo si pasa §4.2, y estado vivo ("sigue a la venta" / "retirado hace 3 días" — de `vehicle.status` y `last_seen`, `0003:21-24` [VERIFICADO]). **DealerAnchorCard**: nombre, `cdp_code`, stock actual (`/entities/{cdp}/inventory`), delta 30d (`/entities/{cdp}/delta`), y su % de valoraciones a 12 meses si tiene (§4.6).
+- **Composer con DataLinker**: al escribir, "vincular dato" abre búsqueda contra inventario real (no pega URLs: selecciona la entidad). Voto optimista con rollback visible si el servidor rechaza.
+
+### 6.4 `/community/user/:handle` — perfil
+- `rep` (§4.5) con desglose por origen recomputable a la vista ("+120 por posts con dato, +15 por búsquedas cerradas"), historial de posts y peticiones, valoraciones recibidas (dealers) con su ventana de 12 meses y sus 4 ejes (§4.6). Sin métricas de vanidad sin fuente.
+
+**Protocolo de mando [VERIFICADO en memoria de proyecto]:** NADA de código de frontend de este pilar se escribe sin OK explícito del owner sobre esta especificación — regla dura vigente tras el rechazo del prototipo prematuro. Esta carta es el documento que se somete a ese OK.
+
+---
+
+## 7. Protocolo de verificación (antialucinación aplicada al producto)
+
+Todo dato mostrado al usuario final se confirma por ≥2 vías independientes antes de darse por bueno. Si las vías discrepan, el dato degrada (nunca se muestra la versión "bonita") y se emite flag.
+
+1. **Precio/estado en anchor card** — Vía A: fila viva de `vehicle` (`/vehicles/{ulid}`, `vehicles.py:71`). Vía B: reconstrucción desde el ledger `vehicle_event` (último `PRICE_CHANGE.new_value`, o `NEW` si no hay cambios) vía `/vehicles/{ulid}/history` (`vehicles.py:24`). Coinciden → badge §4.2. Discrepan → sin badge, precio con timestamp "última observación", flag automático. El proyecto ya mantiene snapshot + ledger por caminos de escritura distintos: verificación cruzada natural.
+2. **Contadores del hero y heatmap** — Vía A: query agregada de producción (cacheada 60s). Vía B: en CI, recuento independiente contra snapshot seeded (mismo patrón del programa E2E-replicación del proyecto) — el test falla si endpoint y SQL directo difieren. En runtime, botón de auditoría interna (staff) que recomputa sin cache.
+3. **Coincidencias "Se busca"** — Vía A: `wanted_match` materializado por el matcher. Vía B: re-ejecución del criterio §4.4 como query directa sobre `vehicle` en el render de la lista (el matcher es SQL determinista: ambas vías DEBEN coincidir; test de propiedad en CI con los bordes exactos year±1/±2, km·1.2, price·1.1). Además, cada match mostrado re-verifica `vehicle.status='available'` en render — un coche vendido jamás aparece como coincidencia viva (mitiga la latencia scraping→clic declarada en §3, y alimenta el KPI §4.10 con su dato crudo).
+4. **Reputación** — Vía A: valor agregado servido. Vía B: `SUM(reputation_event.delta)` del ledger. Job periódico de reconciliación: desviación = bug P1 + flag `community.rep_mismatch` a `alert`; mientras tanto se muestra el valor del ledger (fuente de verdad).
+5. **Anchors y drift** — snapshot JSONB de `post_anchor` al anclar vs dato vivo: si el precio vivo difiere del citado, la card lo declara ("el autor citó 15.900€; hoy 14.500€") en vez de reescribir silenciosamente la historia.
+6. **Canal de flags** — todo fallo de doble vía emite fila en `alert` (esquema verificado §5.1) con `origin='community.<check>'`, `severity`, `payload` con ambos valores discrepantes. Cero flags silenciosos.
+7. **Valoraciones de dealer** — Vía A: la fila `dealer_review`. Vía B: el `wanted_match` habilitante (FK obligatoria + `clicked_at`/cierre "comprado vía Cardeep"). Una review sin match probado es imposible por constraint, no por convención (§4.6). El double-blind se verifica por su propio invariante: ninguna review con `revealed_at NULL` sale por la API (test de contrato).
+8. **Regla de render universal:** un dato que no supera su doble vía se muestra como estado degradado explícito o "—". Prohibido el fallback inventado, el placeholder numérico y el valor cacheado sin marca temporal.
+
+---
+
+## 8. Uso de LLM (doctrina €0 del CLAUDE.md: local/barato para lo masivo; lo caro, solo para decidir)
+
+**Camino crítico de servicio: CERO LLM.** Ranking (§4.1), matching (§4.4), reputación (§4.5), verificación (§7) son SQL/aritmética determinista. No es austeridad: un match irreproducible no pasaría la doble vía §7.3, y el research demuestra (§2.6.5) que esta mecánica se resuelve con fórmulas públicas, no con inteligencia.
+
+**Local/barato (fuera del camino crítico, en cola):**
+- Parseo del `free_text` de peticiones a filtros estructurados — primero regex/normalizador del pipeline (doctrina regex-antes-que-LLM del proyecto); modelo local solo como fallback de lo que la regex no capture, y su salida se valida contra el vocabulario real de `vehicle.make/model` antes de aceptarse (un parse que no existe en el inventario se descarta, no se inventa).
+- Clasificación spam/duplicado/toxicidad en cola de pre-moderación: modelo local, umbral conservador, y SIEMPRE humano-con-privilegio (§4.5) para la decisión de borrado. El LLM encola, no ejecuta — coherente con la regla TL4 de Discourse (§2.2) y con el escalado-a-staff de Nextdoor (§2.3): el poder destructivo y lo sensible nunca son automáticos ni de la multitud.
+- Deduplicación de peticiones casi idénticas del mismo usuario: hash estructural primero, LLM local solo en zona gris.
+
+**Caro (justificado de verdad, y solo si se activa):**
+- Nada en v1. Candidato único futuro: resumen editorial semanal de actividad ("qué se busca y qué se mueve") — pieza de contenido, no de dato, 1 vez/semana, coste acotado, revisable antes de publicar. Las apelaciones de moderación ambiguas quedan en humanos, no en Opus.
+- La integración con Deepy (blueprint §3.7, `00-PLATFORM-BLUEPRINT-E2E.md:238` [VERIFICADO en esta sesión]) es OTRO pilar con su propia carta; este no le crea dependencias.
+
+---
+
+## 9. Fases de construcción (orden estricto; cada una con build+test+revisión real antes de avanzar)
+
+> Autoridad asumida: reemplazar/reestructurar código existente donde haga falta (p. ej., desmontar `DEV_BYPASS`). Frenos vigentes: el gate de frontend del owner (§6) y el gasto.
+
+- **F0 — Gate de mando + cierre residual de research.** La investigación adversarial de mecánica está hecha (§2, 17 referencias con criterios exactos). Residual declarado: pasada de navegador real sobre las UIs españolas (Forocoches, Wallapop, coches.net, Milanuncios) para calibrar copy/UX antes de congelar §6 — la mecánica está verificada; falta la piel local. Y el paso innegociable: someter esta carta al OK explícito del owner (obligatorio para todo lo que toque `web/`). *Verificación:* capturas fechadas anexadas a esta carpeta; acta de decisión del owner registrada. Sin OK, el pilar se detiene aquí y lo dice.
+- **F1 — Auth real (prerequisito estructural, beneficia a toda la plataforma).** Migración `0073_app_user` (+`user_session`, `user_notification`), router `auth.py` (registro, login, sesión revocable, argon2id, verificación de rol dealer vía `tax_id.py`), `AuthContext.tsx` conmutado a backend real con `DEV_BYPASS` degradado a flag de entorno **apagado por defecto y prohibido en build de producción**. *Verificación:* suite pytest del router (happy + adversarial: enumeración, fuerza bruta contra `ratelimit.py`, fijación de sesión); E2E Playwright login/logout/expiración; revisión de seguridad adversarial independiente ANTES de merge (patrón doble-review del proyecto — recordatorio de campaña 06-16: ~30% de los CRITICAL de agentes fueron falsos positivos, verificar a mano); CI verde con bypass off.
+- **F2 — Backend "Se busca".** Migración `0074_wanted` (`wanted_listing`, `wanted_match`, `dealer_review`, `geo_province_adjacency` — poblada verificando el nº de pares limítrofes por dos caminos, §5.2); matcher determinista §4.4 + hook incremental sobre `vehicle_event NEW`; TTL, cooldown y cuotas §4.4; endpoints CRUD + matches en `community.py`; notificaciones vía `user_notification` (decisión sobre `alert` ya tomada, §5.1). *Verificación:* tests de propiedad del matcher (bordes exactos de §4.4); doble vía §7.3 en CI contra snapshot seeded; benchmark del matcher a escala del inventario real (EXPLAIN + índices probados, no asumidos).
+- **F3 — Frontend "Se busca"** (tras gate F0). Ruta, grupo COMUNIDAD en `Shell.tsx`, formulario, matching en vivo, notificaciones, cierre con motivo, valoración post-match con double-blind. *Verificación:* E2E publica→ve matches→recibe notificación→cierra→valora, con dato real; regresión visual en breakpoints doctrinales (320/768/1024/1440); cero regresión en rutas existentes (suite actual verde); revisión de código independiente.
+- **F4 — Backend foro.** Migración `0075_forum` (`forum_thread`, `forum_post`, `post_anchor`, `post_vote`, `reputation_event`, `moderation_flag`); ranking §4.1, reputación y privilegios §4.5, verificación de anchors §4.2, umbral de flags opaco. *Verificación:* tests unitarios de la fórmula §4.1 con vectores calculados a mano FUERA del código (doble camino para cada número: log10 y gravedad computados independientemente); reconciliación ledger §7.4 en CI; revisión adversarial de la mecánica de privilegios (abuso de voto, sybil básico, pares infladores §4.5).
+- **F5 — Frontend foro:** feed, hilo, anchor cards, composer DataLinker, perfil, heatmap. *Verificación:* E2E crear-hilo-con-anchor→votar→ver-rank-mover; test explícito del estado degradado §7.1 (anchor con precio discrepante renderiza la declaración de drift, no el precio bonito); test del invariante double-blind §7.7; accesibilidad + reduced-motion; revisión de diseño contra el sistema visual existente (cero estilo huérfano).
+- **F6 — Endurecimiento y sello.** Rate limits afinados sobre el middleware existente (`main.py:125-127`), cola de moderación operativa con SLA interno medido (listón de referencia: Nextdoor 90% <6h, §2.3 — el nuestro se mide y publica internamente antes de prometer nada), KPI §4.10 en producción, runbook, barrido final de regresiones en toda la plataforma, y auditoría cruzada de TODOS los números en pantalla contra sus criterios §4 uno a uno. *Verificación:* checklist §4→pantalla firmado ítem a ítem; CI completa verde; parte de entrega honesto con huecos residuales declarados.
+
+**Orden de valor deliberado:** F1-F3 entregan el producto del único foso real (§2.6.1: demanda estructurada + matching en tiempo real contra el mercado completo — lo que mató a Want It Now y AutoTrader no puede dar) sin esperar masa crítica; el foro (F4-F5) solo se abre cuando la plataforma tenga usuarios reales a los que servirle conversación — secuencia que neutraliza el riesgo de tablón-fantasma que el caso Forocoches (§2.5) demuestra que ni la masa resuelve sola.
+
+---
+
+## Resumen
+
+Pilar 100% net-new re-verificado en esta sesión anclaje por anclaje: 47 tablas reales y ninguna social, 5 routers y ninguno de comunidad, cero rutas frontend, auth en bypass — solo una visión en el blueprint cuya etiqueta "NOW" es falsa contra el código (`7d494dc`). El research adversarial (17 referencias, criterios exactos, procedencia reconciliada frente al borrador previo) dictamina un solo foso: matching de demanda en tiempo real contra el censo total (`vehicle`/`vehicle_event`) — AutoTrader alerta en batch de su propia casa, CarWow contra su pool, Want It Now murió sin matcher, y nadie cruza el mercado entero. En confianza entre personas, efecto de red y cierre de transacción no hay ventaja alguna y se diseña en consecuencia: gate transaccional eBay, double-blind Airbnb, ejes OfferUp, moderación humana con lo sensible a staff (Nextdoor/Discourse TL4), y el hueco de identidad ID+liveness declarado, no maquillado. Prioridad: primero el tablón "Se busca" (valor con un solo usuario), el foro después; cada número en pantalla trazado (§4), verificado por doble vía (§7), con LLM fuera del camino crítico (§8) y bloqueado por dos frenos explícitos: auth real (F1) y OK del owner (F0).

@@ -13,6 +13,33 @@
 
 ---
 
+## 0. Salud del MOTOR (scheduler) — comprobar esto ANTES que nada
+
+> El 2026-06-29 el motor murió y estuvo 18 días parado sin que NADA lo detectara — su propio
+> `silence_watchdog` es un job DEL scheduler y murió con él. Todo lo demás en este runbook mide
+> síntomas río abajo de un motor vivo; si el motor está muerto, ninguna otra sección importa.
+> Ver `plans/cardeep-omni/00-marketplace-engine.md` (F0/F1) y
+> `plans/cardeep-omni/EJECUCION_00_F0-F2_2026-07-17.md` para el incidente completo.
+
+```bash
+# Vía A: el propio latido (bumped cada 2 min por el proceso vivo)
+$PSQL "SELECT holder, pid, last_heartbeat, now()-last_heartbeat AS age FROM scheduler_lease;"
+# Vía B, independiente (escrita por APScheduler, no por lock_heartbeat.py): ¿avanza entre dos
+# lecturas separadas >=15 min?
+$PSQL "SELECT id, to_timestamp(next_run_time) FROM apscheduler_jobs ORDER BY next_run_time;"
+# El contenedor supervisado en sí
+docker compose -f docker-compose.yml ps autopilot
+# El watchdog EXTERNO (Windows Task Scheduler, fuera del proceso/contenedor del motor) — su
+# propio log, escrito incluso si la DB está caída:
+Get-Content state\engine_watchdog.log -Tail 10
+Get-ScheduledTaskInfo -TaskName CardeepEngineWatchdog | Select NextRunTime,LastRunTime,LastTaskResult
+```
+
+`age` de `scheduler_lease` ≤30 min = LATIENDO; entre 30 min y 24h = DEGRADADO (se investiga);
+≥24h o sin fila = PARADO (crítico — exactamente el estado en que estuvo 18 días sin alerta). El
+watchdog (`pipeline/ops/engine_watchdog.py`) dispara una alerta `critical` con
+`origin='engine:heartbeat'` en cuanto cruza los 30 min — buscarla en la sección 4 de abajo.
+
 ## 1. Salud del sistema de un vistazo
 
 ```bash

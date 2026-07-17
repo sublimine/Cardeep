@@ -1053,12 +1053,16 @@ async def cleanup_legacy_buckets(conn: asyncpg.Connection, platform_ulid: str,
     """Retire superseded legacy 'garaje' buckets after the per-seller re-harvest.
 
     SAFETY (mandate): (1) re-point VERIFY — only a bucket car whose deep_link is now owned by
-    a kind='particular' entity is deletable; (2) NO professional/compraventa car is ever
+    a kind='particular' entity is retired; (2) NO professional/compraventa car is ever
     touched (the filter is strictly kind='garaje' + the legacy name prefix); (3) total
-    wallapop cars MUST NOT drop — every deleted bucket car has a live per-seller twin, so the
+    wallapop cars MUST NOT drop — every retired bucket car has a live per-seller twin, so the
     distinct-listing count is preserved. All within ONE transaction.
 
-    Records bucket_* stats: how many buckets existed, how many cars were superseded (deletable),
+    "Retired" = status='gone' (vehicle) / status='closed' (entity), NOT a hard DELETE — see the
+    2026-07-17 F2 fix note on the UPDATE below for why (migrations/0035's append-only guard on
+    vehicle_event forbids the DELETE this function used to perform).
+
+    Records bucket_* stats: how many buckets existed, how many cars were superseded (retired),
     how many were NOT yet re-pointed (left intact this run), and the final bucket count."""
     # Bucket inventory BEFORE (truth snapshot).
     buckets_before = await conn.fetchval(
@@ -1097,32 +1101,54 @@ async def cleanup_legacy_buckets(conn: asyncpg.Connection, platform_ulid: str,
         stats["bucket_cars_not_repointed"] = bucket_cars_before - len(superseded_ulids)
 
         if superseded_ulids:
-            # DELETE the superseded bucket VEHICLES. platform_listing + vehicle_event rows on
-            # those vehicles CASCADE away (FK ON DELETE CASCADE, verified). Only the superseded
-            # bucket car (its own vehicle_ulid) is removed — the per-seller twin is a DISTINCT
-            # vehicle_ulid with its own live edge, so the distinct-listing total holds (no drop).
+            # Mark the superseded bucket VEHICLES gone (NOT a hard DELETE).
+            #
+            # ROOT CAUSE (F2 triage, 2026-07-17, reproduced live — RestrictViolationError
+            # "vehicle_event is append-only: DELETE forbidden"): migrations/0035_append_only_
+            # row_guards.sql (2026-06-15) added trg_vehicle_event_immutable, a BEFORE DELETE
+            # trigger on vehicle_event that unconditionally raises. The old `DELETE FROM
+            # vehicle` this comment used to describe relied on FK ON DELETE CASCADE reaching
+            # vehicle_event — that cascade now hits the guard and crashes the whole harvester
+            # (harvest_run: exit -1 / 3221226091 from 2026-06-23 on; wallapop_wholesale's open
+            # breaker was this bug, not a site/anti-bot issue).
+            #
+            # The status='gone' idiom (same as evict.py:486, localizavo_wholesale.py:691,
+            # subastacar_wholesale.py:669, generic_dealer_site.py:730) preserves the delta
+            # history the guard exists to protect, and the existing DB trigger
+            # trg_vehicle_gone_removes_listing (AFTER UPDATE OF status ... WHEN new.status=
+            # 'gone') retires the platform_listing edge as a side effect — so the superseded
+            # bucket car stops being served exactly as before, it is just no longer erased.
+            # The per-seller twin is a DISTINCT vehicle_ulid with its own live edge, so the
+            # distinct-listing total still holds (no drop).
             await conn.execute(
-                "DELETE FROM vehicle WHERE vehicle_ulid = ANY($1::text[])",
+                "UPDATE vehicle SET status='gone', last_seen=now() "
+                "WHERE vehicle_ulid = ANY($1::text[]) AND status <> 'gone'",
                 superseded_ulids)
 
-        # DELETE bucket entities now holding ZERO cars (fully superseded). A bucket that still
-        # owns un-repointed cars is KEPT so its remaining real listings stay served. The
-        # entity delete CASCADES to entity_source/platform_meta/entity_alias (verified FKs).
-        deleted_entities = await conn.fetch(
-            """DELETE FROM entity e
-                WHERE e.kind = $1 AND e.trade_name LIKE $2
-                  AND NOT EXISTS (SELECT 1 FROM vehicle v WHERE v.entity_ulid = e.entity_ulid)
+        # CLOSE bucket entities now holding ZERO live cars (fully superseded), instead of
+        # DELETE: entity has vehicle_ulid_fkey ON DELETE CASCADE, so a hard DELETE here would
+        # cascade into vehicle -> vehicle_event for every car the bucket EVER owned (gone or
+        # not) and hit the same append-only guard as above. status='closed' is a valid
+        # entity_status (migrations/0002_entities.sql) and is inert for a bucket that already
+        # carries zero live listings. A bucket that still owns un-repointed (available) cars
+        # is left 'unverified'/'active' so its remaining real listings stay served.
+        closed_entities = await conn.fetch(
+            """UPDATE entity e SET status='closed'
+                WHERE e.kind = $1 AND e.trade_name LIKE $2 AND e.status <> 'closed'
+                  AND NOT EXISTS (
+                    SELECT 1 FROM vehicle v
+                     WHERE v.entity_ulid = e.entity_ulid AND v.status <> 'gone')
                 RETURNING e.entity_ulid""",
             LEGACY_BUCKET_KIND, LEGACY_BUCKET_NAME_PREFIX + "%")
-        stats["bucket_entities_deleted"] = len(deleted_entities)
+        stats["bucket_entities_deleted"] = len(closed_entities)  # kept key name: stats contract
 
     stats["bucket_entities_after"] = await conn.fetchval(
-        "SELECT count(*) FROM entity WHERE kind=$1 AND trade_name LIKE $2",
+        "SELECT count(*) FROM entity WHERE kind=$1 AND trade_name LIKE $2 AND status <> 'closed'",
         LEGACY_BUCKET_KIND, LEGACY_BUCKET_NAME_PREFIX + "%")
     print(f"[wallapop_wholesale] legacy cleanup: buckets {buckets_before}->"
-          f"{stats['bucket_entities_after']}; superseded bucket cars deleted="
+          f"{stats['bucket_entities_after']}; superseded bucket cars marked gone="
           f"{stats['bucket_cars_superseded']}; left intact (not yet re-pointed)="
-          f"{stats['bucket_cars_not_repointed']}; bucket entities removed="
+          f"{stats['bucket_cars_not_repointed']}; bucket entities closed="
           f"{stats['bucket_entities_deleted']}.")
 
 

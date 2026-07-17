@@ -112,7 +112,45 @@ geo, platforms y ops. Single-worker por diseño (cache en proceso). Probar:
 curl http://127.0.0.1:8090/                       # raíz / health
 ```
 
-## 8. Arrancar el motor (cadencia durable)
+## 8. Arrancar el motor (cadencia durable) — SUPERVISADO, nunca en primer plano
+
+> ⚠️ **Incidente real (F0, 2026-07-17)**: el motor estuvo PARADO 18 días (29-jun → 17-jul) porque
+> la única instrucción que existía aquí era el comando en primer plano de abajo — muere al cerrar
+> la terminal, y su propio `silence_watchdog` (job DEL scheduler) murió con él, así que nadie lo
+> vio. Ver `plans/cardeep-omni/00-marketplace-engine.md` F0/F1 y
+> `plans/cardeep-omni/EJECUCION_00_F0-F2_2026-07-17.md` para la evidencia completa.
+
+**Procedimiento correcto — Docker Compose supervisado (`restart: unless-stopped`)**:
+
+```bash
+docker compose -f docker-compose.yml build api           # imagen fresca desde main (borra drift)
+docker compose -f docker-compose.yml up -d cardeep-pg     # si no estaba ya en compose
+docker compose -f docker-compose.yml up -d autopilot      # el motor, supervisado por Docker
+docker compose -f docker-compose.yml ps                   # Up / healthy
+docker logs -f cardeep-autopilot                          # latido, jobs, cosecha en vivo
+```
+
+Sobrevive: cierre de terminal, crash del proceso Python (Docker lo reinicia solo), reinicio del
+host (si Docker Desktop arranca con el sistema). Verificación de que está VIVO, por 2 vías
+independientes (protocolo §7 de la carta 00): `scheduler_lease.last_heartbeat` avanzando en dos
+lecturas separadas ≥30 min, Y `apscheduler_jobs.next_run_time` avanzando entre las mismas dos
+lecturas:
+
+```sql
+SELECT holder, pid, last_heartbeat, now()-last_heartbeat AS age FROM scheduler_lease;
+SELECT id, to_timestamp(next_run_time) FROM apscheduler_jobs ORDER BY next_run_time;
+```
+
+**Watchdog externo (F1, obligatorio, ya instalado en este host)**: la tarea programada de
+Windows `CardeepEngineWatchdog` (`pipeline/ops/engine_watchdog.py`, cada 5 min) vive FUERA del
+contenedor y de Docker — lee `scheduler_lease` directamente por el puerto publicado (5433) y
+escribe `state/engine_watchdog.log` (canal externo, funciona incluso con la DB caída) además de
+disparar una alerta `critical` (`origin='engine:heartbeat'`) si el latido lleva >30 min parado.
+Verificar que está instalada: `Get-ScheduledTask -TaskName CardeepEngineWatchdog`. En un host
+sin Windows Task Scheduler, portar el mismo script a cron/systemd-timer — la única condición dura
+es que corra en un proceso/host distinto del scheduler que vigila.
+
+**Comando manual en primer plano (SOLO para depurar, nunca para producción)**:
 
 ```bash
 python -m pipeline.ops.scheduler                  # BlockingScheduler + SQLAlchemyJobStore en PG
@@ -120,8 +158,10 @@ python -m pipeline.ops.scheduler --dry-run        # qué fuentes están DUE ahor
 python -m pipeline.ops.scheduler --check-silence  # fuentes calladas > 2× su intervalo (read-only)
 ```
 
-Es **single-producer**: una sola instancia. Persiste los jobs en `cardeep-pg`, así que
-sobrevive a reinicios sin re-disparar (lo que da la propiedad "Cardeep no se cae").
+Es **single-producer**: una sola instancia (advisory lock de Postgres lo impone). Persiste los
+jobs en `cardeep-pg`, así que sobrevive a reinicios sin re-disparar — pero SOLO si algo (Docker,
+systemd, NSSM) reinicia el PROCESO tras un crash. El single-producer por sí solo no da
+supervisión; la da el supervisor externo de arriba.
 
 ---
 
