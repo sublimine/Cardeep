@@ -17,7 +17,9 @@ recomputation that can catch a SQL bug.
 """
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Any, NamedTuple, Sequence
+
+import asyncpg
 
 # Anti-ruido de cohorte (patrón iSeeCars, adoptado en toda la carta 01-market-intelligence
 # para M1/M3/M4/M5/M7/M9/M10): por debajo de este tamaño de muestra NUNCA se publica un
@@ -94,3 +96,82 @@ def divergence_pct(a: float, b: float) -> float:
 def year_band(anchor_year: int, radius: int = YEAR_BAND_RADIUS) -> tuple[int, int]:
     """Return the inclusive ``(low, high)`` year window for a M1-style ±radius band."""
     return anchor_year - radius, anchor_year + radius
+
+
+# ---------------------------------------------------------------------------
+# F2 — dynamic window handling (01-market-intelligence-f0.md gate: real span=35
+# days at F0 measurement time, < the 90/45/30d nominal windows the carta names).
+# ---------------------------------------------------------------------------
+
+# Nominal (target) windows per metric, per carta §4. NEVER used directly on a young
+# corpus — always passed through ``effective_window_days`` first, which clamps to the
+# actual observed history so the product never claims a 90-day view of a 35-day system.
+NOMINAL_WINDOW_DAYS_M3: int = 90   # days-to-retirada rolling window
+NOMINAL_WINDOW_DAYS_M4: int = 45   # Market Days Supply (vAuto standard)
+NOMINAL_WINDOW_DAYS_M5: int = 30   # provincial absorption rate
+NOMINAL_WINDOW_DAYS_M9: int = 30   # seller price-pressure window
+# M7 momentum needs TWO non-overlapping windows (60d canonical) — handled separately
+# via ``m7_half_window_days`` below, not a single nominal constant.
+M7_NOMINAL_HALF_DAYS: int = 30
+
+
+async def get_span_days(conn: asyncpg.Connection) -> float:
+    """Real observed span of vehicle_event.observed_at, in days (float, sub-day precision).
+
+    Queried FRESH on every call (never cached/hardcoded) — the whole point of the F0 gate
+    is that this number grows over time and each run must react to the CURRENT reality,
+    not the 35-day figure measured when F0 was written.
+    """
+    row = await conn.fetchrow("SELECT min(observed_at) AS mn, max(observed_at) AS mx FROM vehicle_event")
+    if row is None or row["mn"] is None or row["mx"] is None:
+        return 0.0
+    return (row["mx"] - row["mn"]).total_seconds() / 86400.0
+
+
+def effective_window_days(nominal_days: int, span_days: float) -> float:
+    """The window a metric ACTUALLY uses today: min(nominal, observed span).
+
+    A young corpus (span < nominal) gets an honestly-reduced window instead of a fake
+    90/45/30-day claim (01-market-intelligence-f0.md §3 gate). Once the corpus ages past
+    the nominal window, this simply returns the nominal value unchanged — the reduction
+    is temporary by construction, not a permanent product decision.
+    """
+    if span_days <= 0:
+        return float(nominal_days)
+    return min(float(nominal_days), span_days)
+
+
+def m7_half_window_days(span_days: float, nominal_half: int = M7_NOMINAL_HALF_DAYS) -> float:
+    """Half-window size for M7's early/late comparison.
+
+    Canonical M7 wants two non-overlapping ``nominal_half``-day windows (60d total). When
+    the observed span can't cover that (span < 2*nominal_half), each half is shrunk to
+    span/2 — a smaller, honestly-labelled comparison — rather than silently reusing full
+    30-day windows that would overlap or reach before the corpus existed.
+    """
+    if span_days >= 2 * nominal_half:
+        return float(nominal_half)
+    return span_days / 2.0
+
+
+class SegmentStat(NamedTuple):
+    """Canonical per-row shape for every F2 metric written to ``market_stat``.
+
+    Distinct from F1's ``M1Row`` (kept untouched to avoid regressing the already-verified
+    M1 path) but structurally a superset: F2 metrics are scalar (``value_num`` +
+    ``value_extra`` for a secondary figure) rather than a p25/p50/p75 distribution, except
+    M10 which reuses p25/p50/p75 to describe a platform-count distribution (documented at
+    its call site).
+    """
+    scope: str  # 'prov' | 'nat'
+    make: str | None
+    model: str | None
+    fuel: str | None
+    province_code: str | None
+    year: int | None
+    n: int
+    p25: float | None = None
+    p50: float | None = None
+    p75: float | None = None
+    value_num: float | None = None
+    value_extra: dict[str, Any] | None = None

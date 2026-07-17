@@ -348,23 +348,155 @@ def _to_jsonb(obj: Any) -> str:
     return json.dumps(obj)
 
 
+def _stat_tuple(run_id: str, metric_id: str, r: Any) -> tuple:
+    """Normalize an M1Row or a SegmentStat into one market_stat insert tuple.
+
+    M1Row has no value_num/value_extra — getattr defaults them to None so both row
+    shapes (F1's M1Row and F2's SegmentStat, see pipeline/market/cohort.py) flow
+    through the SAME insert statement.
+    """
+    value_extra = getattr(r, "value_extra", None)
+    return (
+        run_id, metric_id, r.make, r.model, r.year, r.fuel, r.province_code, r.n,
+        r.p25, r.p50, r.p75,
+        getattr(r, "value_num", None),
+        _to_jsonb(value_extra) if value_extra is not None else None,
+    )
+
+
+_INSERT_STAT_SQL = """
+    INSERT INTO market_stat
+        (run_id, metric_id, make, model, year, fuel, province_code, n, p25, p50, p75,
+         value_num, value_extra)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb)
+"""
+
+
+async def run_compute_full(
+    conn: asyncpg.Connection,
+    *,
+    publish_intent: bool = False,
+    director_confirmed_anomalies: bool = False,
+    make_filter: list[str] | None = None,
+) -> tuple[str, Any]:
+    """F2: one run computing M1 + M3/M4/M5/M7/M9/M10, then (optionally) the publish gate.
+
+    Returns (run_id, gate_result_or_None). gate_result is None when
+    ``publish_intent`` is False (the run is written but nobody asked to publish it —
+    mirrors F1's ``run_compute`` default). When ``publish_intent`` is True, the +/-3%
+    run-over-run gate (pipeline/market/publish_gate.py) runs against the current
+    latest PUBLISHED run (if any — the very first run has no baseline, see that
+    module's bootstrap handling) and, if clean (or ``director_confirmed_anomalies``),
+    flips published=TRUE.
+    """
+    # Import here (not at module top) to avoid a hard circular-ish coupling for F1
+    # callers that only need run_compute(); F2 callers pay this import once.
+    from pipeline.market.metrics_f2 import fetch_m3, fetch_m4, fetch_m5, fetch_m7, fetch_m9, fetch_m10
+    from pipeline.market.publish_gate import publish_run
+
+    t0 = time.monotonic()
+    span_days = await _span_days(conn)
+
+    m1_rows, n_in_m1 = await fetch_m1(conn, make_filter)
+    checks = await crosscheck_m1(conn, m1_rows)
+    if not checks["passed"] and checks["sampled"] > 0:
+        raise RuntimeError(
+            f"compute_stats M1: SQL-vs-Python cross-check FAILED — "
+            f"max divergence {checks['max_divergence_pct']:.4f}% >= tolerance "
+            f"{CROSSCHECK_TOLERANCE_PCT}%. Run NOT written."
+        )
+
+    m3_rows, n_in_m3, w3 = await fetch_m3(conn, span_days=span_days, make_filter=make_filter)
+    m4_rows, w4 = await fetch_m4(conn, m1_rows, span_days=span_days, make_filter=make_filter)
+    m5_rows, n_in_m5, w5 = await fetch_m5(conn, span_days=span_days, make_filter=make_filter)
+    m7_rows, w7 = await fetch_m7(conn, span_days=span_days, make_filter=make_filter)
+    m9_rows, w9 = await fetch_m9(conn, m1_rows, span_days=span_days, make_filter=make_filter)
+    m10_rows = await fetch_m10(conn, make_filter=make_filter)
+
+    elapsed = time.monotonic() - t0
+    checks["elapsed_seconds_all_metrics"] = round(elapsed, 2)
+    window_desc = (
+        f"{WINDOW_DESCRIPTION_M1} | M3={w3:.1f}d | M4={w4:.1f}d | M5={w5:.1f}d | "
+        f"M7_half={w7:.1f}d (2x) | M9={w9:.1f}d | span_days_observed={span_days:.1f}"
+    )
+
+    run_id = ulid()
+    all_rows: list[tuple] = []
+    all_rows += [_stat_tuple(run_id, "M1", r) for r in m1_rows]
+    all_rows += [_stat_tuple(run_id, "M3", r) for r in m3_rows]
+    all_rows += [_stat_tuple(run_id, "M4", r) for r in m4_rows]
+    all_rows += [_stat_tuple(run_id, "M5", r) for r in m5_rows]
+    all_rows += [_stat_tuple(run_id, "M7", r) for r in m7_rows]
+    all_rows += [_stat_tuple(run_id, "M9", r) for r in m9_rows]
+    all_rows += [_stat_tuple(run_id, "M10", r) for r in m10_rows]
+
+    async with conn.transaction():
+        await conn.execute(
+            """
+            INSERT INTO market_stat_run
+                (run_id, methodology_version, window_description, n_in,
+                 metrics_computed, checks, published, published_at, notes)
+            VALUES ($1, $2, $3, $4, $5, $6::jsonb, FALSE, NULL, $7)
+            """,
+            run_id, METHODOLOGY_VERSION, window_desc, n_in_m1,
+            ["M1", "M3", "M4", "M5", "M7", "M9", "M10"], _to_jsonb(checks),
+            f"n_in per metric: M1={n_in_m1} M3={n_in_m3} M5={n_in_m5}",
+        )
+        if all_rows:
+            await conn.executemany(_INSERT_STAT_SQL, all_rows)
+
+    gate_result = None
+    if publish_intent:
+        gate_result = await publish_run(
+            conn, run_id, director_confirmed_anomalies=director_confirmed_anomalies
+        )
+    return run_id, gate_result
+
+
+async def _span_days(conn: asyncpg.Connection) -> float:
+    from pipeline.market.cohort import get_span_days
+    return await get_span_days(conn)
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--publish", action="store_true", help="mark the run published=TRUE (F1 default: never)")
+    parser.add_argument("--full", action="store_true", help="F2: compute M1+M3/M4/M5/M7/M9/M10 in one run")
+    parser.add_argument(
+        "--confirm-anomalies", action="store_true",
+        help="Director override: publish even if the +/-3% gate is red",
+    )
     args = parser.parse_args()
 
     conn = await asyncpg.connect(DSN, command_timeout=900)
     try:
-        run_id = await run_compute(conn, publish=args.publish)
-        n_rows = await conn.fetchval("SELECT count(*) FROM market_stat WHERE run_id = $1", run_id)
-        run_row = await conn.fetchrow(
-            "SELECT n_in, published, checks FROM market_stat_run WHERE run_id = $1", run_id
-        )
-        print(f"run_id={run_id}")
-        print(f"n_in={run_row['n_in']}")
-        print(f"market_stat rows written={n_rows}")
-        print(f"published={run_row['published']}")
-        print(f"checks={run_row['checks']}")
+        if args.full:
+            run_id, gate_result = await run_compute_full(
+                conn, publish_intent=args.publish, director_confirmed_anomalies=args.confirm_anomalies
+            )
+            n_rows = await conn.fetchval("SELECT count(*) FROM market_stat WHERE run_id = $1", run_id)
+            run_row = await conn.fetchrow(
+                "SELECT n_in, published, metrics_computed FROM market_stat_run WHERE run_id = $1", run_id
+            )
+            print(f"run_id={run_id}")
+            print(f"n_in(M1)={run_row['n_in']}")
+            print(f"metrics_computed={run_row['metrics_computed']}")
+            print(f"market_stat rows written={n_rows}")
+            print(f"published={run_row['published']}")
+            if gate_result is not None:
+                print(f"gate: has_baseline={gate_result.has_baseline} compared={gate_result.compared} "
+                      f"anomalies={len(gate_result.anomalies)} max_div={gate_result.max_divergence_pct:.3f}%")
+        else:
+            run_id = await run_compute(conn, publish=args.publish)
+            n_rows = await conn.fetchval("SELECT count(*) FROM market_stat WHERE run_id = $1", run_id)
+            run_row = await conn.fetchrow(
+                "SELECT n_in, published, checks FROM market_stat_run WHERE run_id = $1", run_id
+            )
+            print(f"run_id={run_id}")
+            print(f"n_in={run_row['n_in']}")
+            print(f"market_stat rows written={n_rows}")
+            print(f"published={run_row['published']}")
+            print(f"checks={run_row['checks']}")
     finally:
         await conn.close()
 
