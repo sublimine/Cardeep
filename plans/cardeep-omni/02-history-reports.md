@@ -409,3 +409,126 @@ alcance de esta carta.
   ficheros) que auditar en esta fase.
 - Coverage SQL de §10.1-10.4 medido en vivo contra `cardeep-pg` (puerto 5433, sano) con las
   queries citadas arriba, reproducibles por cualquiera.
+
+---
+
+## 11. Ejecución F1 — motor de re-identificación de por vida — CERRADO 2026-07-18
+
+> Backend puro, cero colisión con los otros 3 frentes de Bloque 1 (verificado: solo se tocó
+> `migrations/0075_lifetime_link.sql` —número re-confirmado por `ls migrations/` en el momento
+> de escribirlo, tras 0073/AUTH-0 y 0074/01—, `pipeline/identity/link_lifetimes.py`,
+> `tests/test_link_lifetimes.py`).
+
+### 11.1 TDD — RED→GREEN, 43 tests
+
+Fixtures sintéticas (sin DB) cubriendo exactamente lo exigido por el mandato: cadenas
+verdaderas (2 y 3 episodios), falsos amigos (ver 11.3 — sustitución declarada
+cross-provincia→cross-dominio, con evidencia real de por qué), km retrocedido (pequeño=ruido,
+grande=flag sin bloquear), gemelos de flota con misma foto de catálogo (guard de
+alta-colisión sobre `photo_hash`, mismo patrón que `PHOTO_HIGH_COLLISION_K` de 0023). RED
+confirmado (`ModuleNotFoundError`) antes de escribir la implementación; GREEN: 43/43 tras
+implementar `pipeline/identity/link_lifetimes.py`. Suite de identidad completa (cluster_vehicles
++ photo_guard + country_isolation + link_lifetimes): **146 passed, 4 skipped** (los 4 skips son
+tests de integración contra el PG dry-run de `:5434`, no levantado en esta sesión — no
+relacionados con este motor).
+
+### 11.2 Migración `0075_lifetime_link.sql`
+
+`lifetime_link_run` (espejo de `vehicle_cluster_run`, 0023) + `lifetime_link` (edges dirigidos
+`vehicle_ulid_from→vehicle_ulid_to`, `match_signal IN ('vin_ref','photo_hash','both')`,
+`evidence JSONB NOT NULL`) + vista `v_vehicle_lifetime` (solo expone el último run
+`vam_verified=TRUE` — el ÚNICO gate que el API/frontend puede leer, §7). Aditiva, reversible
+(rollback documentado), aplicada en vivo (`python -m scripts.migrate up` → `applied 0075`).
+Número confirmado en el momento de crearla: 0073 (AUTH-0) y 0074 (01-market-intelligence) ya
+estaban tomados por los otros dos frentes de este bloque; 0075 fue el siguiente libre, sin
+colisión.
+
+### 11.3 HALLAZGO ADVERSARIAL REAL — el churn intra-dominio (no anticipado por el diseño original)
+
+**Primera corrida real** (motor sin el guard de dominio, sobre 2.520.623 vehículos candidato):
+**208 edges, 208 cadenas** (todas de 2 episodios). Antes de considerar siquiera la muestra
+manual N=50 de §7, auditoría SQL directa de los 208 edges reveló:
+
+- **100% de los 208 edges son intra-dominio** (mismo host en `deep_link` del predecesor y del
+  sucesor) — verificado con `regexp_replace(deep_link,...)` cruzado, `COUNT(*) FILTER (same_domain)`
+  = 208/208.
+- **75% (156/208) tienen un gap predecesor→sucesor de MENOS DE 1 DÍA**; el resto (52/208) cae en
+  una banda de 7-30 días con clusters discretos casi idénticos (7,01d / 7,71d / 24,74d /
+  24,76d) — una distribución bimodal, sin NADA entre 1-7 días ni más allá de 30 días pese a que
+  la ventana permitida es de 365 días. Esa forma de distribución es la firma de una CADENCIA DE
+  RECRAWL del scraper, no de comportamiento orgánico de mercado.
+- Caso ancla verificado a mano: `RIMAUTO NIPON, S.L.U. (Teruel)` — el MISMO dealer, el MISMO
+  UUID de listing (`3838017a-961a-490f-af31-55e71ac6adb6`) visible en ambas URLs de Toyota
+  (`.../pdp.toyota-yaris-2025-...-{uuid}` → `.../vo/{uuid}`) — Toyota reestructuró el formato de
+  URL de su sitio y el scraper lo leyó como "coche distinto" (nuevo `entity_ulid` Y nuevo
+  `vehicle_ulid`, por el `UNIQUE(entity_ulid, deep_link)` de 0003) cuando en realidad es el
+  mismo anuncio, mismo dealer, mismo coche.
+- Otros casos (Volvo Selekt, BMW Premium Selection, Spoticar/Stellantis, Mini Next): mismo
+  patrón — el km del sucesor frecuentemente IDÉNTICO al del predecesor (a veces valores
+  redondos de plantilla: 5.000/10.000/15.000 km), y el dealer a veces literalmente el mismo
+  `cdp_code` repetido, a veces una sede distinta de la MISMA cadena/grupo OEM (p.ej. MERENAUTO A
+  Coruña↔Salamanca, DITEVO Barcelona entre sedes) — reasignación interna de stock certificado
+  entre puntos de venta de la MISMA red de fabricante, o simple renovación de listing_ref, nunca
+  una compraventa independiente adquiriendo el coche de otra.
+
+**Conclusión**: con la población de `vin_ref` de HOY (100% concentrada en 13 fuentes OEM-CPO,
+§10.2), la señal `vin_ref` en solitario captura *listing churn* de portal, no el "coche
+rebotado entre compraventas independientes" que este pilar existe para medir. Esto es un
+hallazgo real, medido, no anticipado por el diseño original de esta carta (§7 hablaba de
+"falsos amigos cross-provincia" — sustituido aquí por el guard real que la evidencia exige:
+cross-dominio).
+
+**Corrección aplicada** (TDD primero, RED→GREEN, después re-run): nuevo guard duro
+`_platform_domain()` en `link_lifetimes.py` — predecesor y sucesor deben tener **dominio
+distinto** en `deep_link`; si coinciden, el par se rechaza SIEMPRE, sin importar la fuerza de
+la señal (no es un descuento de probabilidad, es un bloqueo — la evidencia mostró 0% de
+supervivencia real en el patrón intra-dominio). 6 tests nuevos (`test_same_platform_domain_...`
++ `TestPlatformDomain`), 43/43 verdes.
+
+**Segunda corrida real** (motor CON el guard de dominio, mismos 2.520.623 candidatos):
+**0 edges, 0 cadenas**. Resultado esperado y correcto: los 208 edges anteriores eran
+enteramente el artefacto de churn; al bloquearlo, no queda ni un solo par que sobreviva las
+demás señales (vin_ref válido + firma + ventana + guardas). Escrito en `lifetime_link_run`
+(`n_in=2.520.623, n_chains=0, n_linked=0`).
+
+### 11.4 Veredicto de gate — `vam_verified` se queda en `FALSE`, honestamente
+
+El protocolo §7 exige muestra manual N=50 + precisión ≥95% ANTES del primer `vam_verified=TRUE`.
+Con 0 edges no hay nada que muestrear — el criterio es vacuamente cierto (0/0) pero elevarlo a
+`TRUE` sería un acto ceremonial sin sustancia verificada, exactamente lo que la doctrina
+antialucinación prohíbe disfrazar como cierre. **Se deja `vam_verified=FALSE`** (el default de
+la migración): `v_vehicle_lifetime` sirve 0 filas hoy, honestamente, sea cual sea el valor del
+flag — pero el flag en sí no lleva una certificación que no se ganó. El motor está completo,
+probado y corrido dos veces contra datos reales; su rendimiento actual es CERO eslabones
+defendibles, no por un fallo del motor sino porque el dato de identidad disponible hoy
+(vin_ref, 100% OEM-CPO) no contiene ningún caso genuino de "coche rebotado entre negocios
+independientes" tras aplicar el guard anti-churn correcto. Esto desbloquea honestamente
+09-Fase4 (que depende de este motor, C-9 del master): consumirlo hoy no aporta nada porque no
+hay nada que consumir — no porque el motor esté roto.
+
+**Camino a un yield real (declarado, no ejecutado en esta carta)**: 04-F6 puebla `photo_hash`
+(hoy 0/2.670.827) — el motor YA soporta esa señal end-to-end (`_build_photo_hash_buckets`,
+guard de alta-colisión, 6 tests verdes) sin tocar una línea cuando ese dato exista. Es la única
+vía realista a un primer `vam_verified=TRUE` con sustancia.
+
+### 11.5 Verificación real (no maquillada)
+
+- Migración aditiva/reversible aplicada en vivo (`0075`), verificada por `\d lifetime_link`/
+  `\d lifetime_link_run` contra el esquema real.
+- Cero `UPDATE` sobre `vehicle`/`vehicle_event`: inspección directa de `_write_to_pg` — solo
+  `DELETE FROM lifetime_link[_run] WHERE run_id=RUN_ID` (idempotencia del propio run) +
+  `INSERT`. Ninguna sentencia toca `vehicle` ni `vehicle_event`.
+- 43 tests unitarios verdes (TDD completo, sin DB) + 146/150 en la suite de identidad completa
+  (4 skips = integración `:5434` no levantada, no relacionados).
+- Dos corridas reales contra `cardeep-pg` vivo, con auditoría SQL adversarial completa de la
+  primera (no solo confiar en el conteo) antes de aceptar o rechazar el resultado.
+- Incidente operativo declarado (higiene, no bloqueante): un intento de lanzar la segunda
+  corrida en background con `&` manual + `run_in_background` combinados dejó un proceso
+  huérfano bloqueado en un pipe (`| tail`); diagnosticado por CPU-time plano en
+  `Get-Process` (171 s acumulados, sin crecer más) + `pg_stat_activity` mostrando la conexión
+  parada en `idle in transaction`/`ClientRead` durante >10 min; terminado (`Stop-Process`), sin
+  tocar ninguna conexión de otro frente (verificado por texto de query exclusivo de este
+  módulo antes de tocar nada). La corrida real (lanzada sin el pipe intermedio) completó sola,
+  limpia, ~11:44 min (más lenta que la primera por contención genuina de los otros 3 frentes
+  compartiendo la misma `cardeep-pg`, confirmado por `pg_stat_activity` mostrando consultas
+  concurrentes activas de otros procesos durante toda la ventana).
