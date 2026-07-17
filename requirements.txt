@@ -38,6 +38,13 @@ anyascii>=0.3,<0.4     # pipeline/identity/name_normalize.py dealer-name transli
 slowapi>=0.1.9          # FastAPI/Starlette rate-limiter (wraps limits library)
 cachetools>=5.3,<6      # TTLCache: bounded in-memory TTL cache, RAM-safe
 
+# AUTH-0 (00-MASTER.md C-3): password hashing for services/api/auth_security.py.
+# argon2-cffi's PasswordHasher defaults to argon2id with OWASP-recommended parameters —
+# the €0 in-process alternative to a managed KDF service; module-level import in
+# services/api/auth_security.py, so importing/collecting services/api/routers/auth.py
+# requires it.
+argon2-cffi>=23,<26
+
 # Scraping arsenal. curl_cffi is ACTIVE: it is a module-level import in live connectors
 # (dasweltauto / mercedes_benz / milanuncios wholesale), so importing those connectors —
 # or collecting their tests — requires it. The browser stack stays optional until those

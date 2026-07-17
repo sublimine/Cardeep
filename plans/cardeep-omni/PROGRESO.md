@@ -85,6 +85,25 @@ single-producer).
      verde (`tsc --noEmit && vite build`), greps `8506`/`useDossier`→0. Commit atómico
      pendiente de este cierre.
 3. AUTH-0 (fusión 03-F1+05-F3+06-F1-tenancy+08-F1 en un esquema único, security review obligatoria)
+   **EJECUTADO 2026-07-17/18** (registro completo en `AUTH-0.md` — leer ahí, no re-auditar):
+   migración `0073_auth.sql` (`app_user`+`dealer_membership`+`user_session`+`user_notification`,
+   número re-verificado contra `ls migrations/` al crearla, sin colisión con 0074/0075/0076
+   tomados por los otros 3 frentes de este mismo bloque) + router `services/api/routers/auth.py`
+   (register/login/me/logout/refresh/claim-dealer) + `services/api/auth_security.py` (argon2id,
+   tokens opacos revocables con rotación en refresh, anti-enumeración por timing y por
+   respuesta) + `RATE_AUTH` dedicado (10/min) + CORS corregido para las primeras escrituras
+   reales de la API (POST + Authorization/X-Tenant-ID). `DEV_BYPASS` desmontado UNA sola vez de
+   `AuthContext.tsx` (no tres, como planeaban 03/05/08 por separado); `Register.tsx` recableado
+   a un `register()` real (antes llamaba `login()` y nunca registraba nada). Verificado:
+   migración aplicada en vivo, 20/20 tests propios verdes con teardown limpio comprobado (0
+   filas residuales), 0 regresión en 18 archivos de test que tocan `services.api` (263
+   passed/31 skipped en el subconjunto de impacto real), login real de extremo a extremo por
+   curl con preflight CORS real, build de frontend verde. Encontrado y corregido en el propio
+   proceso: el guard repo-wide `test_served_queries_have_country.py` detectó una query nueva
+   (`dealer_membership JOIN entity` sin dimensión de país) — corregida con
+   `AND e.country_code = 'ES'` antes de cerrar. Huecos declarados (no bloqueantes): sin job de
+   purga de `user_session` expiradas, sin ruta de auto-registro para `role='staff'` (YAGNI hasta
+   que exista un consumidor real). Commit atómico pendiente de este cierre.
 4. 00-F3/F4 (circuit breaker half-open, cadencia adaptativa por fuente)
 
 ## Próximos bloques (no empezar sin cerrar el anterior — ver 00-MASTER.md §4)

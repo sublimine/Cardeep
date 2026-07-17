@@ -86,6 +86,11 @@ platform-inventory.  These trigger multi-join queries over 500 k + rows."""
 RATE_HEALTH: str = "300/minute" if _ENABLED else _NOOP_LIMIT
 """Generous limit for the /health liveness probe — must never block monitors."""
 
+RATE_AUTH: str = "10/minute" if _ENABLED else _NOOP_LIMIT
+"""AUTH-0: tight limit for credential-guessing surfaces (login/register/claim-dealer).
+Deliberately tighter than RATE_DEFAULT — these endpoints spend an argon2 hash per call
+(expensive by design) and are the highest-value bruteforce/enumeration target in the API."""
+
 # ---------------------------------------------------------------------------
 # Limiter singleton — imported by routers and wired into the FastAPI app.
 # ---------------------------------------------------------------------------

@@ -79,7 +79,7 @@ from services.api.deps import (  # noqa: F401
     resolve_cluster,
 )
 from services.api.ratelimit import limiter, rate_limit_handler
-from services.api.routers import entities, geo, ops, platforms, vehicles
+from services.api.routers import auth, entities, geo, ops, platforms, vehicles
 
 # Prod-gated fail-fast: in CARDEEP_ENV=prod, refuse to start on the dev-default DSN OR without an
 # API key configured. No-op in dev/test (CARDEEP_ENV unset) — startup stays byte-identical.
@@ -139,8 +139,13 @@ _cors_origins = os.environ.get(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _cors_origins.split(",") if o.strip()],
-    allow_methods=["GET", "OPTIONS"],
-    allow_headers=["X-API-Key", "Content-Type"],
+    # AUTH-0: POST added for /auth/* (register/login/logout/refresh/claim-dealer) — the
+    # first write endpoints in this API; the other 5 routers stay GET-only.
+    allow_methods=["GET", "POST", "OPTIONS"],
+    # Authorization (bearer session token) and X-Tenant-ID (sent once AuthContext.tsx has a
+    # real tenant) must be preflight-allowed or the browser drops the request before it
+    # ever reaches FastAPI.
+    allow_headers=["X-API-Key", "Content-Type", "Authorization", "X-Tenant-ID"],
 )
 
 app.include_router(ops.router)
@@ -148,6 +153,7 @@ app.include_router(entities.router)
 app.include_router(geo.router)
 app.include_router(vehicles.router)
 app.include_router(platforms.router)
+app.include_router(auth.router)
 
 
 if __name__ == "__main__":

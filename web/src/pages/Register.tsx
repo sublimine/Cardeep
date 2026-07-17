@@ -6,11 +6,12 @@ import { Mail, User } from 'lucide-react'
 import Input from '../components/Input'
 import Button from '../components/Button'
 import { AuthSplitLayout, FormCard, PasswordInput } from '../auth/LoginPage'
+import { ApiError } from '../api/client'
 
 // ─── Register ─────────────────────────────────────────────────────────────────
 
 export default function Register() {
-  const { login } = useAuthContext()
+  const { register } = useAuthContext()
   const navigate = useNavigate()
 
   const [firstName, setFirstName]           = useState('')
@@ -40,10 +41,14 @@ export default function Register() {
 
     setLoading(true)
     try {
-      await login(email, password)
+      await register(email, password, `${firstName} ${lastName}`.trim())
       navigate('/dashboard', { replace: true })
-    } catch {
-      setError('No se pudo crear la cuenta. Inténtalo de nuevo.')
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 409
+          ? 'Ya existe una cuenta con ese email'
+          : 'No se pudo crear la cuenta. Inténtalo de nuevo.',
+      )
       setLoading(false)
     }
   }
@@ -111,7 +116,7 @@ export default function Register() {
               value={password}
               onChange={v => setPassword(v)}
               autoComplete="new-password"
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Mínimo 10 caracteres"
             />
 
             {/* Confirm password */}
