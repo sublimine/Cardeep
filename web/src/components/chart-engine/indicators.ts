@@ -11,9 +11,10 @@
  * ATR: TrueRange = max(H-L, |H-Pc|, |L-Pc|), smoothed with RMA.
  */
 
-// TYPE-ONLY import to avoid circular dependency:
-// indicators.ts imports types from market.ts; market.ts re-exports calc* from here.
-import type { Bar, PD } from './market'
+// TYPE-ONLY import — pure bar/point shapes, zero dependency on any data source.
+// Rescued (09-Fase0, plans/cardeep-omni/09-trading-terminal.md) from the demolished
+// terminal/DeFi prototype: these types used to live in the now-quarantined market.ts.
+import type { Bar, PD } from './types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Normalized output types (chart renderer consumes these generically)
@@ -49,7 +50,7 @@ const C = {
   blue:    '#60a5fa',
   teal:    '#2dd4bf',
   fuchsia: '#e879f9',
-  violet:  '#a78bfa',
+  cobalt:  '#3b82f6',
   rose:    '#fb7185',
   amber:   '#f59e0b',
   sky:     '#38bdf8',
@@ -368,7 +369,7 @@ const INDICATOR_CATALOG_INTERNAL: IndicatorDef[] = [
         }
         out[i] = denom > 0 ? numer / denom : NaN
       }
-      return oneOverlay('vwma', C.violet, toPoints(bars, out), 1)
+      return oneOverlay('vwma', C.cobalt, toPoints(bars, out), 1)
     },
   },
   {

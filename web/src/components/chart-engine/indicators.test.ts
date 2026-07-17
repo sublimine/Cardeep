@@ -1,14 +1,17 @@
 /**
- * CARDEEP Terminal — Indicator self-verification module
+ * CARDEEP chart-engine — Indicator self-verification module
  * No external test runner required. Call runIndicatorChecks() from a browser
  * console or a Node script: `import { runIndicatorChecks } from './indicators.test'`
  *
  * Each check validates a known mathematical property or a hand-computed fixture
  * with ±0.3% tolerance.
+ *
+ * Rescued (09-Fase0, plans/cardeep-omni/09-trading-terminal.md) from the demolished
+ * terminal/DeFi prototype — logic unchanged, only the `Bar` type source moved.
  */
 
 import { calcSMA, calcEMA, calcBB, calcRSI, calcMACD, calcVWAP } from './indicators'
-import type { Bar } from './market'
+import type { Bar } from './types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test infrastructure

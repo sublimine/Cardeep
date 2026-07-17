@@ -1,10 +1,15 @@
 /*
- * CARDEEP Terminal — theme bridge (neutral / minimal)
+ * CARDEEP chart-engine — theme bridge (neutral / minimal)
  * Pure dark-or-white per platform theme. The terminal paints its OWN neutral backdrop (`bg`)
  * so the workspace's colourful mesh never tints it purple. Glass is subtle and monochrome;
  * a single restrained neon (cyan) accent marks only what is truly active. No grain noise,
  * no pointer-glow. Canvas charts can't read CSS vars, so we resolve concrete values and react
  * to theme via a MutationObserver on the <html> `.light` class.
+ *
+ * Rescued alongside MarketChart.tsx/drawings.tsx (09-Fase0, plans/cardeep-omni/09-trading-terminal.md):
+ * not itself one of the four files the carta names explicitly, but both depend on it directly
+ * and it is already brand-clean (no violet literals, verified by grep) — quarantining it would
+ * have broken the rescue it was meant to support.
  */
 import { useEffect, useState } from 'react'
 

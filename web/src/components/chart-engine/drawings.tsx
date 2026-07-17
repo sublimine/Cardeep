@@ -1,17 +1,20 @@
 /*
- * CARDEEP Terminal — drawing engine (TradingView-parity)
+ * CARDEEP chart-engine — drawing engine (TradingView-parity)
  * One SVG overlay that renders every drawing geometry: trend lines & rays, channels,
  * the full Fibonacci/Gann family, pitchforks, harmonic & Elliott patterns, projection /
  * position tools, shapes, arrows, text/notes, brush, and measure. Anchors live in
  * chart space ({time,price}) so drawings stay glued to the data through pan/zoom.
  * Click-count is driven by tools.ts (requiredClicks); pointN/brush terminate on dblclick / mouseup.
+ *
+ * Rescued (09-Fase0, plans/cardeep-omni/09-trading-terminal.md) from the demolished
+ * terminal/DeFi prototype — logic unchanged, only the `Bar` type source moved.
  */
 import React, { useEffect, useRef, useState } from 'react'
 import type { IChartApi, ISeriesApi } from 'lightweight-charts'
 import type { TerminalPalette } from './theme'
 import { MONO } from './theme'
 import { TOOL_BY_ID, requiredClicks, type Geometry } from './tools'
-import type { Bar } from './market'
+import type { Bar } from './types'
 
 export interface DrawPoint { time: string; price: number }
 export interface Drawing { id: string; tool: string; geometry: Geometry; pts: DrawPoint[]; color: string; text?: string }

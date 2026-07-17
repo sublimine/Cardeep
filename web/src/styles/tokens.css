@@ -417,13 +417,6 @@ html.light body.on-terminal .cx-mesh {
   box-shadow: 0 0 24px rgba(37,99,235,0.15), inset 0 0 16px rgba(37,99,235,0.06);
 }
 
-.gradient-text {
-  background: linear-gradient(120deg, #a78bfa 0%, #60a5fa 50%, #67e8f9 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 /* ── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

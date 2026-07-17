@@ -1,9 +1,15 @@
 /*
- * CARDEEP Terminal — institutional price-index chart
+ * CARDEEP chart-engine — institutional price-index chart
  * lightweight-charts (TradingView's engine) on the cx-* palette, theme-reactive. Renders any
  * of the 53 indicators generically from indicators.ts (compute → IndSeries[]), routes separate
- * panes to their own price scale, hosts the full drawings.tsx engine (95 tools) and a unique
- * cross-border regional overlay.
+ * panes to their own price scale, hosts the full drawings.tsx engine and a caller-fed
+ * multi-series comparison overlay.
+ *
+ * Rescued (09-Fase0, plans/cardeep-omni/09-trading-terminal.md) from the demolished
+ * terminal/DeFi prototype and decoupled from its synthetic data source: this component now
+ * takes `data: Bar[]` (and, for the comparison overlay, `compareData`) directly from the
+ * caller instead of generating its own series via the quarantined market.ts `priceSeries()` —
+ * a real backend feed (Fase 1 `market_bucket_daily`) plugs in with zero changes to this file.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -13,7 +19,7 @@ import {
 } from 'lightweight-charts'
 import type { TerminalPalette } from './theme'
 import { MONO } from './theme'
-import { priceSeries, MARKET_BY_CODE, type Instrument, type Bar } from './market'
+import type { Bar } from './types'
 import type { IndicatorDef } from './indicators'
 import { DrawingLayer, type Drawing } from './drawings'
 
@@ -36,12 +42,15 @@ function paneLayout(sepUids: string[]) {
 
 interface MarketChartProps {
   p: TerminalPalette
-  inst: Instrument
-  market: string
+  data: Bar[]
+  /** Human-readable symbol label for the volume-pane caption (e.g. a future C1 symbol_key). Optional, purely cosmetic. */
+  symbol?: string
   range: RangeLabel
   chartType: ChartType
   indicators: ActiveIndicator[]
   compare: string[]
+  /** Bars for each active `compare` key, supplied by the caller — this component never fetches its own data. */
+  compareData: Record<string, Bar[]>
   tool: string
   color: string
   drawings: Drawing[]
@@ -55,7 +64,7 @@ interface MarketChartProps {
 }
 
 export function MarketChart(props: MarketChartProps) {
-  const { p, inst, market, range, chartType, indicators, compare, tool, color, drawings, onAddDrawing, onUpdateDrawing, onDeleteDrawing, hideDrawings, lockDrawings, magnet, onCross } = props
+  const { p, data, symbol, range, chartType, indicators, compare, compareData, tool, color, drawings, onAddDrawing, onUpdateDrawing, onDeleteDrawing, hideDrawings, lockDrawings, magnet, onCross } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,7 +78,6 @@ export function MarketChart(props: MarketChartProps) {
   const [chartH, setChartH] = useState(0)
   const [drawV, setDrawV] = useState(0)
 
-  const data: Bar[] = useMemo(() => priceSeries(inst, market), [inst, market])
   const sepList = useMemo(() => indicators.filter(i => i.def.pane === 'separate'), [indicators])
   const indSig = useMemo(() => indicators.map(i => i.uid + ':' + JSON.stringify(i.params)).join('|'), [indicators])
   const layout = useMemo(() => paneLayout(sepList.map(i => i.uid)), [sepList])
@@ -185,7 +193,8 @@ export function MarketChart(props: MarketChartProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indSig, data, p.dark, layout])
 
-  // Regional comparison overlay
+  // Comparison overlay — data supplied entirely by the caller via compareData; this component
+  // never fetches or generates its own series.
   useEffect(() => {
     const chart = chartRef.current; if (!chart) return
     const want = new Set(compare)
@@ -194,21 +203,24 @@ export function MarketChart(props: MarketChartProps) {
     }
     compare.forEach((code, idx) => {
       if (cmpRefs.current.has(code)) return
+      const bars = compareData[code]
+      if (!bars?.length) return
       const series = chart.addSeries(LineSeries, { color: COMPARE_HUES[idx % COMPARE_HUES.length], lineWidth: 2, priceLineVisible: false, lastValueVisible: true, title: code })
-      series.setData(priceSeries(inst, code).map(d => ({ time: d.time, value: d.close })))
+      series.setData(bars.map(d => ({ time: d.time, value: d.close })))
       cmpRefs.current.set(code, series)
     })
     setDrawV(n => n + 1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compare, inst])
+  }, [compare, compareData])
 
-  // Range
+  // Range — anchored to the last bar of the real series (never a hardcoded reference date).
   useEffect(() => {
     const chart = chartRef.current; if (!chart) return
-    if (range === 'ALL') { chart.timeScale().fitContent(); return }
-    const from = new Date('2026-06-01'); from.setDate(from.getDate() - RANGE_DAYS[range])
-    try { chart.timeScale().setVisibleRange({ from: from.toISOString().split('T')[0] as any, to: '2026-06-01' as any }) } catch { /* */ }
-  }, [range])
+    if (range === 'ALL' || data.length === 0) { chart.timeScale().fitContent(); return }
+    const last = data[data.length - 1].time
+    const from = new Date(last); from.setDate(from.getDate() - RANGE_DAYS[range])
+    try { chart.timeScale().setVisibleRange({ from: from.toISOString().split('T')[0] as any, to: last as any }) } catch { /* */ }
+  }, [range, data])
 
   // Pane separators + labels
   const separators: number[] = []
@@ -225,7 +237,7 @@ export function MarketChart(props: MarketChartProps) {
         <div key={i} style={{ position: 'absolute', left: 0, right: 0, top: y, height: 1, background: p.hairline, pointerEvents: 'none', zIndex: 5 }} />
       ))}
       {chartH > 0 && layout.vol && (
-        <div style={{ position: 'absolute', left: 10, top: chartH * layout.vol.top + 5, fontSize: 9, fontWeight: 700, color: p.t4, letterSpacing: '0.10em', pointerEvents: 'none', zIndex: 5, fontFamily: 'Inter, system-ui' }}>SUPPLY VOL · {MARKET_BY_CODE[market]?.code}</div>
+        <div style={{ position: 'absolute', left: 10, top: chartH * layout.vol.top + 5, fontSize: 9, fontWeight: 700, color: p.t4, letterSpacing: '0.10em', pointerEvents: 'none', zIndex: 5, fontFamily: 'Inter, system-ui' }}>SUPPLY VOL{symbol ? ` · ${symbol}` : ''}</div>
       )}
       {chartH > 0 && sepList.map(i => {
         const m = layout[i.uid]; if (!m) return null

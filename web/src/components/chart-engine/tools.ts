@@ -1,5 +1,5 @@
 /**
- * CARDEEP Terminal — Drawing tools taxonomy
+ * CARDEEP chart-engine — Drawing tools taxonomy
  * Source of truth: .cardeep-spec/tools.json (95 tools, 13 groups)
  *
  * Geometry normalization notes:
@@ -7,6 +7,12 @@
  *   No out-of-union values were found; no normalization was required.
  * - clicks === -1 in the spec (brushes, pointN shapes) is preserved verbatim;
  *   requiredClicks() converts it to -1 (indefinite) per contract.
+ *
+ * Rescued alongside drawings.tsx (09-Fase0, plans/cardeep-omni/09-trading-terminal.md):
+ * not itself one of the four files the carta names explicitly, but drawings.tsx has a hard
+ * compile-time dependency on this tool registry and it carries zero mock-data/brand baggage
+ * (self-contained, zero imports) — quarantining it would have broken the rescue it was meant
+ * to support. Fase 3 decides whether the real terminal needs all 95 tools or a reduced set.
  */
 
 // ---------------------------------------------------------------------------
