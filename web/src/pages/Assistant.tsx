@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  MessageSquare, FileText, Search, Image as ImageIcon, Send, Plus, ChevronRight,
+  MessageSquare, FileText, Search, Send, Plus, ChevronRight,
 } from 'lucide-react'
 import Card from '../components/Card'
 import { useAuthContext } from '../auth/AuthContext'
@@ -15,16 +15,21 @@ function renderBold(text: string): React.ReactNode {
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type Mode = 'ask' | 'listing' | 'vin' | 'image'
+// 07-marketing F0: mode 'image' REMOVED (demolition, not renamed). It rendered
+// Math.floor(Math.random() * CAR_IMAGES.length) over 5 hardcoded Unsplash stock
+// photos, labeled "Imagen generada" — a fabricated-capability lie the project's own
+// antialucinación doctrine forbids (plans/cardeep-omni/07-marketing.md S1.1/S6
+// "Demoliciones ligadas" (a)). No car-image generation exists anywhere in Cardeep;
+// pretending otherwise client-side is worse than having no feature at all.
+type Mode = 'ask' | 'listing' | 'vin'
 
-interface ChatMsg { id: string; role: 'user' | 'bot'; text: string; imageUrl?: string }
+interface ChatMsg { id: string; role: 'user' | 'bot'; text: string }
 interface Conversation { id: string; title: string; mode: Mode; messages: ChatMsg[]; updatedAt: string }
 
 const MODES: { id: Mode; label: string; desc: string }[] = [
   { id: 'ask',     label: 'Preguntar',              desc: 'Stock · precios · mercado EU'  },
   { id: 'listing', label: 'Descripción de anuncio', desc: 'Genera texto de venta'          },
   { id: 'vin',     label: 'Valorar VIN',             desc: 'Tasación por VIN o matrícula'  },
-  { id: 'image',   label: 'Imagen de coche',         desc: 'Genera imagen desde descripción'},
 ]
 
 const SUGGESTIONS: Record<Mode, string[]> = {
@@ -49,33 +54,17 @@ const SUGGESTIONS: Record<Mode, string[]> = {
     'WDD2050422F312345',
     'TMBJP7NE4J0012345',
   ],
-  image: [
-    'BMW Serie 3 azul marino, exterior día, fondo neutro',
-    'SUV compacto blanco, interior premium, luz natural',
-    'Deportivo rojo vista lateral, ángulo 3/4 trasero',
-    'Berlina gris marengo, frontal limpio, sin fondo',
-    'Todoterreno negro mate, vista aérea, carretera',
-  ],
 }
 
 const EMPTY: Record<Mode, { heading: string; body: string }> = {
   ask:     { heading: 'Pregunta sobre tu negocio',           body: 'Consulta stock, márgenes, pipeline y alertas del mercado EU en tiempo real.' },
   listing: { heading: 'Genera una descripción de anuncio',   body: 'Indica marca, modelo, año y km. Obtendrás un texto profesional listo para publicar.' },
   vin:     { heading: 'Valora un VIN o matrícula',           body: 'Pega el VIN de 17 dígitos para historial completo y tasación EU al instante.' },
-  image:   { heading: 'Describe el coche a visualizar',      body: 'Marca, color y ángulo. Recibirás una imagen optimizada para anuncio.' },
 }
 
-const NEW_TITLE: Record<Mode, string> = { ask: 'Nueva consulta', listing: 'Nuevo anuncio', vin: 'Nueva valoración', image: 'Nueva imagen' }
+const NEW_TITLE: Record<Mode, string> = { ask: 'Nueva consulta', listing: 'Nuevo anuncio', vin: 'Nueva valoración' }
 
-const CAR_IMAGES = [
-  'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=480&h=270&fit=crop',
-  'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=480&h=270&fit=crop',
-  'https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=480&h=270&fit=crop',
-  'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=480&h=270&fit=crop',
-  'https://images.unsplash.com/photo-1620891549027-942fdc95d3f5?w=480&h=270&fit=crop',
-]
-
-function botReply(mode: Mode, text: string): { text: string; imageUrl?: string } {
+function botReply(mode: Mode, text: string): { text: string } {
   const q = text.toLowerCase()
 
   if (mode === 'ask') {
@@ -109,11 +98,6 @@ function botReply(mode: Mode, text: string): { text: string; imageUrl?: string }
     }
   }
 
-  if (mode === 'image') {
-    const idx = Math.floor(Math.random() * CAR_IMAGES.length)
-    return { text: `Imagen generada para:\n*"${text}"*\n\nResolución **1920×1080** · Fondo neutro · Optimizada para anuncio. Lista para descargar.`, imageUrl: CAR_IMAGES[idx] }
-  }
-
   return { text: 'No entendí la consulta. Intenta de nuevo.' }
 }
 
@@ -121,8 +105,7 @@ function ModeIcon({ mode, size = 13 }: { mode: Mode; size?: number }) {
   const p = { width: size, height: size }
   if (mode === 'ask')     return <MessageSquare {...p} />
   if (mode === 'listing') return <FileText {...p} />
-  if (mode === 'vin')     return <Search {...p} />
-  return <ImageIcon {...p} />
+  return <Search {...p} />
 }
 
 function BotAvatar({ size = 24 }: { size?: number }) {
@@ -204,7 +187,7 @@ export default function Assistant() {
     setTyping(true)
     setTimeout(() => {
       const reply = botReply(mode, t)
-      const botMsg: ChatMsg = { id: `b-${Date.now()}`, role: 'bot', text: reply.text, imageUrl: reply.imageUrl }
+      const botMsg: ChatMsg = { id: `b-${Date.now()}`, role: 'bot', text: reply.text }
       setConversations(prev => prev.map(cv =>
         cv.id === activeConvId ? { ...cv, messages: [...cv.messages, botMsg], updatedAt: new Date().toISOString() } : cv
       ))
@@ -331,16 +314,6 @@ export default function Assistant() {
                     >
                       {msg.role === 'bot' ? renderBold(msg.text) : msg.text}
                     </div>
-
-                    {msg.imageUrl && (
-                      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.12, duration: 0.32 }} className="max-w-[400px] overflow-hidden rounded-xl" style={{ border: '1px solid var(--border-default)' }}>
-                        <img src={msg.imageUrl} alt="Imagen generada" className="block w-full" />
-                        <div className="flex items-center justify-between p-[7px_12px] text-[10px]" style={{ background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
-                          <span>Imagen generada · CARDEEP AI</span>
-                          <span className="rounded-full px-[7px] py-0.5 text-[9.5px] font-semibold" style={{ background: `${ACCENT}1a`, color: ACCENT, border: `1px solid ${ACCENT}33` }}>1920×1080</span>
-                        </div>
-                      </motion.div>
-                    )}
                   </div>
                 </motion.div>
               ))}
@@ -376,8 +349,7 @@ export default function Assistant() {
                 placeholder={
                   mode === 'ask'     ? 'Pregunta sobre stock, márgenes, mercado EU…' :
                   mode === 'listing' ? 'Ej: BMW 320d 2021, 68.000 km, automático, blanco…' :
-                  mode === 'vin'     ? 'Pega el VIN de 17 dígitos o matrícula…' :
-                                       'Describe el coche: marca, color, ángulo, fondo…'
+                                       'Pega el VIN de 17 dígitos o matrícula…'
                 }
                 className="flex-1 resize-none overflow-y-hidden border-0 bg-transparent text-[12.5px] leading-[1.55] outline-none"
                 style={{ color: 'var(--text-primary)' }}

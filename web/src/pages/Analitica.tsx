@@ -65,6 +65,16 @@ const STOCK_SEGMENTS = [
   { segment: 'Furgoneta', days: 61, target: 45, count: 12, color: BAD },
 ]
 
+// 07-marketing F0 (00-MASTER.md §5.1: "01 decide el destino de la página; 07 posee
+// SOLO el panel CHANNELS"): esta constante y ChannelPerfPanel de abajo son mock
+// (leads/ventas/CPL inventados), igual que el resto de esta página — pero es la
+// única sección que este pilar POSEE, así que se etiqueta honestamente aquí y ahora
+// en vez de esperar a F4. F4 la sustituye por el radar real (cobertura C3 +
+// divergencia de precio C4, consumidos de 05-multiposting's /publishing/*, más
+// días-hasta-baja C5 nuevo) — 01-F6 (dueño de la página) aún no ha ejecutado, así
+// que el resto de paneles (SALES_DATA/KPI_VALUES/TOP_MODELS/STOCK_SEGMENTS/
+// FUNNEL_STAGES/REGION_SALES) permanece exactamente como estaba, fuera de este
+// pilar's alcance.
 const CHANNELS = [
   { name: 'coches.net',  leads: 142, sales: 12, cpl: 9.40, color: ACCENT, pct: 42 },
   { name: 'AutoScout24', leads:  88, sales:  7, cpl: 8.10, color: ACCENT, pct: 26 },
@@ -296,8 +306,15 @@ function ChannelPerfPanel() {
         <div className="mb-0.5 flex items-center gap-1.5">
           <Globe style={{ width: 12, height: 12, color: ACCENT }} />
           <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Rendimiento por canal</h2>
+          <span
+            className="ml-1 rounded-full px-[7px] py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em]"
+            style={{ background: 'rgba(217,119,6,0.14)', border: '1px solid rgba(217,119,6,0.32)', color: '#d97706' }}
+            title="Datos ilustrativos: leads/ventas/CPL de ejemplo. El radar real (cobertura y divergencia de precio verificadas) llega en la página Marketing."
+          >
+            Ilustrativo
+          </span>
         </div>
-        <p className="mb-3.5 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>coches.net · AutoScout24 · Web · Particular</p>
+        <p className="mb-3.5 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>coches.net · AutoScout24 · Web · Particular — datos de ejemplo, ver Marketing para el radar real</p>
 
         <div className="grid shrink-0 gap-1 border-b pb-2" style={{ gridTemplateColumns: '1fr 52px 50px 52px', borderColor: 'var(--border-subtle)' }}>
           {['Canal', 'Leads', 'Ventas', 'CPL'].map(h => (
