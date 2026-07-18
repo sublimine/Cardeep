@@ -97,6 +97,7 @@ from services.api.routers import (
     publishing,
     terminal,
     vehicles,
+    wanted,
 )
 
 # Prod-gated fail-fast: in CARDEEP_ENV=prod, refuse to start on the dev-default DSN OR without an
@@ -185,6 +186,7 @@ app.include_router(crm_notes.router)
 app.include_router(crm_calendar.router)
 app.include_router(marketing.router)
 app.include_router(terminal.router)
+app.include_router(wanted.router)
 
 
 if __name__ == "__main__":

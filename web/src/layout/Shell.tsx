@@ -6,7 +6,7 @@ import {
   MessageSquare, Calendar, BarChart3, Settings,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
   TrendingUp, Zap, Code2, LineChart, StickyNote, Receipt, CreditCard, UserCircle, LifeBuoy,
-  Bot, Radio, CandlestickChart, Megaphone,
+  Bot, Radio, CandlestickChart, Megaphone, Search,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -69,6 +69,16 @@ const NAV_GROUPS = [
       // (5 fictional employees) is not this pilar's product; the client conversation
       // lives in Inbox. Chat.tsx code stays parked, unrouted, per the carta's decision.
       { to: '/calendar', label: 'Calendario', icon: Calendar,       end: false },
+    ],
+  },
+  {
+    // 08-forum-community F3: "Se busca" board (§6.1, PRIORITY 1 of the pilar). "/community"
+    // (foro completo, §6.2-§6.4) lands in F5, behind the carta's own masa-crítica gate — no
+    // entry for it here yet (a ghost-forum nav link is exactly what the carta's Forocoches
+    // case study (§2.5) warns against exhibiting before there are real users to serve).
+    label: 'COMUNIDAD',
+    items: [
+      { to: '/community/wanted', label: 'Se busca', icon: Search, end: false },
     ],
   },
   {

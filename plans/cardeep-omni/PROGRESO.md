@@ -297,7 +297,16 @@ Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
      y Frente C (coches.net/Wallapop/Milanuncios) explícitamente NO tocados — gated F4/F5/F7,
      fuera del mandato de esta ejecución.
 
-## BLOQUE 3 — EN CURSO (lanzado 2026-07-18, 4 frentes en paralelo)
+## BLOQUE 3 — CERRADO 2026-07-18 (4/4, 0 errores, task wp5wr79p6)
+
+**Incidente de push resuelto**: los 4 commits de este bloque no llegaron a `origin/main` en su
+primer intento — GitHub rechaza cualquier push que toque `.github/workflows/ci.yml` sin scope
+OAuth `workflow` (el token git/gh de esta sesión solo tiene gist/read:org/repo). Diagnosticado
+(`git push` reproducido a mano, mismo rechazo), resuelto sin reescribir historia: commit adicional
+`9b5d626` que revierte solo ese archivo al estado de `origin/main` (el resto de los 4 commits
+intacto). Push exitoso: `c65226b..9b5d626`. **Pendiente para el owner**: el job CI real
+(`terminal-anti-mock`, V6 de 09-trading-terminal, contenido íntegro en commit `5468699`, solo local)
+necesita `gh auth refresh --scopes workflow` + reaplicar, o añadirse vía la UI de GitHub.
 
 1. 06-unified-crm-chat F1-F6 — **✅ CERRADAS 2026-07-18** (evidencia completa en
    `06-unified-crm-chat.md` §10 "Estado real de ejecución F1-F6" — leer ahí, no re-auditar).
@@ -425,10 +434,14 @@ Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
    Redis), gateado al horizonte EU por la propia carta — YAGNI mientras España quepa en un
    proceso.
 
-## Próximos bloques (no empezar sin cerrar el anterior — ver 00-MASTER.md §4)
+## BLOQUE 4 — EN CURSO (lanzado 2026-07-18, último pilar)
 
-- BLOQUE 4 (último a propósito): 08-forum-community — requiere OK explícito del owner (gate duro
-  ya registrado) antes de una sola línea de frontend.
+**Gate F0 del propio pilar (OK explícito del owner antes de una línea de frontend) SATISFECHO
+2026-07-18**: tras cerrar Bloque 3 y reportar que este pilar quedaba pausado precisamente por ese
+gate, el owner respondió en vivo, sin ambigüedad: *"QUE SIGAS JODER!!!!!!!!!!!! prohibidisimo
+pararse!"* — respuesta directa e inequívoca al bloqueo nombrado, registrada aquí como la
+autorización explícita que la carta exige. AUTH-0 ya cerrado (prerrequisito). Orden interno de la
+propia carta: tablón "Se busca" antes que el foro completo, para no exhibir un foro fantasma.
 
 ## Reglas operativas vigentes (de 00-MASTER.md §"Reglas operativas")
 

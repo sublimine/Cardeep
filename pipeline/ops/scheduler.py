@@ -941,6 +941,11 @@ def _check_silence() -> None:
 # Cadence for the product_stats cache refresh that backs a fast /stats (env-overridable).
 PRODUCT_STATS_REFRESH_MIN: int = int(os.environ.get("CARDEEP_STATS_REFRESH_MIN", "30"))
 
+# 08-forum-community F2: how often the "Se busca" matcher re-scores open listings against
+# vehicle_event's latest state (env-overridable). Short by design (carta §3/§4.4 competitive
+# claim: reacting to new stock fast, not AutoTrader's once-daily batch).
+WANTED_MATCHER_CADENCE_MINUTES: int = int(os.environ.get("CARDEEP_WANTED_MATCHER_CADENCE_MIN", "10"))
+
 
 def _refresh_product_stats_job() -> None:
     """Picklable cadence job: refresh the product_stats cache (fast /stats). Best-effort — a failed
@@ -956,6 +961,29 @@ def _refresh_product_stats_job() -> None:
         log.info("product_stats refreshed: %s", counts)
     except Exception as exc:  # best-effort — never propagate into the scheduler
         log.warning("product_stats refresh failed: %s", exc)
+
+
+def wanted_matcher_job() -> None:
+    """08-forum-community F2: incremental "Se busca" matcher.
+
+    Re-scores every OPEN wanted_listing against the live census
+    (pipeline/wanted/run_matcher.py::run_matcher_incremental) and expires listings past
+    their TTL. Cadence is short (WANTED_MATCHER_CADENCE_MINUTES, default 10) — the
+    carta's entire competitive argument (§3/§4.4) is reacting to new stock fast, not in
+    an AutoTrader-style once-daily batch. Best-effort: a DB error is logged and the job
+    exits cleanly so it never takes the scheduler down (same contract as every job above).
+    Inert (0 rows touched) on a DB without migrations 0093/0094 — never raises on a
+    missing table.
+    """
+    import asyncio
+
+    try:
+        from pipeline.wanted.run_matcher import run_matcher_incremental
+
+        stats = asyncio.run(run_matcher_incremental(_ASYNCPG_DSN))
+        log.info("wanted_matcher: %s", stats)
+    except Exception as exc:  # best-effort — never propagate into the scheduler
+        log.warning("wanted_matcher failed: %s", exc)
 
 
 def _lease_heartbeat_job(lock_key: int, holder: str) -> None:
@@ -1176,6 +1204,20 @@ def _start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=600,
+    )
+
+    # 08-forum-community F2: incremental "Se busca" matcher — short cadence, independent of
+    # the harvest heartbeat (same category as inquisition_cadence/cadence_estimate above).
+    scheduler.add_job(
+        wanted_matcher_job,
+        trigger="interval",
+        minutes=WANTED_MATCHER_CADENCE_MINUTES,
+        id="wanted_matcher",
+        name="cardeep wanted-board matcher (08-forum-community F2)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=300,
     )
 
     log.info(
