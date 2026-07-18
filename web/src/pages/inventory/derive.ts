@@ -67,6 +67,33 @@ export function daysInStock(firstSeen: string, now: Date): number {
   return Math.max(0, Math.floor((now.getTime() - seen) / MS_PER_DAY))
 }
 
+// K3 — aging semaphore, single canonical definition (carta 03-garage-fleet §4 row K3):
+// verde <=30d · ambar 31-60d · rojo 61-90d (STALE_DAYS) · negro +90d. Cuts are
+// [RESEARCH-US, pendiente calibración ES] per the carta's own F0 note; this is the
+// ONE place they are encoded — VehicleTable's row indicator and VehicleDetailModal's
+// stock badge both call this instead of re-deriving their own thresholds.
+export type AgingBand = 'fresco' | 'normal' | 'envejecido' | 'critico'
+
+export const AGING_GREEN_MAX_DAYS = 30
+export const AGING_AMBER_MAX_DAYS = 60
+// AGING_RED_MAX_DAYS === STALE_DAYS (config.ts) — imported by callers that need both.
+
+export function agingBand(days: number, staleDays: number): AgingBand {
+  if (days <= AGING_GREEN_MAX_DAYS) return 'fresco'
+  if (days <= AGING_AMBER_MAX_DAYS) return 'normal'
+  if (days <= staleDays) return 'envejecido'
+  return 'critico'
+}
+
+export function agingColor(band: AgingBand): string {
+  switch (band) {
+    case 'fresco': return 'var(--c-emerald)'
+    case 'normal': return 'var(--c-amber)'
+    case 'envejecido': return 'var(--c-rose)'
+    case 'critico': return '#3f3f46' // negro (zinc-700 — legible en tema claro y oscuro)
+  }
+}
+
 /** Strips a leading "www." from a URL's hostname for a clean display label. */
 export function hostnameOf(url: string): string {
   try {

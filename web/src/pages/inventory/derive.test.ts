@@ -41,6 +41,7 @@ function makeVehicle(overrides: Partial<VehicleListItem>): VehicleListItem {
     fuel: 'Diésel',
     transmission: 'Manual',
     photo_url: 'https://example.com/photo.jpg',
+    vin_ref: null,
     status: 'available',
     first_seen: iso(10),
     last_seen: iso(1),

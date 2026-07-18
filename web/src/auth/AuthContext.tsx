@@ -24,6 +24,9 @@ interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>
   register: (email: string, password: string, name?: string) => Promise<void>
   logout: () => void
+  /** Re-fetch /auth/me and replace the cached user — used after POST /auth/claim-dealer
+   * elevates the account to role='dealer' with a fresh tenant_id (03-garage-fleet F1). */
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -105,13 +108,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applySession])
 
+  const refreshUser = useCallback(async () => {
+    const data = await api.get<{ user: User }>('/auth/me')
+    const user = hydrateUser(data.user)
+    setTenantId(user.tenantId || null)
+    setState(s => ({ ...s, user, isLoading: false, isAuthenticated: true }))
+  }, [])
+
   useEffect(() => {
     window.addEventListener('auth:unauthorized', logout)
     return () => window.removeEventListener('auth:unauthorized', logout)
   }, [logout])
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

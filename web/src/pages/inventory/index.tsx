@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { PageSkeleton } from '../../components/LoadingSpinner'
 import EmptyState from '../../components/EmptyState'
 import Button from '../../components/Button'
+import { useAuthContext } from '../../auth/AuthContext'
 import { useDealerInventory } from './useDealerInventory'
 import { useInventoryState, deriveVisible } from './useInventoryState'
 import { applyFilters, buildChips, stockStats, toCsv, relativeDate } from './derive'
@@ -13,6 +14,8 @@ import VehicleTable from './VehicleTable'
 import VehicleGrid from './VehicleGrid'
 import VehicleDetailModal from './VehicleDetailModal'
 import ActivityDrawer from './ActivityDrawer'
+import ClaimDealerPrompt from './ClaimDealerPrompt'
+import FleetBoard from './FleetBoard'
 
 const GarageScene = lazy(() => import('./garage/GarageScene'))
 
@@ -29,7 +32,19 @@ function downloadCsv(csv: string, filename: string) {
 }
 
 export default function Inventory() {
-  const { entity, vehicles, loadedCount, isComplete, loading, error, reload } = useDealerInventory()
+  // 03-garage-fleet F1: the dealer scope comes from the LOGGED-IN SESSION
+  // (dealer_membership -> entity.cdp_code, AUTH-0), never a hardcoded constant.
+  // A user with no dealer tenant yet gets the real claim flow, not a fabricated fleet.
+  const { user } = useAuthContext()
+  const cdp = user?.tenantId || null
+
+  if (!cdp) return <ClaimDealerPrompt />
+
+  return <InventoryForDealer cdp={cdp} />
+}
+
+function InventoryForDealer({ cdp }: { cdp: string }) {
+  const { entity, vehicles, loadedCount, isComplete, loading, error, reload } = useDealerInventory(cdp)
   const state = useInventoryState()
   const [activityOpen, setActivityOpen] = useState(false)
   const [recentEventCount, setRecentEventCount] = useState<number | null>(null)
@@ -97,7 +112,7 @@ export default function Inventory() {
         loadedCount={loadedCount}
         totalExpected={entity?.available_inventory ?? null}
         isComplete={isComplete}
-        onExportCsv={() => downloadCsv(toCsv(filtered, now), `cardeep_gyata_inventario_${now.toISOString().slice(0, 10)}.csv`)}
+        onExportCsv={() => downloadCsv(toCsv(filtered, now), `cardeep_${cdp}_inventario_${now.toISOString().slice(0, 10)}.csv`)}
         freshnessLabel={freshnessLabel}
         onToggleFilters={() => setFilterRailOpen(o => !o)}
         hasActiveFilters={hasActiveFilters}
@@ -126,6 +141,8 @@ export default function Inventory() {
             <VehicleTable vehicles={filtered} sort={state.sort} onSortChange={state.setSort} onSelect={state.selectVehicle} now={now} />
           ) : state.view === 'tarjetas' ? (
             <VehicleGrid vehicles={filtered} onSelect={state.selectVehicle} now={now} />
+          ) : state.view === 'tablero' ? (
+            <FleetBoard cdp={cdp} vehicles={filtered} now={now} />
           ) : (
             <Suspense fallback={<div style={{ height: 560, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t4)', fontSize: 13 }}>Preparando garaje…</div>}>
               <GarageScene vehicles={filtered} allVehicles={vehicles} onOpenDetail={state.selectVehicle} openUlid={state.selectedUlid} />
@@ -140,7 +157,7 @@ export default function Inventory() {
         )}
       </AnimatePresence>
 
-      <ActivityDrawer open={activityOpen} onClose={() => setActivityOpen(false)} now={now} onCountLoaded={setRecentEventCount} />
+      <ActivityDrawer cdp={cdp} open={activityOpen} onClose={() => setActivityOpen(false)} now={now} onCountLoaded={setRecentEventCount} />
 
       <style>{`
         .filter-rail-toggle { display: none; }

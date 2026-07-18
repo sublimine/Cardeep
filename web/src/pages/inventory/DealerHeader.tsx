@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { MapPin, Phone, Globe, Copy, Check, Activity, ShieldCheck } from 'lucide-react'
+import { MapPin, Phone, Globe, Copy, Check, Activity, ShieldCheck, AlertTriangle } from 'lucide-react'
 import type { EntityDetail, EntityKind } from '../../api/cardeep'
 import { useToast } from '../../components/Toast'
 import { formatPrice, formatKm, hostnameOf, type StockStats } from './derive'
@@ -82,6 +82,12 @@ export default function DealerHeader({
   const avgAge = stats.avgAgeDays
   const ageTone: StatTileProps['tone'] = avgAge === null ? 'default' : avgAge < 30 ? 'emerald' : avgAge < 90 ? 'amber' : 'rose'
 
+  // K14 §7 protocol — vía 1: entity.available_inventory (server aggregate). vía 2: the
+  // real count of rows the client paginated through. Only comparable once isComplete
+  // (loadedCount grows monotonically until every page is fetched); a mismatch does not
+  // hide the number, it flags it — never silently pick one side.
+  const countDiverges = isComplete && entity !== null && loadedCount !== entity.available_inventory
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -141,11 +147,22 @@ export default function DealerHeader({
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <StatTile
-          label="Anuncios"
-          value={entity ? String(entity.available_inventory) : '—'}
-          pending={loading && !entity}
-        />
+        <div style={{ position: 'relative' }}>
+          <StatTile
+            label="Anuncios"
+            value={entity ? String(countDiverges ? Math.min(entity.available_inventory, loadedCount) : entity.available_inventory) : '—'}
+            pending={loading && !entity}
+            tone={countDiverges ? 'amber' : 'default'}
+          />
+          {countDiverges && (
+            <span
+              title={`Divergencia entre vías de verificación: API=${entity!.available_inventory} · paginación=${loadedCount}. Se muestra el menor.`}
+              style={{ position: 'absolute', top: -5, right: -5, display: 'flex', width: 16, height: 16, borderRadius: '50%', background: 'var(--c-amber)', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <AlertTriangle style={{ width: 10, height: 10, color: '#000' }} />
+            </span>
+          )}
+        </div>
         <StatTile
           label="Valor del stock"
           value={stats.pricedCount > 0 ? `${formatPrice(stats.totalValue, 'EUR')}${stats.pricedCount < stats.count ? ` (${stats.pricedCount})` : ''}` : '—'}

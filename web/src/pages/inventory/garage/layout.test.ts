@@ -21,7 +21,7 @@ function makeVehicle(ulid: string, make: string): VehicleListItem {
   return {
     vehicle_ulid: ulid, deep_link: 'https://x', title: `${make} test`, make, model: 'X',
     year: 2020, km: 1000, price: 10000, currency: 'EUR', fuel: 'Diésel', transmission: 'Manual',
-    photo_url: null, status: 'available',
+    photo_url: null, vin_ref: null, status: 'available',
     first_seen: '2026-01-01T00:00:00Z', last_seen: '2026-01-01T00:00:00Z',
   }
 }

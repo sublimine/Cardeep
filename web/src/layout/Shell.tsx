@@ -6,7 +6,7 @@ import {
   MessageSquare, Calendar, BarChart3, Settings,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
   TrendingUp, Zap, Code2, LineChart, StickyNote, Receipt, CreditCard, UserCircle, LifeBuoy,
-  MessagesSquare, Bot,
+  MessagesSquare, Bot, Radio,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -46,6 +46,7 @@ const NAV_GROUPS = [
     label: 'OPERACIÓN',
     items: [
       { to: '/inbox',    label: 'Inbox',      icon: MessageSquare,  end: false },
+      { to: '/publicaciones', label: 'Publicaciones', icon: Radio,  end: false },
       { to: '/chat',     label: 'Chat',       icon: MessagesSquare, end: false },
       { to: '/calendar', label: 'Calendario', icon: Calendar,       end: false },
     ],
@@ -53,7 +54,7 @@ const NAV_GROUPS = [
   {
     label: 'FINANZAS',
     items: [
-      { to: '/finance',  label: 'Finanzas', icon: BarChart3,  end: false },
+      { to: '/finance',  label: 'Mercado', icon: BarChart3,  end: false },
       { to: '/invoices', label: 'Facturas', icon: Receipt,    end: false },
       { to: '/pricing',  label: 'Planes',   icon: CreditCard, end: false },
     ],

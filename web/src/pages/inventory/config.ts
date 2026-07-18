@@ -1,14 +1,22 @@
 // CARDEEP Inventory — dealer + threshold configuration.
 //
-// The real API is geo -> entity -> inventory, read-only, with no auth that maps
-// a logged-in user to a dealer (see AuthContext DEV_BYPASS). Until that exists,
-// this page renders ONE real, verified dealer. Single point of change.
+// 03-garage-fleet F1: the hardcoded DEALER_CDP constant that used to live here is
+// GONE. AUTH-0 (migrations/0073_auth.sql + services/api/routers/auth.py) is the
+// real mechanism that maps a logged-in user to a dealer: session -> app_user ->
+// dealer_membership -> entity.cdp_code, surfaced on the frontend as
+// `useAuthContext().user.tenantId`. Every page in this directory now takes `cdp`
+// as an explicit parameter/prop sourced from that session tenant, never from a
+// module-level constant — see `pages/inventory/index.tsx`.
 //
-// Chosen dealer: GYATA, servicio oficial Ford (Madrid). 468 real available
+// GYATA, servicio oficial Ford (Madrid, CDP-ES-28-YCZB8JYW) remains the seeded
+// DEMO dealer account (scripts/seed_demo_dealer.py) — 468 real available
 // vehicles verified live against cardeep-pg on 2026-07-16, single alias
-// (n_aliases=1, clean identity — no cross-dealer cluster merge ambiguity),
-// 100% photo/price/km/fuel/transmission coverage on the first 200 rows.
-export const DEALER_CDP = 'CDP-ES-28-YCZB8JYW'
+// (n_aliases=1, clean identity), 100% photo/price/km/fuel/transmission coverage
+// on the first 200 rows. It is seeded directly (GYATA has no `cif` on record —
+// verified live: `entity.cif` is empty for this row — so the real
+// POST /auth/claim-dealer self-service path, which requires a checksum-valid
+// tax ID matching the census record, is not usable for this specific entity;
+// the seed script documents this honestly rather than faking a claim).
 
 // Pagination — /entities/{cdp}/inventory allows size<=200; 468 vehicles fit in
 // 3 requests, comfortably inside the endpoint's 30/min rate limit.

@@ -11,12 +11,15 @@ import {
   cardeep, CardeepApiError,
   type VehicleListItem, type VehicleHistoryEvent, type VehiclePlatforms,
 } from '../../api/cardeep'
-import { daysInStock, formatKm, formatPrice, hostnameOf, relativeDate } from './derive'
+import { agingBand, agingColor, daysInStock, formatKm, formatPrice, hostnameOf, relativeDate } from './derive'
+import { STALE_DAYS } from './config'
+import { fetchPlatforms, getCachedPlatforms } from './platformsCache'
 
-// Session-level cache — avoids re-fetching history/platforms when the user
-// re-opens the same vehicle (e.g. via the 3D garage HUD's prev/next).
+// Session-level cache — avoids re-fetching history when the user re-opens the
+// same vehicle (e.g. via the 3D garage HUD's prev/next). Platforms (K8) use the
+// SHARED cache in platformsCache.ts so VehicleTable's row badge and this modal
+// never issue two independent fetches for the same vehicle_ulid.
 const historyCache = new Map<string, VehicleHistoryEvent[]>()
-const platformsCache = new Map<string, VehiclePlatforms>()
 
 type TabKey = 'ficha' | 'historial' | 'plataformas'
 
@@ -53,7 +56,7 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
   const [tab, setTab] = useState<TabKey>(initialTab)
   const [history, setHistory] = useState<VehicleHistoryEvent[] | null>(historyCache.get(vehicle.vehicle_ulid) ?? null)
   const [historyError, setHistoryError] = useState<string | null>(null)
-  const [platforms, setPlatforms] = useState<VehiclePlatforms | null>(platformsCache.get(vehicle.vehicle_ulid) ?? null)
+  const [platforms, setPlatforms] = useState<VehiclePlatforms | null>(getCachedPlatforms(vehicle.vehicle_ulid) ?? null)
   const [platformsError, setPlatformsError] = useState<string | null>(null)
   const { success } = useToast()
 
@@ -69,8 +72,8 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
   useEffect(() => {
     if (tab !== 'plataformas' || platforms !== null) return
     let live = true
-    cardeep.vehiclePlatforms(vehicle.vehicle_ulid)
-      .then(data => { if (live) { platformsCache.set(vehicle.vehicle_ulid, data); setPlatforms(data) } })
+    fetchPlatforms(vehicle.vehicle_ulid)
+      .then(data => { if (live) setPlatforms(data) })
       .catch((err: unknown) => { if (live) setPlatformsError(err instanceof CardeepApiError ? err.message : 'Error al cargar las plataformas') })
     return () => { live = false }
   }, [tab, vehicle.vehicle_ulid, platforms])
@@ -100,7 +103,7 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: 14, left: 16, display: 'flex', alignItems: 'baseline', gap: 12 }}>
           <span style={{ fontSize: 28, fontWeight: 900, color: '#fff', textShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>{formatPrice(vehicle.price, vehicle.currency)}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: days >= 90 ? 'rgba(225,29,72,0.75)' : 'rgba(5,150,105,0.75)', padding: '3px 10px', borderRadius: 999 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: agingColor(agingBand(days, STALE_DAYS)), padding: '3px 10px', borderRadius: 999 }}>
             {days} días en stock
           </span>
         </div>
@@ -137,6 +140,7 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
                   { k: 'Combustible', v: vehicle.fuel ?? '—' },
                   { k: 'Cambio', v: vehicle.transmission ?? '—' },
                   { k: 'Precio', v: formatPrice(vehicle.price, vehicle.currency) },
+                  { k: 'VIN', v: vehicle.vin_ref ?? '—', tip: 'Solo visible para el dealer propietario de la flota' },
                   { k: 'Estado', v: <VehicleStatusBadge status={vehicle.status === 'available' ? 'listed' : vehicle.status} /> },
                   { k: 'En stock (detectado)', v: `${days} días`, tip: 'Días desde que CARDEEP detectó este anuncio por primera vez' },
                   { k: 'Primera detección', v: new Date(vehicle.first_seen).toLocaleDateString('es-ES') },

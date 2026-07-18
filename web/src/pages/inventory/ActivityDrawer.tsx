@@ -7,7 +7,6 @@ import EmptyState from '../../components/EmptyState'
 import Button from '../../components/Button'
 import { cardeep, CardeepApiError, type DeltaEvent } from '../../api/cardeep'
 import { relativeDate, formatPrice } from './derive'
-import { DEALER_CDP } from './config'
 
 function deltaToTimelineItem(e: DeltaEvent, idx: number, now: Date): TimelineItem {
   const date = relativeDate(e.observed_at, now)
@@ -25,13 +24,14 @@ function deltaToTimelineItem(e: DeltaEvent, idx: number, now: Date): TimelineIte
 }
 
 interface ActivityDrawerProps {
+  cdp: string
   open: boolean
   onClose: () => void
   now: Date
   onCountLoaded?: (count7d: number) => void
 }
 
-export default function ActivityDrawer({ open, onClose, now, onCountLoaded }: ActivityDrawerProps) {
+export default function ActivityDrawer({ cdp, open, onClose, now, onCountLoaded }: ActivityDrawerProps) {
   const [events, setEvents] = useState<DeltaEvent[]>([])
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -42,7 +42,7 @@ export default function ActivityDrawer({ open, onClose, now, onCountLoaded }: Ac
   useEffect(() => {
     if (!open || loaded) return
     setLoading(true)
-    cardeep.entityDelta(DEALER_CDP, 1, 50)
+    cardeep.entityDelta(cdp, 1, 50)
       .then(res => {
         setEvents(res.items)
         setHasMore(res.has_more)
@@ -53,12 +53,12 @@ export default function ActivityDrawer({ open, onClose, now, onCountLoaded }: Ac
       .catch((err: unknown) => setError(err instanceof CardeepApiError ? err.message : 'Error al cargar la actividad'))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, loaded])
+  }, [open, loaded, cdp])
 
   const loadMore = () => {
     setLoading(true)
     const nextPage = page + 1
-    cardeep.entityDelta(DEALER_CDP, nextPage, 50)
+    cardeep.entityDelta(cdp, nextPage, 50)
       .then(res => { setEvents(e => [...e, ...res.items]); setHasMore(res.has_more); setPage(nextPage) })
       .catch((err: unknown) => setError(err instanceof CardeepApiError ? err.message : 'Error al cargar más actividad'))
       .finally(() => setLoading(false))

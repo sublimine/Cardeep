@@ -9,9 +9,9 @@ import {
   type ChipKey, type InventoryFilters, type SortKey,
 } from './derive'
 
-export type ViewMode = 'tabla' | 'tarjetas' | 'garaje'
+export type ViewMode = 'tabla' | 'tarjetas' | 'garaje' | 'tablero'
 
-const VALID_VIEWS: ViewMode[] = ['tabla', 'tarjetas', 'garaje']
+const VALID_VIEWS: ViewMode[] = ['tabla', 'tarjetas', 'garaje', 'tablero']
 const VALID_SORTS: SortKey[] = ['recientes', 'antiguos_stock', 'precio_asc', 'precio_desc', 'km_asc', 'km_desc', 'anio_desc']
 const VALID_CHIPS: ChipKey[] = ['nuevos', 'stale', 'sin_foto', 'sin_precio']
 

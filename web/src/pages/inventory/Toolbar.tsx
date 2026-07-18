@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { Search, List, LayoutGrid, Orbit, Download, SlidersHorizontal, X } from 'lucide-react'
+import { Search, List, LayoutGrid, Orbit, Download, SlidersHorizontal, X, Kanban } from 'lucide-react'
 import type { ChipDef, ChipKey, SortKey } from './derive'
 import type { ViewMode } from './useInventoryState'
 
@@ -17,6 +17,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 const VIEW_OPTIONS: { value: ViewMode; icon: typeof List; label: string }[] = [
   { value: 'tabla', icon: List, label: 'Tabla' },
   { value: 'tarjetas', icon: LayoutGrid, label: 'Tarjetas' },
+  { value: 'tablero', icon: Kanban, label: 'Tablero' },
   { value: 'garaje', icon: Orbit, label: 'Garaje 3D' },
 ]
 

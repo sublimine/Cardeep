@@ -11,8 +11,9 @@ import Kanban from './pages/Kanban'
 import Contacts from './pages/Contacts'
 import Deals from './pages/Deals'
 import Inbox from './pages/Inbox'
+import Publicaciones from './pages/Publicaciones'
 import Calendar from './pages/Calendar'
-import Finance from './pages/Finance'
+import Mercado from './pages/Mercado'
 import Settings from './pages/Settings'
 import Inteligencia from './pages/Inteligencia'
 import Arbitrage from './pages/Arbitrage'
@@ -79,8 +80,9 @@ export default function App() {
           <Route path="contacts"   element={<Contacts />} />
           <Route path="deals"      element={<Deals />} />
           <Route path="inbox"      element={<Inbox />} />
+          <Route path="publicaciones" element={<Publicaciones />} />
           <Route path="calendar"   element={<Calendar />} />
-          <Route path="finance"    element={<Finance />} />
+          <Route path="finance"    element={<Mercado />} />
           <Route path="inteligencia" element={<Inteligencia />} />
           <Route path="arbitrage"  element={<Arbitrage />} />
           <Route path="api"        element={<Api />} />

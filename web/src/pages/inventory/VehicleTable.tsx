@@ -3,10 +3,12 @@ import { ExternalLink, MoreVertical, Copy, History, Radar } from 'lucide-react'
 import type { VehicleListItem } from '../../api/cardeep'
 import { Dropdown } from '../../components/Dropdown'
 import { useToast } from '../../components/Toast'
-import { daysInStock, formatKm, formatPrice, relativeDate, type SortKey } from './derive'
+import { agingBand, agingColor, daysInStock, formatKm, formatPrice, relativeDate, type SortKey } from './derive'
 import { STALE_DAYS } from './config'
 import VehiclePhoto from './VehiclePhoto'
 import { ROW_BATCH } from './config'
+import { usePlatformBadge } from './platformsCache'
+import { usePricePositionBadge } from './pricePositionCache'
 
 interface SortableColumn {
   label: string
@@ -22,7 +24,7 @@ const COLUMNS: SortableColumn[] = [
 
 function AgeBar({ days }: { days: number }) {
   const pct = Math.min(days / 180, 1) * 100
-  const color = days < 30 ? 'var(--c-emerald)' : days < STALE_DAYS ? 'var(--c-amber)' : 'var(--c-rose)'
+  const color = agingColor(agingBand(days, STALE_DAYS))
   return (
     <div>
       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--t2)' }}>{days}d</span>
@@ -30,6 +32,53 @@ function AgeBar({ days }: { days: number }) {
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
       </div>
     </div>
+  )
+}
+
+// K8 — multi-platform presence, lazy per row (usePlatformBadge fetches once per
+// vehicle_ulid and caches — bounded to whatever batch of rows is currently mounted
+// via ROW_BATCH progressive reveal, never all 468 at once). Shows a divergence
+// warning when a platform's own listed price differs from the dealer's own price.
+function PlatformBadge({ ulid, ownPrice }: { ulid: string; ownPrice: number | null }) {
+  const data = usePlatformBadge(ulid)
+  if (data === null) return null
+  if (data.platforms.length === 0) return null
+  const diverges = ownPrice !== null && data.platforms.some(p => p.platform_price !== null && p.platform_price !== ownPrice)
+  return (
+    <span
+      title={diverges ? 'Precio distinto en otra plataforma' : `Publicado en ${data.platforms.length} plataforma(s)`}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10.5, fontWeight: 700,
+        color: diverges ? 'var(--c-amber)' : 'var(--t4)', marginTop: 2,
+      }}
+    >
+      <Radar style={{ width: 10, height: 10 }} /> {data.platforms.length}
+    </span>
+  )
+}
+
+// K9 — "vs mercado" (T1 transparency: ratio/band/cuts/n are exactly what 01's M2
+// endpoint publishes, never re-derived — 00-MASTER.md C-1). Absent segment data
+// (no run yet, n<8 even nationally) renders nothing rather than a fabricated number.
+const BAND_LABEL: Record<'below_market' | 'at_market' | 'above_market', string> = {
+  below_market: 'bajo mercado', at_market: 'en mercado', above_market: 'sobre mercado',
+}
+const BAND_COLOR: Record<'below_market' | 'at_market' | 'above_market', string> = {
+  below_market: 'var(--c-emerald)', at_market: 'var(--t3)', above_market: 'var(--c-amber)',
+}
+
+function PricePositionBadge({ ulid }: { ulid: string }) {
+  const data = usePricePositionBadge(ulid)
+  if (data === null || data.position === null) return null
+  const { ratio, band, segment_n } = data.position
+  const pct = Math.round((ratio - 1) * 100)
+  return (
+    <span
+      title={`${BAND_LABEL[band]} · n=${segment_n} comparables · ratio=${ratio.toFixed(3)}`}
+      style={{ fontSize: 11, fontWeight: 700, color: BAND_COLOR[band] }}
+    >
+      {pct > 0 ? '+' : ''}{pct}% <span style={{ opacity: 0.7, fontWeight: 500 }}>vs mediana (n={segment_n})</span>
+    </span>
   )
 }
 
@@ -121,8 +170,12 @@ export default function VehicleTable({ vehicles, sort, onSortChange, onSelect, n
                 {v.title ?? `${v.make} ${v.model}`}
               </p>
               <p style={{ fontSize: 11, color: 'var(--t3)' }}>{v.make} · {v.year ?? '—'}</p>
+              <PlatformBadge ulid={v.vehicle_ulid} ownPrice={v.price} />
             </div>
-            <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--t1)', fontFamily: 'JetBrains Mono, monospace' }}>{formatPrice(v.price, v.currency)}</p>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 800, color: 'var(--t1)', fontFamily: 'JetBrains Mono, monospace' }}>{formatPrice(v.price, v.currency)}</p>
+              <PricePositionBadge ulid={v.vehicle_ulid} />
+            </div>
             <p style={{ fontSize: 12.5, color: 'var(--t2)' }}>{formatKm(v.km)}</p>
             <p style={{ fontSize: 12.5, color: 'var(--t2)' }}>{v.fuel ?? '—'}</p>
             <p style={{ fontSize: 12.5, color: 'var(--t2)' }}>{v.transmission ?? '—'}</p>

@@ -3,7 +3,7 @@
 // `error`, never as a silently-swapped placeholder fleet.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cardeep, CardeepApiError, type EntityDetail, type VehicleListItem } from '../../api/cardeep'
-import { DEALER_CDP, PAGE_SIZE } from './config'
+import { PAGE_SIZE } from './config'
 
 interface DealerInventoryState {
   entity: EntityDetail | null
@@ -29,7 +29,11 @@ function errorMessage(err: unknown): string {
   return 'Error desconocido al consultar la API de CARDEEP'
 }
 
-export function useDealerInventory(cdp: string = DEALER_CDP) {
+// 03-garage-fleet F1: `cdp` is now REQUIRED, sourced from the logged-in dealer's
+// session tenant (`useAuthContext().user.tenantId`) — never a hardcoded default.
+// Callers with no tenant yet (particular account, or dealer who hasn't claimed
+// an entity) must not call this hook; render a claim/onboarding state instead.
+export function useDealerInventory(cdp: string) {
   const [state, setState] = useState<DealerInventoryState>(INITIAL_STATE)
   const generationRef = useRef(0)
 
