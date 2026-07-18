@@ -82,8 +82,11 @@ from services.api.ratelimit import limiter, rate_limit_handler
 from services.api.routers import (
     arbitrage,
     auth,
+    crm_calendar,
     crm_contacts,
     crm_deals,
+    crm_inbox,
+    crm_notes,
     dealer_ops,
     entities,
     geo,
@@ -177,6 +180,9 @@ app.include_router(arbitrage.router)
 app.include_router(dealer_ops.router)
 app.include_router(crm_contacts.router)
 app.include_router(crm_deals.router)
+app.include_router(crm_inbox.router)
+app.include_router(crm_notes.router)
+app.include_router(crm_calendar.router)
 app.include_router(marketing.router)
 app.include_router(terminal.router)
 

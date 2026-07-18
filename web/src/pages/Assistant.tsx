@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
-  MessageSquare, FileText, Search, Send, Plus, ChevronRight,
+  MessageSquare, FileText, Search, Send, Plus, ChevronRight, ArrowRight,
 } from 'lucide-react'
 import Card from '../components/Card'
 import { useAuthContext } from '../auth/AuthContext'
@@ -81,14 +82,11 @@ function botReply(mode: Mode, text: string): { text: string } {
     return { text: 'Puedo ayudarte con **stock**, **márgenes**, **vehículos estancados**, **precios de mercado** y **estado del pipeline**. ¿Qué necesitas saber?' }
   }
 
-  if (mode === 'listing') {
-    const make = q.match(/bmw|volkswagen|vw|audi|mercedes|seat|skoda|opel|ford|peugeot|renault/)?.[0]?.toUpperCase() ?? 'Este vehículo'
-    const kmMatch = text.match(/(\d[\d.,]*)\s*km/)
-    const km = kmMatch ? kmMatch[1] : '60.000'
-    return {
-      text: `Descripción generada:\n\n"**${text}** — un ${make} de referencia en su segmento. Con ${km} km en excelente estado de conservación, revisiones al día y equipamiento completo. Interior impecable, carrocería sin golpes ni rayones. Disponible para prueba inmediata y financiación a medida. Garantía mecánica incluida. ¡Oportunidad única al mejor precio del mercado!"\n\n**Palabras clave sugeridas:** ${make} ocasión · coches segunda mano · comprar ${make} España · precio justo EU.`,
-    }
-  }
+  // mode === 'listing' has no branch here: 07-marketing F5 redirects that mode to
+  // Marketing.tsx's Bloque 4 (ListingRedirectPanel below) before `send()` is ever
+  // reachable — see plans/cardeep-omni/07-marketing.md S6 "(b) Assistant.tsx modo
+  // listing redirige al Bloque 4". The old fake copy-generation text this branch used
+  // to return is gone, not merely unreachable.
 
   if (mode === 'vin') {
     const vinMatch = text.match(/[A-HJ-NPR-Z0-9]{17}/i)
@@ -106,6 +104,36 @@ function ModeIcon({ mode, size = 13 }: { mode: Mode; size?: number }) {
   if (mode === 'ask')     return <MessageSquare {...p} />
   if (mode === 'listing') return <FileText {...p} />
   return <Search {...p} />
+}
+
+// 07-marketing F5 (plans/cardeep-omni/07-marketing.md S6, demolición (b)): el modo
+// "Descripción de anuncio" ya no fabrica texto con regex+plantilla — redirige al
+// Bloque 4 de Marketing ("Descripción con pruebas"), donde el copy se genera desde
+// hechos verificados del censo, con cada cifra trazada a su fuente.
+function ListingRedirectPanel() {
+  const navigate = useNavigate()
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3.5 p-[40px_24px]">
+      <div className="flex h-[54px] w-[54px] items-center justify-center rounded-2xl" style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}2e`, color: ACCENT }}>
+        <FileText style={{ width: 22, height: 22 }} />
+      </div>
+      <div className="text-center">
+        <div className="mb-1.5 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Ahora con pruebas, no con plantillas</div>
+        <div className="mx-auto max-w-[340px] text-xs leading-[1.65]" style={{ color: 'var(--text-muted)' }}>
+          La descripción de anuncio se mudó a Marketing → "Descripción con pruebas": eliges un coche real de
+          tu inventario y cada afirmación del texto trae su fuente (posición de precio, kilometraje, presencia
+          en plataformas) — nunca una plantilla genérica rellenada con lo que escribas aquí.
+        </div>
+      </div>
+      <button
+        onClick={() => navigate('/marketing')}
+        className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold transition-colors"
+        style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
+      >
+        Ir a Marketing <ArrowRight style={{ width: 13, height: 13 }} />
+      </button>
+    </div>
+  )
 }
 
 function BotAvatar({ size = 24 }: { size?: number }) {
@@ -271,6 +299,10 @@ export default function Assistant() {
             </button>
           </div>
 
+          {mode === 'listing' ? (
+            <ListingRedirectPanel />
+          ) : (
+          <>
           <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-[18px_18px_10px]">
             {msgs.length === 0 && !typing && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-1 flex-col items-center justify-center gap-3.5 p-[40px_24px]">
@@ -347,9 +379,9 @@ export default function Assistant() {
                 onFocus={() => setComposerFocused(true)}
                 onBlur={() => setComposerFocused(false)}
                 placeholder={
-                  mode === 'ask'     ? 'Pregunta sobre stock, márgenes, mercado EU…' :
-                  mode === 'listing' ? 'Ej: BMW 320d 2021, 68.000 km, automático, blanco…' :
-                                       'Pega el VIN de 17 dígitos o matrícula…'
+                  // 'listing' never reaches this composer — see the mode==='listing'
+                  // branch above (ListingRedirectPanel) that replaces this whole area.
+                  mode === 'ask' ? 'Pregunta sobre stock, márgenes, mercado EU…' : 'Pega el VIN de 17 dígitos o matrícula…'
                 }
                 className="flex-1 resize-none overflow-y-hidden border-0 bg-transparent text-[12.5px] leading-[1.55] outline-none"
                 style={{ color: 'var(--text-primary)' }}
@@ -372,6 +404,8 @@ export default function Assistant() {
               <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Enter para enviar · Shift+Enter nueva línea</span>
             </div>
           </div>
+          </>
+          )}
         </Card>
 
         <div className="flex flex-col gap-3">

@@ -18,6 +18,7 @@ established precedent in this codebase, not a private API violation).
 from __future__ import annotations
 
 import hashlib
+import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query, Request
@@ -25,10 +26,21 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 
 from pipeline.ids import ulid
 from pipeline.market.cohort import MIN_COHORT_N
+from pipeline.marketing.adcopy import (
+    AdCopyFacts,
+    LlmClient,
+    PricePositionFact,
+    build_claims,
+    build_snapshot,
+    generate_copy,
+    snapshot_hash,
+)
 from pipeline.marketing.feeds import TARGETS, DealerFeedInput, VehicleFeedInput, generate_feed
 from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, page_slice, require_api_key, resolve_cluster
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
+from services.api.routers.auth import CurrentSession, get_current_session
+from services.api.routers.dealer_ops import _authorize_vehicle
 from services.api.routers.market import compute_price_position
 from services.api.routers.publishing import _coverage_band, _price_divergence
 
@@ -484,3 +496,172 @@ async def channel_radar(
             c5_min_cohort_n=MIN_COHORT_N,
         )
     return cache_set(request, response)
+
+
+# ---------------------------------------------------------------------------
+# POST /vehicles/{vehicle_ulid}/adcopy -- C7 (F5)
+# ---------------------------------------------------------------------------
+# GASTO GATE (carta F5, pipeline/marketing/adcopy.py's module docstring): this
+# repository has NO LLM API credential configured anywhere. _resolve_llm_client
+# returns None today and the endpoint answers 503 declaring the gap -- exactly the
+# same fail-closed shape as require_api_key's prod guard (services/api/deps.py) and
+# 05-multiposting's AS24-credential gate (F5) / 06's WhatsApp gate (F7). The pipeline
+# underneath (pipeline/marketing/adcopy.py) is fully built and tested against a fake
+# injected client; wiring a REAL provider here the moment the owner supplies a key +
+# signs off on the per-generation budget is a one-line change, not a redesign.
+
+ADCOPY_MODEL_ENV_VAR = "CARDEEP_ADCOPY_MODEL"
+ADCOPY_API_KEY_ENV_VAR = "ANTHROPIC_API_KEY"
+
+
+def _resolve_llm_client() -> tuple[LlmClient, str] | None:
+    """Returns (client, model_name) if a real provider is configured, else None.
+    Declared gap: no branch of this function fabricates a client — the absence of
+    ANTHROPIC_API_KEY (or any other provider key) in this environment is verified
+    (grep of requirements.txt/.env.example/services/api at F5 execution time), so this
+    always returns None today. Wiring a real Anthropic/OpenAI call here is the ONLY
+    change needed once the owner provides a credential — the injected LlmClient
+    protocol (pipeline/marketing/adcopy.py) is already the exact shape a real client
+    needs to satisfy."""
+    api_key = os.environ.get(ADCOPY_API_KEY_ENV_VAR)
+    if not api_key:
+        return None
+    # NOT REACHED today (no key configured) -- left unimplemented deliberately rather
+    # than shipping an untested live-API code path with nothing to test it against in
+    # this session (antialucinacion doctrine: untested code claiming to work is worse
+    # than an honest gap). Wire the real client call here when the owner activates F5.
+    raise NotImplementedError(
+        f"{ADCOPY_API_KEY_ENV_VAR} is configured but the provider call is not yet wired "
+        "-- this is the single point where a real LLM client must be implemented before "
+        "production activation (see pipeline/marketing/adcopy.py's module docstring)."
+    )
+
+
+async def _resolve_adcopy_facts(conn, vehicle_ulid: str) -> AdCopyFacts | None:
+    vrow = await conn.fetchrow(
+        "SELECT vehicle_ulid, make, model, year, km, price, currency, fuel, transmission, title "
+        "FROM vehicle WHERE vehicle_ulid = $1",
+        vehicle_ulid,
+    )
+    if vrow is None:
+        return None
+
+    position_outcome = await compute_price_position(conn, vehicle_ulid)
+    price_position: PricePositionFact | None = None
+    if position_outcome.ok and position_outcome.data and position_outcome.data.get("position"):
+        pos = position_outcome.data["position"]
+        province_code = position_outcome.data.get("segment", {}).get("province_code")
+        province_name = None
+        if pos["scope"] == "prov" and province_code:
+            province_name = await conn.fetchval(
+                "SELECT name FROM geo_province WHERE code = $1", province_code,
+            )
+        price_position = PricePositionFact(
+            ratio=pos["ratio"], band=pos["band"], segment_n=pos["segment_n"],
+            segment_p50=pos["segment_p50"], scope=pos["scope"], province_name=province_name,
+        )
+
+    platform_count = await conn.fetchval(
+        "SELECT count(DISTINCT platform_entity_ulid) FROM platform_listing "
+        "WHERE vehicle_ulid = $1 AND status = 'listed'",
+        vehicle_ulid,
+    )
+
+    return AdCopyFacts(
+        vehicle_ulid=vrow["vehicle_ulid"], make=vrow["make"], model=vrow["model"],
+        year=vrow["year"], km=vrow["km"],
+        price=float(vrow["price"]) if vrow["price"] is not None else None,
+        currency=vrow["currency"], fuel=vrow["fuel"], transmission=vrow["transmission"],
+        title=vrow["title"], price_position=price_position, platform_count=platform_count or 0,
+    )
+
+
+async def _cached_grounded_generation(conn, vehicle_ulid: str, hash_value: str) -> dict[str, Any] | None:
+    row = await conn.fetchrow(
+        """SELECT gen_ulid, output_text, claims, model_used
+             FROM adcopy_generation
+            WHERE vehicle_ulid = $1 AND snapshot_hash = $2 AND status = 'grounded'
+            ORDER BY created_at DESC LIMIT 1""",
+        vehicle_ulid, hash_value,
+    )
+    if row is None:
+        return None
+    return {
+        "gen_ulid": row["gen_ulid"], "vehicle_ulid": vehicle_ulid, "status": "grounded",
+        "output_text": row["output_text"], "claims": row["claims"],
+        "unbacked_numerals": [], "model_used": row["model_used"], "cached": True,
+    }
+
+
+@router.post("/vehicles/{vehicle_ulid}/adcopy")
+@limiter.limit(RATE_DEFAULT)
+async def vehicle_adcopy(
+    vehicle_ulid: str,
+    request: Request,
+    session: CurrentSession = Depends(get_current_session),
+) -> JSONResponse:
+    """C7 — "Descripción con pruebas" (carta S6 Bloque 4). Every numeral in the
+    returned copy is traceable to a ``claims[]`` entry with its source query
+    (00-MASTER.md: the antialucinación doctrine applied to the product itself).
+
+    Authorization: session-based, SAME ownership check as dealer_ops.py's fleet-ops
+    writes (``_authorize_vehicle``) — this is a GASTO-gated action (a real LLM call
+    costs money once wired), so it is NEVER a plain X-API-Key public read like this
+    router's other three endpoints; only the vehicle's own dealer can trigger it.
+
+    503 when no LLM provider is configured (see module-level GASTO GATE comment) —
+    this is the honest, declared state, never a fabricated/templated copy presented as
+    a real generation. Checked AFTER the cache lookup below, so a previously-grounded
+    generation is still servable even before the owner activates a live provider.
+
+    Cache: a prior ``grounded`` generation for the SAME (vehicle, snapshot) is reused
+    (carta S8 cache key) — the snapshot changes only when the vehicle's own facts or
+    its market comparables change, so an unrelated market_stat refresh elsewhere never
+    forces a re-spend.
+    """
+    async with request.app.state.pool.acquire() as c:
+        await _authorize_vehicle(c, session.user_ulid, vehicle_ulid)
+
+        facts = await _resolve_adcopy_facts(c, vehicle_ulid)
+        if facts is None:
+            return err(f"vehicle {vehicle_ulid} not found", status=404)
+
+        claims = build_claims(facts)
+        hash_value = snapshot_hash(build_snapshot(facts, claims))
+        cached = await _cached_grounded_generation(c, vehicle_ulid, hash_value)
+        if cached is not None:
+            return ok(cached)
+
+        resolved = _resolve_llm_client()
+        if resolved is None:
+            return err(
+                f"copy generation is not available: {ADCOPY_API_KEY_ENV_VAR} is not configured. "
+                "This is a GASTO gate (plans/cardeep-omni/07-marketing.md F5) -- the owner must "
+                "provide an LLM credential and approve the per-generation budget before this "
+                "activates in production.",
+                status=503,
+            )
+        llm_client, model_name = resolved
+
+        result = generate_copy(facts, llm_client, model_name=model_name)
+
+        gen_ulid_val = ulid()
+        await c.execute(
+            """INSERT INTO adcopy_generation
+                   (gen_ulid, vehicle_ulid, input_snapshot, snapshot_hash, claims,
+                    output_text, model_used, status, unbacked_numerals)
+               VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6, $7, $8, $9::jsonb)""",
+            gen_ulid_val, vehicle_ulid, result.snapshot, result.snapshot_hash,
+            [{"claim_id": cl.claim_id, "text": cl.text, "provenance": cl.provenance} for cl in result.claims],
+            result.output_text, result.model_used, result.status, list(result.unbacked_numerals),
+        )
+
+    return ok({
+        "gen_ulid": gen_ulid_val,
+        "vehicle_ulid": vehicle_ulid,
+        "status": result.status,
+        "output_text": result.output_text,
+        "claims": [{"claim_id": cl.claim_id, "text": cl.text, "provenance": cl.provenance} for cl in result.claims],
+        "unbacked_numerals": list(result.unbacked_numerals),
+        "model_used": result.model_used,
+    })

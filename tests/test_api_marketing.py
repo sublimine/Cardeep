@@ -39,6 +39,13 @@ SKIP_NO_DB = pytest.mark.skipif(not DB_AVAILABLE, reason="cardeep-pg not reachab
 AUDITED_DEALER = "CDP-ES-46-AD9ZXC65"
 UNKNOWN_DEALER = "CDP-ES-00-NOPE0000"
 
+# Seeded demo dealer (scripts/seed_demo_dealer.py) -- same fixture
+# tests/test_dealer_ops_router.py already established for authenticated-session tests.
+DEMO_EMAIL = "demo@cardeep.local"
+DEMO_PASSWORD = "CardeepDemo2026!"
+GYATA_CDP = "CDP-ES-28-YCZB8JYW"
+GYATA_VEHICLE_ULID = "01KV00MAMCMJ9QCW0JY3T4XJY9"
+
 
 def _fetchval(sql: str, *args):
     async def _q():
@@ -54,6 +61,17 @@ def _fetchval(sql: str, *args):
 def client():
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture(scope="module")
+def gyata_token(client: TestClient) -> str:
+    r = client.post("/auth/login", json={"email": DEMO_EMAIL, "password": DEMO_PASSWORD})
+    assert r.status_code == 200, r.text
+    return r.json()["token"]
+
+
+def _auth(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
 @SKIP_NO_DB
@@ -268,3 +286,89 @@ class TestChannelRadarContract:
             # The naive "any difference" count is always >= the threshold-gated count
             # the endpoint reports (2%/EUR200 floor only shrinks the set).
             assert independent_n >= p["n_divergent"]
+
+
+@SKIP_NO_DB
+class TestAdCopyContract:
+    """C7 (F5). No LLM provider is configured anywhere in this environment (verified
+    at F5 execution time) — the endpoint's honest, declared state is 503, never a
+    fabricated/templated copy. The grounded/rejected code paths themselves are
+    exercised exhaustively offline in tests/test_marketing_adcopy.py against a fake
+    injected client; this suite only proves the HTTP contract (auth + gate + cache)
+    around it, using the SAME seeded demo dealer as test_dealer_ops_router.py."""
+
+    def test_no_session_401s(self, client):
+        resp = client.post(f"/vehicles/{GYATA_VEHICLE_ULID}/adcopy")
+        assert resp.status_code == 401
+
+    def test_unknown_vehicle_404s_not_403(self, client, gyata_token):
+        resp = client.post("/vehicles/NONEXISTENT-ULID-000/adcopy", headers=_auth(gyata_token))
+        assert resp.status_code == 404
+
+    def test_own_vehicle_503s_with_declared_gasto_gate(self, client, gyata_token):
+        resp = client.post(f"/vehicles/{GYATA_VEHICLE_ULID}/adcopy", headers=_auth(gyata_token))
+        assert resp.status_code == 503
+        body = resp.json()
+        assert body["ok"] is False
+        assert "ANTHROPIC_API_KEY" in body["error"]
+        assert "GASTO" in body["error"]
+
+    def test_no_row_persisted_when_gate_never_reached(self, client, gyata_token):
+        """A 503 (provider not configured) must NOT write a fake adcopy_generation
+        row — there is no generation to record when the pipeline never ran."""
+        before = _fetchval("SELECT count(*) FROM adcopy_generation WHERE vehicle_ulid = $1", GYATA_VEHICLE_ULID)
+        client.post(f"/vehicles/{GYATA_VEHICLE_ULID}/adcopy", headers=_auth(gyata_token))
+        after = _fetchval("SELECT count(*) FROM adcopy_generation WHERE vehicle_ulid = $1", GYATA_VEHICLE_ULID)
+        assert after == before
+
+    def test_cached_grounded_generation_served_without_llm(self, client, gyata_token):
+        """Seed a real 'grounded' row directly (simulating a PRIOR successful
+        generation, since no live LLM can run in this environment) and confirm the
+        cache path serves it WITHOUT hitting the 503 gate — proving the cache check
+        happens before the LLM-configured check, per the endpoint's own contract."""
+        import json as _json
+
+        from pipeline.marketing.adcopy import build_claims, build_snapshot, snapshot_hash
+        from services.api.routers.marketing import _resolve_adcopy_facts
+
+        async def _seed():
+            conn = await asyncpg.connect(DSN_SYNC)
+            try:
+                # Resolve facts via the EXACT same function the endpoint calls (not a
+                # re-implementation) so the seeded snapshot_hash matches what the live
+                # request will compute — otherwise this would test a cache miss, not a hit.
+                facts = await _resolve_adcopy_facts(conn, GYATA_VEHICLE_ULID)
+                assert facts is not None
+                claims = build_claims(facts)
+                snap = build_snapshot(facts, claims)
+                h = snapshot_hash(snap)
+                await conn.execute(
+                    """INSERT INTO adcopy_generation
+                           (gen_ulid, vehicle_ulid, input_snapshot, snapshot_hash, claims,
+                            output_text, model_used, status, unbacked_numerals)
+                       VALUES ($1, $2, $3::jsonb, $4, $5::jsonb, $6, $7, 'grounded', '[]'::jsonb)""",
+                    "__CARDEEP_TEST_ADCOPY_CACHE__", GYATA_VEHICLE_ULID, _json.dumps(snap), h,
+                    _json.dumps([{"claim_id": c.claim_id, "text": c.text, "provenance": c.provenance} for c in claims]),
+                    "Texto de prueba grounded (fixture de test).", "test-fixture-model",
+                )
+                return h
+            finally:
+                await conn.close()
+
+        async def _cleanup():
+            conn = await asyncpg.connect(DSN_SYNC)
+            try:
+                await conn.execute("DELETE FROM adcopy_generation WHERE gen_ulid = $1", "__CARDEEP_TEST_ADCOPY_CACHE__")
+            finally:
+                await conn.close()
+
+        asyncio.run(_seed())
+        try:
+            resp = client.post(f"/vehicles/{GYATA_VEHICLE_ULID}/adcopy", headers=_auth(gyata_token))
+            assert resp.status_code == 200, resp.text
+            body = resp.json()["data"]
+            assert body["status"] == "grounded"
+            assert body["cached"] is True
+            assert body["output_text"] == "Texto de prueba grounded (fixture de test)."
+        finally:
+            asyncio.run(_cleanup())

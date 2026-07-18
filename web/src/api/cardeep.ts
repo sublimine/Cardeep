@@ -621,6 +621,21 @@ export interface FeedReport {
   content_hash: string;
   created_at: string;
 }
+export type AdCopyStatus = 'grounded' | 'rejected';
+export interface AdCopyClaim {
+  claim_id: string;
+  text: string;
+  provenance: string;
+}
+export interface AdCopyResult {
+  gen_ulid: string;
+  vehicle_ulid: string;
+  status: AdCopyStatus;
+  output_text: string | null;
+  claims: AdCopyClaim[];
+  unbacked_numerals: string[];
+  model_used: string;
+}
 
 export const cardeep = {
   stats: (signal?: AbortSignal) => getData<{ counts: Stats }>('/stats', undefined, signal).then((d) => d.counts),

@@ -7,12 +7,15 @@
 //
 // Bloques 1-3 (F4): "Arregla estos primero" (C1, gratis), "Radar de canales" (C3/C4/C5,
 // Capa 1 — PremiumGate), "Feed listo para anunciarte" (C6, generación gratis). Bloque 4
-// ("Descripción con pruebas", C7) llega en F5 — no simulado aquí mientras tanto.
+// ("Descripción con pruebas", C7, F5): el dealer elige un coche de SU inventario (nunca
+// texto libre); cada afirmación numérica del copy trae su fuente. 503 honesto cuando el
+// proveedor LLM no está configurado (frontera de GASTO, plans/cardeep-omni/07-marketing.md
+// F5) — nunca una plantilla disfrazada de generación real.
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Gauge,
-  Radio, RefreshCw, ShieldCheck,
+  Radio, RefreshCw, ShieldCheck, Sparkles, Lock,
 } from 'lucide-react'
 import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
@@ -25,6 +28,7 @@ import {
   type ListingAuditItem, type ListingAuditMeta, type ChannelRadar,
   type ChannelCoverageBand, type MarketingFeedTarget, type FeedReport,
 } from '../api/cardeep'
+import { marketingOps, AdCopyNotConfiguredError, type AdCopyResult } from '../api/marketingOps'
 import type { Plan } from '../types'
 import { ACCENT, GOOD, BAD, WARN } from '../lib/theme'
 import { cn } from '../lib/cn'
@@ -324,6 +328,108 @@ function FeedBlock({ cdp }: { cdp: string }) {
 }
 
 // ---------------------------------------------------------------------------
+// Bloque 4 — "Descripción con pruebas" (C7, F5)
+// ---------------------------------------------------------------------------
+
+function AdCopyClaimsList({ claims }: { claims: AdCopyResult['claims'] }) {
+  return (
+    <ul className="mt-2 flex flex-col gap-1">
+      {claims.map(c => (
+        <li key={c.claim_id} className="text-[10.5px]" style={{ color: 'var(--text-muted)' }} title={c.provenance}>
+          <span style={{ color: ACCENT }}>●</span> {c.text}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function AdCopyBlock({ items }: { items: ListingAuditItem[] }) {
+  const [selected, setSelected] = useState<string>('')
+  const [result, setResult] = useState<AdCopyResult | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [notConfigured, setNotConfigured] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const generate = useCallback(() => {
+    if (!selected) return
+    setLoading(true)
+    setResult(null)
+    setNotConfigured(null)
+    setError(null)
+    marketingOps.generateAdCopy(selected)
+      .then(setResult)
+      .catch((e: unknown) => {
+        if (e instanceof AdCopyNotConfiguredError) setNotConfigured(e.message)
+        else setError(e instanceof Error ? e.message : 'Error al generar la descripción')
+      })
+      .finally(() => setLoading(false))
+  }, [selected])
+
+  return (
+    <div className="mb-6">
+      <div className="mb-3">
+        <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Descripción con pruebas</h2>
+        <p className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
+          Elige un coche de tu inventario. Cada afirmación del texto trae su fuente — nunca un dato inventado.
+        </p>
+      </div>
+
+      <Card className="!p-4">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <select
+            value={selected}
+            onChange={e => { setSelected(e.target.value); setResult(null); setNotConfigured(null); setError(null) }}
+            className="min-w-[240px] flex-1 rounded-lg px-3 py-2 text-[12px]"
+            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+          >
+            <option value="">Selecciona un coche de tu inventario…</option>
+            {items.map(i => (
+              <option key={i.vehicle_ulid} value={i.vehicle_ulid}>
+                {i.title ?? `${i.make ?? ''} ${i.model ?? ''}`.trim()} {i.year ? `(${i.year})` : ''}
+              </option>
+            ))}
+          </select>
+          <Button onClick={generate} disabled={!selected || loading} icon={<Sparkles className="h-3.5 w-3.5" />}>
+            {loading ? 'Generando…' : 'Generar descripción'}
+          </Button>
+        </div>
+
+        {notConfigured && (
+          <div className="mt-3.5 flex items-start gap-2 rounded-lg p-3" style={{ background: `${WARN}14`, border: `1px solid ${WARN}38` }}>
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: WARN }} />
+            <p className="text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>
+              Generación no disponible todavía: requiere que el propietario active un proveedor de IA y apruebe
+              el presupuesto por generación. El motor está listo — solo falta esa activación.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-3.5 rounded-lg p-3" style={{ background: `${BAD}14`, border: `1px solid ${BAD}38` }}>
+            <p className="text-[11.5px]" style={{ color: BAD }}>{error}</p>
+          </div>
+        )}
+
+        {result && result.status === 'rejected' && (
+          <div className="mt-3.5 rounded-lg p-3" style={{ background: `${BAD}14`, border: `1px solid ${BAD}38` }}>
+            <p className="text-[11.5px] font-semibold" style={{ color: BAD }}>
+              Generación rechazada: contenía cifras sin respaldo verificado ({result.unbacked_numerals.join(', ')}).
+            </p>
+          </div>
+        )}
+
+        {result && result.status === 'grounded' && result.output_text && (
+          <div className="mt-3.5 rounded-lg p-3.5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+            <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{result.output_text}</p>
+            <AdCopyClaimsList claims={result.claims} />
+          </div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -356,6 +462,7 @@ function MarketingForDealer({ cdp, plan }: { cdp: string; plan: Plan }) {
       <FixThisFirstBlock items={items} />
       <ChannelRadarBlock radar={radar} plan={plan} />
       <FeedBlock cdp={cdp} />
+      <AdCopyBlock items={items} />
     </div>
   )
 }
