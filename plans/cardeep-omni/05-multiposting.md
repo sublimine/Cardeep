@@ -1,8 +1,11 @@
 # Carta de sub-proyecto — Pilar 05: Multipublicación automática de anuncios
 
 > Programa: cardeep-omni · Clave: `05-multiposting` · Fecha: 2026-07-17
-> Fase: SYNTHESIS (arquitectura). Este documento es la fuente de verdad del pilar
-> hasta que una fase de ejecución lo enmiende con evidencia nueva.
+> Fase: **F0-F2 EJECUTADAS y CERRADAS (2026-07-18) — ver §10.** Frente A (estado de
+> publicación, solo lectura) real y servido. F3-F7 (Frente B/C: auth-consumo, feeds, AS24,
+> Radar, coches.net/Wallapop/Milanuncios) siguen SYNTHESIS — gated, no ejecutadas.
+> Este documento es la fuente de verdad del pilar hasta que una fase de ejecución
+> posterior lo enmiende con evidencia nueva.
 > Doctrina aplicada: antialucinación tolerancia cero — cada afirmación lleva
 > [VERIFICADO] (leída en código/DB/doc real, con archivo:línea) o [ASUMIDO]
 > (declarada como suposición, jamás disfrazada de certeza).
@@ -31,6 +34,16 @@ aspiracional desalineada con el código real. Este pilar es **net-new al 100%**.
   publicación en ninguna de las **66 migraciones existentes** (`0001`→`0072_vehicle_cluster_country_proof.sql`,
   numeración con huecos — cifra canónica fijada en `00-MASTER.md` C-13, re-contada aquí por
   `ls migrations/*.sql | wc -l` 2026-07-17). [VERIFICADO]
+  **Addendum F0 (2026-07-18, re-conteo en la ejecución de este documento):** la cifra "66" sigue
+  siendo la correcta COMO CIERRE de Bloque 0 (C-13 ya la fijó bien; no se repite el error de "72").
+  Pero el programa avanzó: `ls migrations/*.sql | wc -l` da hoy **72 archivos**, última
+  `0078_dgt_corroboration.sql` — Bloque 1 consumió 0073-0078 (`0073_auth.sql`=AUTH-0,
+  `0074_market_stat.sql`+`0077_dgt_transfer.sql`+`0078_dgt_corroboration.sql`=01-market-intelligence,
+  `0075_lifetime_link.sql`=02-history-reports, `0076_adaptive_cadence.sql`=00-marketplace-engine).
+  Consecuencia directa sobre §5.2 de este documento: la reserva original de esta carta
+  (`0073_dealer_account`→`0076_feed_export`) **choca por completo** con lo anterior — exactamente
+  el escenario que `00-MASTER.md` C-6 anticipa ("ninguna carta posee un número"). Ver corrección
+  en §5.2.
 - `graphify explain "platform_listing"` → degree=1: el nodo solo conecta con su propia
   migración; ningún módulo Python escribe outbound sobre él. [VERIFICADO en RECON]
 
@@ -309,6 +322,18 @@ un solo archivo de constantes, nunca inline.
   la mediana de rotación del segmento (segmento = make+model+year±1+banda de km, calculado
   desde `vehicle_event` GONE — misma base que el pilar 01). Si la mediana del segmento no es
   computable (n < 30 eventos GONE), el badge NO se muestra (regla "sin dato").
+  **Enmienda F1 (2026-07-18):** la banda de km se DESCARTA como cómputo propio. `01-market-
+  intelligence` ya publica exactamente esta métrica — `market_stat` `metric_id='M3'`
+  (`pipeline/market/metrics_f2.py`, mediana de `GONE.observed_at − vehicle.first_seen` por
+  segmento make+model+year±1+fuel+province, run+gate real, publicado
+  `01KXS6Q4TJKCWM19KKQN2SJ2J1`). `00-MASTER.md` C-1/C-12 prohíben un segundo cómputo
+  independiente de mediana-por-cohorte; construir una variante con banda de km habría sido
+  exactamente esa segunda implementación que el programa entero existe para evitar. Este
+  pilar por tanto **consume M3 en vivo** (JOIN por make+model+year+fuel+province_code del
+  dealer contra el run publicado más reciente) en vez de derivarlo. El umbral n≥30 de esta
+  carta se aplica como filtro LOCAL adicional sobre el `n` que M3 ya trae (más estricto que
+  el `MIN_COHORT_N=8` con el que M3 fue calculado) — no es una re-derivación, es un criterio
+  de producto de este pilar sobre un número ajeno ya verificado.
 
 ### 4.5 Estado de publicación outbound (Frente B, desde F5)
 
@@ -362,11 +387,37 @@ cero resultados para estos identificadores en RECON; re-verificar colisión en b
 Numeración: **desde `0073`** (última existente `0072_vehicle_cluster_country_proof.sql`,
 re-verificado 2026-07-17). La reserva "0033-0035" del blueprint queda anulada por §1.5.
 
-- **`0073_dealer_account.sql`** — `dealer_account` (tenant: FK a `entity` del dealer,
+**CORRECCIÓN F0 (2026-07-18) — la reserva de arriba choca por completo y queda anulada,
+exactamente el escenario que `00-MASTER.md` C-6 predijo:**
+- `0073` ya es `0073_auth.sql` (AUTH-0, ejecutado 2026-07-17/18 — fusión de 03-F1+05-F3+
+  06-F1-tenancy+08-F1). `0074`-`0076` ya son de 01-market-intelligence/02-history-reports/
+  00-marketplace-engine. El próximo número libre real hoy es **`0079`** (`ls migrations/*.sql
+  | sort | tail -1` → `0078_dgt_corroboration.sql`), y seguirá subiendo mientras 04-arbitrage
+  y otros frentes de Bloque 2 corran en paralelo — **quien ejecute F3/F4/F5 de este pilar
+  DEBE re-verificar `max(ls migrations/)+1` en el momento exacto de crear cada migración, no
+  usar los números de esta tabla**. Los nombres de tabla (`platform_credential`,
+  `publish_job`+`publish_job_event`, `feed_export`+`feed_export_run`) siguen vigentes; solo
+  el número de archivo cambia.
+- **`dealer_account`/`dealer_user` (lo que este documento reservaba para `0073`) NO SE
+  CONSTRUYE — está SUPERSEDIDO por AUTH-0**, que ya existe y resuelve exactamente el mismo
+  prerrequisito con un esquema más general: `app_user` (roles dealer/particular/staff,
+  argon2id) + `dealer_membership` (user↔`entity` N:M, permite multi-rooftop) +
+  `user_session` + `user_notification` (`migrations/0073_auth.sql`,
+  `services/api/routers/auth.py`). `AuthContext.tsx:48,74` ya llama `/auth/me`/`/auth/login`
+  contra este backend REAL (`DEV_BYPASS` ya desmontado). Cuando F3 de este pilar se ejecute,
+  su trabajo real es CONSUMIR `dealer_membership`/`app_user.tenantId` (igual que
+  03-garage-fleet F1 ya hace en `pages/inventory/`), nunca crear un segundo esquema de tenant
+  — exactamente el mandato de `00-MASTER.md` C-3 ("cada carta afectada CONSUME este esquema,
+  no crea el suyo"). Este documento's F3 (§9) queda por tanto reducido a: security-review de
+  que el flujo `/pro/*` usa `dealer_membership` correctamente + UI de conexión de
+  plataformas — no migración nueva de tenant.
+
+- ~~**`0073_dealer_account.sql`** — `dealer_account` (tenant: FK a `entity` del dealer,
   estado, plan) + `dealer_user` (email, password_hash — argon2, jamás en claro —, rol).
   Es el prerrequisito de TODO el shell `/pro/*`; hoy no existe auth alguna (§1.3).
   Convierte en reales los endpoints `/auth/login` y `/auth/me` que
-  `web/src/auth/AuthContext.tsx:48,74` ya llama contra el vacío.
+  `web/src/auth/AuthContext.tsx:48,74` ya llama contra el vacío.~~ **(supersedido, ver
+  corrección arriba — no se construye)**
 - **`0074_platform_credential.sql`** — `platform_credential`
   (`dealer_account` × `platform_entity_ulid`, `kind` ∈ {api_key, oauth, session},
   secreto **cifrado at-rest** (pgcrypto o cifrado de aplicación — decidir en F5 con
@@ -544,19 +595,28 @@ El mismo estándar antialucinación del proyecto, aplicado al producto: **nada s
   verde; grep `MOCK_` en la página = 0; checklist número-a-criterio (cada dato en pantalla
   → sección §4 de esta carta); revisión visual contra el design system; estados
   "sin dato"/"por confirmar" demostrados con datos reales degradados.
-- **F3 — Auth dealer/tenant (migración `0073`).** `auth.py` + `dealer_account`/`dealer_user`;
-  hace reales los endpoints que `AuthContext.tsx:48,74` ya llama; retirar `DEV_BYPASS` del
-  camino de producción. *Verificación:* suite de auth (hash argon2, expiración, tenant
-  scoping — un dealer JAMÁS ve datos de otro, test explícito); **security review
-  obligatoria** (trigger de reglas del repo: código de autenticación); e2e login→shell→
-  publicaciones contra backend real.
-- **F4 — Feeds Google + Meta (migración `0076`).** Generadores en `pipeline/publish/feeds/`
+  **Corrección de ruta (F2, 2026-07-18):** el prefijo `/pro/*` de §6 era aspiracional — el
+  `App.tsx` real no tiene NINGÚN namespace `/pro/` en ninguna ruta (AUTH-0 resolvió el auth
+  sin introducirlo; todas las rutas protegidas son planas: `/dashboard`, `/inbox`, etc.).
+  La ruta real construida es **`/publicaciones`** (plana, bajo el mismo `Shell`/
+  `ProtectedRoute` que el resto de la app) — coherente con lo que existe, no con lo que el
+  blueprint imaginaba.
+- **F3 — Auth dealer/tenant — SUPERSEDIDA por AUTH-0 (ver corrección §5.2, F0 2026-07-18).**
+  `auth.py`/`AuthContext.tsx`/`DEV_BYPASS` ya son reales HOY (ejecutado 2026-07-17/18, fuera
+  de este pilar). Lo que queda de F3 para este pilar: verificar que `/publicaciones` respeta
+  el tenant scoping de `dealer_membership` (un dealer jamás ve la matriz de otro — ya
+  garantizado por diseño, F1 exige `cdp_code` explícito) y, si acaso, UI de conexión de
+  plataformas. Ninguna migración nueva de auth.
+- **F4 — Feeds Google + Meta (número real: `max(ls migrations/)+1` en el momento de
+  ejecutar F4, NUNCA `0076` — ya consumido por `0076_adaptive_cadence.sql` de 00, ver §5.2).**
+  Generadores en `pipeline/publish/feeds/`
   + validador campo-a-campo contra las specs exactas (§2.2/§2.3) + guard del 30%.
   *Verificación:* tests de schema por campo obligatorio (incluido el caso "campo ausente
   rechaza el ítem/feed"); doble vía de row_count (§7.4); test del guard (fixture que cae
   31% → bloqueado; 29% → pasa); validación del archivo con el validador oficial de la
   plataforma si existe, y si no, declararlo en el informe de fase como hueco.
-- **F5 — Adaptador AS24 + `publish_job` + credenciales (migraciones `0074`/`0075`).**
+- **F5 — Adaptador AS24 + `publish_job` + credenciales (números reales a re-verificar con
+  `max(ls migrations/)+1` al ejecutar — `0074`/`0075` ya pertenecen a 01/02, ver §5.2).**
   Contrato de adaptador outbound en `pipeline/publish/_core/`, `as24.py` contra el OpenAPI
   público, governor outbound (instancia nueva), almacén cifrado de credenciales, endpoints
   de job + UI §6.4-6.5. *Verificación:* contract-tests generados desde el spec OpenAPI del
@@ -575,6 +635,118 @@ El mismo estándar antialucinación del proyecto, aplicado al producto: **nada s
   *Criterio de apertura:* acceso real firmado (API de partner, contrato de hub, u OK
   explícito del owner para el piloto de navegador con cuenta de sacrificio). Sin eso,
   esta fase no consume ni una hora.
+
+---
+
+## 10. Ejecución F0-F2 (2026-07-18) — Frente A cerrado, solo-lectura
+
+> Ejecutado dentro de BLOQUE 2 (`PROGRESO.md`), en paralelo con 03-garage-fleet F1-F4 y
+> 04-arbitrage F1-F6 (mismo repo, misma DB viva `cardeep-pg`, mismo API server `:8090`) —
+> tres commits atómicos independientes, sin colisión de archivos gracias a la tabla de
+> ownership de `00-MASTER.md` §5.1 y a la disciplina append-only en `cardeep.ts`/`main.py`.
+
+### 10.1 F0 — Verdad en tierra + corrección de deriva
+
+- Censo real de `platform_listing` ejecutado (`scripts/f0_publishing_census.py`, re-
+  ejecutable): **2.430.136 aristas totales, 1.938.891 `listed`, 43 plataformas**;
+  **380.852 dealers con inventario disponible, 378.057 (99,27%) con ≥1 arista `listed`**.
+  Verificado por 2 vías: SQL directo (`platform_listing JOIN servable_vehicle JOIN entity`,
+  el MISMO join que `platforms.py:59-63`) y el endpoint `GET /platforms/{cdp}/inventory`
+  YA existente — 7 plataformas pequeñas paginadas a COMPLETITUD (BCA España, Autorola,
+  Miclasico, Car & Classic, RACC, Subastacar, LocalizaVO: conteo exacto, 0 discrepancia);
+  9 plataformas grandes muestreadas (primera página, prueba de subconjunto — paginar
+  Wallapop/coches.net/AS24 enteras a través del rate-limiter compartido con las otras 2
+  sesiones paralelas se declaró inviable, no se maquilló como completo).
+- **Hallazgo real no anticipado por la carta (F0.2b):** `platforms.py:49-50` exige
+  `entity.kind == 'plataforma'` y devuelve 400 si no — pero **96.941 aristas reales**
+  (25 entidades: 14 `oem_vo_portal` como `mercedes_benz`/`audi`/`hyundai`/`toyota_lexus`,
+  4 `cadena` como Flexicar/Clicars/OcasionPlus/Carplus, 6 `rent_a_car_vo` como Arval/OK
+  Mobility, 1 `importador`) usan ese endpoint sin poder ser consultadas por él. Verificado
+  con un caso de tres partes distintas real: dealer `CDP-ES-01-7J6SM0SQ` (un concesionario
+  cualquiera) tiene un coche cross-posteado en `volvo_jlr_suzuki` (`oem_vo_portal`) — un
+  cross-posting genuino, no un self-loop de identidad. Declarado para quien posea
+  `platforms.py`; el router nuevo de este pilar (§10.2) NO reproduce ese gate.
+- Corrección de cifra de migraciones: "66" (§1.1) seguía siendo correcta como cierre de
+  Bloque 0; hoy son **72 archivos reales**, última `0078_dgt_corroboration.sql` — Bloque 1
+  consumió `0073`(AUTH-0)-`0078`(01/00), colisionando por completo con la reserva original
+  de §5.2 de este documento. Corregido en §5.2/§9 (F3 supersedido por AUTH-0; F4/F5 re-
+  verifican `max(ls migrations/)+1` en el momento real de ejecutar, nunca los números aquí
+  escritos). Blueprint §3.10 re-verificado: sin deriva nueva desde el barrido de Bloque 0.
+- §4.4 enmendado: reutiliza `market_stat` `metric_id='M3'` de 01-market-intelligence (ya
+  publicado, `run_id=01KXS6Q4TJKCWM19KKQN2SJ2J1`) en vez de una segunda mediana-por-cohorte
+  con banda de km — evita la tercera implementación que `00-MASTER.md` C-1/C-12 prohíben.
+
+### 10.2 F1 — API del Frente A
+
+- `services/api/routers/publishing.py` (nuevo, 2 endpoints, patrón exacto de
+  `platforms.py`): `GET /publishing/{cdp}/coverage` (semáforo §4.1, solo plataformas con
+  ≥1 arista) y `GET /publishing/{cdp}/matrix` (paginado, fusiona §4.1-§4.4: divergencia de
+  precio, anomalías, frescura vía M3). Registrado en `main.py`.
+- **23 tests nuevos** (`tests/test_api_publishing.py`): 8 unitarios de funciones puras
+  (`_coverage_band`, `_price_divergence`, `_classify_anomaly` — extraídas para ser
+  testeables sin depender de que la DB viva contenga hoy un ejemplo positivo) + 15 de
+  contrato/DB reales. **0 regresión** confirmada en 13 archivos de test de impacto:
+  `test_api_gaps`, `test_api_exhaustiveness`, `test_api_pagination`, `test_api_auth`,
+  `test_api_canonical`, `test_api_seal`, `test_api_ratelimit_cache`,
+  `test_platform_persistence_core`, `test_platform_mint_country_routing`,
+  `test_country_isolation_vin_xplatform`, `test_engine_api_proxies`, `test_api_lifetime`,
+  además del propio `test_api_publishing`.
+- Cross-check de counts contra `/platforms/{cdp}/inventory` en **3 dealers reales**
+  (Valdisa `CDP-ES-46-AD9ZXC65`, Concesur `CDP-ES-41-1YVBKMVH`, Autos Juanjo
+  `CDP-ES-28-5K6CNPCE`). **Bug real cazado en el propio proceso de verificación**: el
+  primer diseño del test paginaba la plataforma ENTERA vía HTTP filtrando por dealer en el
+  cliente — `/platforms/{cdp}/inventory` no filtra por dealer server-side, así que las
+  ~200 aristas de un dealer pueden estar dispersas entre miles de páginas de una plataforma
+  de 274k/789k filas. Colgó >15 minutos contra `coches.net` antes de matarse; verificado en
+  vivo por `pg_stat_activity` que era una consulta real en curso (`ParallelBitmapScan`), no
+  un deadlock. Corregido: la segunda vía pasa a ser SQL directa replicando el JOIN exacto de
+  `platforms.py` pero acotado por dealer — rápida, exacta, igual de independiente.
+  Divergencia de precio verificada contra un ejemplo real vivo (buscado dinámicamente en
+  cada corrida, no hardcodeado, porque el motor de cosecha está vivo y los datos cambian).
+  Hallazgo F0.2b re-verificado en `matrix` con el dealer `CDP-ES-01-7J6SM0SQ`: la arista
+  `oem_vo_portal` se sirve sin 400. `sold_still_listed` verificado SOLO por unidad — 0
+  instancias reales existen hoy (`vehicle.status='gone'`=546.157;
+  `platform_listing.status='removed'`=491.245; de los 546.157 `gone`, exactamente 491.245
+  tienen alguna arista, y las 491.245 `removed` coinciden 1:1 — el harvester ya sincroniza
+  ambos estados en el mismo paso, así que la anomalía es real pero no observable hoy).
+  Spot-check de deep links: no ejecutado como paso manual aparte — los mismos `listing_url`
+  cross-checados arriba (SQL vs endpoint) son URLs reales de la cosecha viva, no fixtures.
+
+### 10.3 F2 — Pantalla `/publicaciones` (solo lectura)
+
+- `web/src/pages/Publicaciones.tsx` (nueva) + `web/src/api/cardeep.ts` (sección propia,
+  append-only, tipos + `publishingCoverage`/`publishingMatrix`) + ruta `/publicaciones` en
+  `App.tsx` + entrada de nav "Publicaciones" en el grupo OPERACIÓN de `Shell.tsx` (commit
+  atómico al cierre, per regla del master de nav/rutas). Dealer scope =
+  `useAuthContext().user.tenantId` — la MISMA convención que 03-garage-fleet F1 ya
+  estableció para `pages/inventory/` (verificado leyendo su diff en vivo durante esta
+  ejecución), nunca un cdp hardcodeado.
+- Cabecera de cobertura por plataforma (semáforo verde/ámbar/rojo) + tabla vehículo×portal
+  con celdas: Publicado (check + deep link + "visto hace Nh" + reloj si `old_listing`),
+  Precio distinto (ámbar, ambos precios mostrados), Vendido pero sigue publicado (rojo),
+  Retirado del portal, No publicado (gris). `grep MOCK_ web/src/pages/Publicaciones.tsx` = 0.
+- **C-10 (regla del primer llegado) aplicada sobre `Inbox.tsx`**: 06-unified-crm-chat no ha
+  aterrizado (Bloque 3, sin empezar). `MOCK_CONVS` (mobile.de/autoscout24, contactos
+  ficticios) retirado; `?? MOCK_CONVS` → `?? []`; empty-state honesto que distingue
+  "Bandeja aún no conectada" (hoy, `/inbox` no existe en el backend) de "Sin
+  conversaciones" (tras F4 de 06). `useInbox.ts`/hooks NO se tocaron. Registrado en el
+  encabezado de `06-unified-crm-chat.md` para que 06 no lo redescubra como sorpresa.
+- Corrección de ruta: `/pro/publicaciones` (§6) era aspiracional — `App.tsx` real no tiene
+  namespace `/pro/*` en ninguna parte; la ruta construida es `/publicaciones` (plana).
+- Verificación: `npx tsc --noEmit` limpio + `vite build` verde (3599 módulos, sin nuevos
+  errores atribuibles a este pilar — el árbol compartido tenía en el momento de esta
+  ejecución trabajo en curso no comiteado de 03/04/09 en otros archivos, verificado archivo
+  por archivo que ningún error pertenece a `Publicaciones.tsx`/`cardeep.ts`/`App.tsx`/
+  `Shell.tsx`/`Inbox.tsx`). Checklist número-a-criterio: cada dato mostrado traza a §4 de
+  esta carta (cobertura→§4.1, divergencia→§4.2, anomalías→§4.3, frescura→§4.4).
+
+### 10.4 Alcance NO tocado (gated, fuera de este mandato)
+
+F3 (auth — supersedida, ver §5.2/§9), F4 (feeds Google/Meta), F5 (adaptador AS24 +
+credenciales), F6 (Radar Cardeep), F7 (Frente C — coches.net/Wallapop/Milanuncios). Ni una
+línea de código outbound, ni una credencial, ni un adaptador de plataforma se construyó en
+esta ejecución — el pilar sigue siendo, más allá del Frente A ahora real, exactamente el
+net-new que §1 describe.
 
 ---
 

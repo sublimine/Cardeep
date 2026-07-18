@@ -64,7 +64,7 @@ supervivencia de 24h del motor sin verificar dentro de sesión (mecanismo sí ve
 sesión, sigue drenando solo), `validation_matrix.json` no refrescado a propósito (doctrina
 single-producer).
 
-## BLOQUE 1 — EN CURSO (lanzado 2026-07-17, 4 frentes en paralelo, task wkzzck2q4)
+## BLOQUE 1 — CERRADO 2026-07-18 (4/4, 0 errores, task wkzzck2q4)
 
 1. 01-market-intelligence F0-F5 (market_stat, M1-M10, market.py, DGT, price-position) —
    **✅ CERRADAS 2026-07-18** (evidencia completa en
@@ -229,9 +229,71 @@ single-producer).
    `migrations/0076...`, `scripts/{backtest,enable}_adaptive_cadence.py`, tests nuevos,
    esta carta).
 
+## BLOQUE 2 — EN CURSO (lanzado 2026-07-18, 3 frentes en paralelo)
+
+Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
+1. 03-garage-fleet F1-F4 — primeras escrituras reales de la API (hoy 100% solo-lectura); consume
+   AUTH-0 (`app_user`/`dealer_membership`) y 01 (`GET /market/price-position/{vehicle_ulid}` para K9,
+   ventana MDS 45d por C-7).
+2. 04-arbitrage F1-F5 + F6 (identidad-captura de fondo, C-9) — deal-score sobre
+   `pipeline/market/cohort.py` (helper ya factorizado por 01), dueño único de `/arbitrage` (C-2);
+   F6 puebla `photo_hash`/extiende captura de VIN — desbloquea al 02 (hoy 0 edges por vin_ref
+   100% OEM-CPO).
+3. 05-multiposting F0-F2 (Frente A, solo-lectura) — matriz de publicación.
+   **✅ CERRADAS 2026-07-18** (evidencia completa en `05-multiposting.md` — corrección de
+   deriva + F0/F1/F2 registrados inline en esa misma carta — leer ahí, no re-auditar).
+   - **F0**: censo real de `platform_listing` por plataforma×dealer, 2 vías (SQL directo +
+     `GET /platforms/{cdp}/inventory` — 7 plataformas paginadas a completitud, 100% exactas;
+     9 muestreadas por tamaño, 43 plataformas totales). **Hallazgo real no anticipado**:
+     `platforms.py:49-50` rechaza (HTTP 400) 96.941 aristas reales cuyo `platform_entity_ulid`
+     es `oem_vo_portal`/`cadena`/`rent_a_car_vo`/`importador` en vez de `plataforma` — 25
+     entidades legítimas (portales OEM de VO, cadenas de compraventa, canales de desflotación)
+     que el endpoint existente excluye por un gate de `kind` demasiado estricto. Declarado
+     para quien posea `platforms.py`, NO corregido ahí (fuera de alcance F0-F2); el router
+     nuevo de este pilar NO replica ese gate. Corrección de deriva: cifra "66 migraciones"
+     de §1.1 seguía siendo la correcta (C-13 ya la fijó bien); pero hoy son 72 archivos reales
+     — Bloque 1 consumió `0073`-`0078`, chocando por completo con la reserva original de este
+     documento (`0073_dealer_account`→`0076_feed_export`), exactamente el escenario que
+     `00-MASTER.md` C-6 anticipó. `dealer_account`/`dealer_user` (F3) quedan SUPERSEDIDOS por
+     AUTH-0 (ya construido) — F3, cuando se ejecute, consume `dealer_membership`/`tenantId`,
+     no crea un segundo esquema (C-3). §4.4 enmendado: el badge "anuncio viejo" reutiliza
+     `market_stat` M3 de 01-market-intelligence (ya publicado) en vez de una segunda mediana-
+     por-cohorte con banda de km (C-1/C-12) — evita la tercera implementación que el programa
+     existe para prevenir. Blueprint §3.10 re-verificado: ya corregido por el barrido
+     documental de Bloque 0, sin deriva nueva.
+   - **F1**: `services/api/routers/publishing.py` (nuevo, registrado en `main.py`) — 2
+     endpoints solo-lectura: `GET /publishing/{cdp}/coverage` (semáforo S4.1) y
+     `GET /publishing/{cdp}/matrix` (S4.1-S4.4 fusionados por vehículo×plataforma:
+     divergencia de precio, anomalías `sold_still_listed`/`available_removed`, frescura vía
+     M3). 23 tests nuevos (8 unitarios de funciones puras + 15 de contrato/DB), 0 regresión
+     en 13 archivos de test de impacto (`test_api_gaps/exhaustiveness/pagination/auth/
+     canonical/seal/ratelimit_cache`, `test_platform_*`, `test_country_isolation_vin_
+     xplatform`, `test_engine_api_proxies`, `test_api_lifetime`). Cross-check real contra
+     `/platforms/{cdp}/inventory` en 3 dealers reales (Valdisa/Concesur/Autos Juanjo) — vía
+     SQL directa tras descubrir que la vía HTTP ingenua (paginar la plataforma ENTERA
+     filtrando por dealer client-side) es inviable a escala (colgó >15 min contra
+     coches.net/274k filas antes de matarlo; `pg_stat_activity` confirmó que era una consulta
+     real en curso, no un deadlock) — declarado, corregido. Divergencia de precio y hallazgo
+     F0.2b (kind no restringido) verificados contra ejemplos reales vivos, no fixtures.
+     `sold_still_listed` verificado solo por unidad: 0 instancias reales existen hoy (el
+     harvester ya sincroniza `platform_listing.status→'removed'` en el mismo paso que marca
+     `vehicle.status='gone'`, 491.245/491.245 coincide exacto) — declarado, no maquillado.
+   - **F2**: página `/publicaciones` (`web/src/pages/Publicaciones.tsx`, nueva) + nav
+     "OPERACIÓN" (`Shell.tsx`) + ruta (`App.tsx`) + cliente (`cardeep.ts`, sección propia
+     append-only). Dealer scope = `useAuthContext().user.tenantId` (misma convención que
+     03-garage-fleet F1 ya estableció para `pages/inventory/`, sin cdp hardcodeado). Cabecera
+     de cobertura por plataforma + tabla vehículo×portal con estados reales (publicado/precio
+     distinto/vendido-sigue-publicado/no publicado), sin un solo `MOCK_*` (grep=0). **C-10
+     (regla del primer llegado, Inbox.tsx)**: 06-unified-crm-chat no había aterrizado
+     (Bloque 3, no iniciado) — `MOCK_CONVS` (mobile.de/autoscout24, fuera de alcance España)
+     retirado con empty-state honesto ("Bandeja aún no conectada"); registrado en el header de
+     `06-unified-crm-chat.md` para que 06 no lo redescubra como sorpresa. Build web verde
+     (`tsc --noEmit` + `vite build`), 0 regresión de rutas/nav. Frente B (`Publicar en AS24`)
+     y Frente C (coches.net/Wallapop/Milanuncios) explícitamente NO tocados — gated F4/F5/F7,
+     fuera del mandato de esta ejecución.
+
 ## Próximos bloques (no empezar sin cerrar el anterior — ver 00-MASTER.md §4)
 
-- BLOQUE 2: 03-garage-fleet + 04-arbitrage + 05-multiposting (frente A), tras AUTH-0 y 01.
 - BLOQUE 3: 06-CRM + 07-marketing + 09 (resto) + 00-F5/F6.
 - BLOQUE 4 (último a propósito): 08-forum-community — requiere OK explícito del owner (gate duro
   ya registrado) antes de una sola línea de frontend.

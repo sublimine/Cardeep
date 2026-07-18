@@ -9,6 +9,22 @@
 > RECON base: 2026-07-16, re-verificación puntual 2026-07-17 (routers, migraciones,
 > `types.ts`, `useApi.ts`, `useInbox.ts`, `deps.py`, nav de `Shell.tsx`).
 
+> **NOTA DE TRACKER (2026-07-18, registrada por 05-multiposting F2, `00-MASTER.md` C-10
+> "regla del primer llegado"):** `web/src/pages/Inbox.tsx` fue tocado antes de que este
+> pilar aterrizara (Bloque 3 no ha empezado; 05 ejecutó su Bloque 2 F0-F2 primero). Per la
+> regla del master, el primero en llegar retira el mock y deja un empty-state honesto sin
+> reconstruir la página. Cambio real hecho por 05: `MOCK_CONVS` (líneas 14-19, conversaciones
+> `mobile.de`/`autoscout24` fuera de alcance España + contactos ficticios) ELIMINADO;
+> `conversations = data?.conversations ?? MOCK_CONVS` → `?? []`; el estado vacío de la lista
+> ahora distingue "Bandeja aún no conectada" (cuando `useInbox()` trae `error`, el caso de
+> HOY — `/inbox` no existe en `services/api`) de "Sin conversaciones" (caso post-F4, cuando
+> el canal exista y esté simplemente vacío). `useInbox.ts`/`useConversation`/
+> `useInboxMutations` **NO se tocaron** — siguen llamando exactamente los paths que esta carta
+> ya documenta (`GET /inbox`, `GET /inbox/{id}`, `POST /inbox/{id}/reply`, `PATCH /inbox/{id}`)
+> vía `web/src/api/client.ts`. Cuando F4 de este pilar construya `crm_inbox.py`, esos hooks
+> deberían empezar a funcionar sin cambios adicionales en `Inbox.tsx` más allá de lo que ya
+> está — el trabajo pendiente sigue siendo 100% el de esta carta ("F4 — Canal email real").
+
 ---
 
 ## 1. Estado actual
