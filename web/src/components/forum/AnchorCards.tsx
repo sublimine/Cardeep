@@ -1,18 +1,24 @@
 // 08-forum-community F5: VehicleAnchorCard + DealerAnchorCard (carta §6.3).
-// Badge "DATO VERIFICADO" shows ONLY when the anchor's snapshot resolved against the live
-// census at anchor time (carta §4.2 — "nunca badge por defecto"). An unverified anchor
-// (target vanished / never existed) renders a gray "dato retirado" state, never a fabricated
-// price.
-import { ExternalLink, ShieldCheck, Store } from 'lucide-react'
+// Badge "DATO VERIFICADO" shows ONLY when BOTH carta §4.2 conditions hold: (1) the target
+// still exists in the live census AND (2) the live price matches the independent
+// reconstruction from vehicle_event (services/api/routers/forum.py::_verify_anchor).
+// Three distinct render states, never conflated:
+//   - snapshot empty            -> condition (1) failed: "dato retirado del mercado"
+//   - snapshot present, verified=false -> condition (2) failed: price shown with an
+//     "última observación" mark, no badge (a real ops alert was already filed server-side)
+//   - verified=true             -> full badge
+import { ExternalLink, ShieldCheck, AlertTriangle, Store } from 'lucide-react'
 import type { PostAnchor } from '../../api/forum'
+import { PriceSparkline } from './PriceSparkline'
 
 function VehicleAnchorCard({ anchor }: { anchor: PostAnchor }) {
   const s = anchor.snapshot as {
     make?: string; model?: string; year?: number; price?: number; status?: string
-    photo_url?: string; deep_link?: string; last_seen?: string
+    photo_url?: string; deep_link?: string; last_seen?: string; price_confirmed?: boolean
   }
 
-  if (!anchor.verified) {
+  const exists = Object.keys(s).length > 0
+  if (!exists) {
     return (
       <div className="rounded-lg p-3 text-[12px]" style={{ border: '1px dashed var(--border-subtle)', color: 'var(--text-muted)' }}>
         Dato retirado del mercado — este anuncio ya no existe en el censo.
@@ -28,13 +34,22 @@ function VehicleAnchorCard({ anchor }: { anchor: PostAnchor }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>{s.make} {s.model}</span>
-          <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: 'rgba(16,185,129,0.14)', color: '#10b981' }}>
-            <ShieldCheck className="h-2.5 w-2.5" /> DATO VERIFICADO
-          </span>
+          {anchor.verified ? (
+            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: 'rgba(16,185,129,0.14)', color: '#10b981' }}>
+              <ShieldCheck className="h-2.5 w-2.5" /> DATO VERIFICADO
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: 'rgba(245,158,11,0.14)', color: '#f59e0b' }} title="El precio en vivo no coincide con el histórico registrado">
+              <AlertTriangle className="h-2.5 w-2.5" /> última observación
+            </span>
+          )}
         </div>
-        <div className="mt-0.5 text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
-          {s.year ?? '—'} · {s.price != null ? `${s.price.toLocaleString('es-ES')} €` : 'sin precio'} ·{' '}
-          {s.status === 'available' ? 'sigue a la venta' : 'retirado'}
+        <div className="mt-0.5 flex items-center gap-2 text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
+          <span>
+            {s.year ?? '—'} · {s.price != null ? `${s.price.toLocaleString('es-ES')} €` : 'sin precio'} ·{' '}
+            {s.status === 'available' ? 'sigue a la venta' : 'retirado'}
+          </span>
+          <PriceSparkline vehicleUlid={anchor.anchor_ref} />
         </div>
       </div>
       {s.deep_link && (

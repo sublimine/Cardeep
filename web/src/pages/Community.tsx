@@ -176,6 +176,8 @@ function ThreadRow({ thread }: { thread: ThreadSummary }) {
             <span className="inline-flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {thread.net_votes}</span>
             {thread.province_code && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {thread.province_code}</span>}
             <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {timeAgo(thread.last_reply_at)}</span>
+            {/* carta §4.7: el rol del autor se muestra SIEMPRE */}
+            {thread.author_role && <Badge color={thread.author_role === 'dealer' ? 'blue' : thread.author_role === 'staff' ? 'purple' : 'gray'}>{thread.author_role}</Badge>}
           </div>
         </div>
       </div>

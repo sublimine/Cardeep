@@ -150,6 +150,50 @@ permanente es la **receta** (versionada en `countries/ES/recipes/`), no el crudo
 
 ---
 
+## 8. Foro y tablón "Se busca" (08-forum-community)
+
+```bash
+# El matcher incremental corre DENTRO del scheduler durable (nunca proceso suelto) —
+# confirmar que el job existe y su próxima ejecución avanza (igual método que §0 Vía B):
+$PSQL "SELECT id, to_timestamp(next_run_time) FROM apscheduler_jobs WHERE id = 'wanted_matcher';"
+
+# Peticiones abiertas / cerradas y coincidencias servidas (últimos 7 días) — mismos números
+# que expone GET /wanted/pulse (público, sin auth):
+$PSQL "SELECT status, count(*) FROM wanted_listing GROUP BY status;"
+$PSQL "SELECT count(*) FROM wanted_match WHERE notified_at > now() - interval '7 days';"
+
+# KPI de confianza del sistema (carta §4.10) — mismo cálculo que GET /wanted/liveness:
+$PSQL "SELECT
+         count(*) FILTER (WHERE v.status='available') AS live_at_click,
+         count(*) AS total_clicks
+       FROM wanted_match wm JOIN vehicle v ON v.vehicle_ulid = wm.vehicle_ulid
+       WHERE wm.clicked_at > now() - interval '30 days';"
+
+# Reputación: el ledger es la ÚNICA fuente de verdad (nunca cacheada) — para auditar un
+# usuario concreto, SUM(delta) debe coincidir EXACTO con GET /forum/users/{id}.reputation:
+$PSQL "SELECT reason, sum(delta), count(*) FROM reputation_event WHERE user_ulid = '<user_ulid>' GROUP BY reason;"
+
+# Cola de moderación pendiente + SLA (staff-only vía API, GET /forum/moderation/sla) —
+# equivalente en SQL directo si hace falta sin pasar por sesión:
+$PSQL "SELECT count(*) FROM moderation_flag WHERE resolved_at IS NULL;"
+$PSQL "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (resolved_at-created_at))/3600.0) AS median_h
+       FROM moderation_flag WHERE resolved_at IS NOT NULL AND created_at > now() - interval '30 days';"
+```
+
+Config (env, todos con default sensato — no hace falta tocar nada para arrancar):
+
+| Variable | Default | Qué controla |
+|---|---|---|
+| `CARDEEP_WANTED_MATCHER_CADENCE_MIN` | `10` | minutos entre corridas del matcher incremental (`pipeline/ops/scheduler.py::wanted_matcher_job`) |
+
+Lectura sana de referencia: `wanted_matcher` con `next_run_time` avanzando cada ~10 min;
+`moderation_flag` pendientes bajo control (staff revisa la cola, `GET /forum/moderation/queue`);
+`match_liveness_rate` (KPI público) por encima de un umbral razonable — si cae, es la señal
+honesta de que la latencia scraping→clic ha crecido (mitigar en el motor de cosecha, §0, no
+maquillando el número aquí).
+
+---
+
 ## Mapa rápido «síntoma → dónde mirar»
 
 | Síntoma | Mirar | Acción |
@@ -160,3 +204,6 @@ permanente es la **receta** (versionada en `countries/ES/recipes/`), no el crudo
 | Delta sin moverse | §3 (`vehicle_event` 24h) | §2 salud de la fuente que debía aterrizar |
 | Cobertura `REFUTED` | §2 (`source_coverage`) | cosecha incompleta → NO hay bajas hasta recosechar |
 | Disco lleno | §7 (`capacity_ledger`) | `evict --cdp ... --apply` sobre dealers muertos |
+| "Se busca" sin matches nuevos | §8 (`apscheduler_jobs.wanted_matcher`) | confirmar que el job avanza; si no, motor parado (§0) |
+| Cola de moderación creciendo | §8 (`moderation_flag` pendientes) | staff resuelve vía `POST /forum/moderation/flags/{id}/resolve` |
+| `match_liveness_rate` cayendo | §8 (KPI público, `/wanted/liveness`) | señal honesta de latencia scraping→clic — revisar cadencia del motor (§0) |

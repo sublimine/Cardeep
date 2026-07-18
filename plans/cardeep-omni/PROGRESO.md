@@ -434,7 +434,7 @@ necesita `gh auth refresh --scopes workflow` + reaplicar, o añadirse vía la UI
    Redis), gateado al horizonte EU por la propia carta — YAGNI mientras España quepa en un
    proceso.
 
-## BLOQUE 4 — EN CURSO (lanzado 2026-07-18, último pilar)
+## BLOQUE 4 — CERRADO 2026-07-18 (1/1, único pilar del bloque)
 
 **Gate F0 del propio pilar (OK explícito del owner antes de una línea de frontend) SATISFECHO
 2026-07-18**: tras cerrar Bloque 3 y reportar que este pilar quedaba pausado precisamente por ese
@@ -442,6 +442,87 @@ gate, el owner respondió en vivo, sin ambigüedad: *"QUE SIGAS JODER!!!!!!!!!!!
 pararse!"* — respuesta directa e inequívoca al bloqueo nombrado, registrada aquí como la
 autorización explícita que la carta exige. AUTH-0 ya cerrado (prerrequisito). Orden interno de la
 propia carta: tablón "Se busca" antes que el foro completo, para no exhibir un foro fantasma.
+
+1. 08-forum-community F0-F6 — **✅ TODAS CERRADAS 2026-07-18** (evidencia completa en
+   `08-forum-community.md` §10 "Estado real de ejecución" — leer ahí, no re-auditar). Migraciones
+   `0093_wanted.sql` + `0094_wanted_matcher_index.sql` + `0095_forum.sql` (0092 era la última antes
+   de este bloque, verificado con `ls migrations/*.sql | sort | tail` en cada creación, sin
+   colisión — este bloque corrió solo, sin los 3-4 frentes paralelos de bloques anteriores).
+   - **F1 (auth) ya satisfecho por AUTH-0** — verificado de nuevo en esta sesión, no asumido de
+     memoria: cero migración ni router nuevos de auth en este bloque (00-MASTER.md regla #4).
+   - **F2 (backend "Se busca")**: matcher SQL determinista (`pipeline/wanted/matcher.py` +
+     `run_matcher.py`), 11 endpoints (`services/api/routers/wanted.py`), job incremental
+     registrado en el scheduler durable (`wanted_matcher_job`, cada 10 min — nunca proceso
+     suelto). `geo_province_adjacency` poblada con 111 pares reales de provincias españolas,
+     verificados por DOS vías independientes (geometría real vía `shapely` + suma de grados del
+     grafo = 222 = 2×111) y validados a mano contra geografía conocida (Madrid=5, Zaragoza=8,
+     Cuenca=7, Toledo=6 — las cuatro coinciden). Bug real cazado antes de aplicar: `geo_province`
+     tiene PK compuesta `(country_code, code)`, no la forma de una columna que el comentario
+     original de `0001_geo.sql` documentaba — mismo patrón de bug que 01-market-intelligence F4
+     ya había encontrado una vez, verificado contra `pg_constraint` en vivo esta vez también.
+   - **F3 (frontend "Se busca")**: `Wanted.tsx` + grupo de nav COMUNIDAD. E2E real con Playwright:
+     publicar "Lynk & Co 01" en Madrid → "4.239 coincidencias reales" → clic en anuncio real →
+     cierre con motivo → valoración doble-ciego persistida correctamente (`revealed_at=NULL`).
+     Bug de plataforma real encontrado y corregido, fuera del alcance nominal: `vite.config.ts`
+     no tenía proxy de dev para `/api/v1/*`, rompiendo silenciosamente login/registro y CUALQUIER
+     página autenticada en un navegador real (declarado como hueco por 06/07, nunca cerrado por
+     AUTH-0) — corregido, afecta a toda la plataforma.
+   - **F4 (backend foro)**: `pipeline/forum/{ranking,reputation}.py` + `services/api/routers/
+     forum.py`. Fórmula de ranking (Reddit hot + gravedad HN) verificada con vectores calculados
+     a mano fuera del código. Mecánica de privilegios/anti-inflado/tope diario verificada contra
+     la base de datos real, incluido el caso exacto que pide la carta: dos posts del mismo autor,
+     mismo votante, ventana de 7 días — el segundo voto no vuelve a acreditar reputación.
+   - **F5 (frontend foro)**: `Community.tsx`/`CommunityThread.tsx`/`CommunityProfile.tsx` +
+     `VehicleAnchorCard`/`DealerAnchorCard`/`DataLinker` (nombrados tal como exige la carta).
+     Segundo bug real de plataforma encontrado y corregido: `ProtectedRoute.tsx` no comprobaba
+     `isLoading`, rebotando a `/login` cualquier recarga con sesión válida en TODA página
+     autenticada — un guard de una línea, verificado en vivo. Decisión de alcance declarada: el
+     heatmap (§4.8) se sirve como lista de actividad, no SVG interactivo (no existe primitivo
+     `SpainMap` reutilizable en el repo; construir uno de cero para esta pantalla habría sido
+     alcance desproporcionado para Prioridad 2).
+   - **F6 (endurecimiento + sello)**: la auditoría cruzada de §4 (obligatoria por la propia
+     carta) cazó DOS huecos reales, ambos cerrados en el mismo bloque, no solo declarados: (a)
+     el badge "DATO VERIFICADO" solo comprobaba existencia del vehículo, le faltaba la condición
+     2 (coincidencia de precio contra la reconstrucción de `vehicle_event`) — cerrado con
+     verificación de doble vía real + emisión de `alert` en discrepancia; (b) el rol del autor
+     (dealer/particular/staff, exigido "SIEMPRE visible" por §4.7) no se servía ni se pintaba —
+     cerrado. Además: sparkline de precio (§4.3, no construido hasta ahora) y endpoint de SLA de
+     moderación staff-only (§9 F6). Runbook nuevo: `docs/runbook/OPERATE.md` §8.
+   - **Regresión**: 111/111 tests propios verdes (matcher+reputación+ranking+routers, puros y
+     contra `cardeep-pg` real); `tsc --noEmit` y `vite build` limpios en cada fase; pasada de
+     recolección completa de la suite (2.890 tests, 0 errores de importación) tras cada bloque de
+     cambios a archivos compartidos (`main.py`, `pipeline/ops/scheduler.py`, `App.tsx`,
+     `Shell.tsx`, `ProtectedRoute.tsx`). Subconjunto de impacto (21 archivos `test_api_*`+routers):
+     293 passed/1 skipped, más 1 fallo y 2 errores investigados uno a uno y re-ejecutados en
+     aislamiento — los 3 desaparecen fuera de esta sesión concurrida (1 es contaminación cruzada de
+     esta misma sesión corriendo `test_forum_router.py`/`test_wanted_router.py` en paralelo contra
+     la misma DB; 2 son un bug preexistente de `test_terminal_router.py`, pilar 09, nunca tocado
+     aquí) — detalle completo en `08-forum-community.md` §10, no maquillado.
+   - **Huecos honestos declarados, no bloqueantes**: F0 con calibración de copy/UX parcial
+     (Milanuncios bloqueó el navegador real con 405 — confirma la postura anti-bot Tier-1 que la
+     doctrina del proyecto ya asume; Wallapop/Forocoches revisados sin hallazgo adicional). El
+     gate de cooldown de peticiones "Se busca" solo aplica la mitad "antigüedad de cuenta" — la
+     mitad "email verificado" no es implementable porque AUTH-0 no tiene esa columna/flujo
+     todavía. §4.8 heatmap con alcance reducido (lista, no mapa SVG). Commits atómicos por fase,
+     push a `origin/main` verificado tras cada uno — sin incidente de scope OAuth esta vez
+     (ningún archivo de `.github/workflows/` tocado por este pilar).
+
+## PROGRAMA CARDEEP-OMNI — CERRADO 2026-07-18 (5/5 bloques, 10/10 pilares)
+
+Los 5 bloques del plan de construcción (`00-MASTER.md` §4) están cerrados: BLOQUE 0 (cimientos:
+motor revivido, barrido documental, demolición terminal sintético) → BLOQUE 1 (01-market-
+intelligence, 02-history-reports, AUTH-0, 00-F3/F4) → BLOQUE 2 (03-garage-fleet, 04-arbitrage,
+05-multiposting Frente A) → BLOQUE 3 (06-unified-crm-chat, 07-marketing, 09-trading-terminal,
+00-F5/F6) → BLOQUE 4 (08-forum-community). Los 10 pilares originales del programa tienen su fase
+de construcción de ingeniería cerrada y verificada; los huecos que quedan abiertos son,
+sistemáticamente, fases de GASTO/ACCESO que el propio `00-MASTER.md` §3 gateó desde el principio
+como "fuera de orden (gated permanente)" — no ingeniería pendiente: credenciales AS24/WhatsApp
+(05-F7/06-F7/07-F5 costo), convenio institucional DGT/ITV (02-F5), governor Redis (00-F7, gate
+horizonte EU), verificación de identidad ID+liveness (08, hueco declarado desde el research), y
+el scope OAuth `workflow` pendiente para el job CI `terminal-anti-mock` (bloqueo declarado en
+BLOQUE 3, nunca resuelto por no ser reversible sin acción del owner). Ninguno de estos bloquea el
+uso real de la plataforma; todos están declarados, con su carta de origen citada, no maquillados
+como "terminado".
 
 ## Reglas operativas vigentes (de 00-MASTER.md §"Reglas operativas")
 

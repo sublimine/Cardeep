@@ -19,10 +19,13 @@ async function unwrap<T>(promise: Promise<Envelope<T>>): Promise<{ data: T; meta
 
 export type ThreadType = 'discussion' | 'price_check'
 
+export type UserRole = 'dealer' | 'particular' | 'staff'
+
 export interface ThreadSummary {
   thread_ulid: string
   title: string
   author_user_ulid: string
+  author_role: UserRole | null
   province_code: string | null
   thread_type: ThreadType
   created_at: string
@@ -44,6 +47,7 @@ export interface PostAnchor {
 export interface ForumPost {
   post_ulid: string
   author_user_ulid: string
+  author_role: UserRole | null
   body: string
   is_first_post: boolean
   created_at: string

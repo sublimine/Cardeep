@@ -22,8 +22,11 @@ from pydantic import BaseModel, Field, field_validator
 
 from pipeline.forum.ranking import ANCHOR_CAP, rank_score
 from pipeline.forum.reputation import (
+    DOWNVOTE_PRIVILEGE_MIN_REP,
+    FLAG_PRIVILEGE_MIN_REP,
     PEER_INFLATION_WINDOW_DAYS,
     REP_DAILY_CAP,
+    VOTE_PRIVILEGE_MIN_REP,
     can_downvote,
     can_flag,
     can_vote,
@@ -111,10 +114,65 @@ async def _current_rep(conn: asyncpg.Connection, user_ulid: str) -> int:
     return int(total)
 
 
+async def _reconstruct_price_from_events(conn: asyncpg.Connection, vehicle_ulid: str) -> float | None:
+    """Carta §7.1 vía B: 'último PRICE_CHANGE.new_value, o NEW si no hay cambios' — the
+    SAME append-only ledger every other verification protocol in this codebase treats as
+    the second, independent path (0003_vehicles_events.sql's own doctrine)."""
+    row = await conn.fetchrow(
+        "SELECT new_value FROM vehicle_event WHERE vehicle_ulid = $1 AND event_type = 'PRICE_CHANGE' "
+        "ORDER BY observed_at DESC LIMIT 1",
+        vehicle_ulid,
+    )
+    if row is not None and isinstance(row["new_value"], dict) and row["new_value"].get("price") is not None:
+        return float(row["new_value"]["price"])
+    row2 = await conn.fetchrow(
+        "SELECT new_value FROM vehicle_event WHERE vehicle_ulid = $1 AND event_type = 'NEW' "
+        "ORDER BY observed_at ASC LIMIT 1",
+        vehicle_ulid,
+    )
+    if row2 is not None and isinstance(row2["new_value"], dict) and row2["new_value"].get("price") is not None:
+        return float(row2["new_value"]["price"])
+    return None
+
+
+PRICE_MATCH_TOLERANCE = 0.01  # float rounding slack, not a real-world price difference
+
+
+def _price_confirmed(live_price: float | None, reconstructed_price: float | None) -> bool:
+    """Pure comparison — carta §4.2 condition (2) / §7.1 vía B. Extracted from
+    ``_verify_anchor`` (which does the DB I/O) so the exact-match arithmetic is testable
+    without a database (tests/test_forum_router.py's live-DB tests would otherwise be
+    the only way to exercise this, and doing so would require writing a synthetic
+    PRICE_CHANGE row into the REAL, DELETE-blocked vehicle_event ledger — migrations/
+    0035_append_only_row_guards.sql makes that append-only violation impossible to
+    clean up afterwards, so this logic is deliberately isolated instead)."""
+    if live_price is None or reconstructed_price is None:
+        return False
+    return abs(reconstructed_price - live_price) <= PRICE_MATCH_TOLERANCE
+
+
+async def _flag_anchor_drift(conn: asyncpg.Connection, anchor_ref: str, live_price: float | None, reconstructed_price: float | None) -> None:
+    """Carta §7.6: every double-vía failure emits an `alert` row — reused verbatim
+    (0004_verification_health.sql schema), never a second alerting table (carta §5.1)."""
+    await conn.execute(
+        "INSERT INTO alert (origin, severity, message, payload) VALUES ($1, $2, $3, $4)",
+        "community.anchor_drift", "warning",
+        f"vehicle {anchor_ref}: live price and vehicle_event reconstruction disagree",
+        {"vehicle_ulid": anchor_ref, "live_price": live_price, "reconstructed_price": reconstructed_price},
+    )
+
+
 async def _verify_anchor(conn: asyncpg.Connection, anchor_type: str, anchor_ref: str) -> dict[str, Any] | None:
     """Return a JSONB-able snapshot if the anchor target exists NOW, else None (carta §4.2:
     'nunca badge por defecto' — an anchor to a vanished target is stored anyway, per the
-    carta's drift-detection intent, but flagged unverified via a null snapshot)."""
+    carta's drift-detection intent, but flagged unverified via a null snapshot).
+
+    Carta §4.2's TWO conditions for the "DATO VERIFICADO" badge: (1) the target exists
+    (this function returning non-None at all) AND (2) the live price matches the
+    independent reconstruction from vehicle_event (§7.1 vía B). Condition 2 is encoded as
+    ``price_confirmed`` in the snapshot — the router only sets ``verified=True`` when
+    BOTH hold (see ``_insert_anchors``/``get_thread`` below).
+    """
     if anchor_type == "vehicle":
         row = await conn.fetchrow(
             "SELECT make, model, year, price, status, photo_url, deep_link, last_seen "
@@ -123,10 +181,16 @@ async def _verify_anchor(conn: asyncpg.Connection, anchor_type: str, anchor_ref:
         )
         if row is None:
             return None
+        live_price = float(row["price"]) if row["price"] is not None else None
+        reconstructed = await _reconstruct_price_from_events(conn, anchor_ref)
+        price_confirmed = _price_confirmed(live_price, reconstructed)
+        if not price_confirmed and reconstructed is not None and live_price is not None:
+            await _flag_anchor_drift(conn, anchor_ref, live_price, reconstructed)
         return {
             "make": row["make"], "model": row["model"], "year": row["year"],
-            "price": float(row["price"]) if row["price"] is not None else None, "status": row["status"],
+            "price": live_price, "status": row["status"],
             "photo_url": row["photo_url"], "deep_link": row["deep_link"], "last_seen": str(row["last_seen"]),
+            "price_confirmed": price_confirmed,
         }
     if anchor_type == "entity":
         cluster = await resolve_cluster(conn, anchor_ref)
@@ -149,6 +213,18 @@ async def _verify_anchor(conn: asyncpg.Connection, anchor_type: str, anchor_ref:
             return None
         return {"name": row["name"]}
     return None
+
+
+def _is_badge_verified(anchor_type: str, snapshot: dict[str, Any]) -> bool:
+    """Carta §4.2's FULL two-condition badge (existence AND, for vehicles, price
+    cross-check) — stricter than §4.1's ranking-only 'exists' count (kept separate,
+    see ``_verify_anchor``'s docstring). Entity/province anchors have no price to
+    cross-check, so existence alone satisfies the badge for them."""
+    if not snapshot:
+        return False
+    if anchor_type == "vehicle":
+        return bool(snapshot.get("price_confirmed", False))
+    return True
 
 
 async def _insert_anchors(conn: asyncpg.Connection, post_ulid: str, anchors: list[AnchorRequest]) -> int:
@@ -186,11 +262,23 @@ async def _last_pair_credit(conn: asyncpg.Connection, author_ulid: str, voter_ul
     )
 
 
-def _serialize_thread(row: dict[str, Any], rank: float | None = None) -> dict[str, Any]:
+async def _author_roles(conn: asyncpg.Connection, user_ulids: list[str]) -> dict[str, str]:
+    """Carta §4.7 (PistonHeads-exact: reglas distintas para dealer vs particular):
+    'las peticiones y posts muestran SIEMPRE el rol'. Batch fetch, never N+1."""
+    if not user_ulids:
+        return {}
+    rows = await conn.fetch(
+        "SELECT user_ulid, role FROM app_user WHERE user_ulid = ANY($1::text[])", list(set(user_ulids))
+    )
+    return {r["user_ulid"]: r["role"] for r in rows}
+
+
+def _serialize_thread(row: dict[str, Any], rank: float | None = None, author_role: str | None = None) -> dict[str, Any]:
     d = {
         "thread_ulid": row["thread_ulid"],
         "title": row["title"],
         "author_user_ulid": row["author_user_ulid"],
+        "author_role": author_role,  # carta §4.7: role is ALWAYS shown
         "province_code": row["province_code"],
         "thread_type": row["thread_type"],
         "created_at": str(row["created_at"]),
@@ -242,7 +330,8 @@ async def list_threads(
             """,
             province,
         )
-    items = [dict(r) for r in base_rows]
+        items = [dict(r) for r in base_rows]
+        roles = await _author_roles(c, [it["author_user_ulid"] for it in items])
     if sort == "hot":
         for it in items:
             it["_rank"] = rank_score(int(it["net_votes"]), int(it["verified_anchor_count"]), float(it["hours_age"]))
@@ -251,7 +340,7 @@ async def list_threads(
         items.sort(key=lambda x: x["created_at"], reverse=True)
     page_items = items[offset:offset + size]
     has_more = len(items) > offset + size
-    out = [_serialize_thread(it, it.get("_rank")) for it in page_items]
+    out = [_serialize_thread(it, it.get("_rank"), roles.get(it["author_user_ulid"])) for it in page_items]
     return ok(out, page=page, size=size, returned=len(out), has_more=has_more)
 
 
@@ -329,19 +418,23 @@ async def get_thread(thread_ulid: str, request: Request) -> JSONResponse:
             anchors_by_post.setdefault(a["post_ulid"], []).append({
                 "anchor_ulid": a["anchor_ulid"], "anchor_type": a["anchor_type"],
                 "anchor_ref": a["anchor_ref"], "snapshot": a["snapshot"],
-                "verified": a["snapshot"] != {},
+                "verified": _is_badge_verified(a["anchor_type"], a["snapshot"]),
             })
+
+        all_author_ulids = [thread["author_user_ulid"]] + [p["author_user_ulid"] for p in posts]
+        roles = await _author_roles(c, all_author_ulids)
 
         post_items = [
             {
                 "post_ulid": p["post_ulid"], "author_user_ulid": p["author_user_ulid"],
+                "author_role": roles.get(p["author_user_ulid"]),  # carta §4.7: always shown
                 "body": p["body"], "is_first_post": p["is_first_post"],
                 "created_at": str(p["created_at"]), "net_votes": net_by_post.get(p["post_ulid"], 0),
                 "anchors": anchors_by_post.get(p["post_ulid"], []),
             }
             for p in posts
         ]
-    return ok({**_serialize_thread(dict(thread)), "posts": post_items})
+    return ok({**_serialize_thread(dict(thread), author_role=roles.get(thread["author_user_ulid"])), "posts": post_items})
 
 
 @router.post("/threads")
@@ -430,9 +523,11 @@ async def vote_post(
 
         rep = await _current_rep(c, session.user_ulid)
         if payload.value == 1 and not can_vote(rep):
-            raise HTTPException(status_code=403, detail=f"votar requiere reputación >= {10}")
+            raise HTTPException(status_code=403, detail=f"votar requiere reputación >= {VOTE_PRIVILEGE_MIN_REP}")
         if payload.value == -1 and not can_downvote(rep):
-            raise HTTPException(status_code=403, detail="downvote requiere más reputación")
+            raise HTTPException(
+                status_code=403, detail=f"downvote requiere reputación >= {DOWNVOTE_PRIVILEGE_MIN_REP}"
+            )
 
         async with c.transaction():
             if payload.value == 0:
@@ -455,12 +550,19 @@ async def vote_post(
                     daily_credited = await _rep_daily_credited(c, author_ulid)
                     if daily_credited < REP_DAILY_CAP:
                         if payload.value == 1:
-                            anchor_count = await c.fetchval(
-                                "SELECT COUNT(*) FROM post_anchor WHERE post_ulid = $1 AND snapshot <> '{}'::jsonb",
-                                post_ulid,
+                            # §4.5's "post con anchor VERIFICADO" uses the same strict
+                            # two-condition badge as §4.2 (existence + price cross-check
+                            # for vehicles) — a post whose anchor exists but whose price
+                            # has drifted from the ledger reconstruction should not earn
+                            # the higher bonus either.
+                            anchor_rows = await c.fetch(
+                                "SELECT anchor_type, snapshot FROM post_anchor WHERE post_ulid = $1", post_ulid
                             )
-                            delta = upvote_delta(anchor_count > 0)
-                            reason = "upvote_anchor" if anchor_count > 0 else "upvote_no_anchor"
+                            has_verified_anchor = any(
+                                _is_badge_verified(r["anchor_type"], r["snapshot"]) for r in anchor_rows
+                            )
+                            delta = upvote_delta(has_verified_anchor)
+                            reason = "upvote_anchor" if has_verified_anchor else "upvote_no_anchor"
                         else:
                             delta = -2
                             reason = "downvote_received"
@@ -501,7 +603,7 @@ async def flag_post(
             raise HTTPException(status_code=404, detail=f"post {post_ulid} not found")
         rep = await _current_rep(c, session.user_ulid)
         if not can_flag(rep):
-            raise HTTPException(status_code=403, detail="flag requiere más reputación")
+            raise HTTPException(status_code=403, detail=f"flag requiere reputación >= {FLAG_PRIVILEGE_MIN_REP}")
         existing = await c.fetchval(
             "SELECT 1 FROM moderation_flag WHERE post_ulid = $1 AND flagger_user_ulid = $2",
             post_ulid, session.user_ulid,
@@ -571,6 +673,48 @@ async def resolve_flag(
             session.user_ulid, payload.resolution, flag_ulid,
         )
     return ok({"flag_ulid": flag_ulid, "resolution": payload.resolution})
+
+
+@router.get("/moderation/sla")
+@limiter.limit(RATE_DEFAULT)
+async def moderation_sla(
+    request: Request,
+    session: CurrentSession = Depends(get_current_session),
+    window_days: int = Query(default=30, ge=1, le=365),
+) -> JSONResponse:
+    """Carta §9 F6 / §2.3 (Nextdoor reference: ~90% reviewed <6h — our own number is
+    MEASURED and published INTERNALLY, never promised until it is real). Staff-only:
+    an SLA number is an operational metric, not a public trust signal (unlike
+    match_liveness_rate, carta §4.10, which IS public by design)."""
+    async with request.app.state.pool.acquire() as c:
+        await _require_staff(c, session.user_ulid)
+        rows = await c.fetch(
+            """
+            SELECT EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600.0 AS hours
+              FROM moderation_flag
+             WHERE resolved_at IS NOT NULL AND created_at > now() - make_interval(days => $1)
+             ORDER BY hours
+            """,
+            window_days,
+        )
+        pending = await c.fetchval(
+            "SELECT COUNT(*) FROM moderation_flag WHERE resolved_at IS NULL"
+        )
+    hours = [float(r["hours"]) for r in rows]
+    if not hours:
+        return ok({
+            "n_resolved": 0, "median_hours": None, "p90_hours": None,
+            "pct_under_6h": None, "pending_now": pending, "window_days": window_days,
+        })
+    hours.sort()
+    n = len(hours)
+    median = hours[n // 2] if n % 2 else (hours[n // 2 - 1] + hours[n // 2]) / 2
+    p90 = hours[min(n - 1, int(0.9 * n))]
+    pct_under_6h = sum(1 for h in hours if h <= 6.0) / n
+    return ok({
+        "n_resolved": n, "median_hours": median, "p90_hours": p90,
+        "pct_under_6h": pct_under_6h, "pending_now": pending, "window_days": window_days,
+    })
 
 
 # ---------------------------------------------------------------------------

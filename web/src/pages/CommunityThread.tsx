@@ -119,6 +119,12 @@ function PostCard({ post, onChanged }: { post: ForumPost; onChanged: () => void 
           <div className="mb-1.5 flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
             <UserIcon className="h-3 w-3" />
             <Link to={`/community/user/${post.author_user_ulid}`} className="hover:underline">{post.author_user_ulid.slice(0, 10)}</Link>
+            {/* carta §4.7 (PistonHeads-exact): el rol se muestra SIEMPRE, dealer vs particular */}
+            {post.author_role && (
+              <Badge color={post.author_role === 'dealer' ? 'blue' : post.author_role === 'staff' ? 'purple' : 'gray'}>
+                {post.author_role}
+              </Badge>
+            )}
             · {new Date(post.created_at).toLocaleString('es-ES')}
           </div>
           <p className="whitespace-pre-wrap text-[13px]" style={{ color: 'var(--text-primary)' }}>{post.body}</p>

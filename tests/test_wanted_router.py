@@ -340,6 +340,29 @@ class TestPublicAggregates:
         assert set(data) == {"threads_active_24h", "wanted_open", "matches_served_7d"}
         assert all(isinstance(v, int) for v in data.values())
 
+    def test_pulse_counters_match_direct_sql(self, client: TestClient) -> None:
+        """Carta §7 row 2, vía B: 'recuento independiente contra SQL directo — el test
+        falla si endpoint y SQL directo difieren'. Independent asyncpg connection, same
+        WHERE clauses as services/api/routers/wanted.py::pulse, computed separately."""
+        import asyncpg
+
+        async def _direct_counts() -> dict[str, int]:
+            conn = await asyncpg.connect(DSN)
+            try:
+                wanted_open = await conn.fetchval("SELECT COUNT(*) FROM wanted_listing WHERE status = 'open'")
+                matches_7d = await conn.fetchval(
+                    "SELECT COUNT(*) FROM wanted_match WHERE notified_at > now() - interval '7 days'"
+                )
+                return {"wanted_open": wanted_open, "matches_served_7d": matches_7d}
+            finally:
+                await conn.close()
+
+        direct = asyncio.run(_direct_counts())
+        r = client.get("/wanted/pulse")
+        data = r.json()["data"]
+        assert data["wanted_open"] == direct["wanted_open"]
+        assert data["matches_served_7d"] == direct["matches_served_7d"]
+
     def test_liveness_null_rate_when_no_clicks_in_window(self, client: TestClient) -> None:
         r = client.get("/wanted/liveness")
         assert r.status_code == 200

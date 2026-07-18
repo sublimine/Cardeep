@@ -124,6 +124,19 @@ async def _grant_rep(user_ulid: str, delta: int) -> None:
         await conn.close()
 
 
+async def _promote_to_staff(user_ulid: str) -> None:
+    """AUTH-0 has no self-registration path for role='staff' (declared YAGNI) — tests
+    promote directly via SQL, the same technique used elsewhere in this suite for
+    account-age backdating."""
+    import asyncpg
+
+    conn = await asyncpg.connect(DSN)
+    try:
+        await conn.execute("UPDATE app_user SET role = 'staff' WHERE user_ulid = $1", user_ulid)
+    finally:
+        await conn.close()
+
+
 def _seasoned_user(client: TestClient, rep: int = FLAG_PRIVILEGE_MIN_REP) -> tuple[str, str]:
     """Registers a user and grants enough reputation to exercise every privilege tier."""
     token, user_ulid = _register(client)
@@ -155,6 +168,16 @@ class TestThreadsAndPosts:
         data = r2.json()["data"]
         assert len(data["posts"]) == 1
         assert data["posts"][0]["is_first_post"] is True
+        # carta §4.7: role is ALWAYS shown, both on the thread and on each post
+        assert data["author_role"] == "particular"
+        assert data["posts"][0]["author_role"] == "particular"
+
+    def test_feed_includes_author_role(self, client: TestClient) -> None:
+        token, _ = _register(client)
+        client.post("/forum/threads", json={"title": "role-in-feed", "body": "b"}, headers=_auth(token))
+        r = client.get("/forum/threads?sort=recent")
+        match = next(t for t in r.json()["data"] if t["title"] == "role-in-feed")
+        assert match["author_role"] == "particular"
 
     def test_price_check_requires_anchor(self, client: TestClient) -> None:
         token, _ = _register(client)
@@ -191,6 +214,42 @@ class TestThreadsAndPosts:
         thread_ulid = r.json()["data"]["thread_ulid"]
         detail = client.get(f"/forum/threads/{thread_ulid}").json()["data"]
         assert detail["posts"][0]["anchors"][0]["verified"] is False
+
+    def test_anchor_price_confirmed_matches_ledger_reconstruction(self, client: TestClient) -> None:
+        """Carta §4.2 condition (2) / §7.1 vía B: the badge requires the LIVE price to
+        match the independent vehicle_event reconstruction, not just existence."""
+        token, _ = _register(client)
+        r = client.post("/forum/threads", json={
+            "title": "price-confirmed-check", "body": "b",
+            "anchors": [{"anchor_type": "vehicle", "anchor_ref": RARE_VEHICLE_ULID}],
+        }, headers=_auth(token))
+        thread_ulid = r.json()["data"]["thread_ulid"]
+        detail = client.get(f"/forum/threads/{thread_ulid}").json()["data"]
+        anchor = detail["posts"][0]["anchors"][0]
+        assert anchor["snapshot"]["price_confirmed"] is True
+        assert anchor["verified"] is True
+
+    def test_price_confirmed_pure_comparison(self) -> None:
+        """§7.1 vía B / §7.6: the drift-detection ARITHMETIC, tested in pure isolation
+        (no DB). Deliberately NOT tested by writing a synthetic PRICE_CHANGE row into a
+        real vehicle's history: migrations/0035_append_only_row_guards.sql makes
+        vehicle_event rows permanently undeletable (`RAISE EXCEPTION ... DELETE
+        forbidden`) — a live-DB test for this specific arithmetic would either corrupt
+        a real vehicle's permanent price history or require inventing a throwaway
+        vehicle/entity row that itself could never be fully cleaned up afterwards
+        (the FK cascade delete on `vehicle` would re-trigger the same forbidden DELETE
+        on its own vehicle_event rows). The comparison logic is pure and DB-free by
+        construction (services/api/routers/forum.py::_price_confirmed) precisely so it
+        can be verified without that tradeoff."""
+        from services.api.routers.forum import PRICE_MATCH_TOLERANCE, _price_confirmed
+
+        assert _price_confirmed(23490.0, 23490.0) is True
+        assert _price_confirmed(23490.0, 23490.0 + PRICE_MATCH_TOLERANCE) is True
+        assert _price_confirmed(23490.0, 23490.0 + PRICE_MATCH_TOLERANCE + 0.001) is False
+        assert _price_confirmed(23490.0, 28490.0) is False  # the exact +5000 drift scenario
+        assert _price_confirmed(None, 23490.0) is False
+        assert _price_confirmed(23490.0, None) is False
+        assert _price_confirmed(None, None) is False
 
     def test_reply_increments_count(self, client: TestClient) -> None:
         token, _ = _register(client)
@@ -322,6 +381,50 @@ class TestModeration:
         client.post(f"/forum/posts/{post_ulid}/flag", json={"reason": "spam"}, headers=_auth(flagger_token))
         r2 = client.post(f"/forum/posts/{post_ulid}/flag", json={"reason": "spam again"}, headers=_auth(flagger_token))
         assert r2.status_code == 409
+
+    def test_sla_requires_staff(self, client: TestClient) -> None:
+        token, _ = _seasoned_user(client, FLAG_PRIVILEGE_MIN_REP)
+        r = client.get("/forum/moderation/sla", headers=_auth(token))
+        assert r.status_code == 403
+
+    def test_sla_staff_flow_end_to_end(self, client: TestClient) -> None:
+        """Carta §9 F6: SLA de moderación medido de verdad, no asumido — crea un flag,
+        lo resuelve como staff, y verifica que el SLA lo cuenta con horas >= 0."""
+        author_token, _ = _register(client)
+        r = client.post("/forum/threads", json={"title": "sla-target", "body": "b"}, headers=_auth(author_token))
+        post_ulid = r.json()["data"]["first_post_ulid"]
+        flagger_token, _ = _seasoned_user(client, FLAG_PRIVILEGE_MIN_REP)
+        client.post(f"/forum/posts/{post_ulid}/flag", json={"reason": "spam"}, headers=_auth(flagger_token))
+
+        staff_token, staff_ulid = _register(client)
+        asyncio.run(_promote_to_staff(staff_ulid))
+
+        queue = client.get("/forum/moderation/queue", headers=_auth(staff_token)).json()["data"]
+        assert len(queue) >= 1
+        target_flag_ulid = next(f["flag_ulid"] for f in queue if f["post_ulid"] == post_ulid)
+
+        resolve = client.post(
+            f"/forum/moderation/flags/{target_flag_ulid}/resolve",
+            json={"resolution": "dismissed"},
+            headers=_auth(staff_token),
+        )
+        assert resolve.status_code == 200
+
+        sla = client.get("/forum/moderation/sla", headers=_auth(staff_token))
+        assert sla.status_code == 200
+        data = sla.json()["data"]
+        assert data["n_resolved"] >= 1
+        assert data["median_hours"] >= 0
+        assert data["pct_under_6h"] == 1.0  # resolved within the same test run, well under 6h
+
+    def test_resolve_requires_staff(self, client: TestClient) -> None:
+        flagger_token, _ = _seasoned_user(client, FLAG_PRIVILEGE_MIN_REP)
+        r2 = client.post(
+            "/forum/moderation/flags/01NOTAREALFLAGXXXXXXXXXXXX/resolve",
+            json={"resolution": "dismissed"},
+            headers=_auth(flagger_token),
+        )
+        assert r2.status_code == 403
 
 
 # ---------------------------------------------------------------------------
