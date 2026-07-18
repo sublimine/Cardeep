@@ -1,17 +1,31 @@
+// 04-arbitrage F3: real backend wiring (F0-F2 sealed the mock — see plans/cardeep-omni/04-arbitrage.md).
+// Every number on this page is either fetched live from /arbitrage/* or a client-side transform of a
+// fetched number (e.g. a 0-100 gauge derived from a real z-score) — zero hardcoded business literals.
+// The /terminal cross-border mock this carta's §9 F0 targeted was already demolished by 09-Fase0
+// (verified: web/src/pages/terminal/ does not exist, no /terminal route in App.tsx) — F0 needed no
+// further action here.
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { ArrowUpRight, ArrowDownRight, Minus, TrendingDown } from 'lucide-react'
+import {
+  ArrowUpRight, ArrowDownRight, ExternalLink, MapPin, Info,
+} from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as ChartTooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
-import ScoreGauge from '../components/ScoreGauge'
 import Card from '../components/Card'
 import PremiumGate from '../components/PremiumGate'
+import EmptyState from '../components/EmptyState'
+import { TableSkeleton } from '../components/Skeleton'
 import { useIsDark } from '../hooks/useIsDark'
 import { useAuthContext } from '../auth/AuthContext'
 import { ACCENT, GOOD, BAD, WARN } from '../lib/theme'
 import type { Plan } from '../types'
+import {
+  cardeep, CardeepApiError,
+  type DealScoreItem, type DesyncItem, type ArbitrageSummary,
+  type TimeCurves, type GeoArbitrageResponse, type DealBand,
+} from '../api/cardeep'
 
 // ── Animated number ────────────────────────────────────────────────────────────
 
@@ -23,84 +37,18 @@ function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; p
   return <motion.span>{d}</motion.span>
 }
 
-// ── Spark line ─────────────────────────────────────────────────────────────────
-
-function Spark({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
-  if (values.length < 2) return null
-  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1
-  const W = 64, H = height
-  const pts = values.map((v, i): [number, number] => [
-    (i / (values.length - 1)) * W,
-    H - ((v - min) / range) * (H - 4) + 2,
-  ])
-  const line = pts.map(([x, y]) => `${x},${y}`).join(' ')
-  const area = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${pts.at(-1)![0]},${H} Z`
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-      <path d={area} fill={color} fillOpacity={0.12} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-// ── Data types ─────────────────────────────────────────────────────────────────
-
-interface Chollo { id: string; model: string; location: string; price: number; marketPrice: number; score: number; daysListed: number; delta: number }
-interface CrossGap { id: string; model: string; platformA: string; priceA: number; platformB: string; priceB: number; gap: number }
-interface SpreadItem { model: string; spreadPct: number; spreadEur: number }
-interface TimePricePoint { day: string; actual?: number; floor?: number }
-
-// ── Mock data ──────────────────────────────────────────────────────────────────
-
-const CHOLLOS: Chollo[] = [
-  { id: 'c1', model: 'Peugeot 3008 1.5 BlueHDi', location: 'Madrid',   price: 21_900, marketPrice: 24_100, score: 94, daysListed:  3, delta: -800  },
-  { id: 'c2', model: 'VW Golf 1.5 TSI',           location: 'Toledo',   price: 17_300, marketPrice: 18_900, score: 88, daysListed:  6, delta: -500  },
-  { id: 'c3', model: 'Audi A4 Avant 2.0 TDI',     location: 'Valencia', price: 26_300, marketPrice: 28_750, score: 86, daysListed: 18, delta: -1_100},
-  { id: 'c4', model: 'Seat León FR',               location: 'Sevilla',  price: 19_800, marketPrice: 21_300, score: 81, daysListed:  9, delta: 0     },
-  { id: 'c5', model: 'Kia Sportage 1.6 CRDi',      location: 'Bilbao',   price: 20_600, marketPrice: 21_900, score: 76, daysListed: 12, delta: -300  },
-]
-
-const CROSS_GAPS: CrossGap[] = [
-  { id: 'g1', model: 'BMW 320d Touring',  platformA: 'AutoScout24', priceA: 27_750, platformB: 'coches.net',  priceB: 29_400, gap: 1_650 },
-  { id: 'g2', model: 'Renault Clio TCe',  platformA: 'Wallapop',    priceA: 12_900, platformB: 'Milanuncios', priceB: 13_800, gap:   900 },
-  { id: 'g3', model: 'Mercedes A 200',    platformA: 'coches.net',  priceA: 24_100, platformB: 'mobile.de',   priceB: 25_600, gap: 1_500 },
-]
-
-const SPREAD: SpreadItem[] = [
-  { model: 'VW Golf',      spreadPct: 62, spreadEur: 1_860 },
-  { model: 'Peugeot 3008', spreadPct: 78, spreadEur: 2_340 },
-  { model: 'Audi A4',      spreadPct: 88, spreadEur: 2_640 },
-  { model: 'Seat León',    spreadPct: 54, spreadEur: 1_620 },
-  { model: 'Kia Sportage', spreadPct: 46, spreadEur: 1_380 },
-]
-
-const MAX_SPREAD_PCT = Math.max(...SPREAD.map(s => s.spreadPct))
-
-const TIME_DATA: TimePricePoint[] = [
-  { day: 'D+0',  actual: 28_500 },
-  { day: 'D+3',  actual: 28_200 },
-  { day: 'D+7',  actual: 27_800 },
-  { day: 'D+10', actual: 27_400 },
-  { day: 'D+14', actual: 26_800 },
-  { day: 'D+18', actual: 26_300, floor: 26_300 },
-  { day: 'D+21', floor: 26_100 },
-  { day: 'D+25', floor: 25_900 },
-]
-
-function scoreColor(score: number): string {
-  if (score >= 85) return ACCENT
-  if (score >= 70) return WARN
-  return '#94a3b8'
+function fmtEur(n: number): string {
+  return `€${Math.round(n).toLocaleString('es-ES')}`
 }
 
 // ── MetricCard ─────────────────────────────────────────────────────────────────
 
-interface MetricCardProps { label: string; value: number; prefix?: string; suffix?: string; decimals?: number; sub: string; trend: 'up' | 'down' | 'flat' | 'good'; trendLabel: string; spark: number[]; delay?: number }
+interface MetricCardProps {
+  label: string; value: number | null; prefix?: string; suffix?: string; decimals?: number
+  sub: string; loading: boolean; emptyReason?: string | null; delay?: number
+}
 
-function MetricCard({ label, value, prefix, suffix, decimals, sub, trend, trendLabel, spark, delay = 0 }: MetricCardProps) {
-  const trendColor = trend === 'up' || trend === 'good' ? GOOD : trend === 'down' ? BAD : 'var(--text-muted)'
-  const TrendIcon  = trend === 'up' || trend === 'good' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus
-
+function MetricCard({ label, value, prefix, suffix, decimals, sub, loading, emptyReason, delay = 0 }: MetricCardProps) {
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
       <Card hover className="!p-5">
@@ -108,116 +56,162 @@ function MetricCard({ label, value, prefix, suffix, decimals, sub, trend, trendL
           <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
           <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
         </div>
-        <div className="mb-1 text-[44px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
-          <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />
+        <div className="mb-1 text-[40px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
+          {loading ? (
+            <span className="inline-block h-9 w-20 animate-pulse rounded-md" style={{ background: 'var(--glass-medium)' }} />
+          ) : value === null ? (
+            <span className="text-[16px] font-semibold" style={{ color: 'var(--text-muted)' }}>—</span>
+          ) : (
+            <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />
+          )}
         </div>
-        <div className="mb-3.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>
-        <div className="flex items-center justify-between border-t pt-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex items-center gap-1">
-            <TrendIcon style={{ width: 11, height: 11, color: trendColor }} />
-            <span className="text-[10.5px] font-semibold" style={{ color: trendColor }}>{trendLabel}</span>
-          </div>
-          <Spark values={spark} color={ACCENT} height={22} />
+        <div className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+          {value === null && !loading && emptyReason ? emptyReason : sub}
         </div>
       </Card>
     </motion.div>
   )
 }
 
-// ── ChollosPanel — top score visible (teaser), ranked list is the paid product
+// ── ChollosPanel — real deal-score ranking ──────────────────────────────────────
 
-function ChollosPanel() {
-  const top = CHOLLOS[0]
+function dealScoreGauge(z: number): number {
+  // Transparent client-side transform of the real z the API returns (never an
+  // invented number): |z| relative to the price_trap frontier (6.0), clamped 0-100.
+  return Math.min(100, Math.round((Math.abs(z) / 6) * 100))
+}
 
+function ChollosPanel({ deals, loading, error }: { deals: DealScoreItem[] | null; loading: boolean; error: string | null }) {
   return (
     <Card className="!p-0 h-full">
       <div className="flex h-full flex-col p-[18px_20px_14px]">
         <div className="mb-3.5 flex shrink-0 items-start justify-between">
           <div>
-            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Chollos ahora · deal-score</h2>
-            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>precio vs mercado vivo</p>
-          </div>
-          <div className="mt-[-4px] shrink-0">
-            <ScoreGauge score={top.score} size={80} label="Top deal" />
+            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Chollos de reposición</h2>
+            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>precio vs mediana de su cohorte, ahorro € descendente</p>
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-[7px]">
-          {CHOLLOS.map((deal, i) => {
-            const sc = scoreColor(deal.score)
-            const pctUnder = Math.round(((deal.marketPrice - deal.price) / deal.marketPrice) * 100)
-            return (
-              <motion.div
-                key={deal.id}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.18 + i * 0.07, duration: 0.32 }}
-                className="flex items-center gap-[11px] rounded-xl p-[9px_11px]"
-                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderLeft: `2px solid ${sc}` }}
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]" style={{ background: `${sc}16`, border: `1px solid ${sc}28` }}>
-                  <span className="text-[13px] font-extrabold tabular-nums tracking-[-0.02em]" style={{ color: sc }}>{deal.score}</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{deal.model}</div>
-                  <div className="mt-px text-[10px]" style={{ color: 'var(--text-muted)' }}>
-                    {deal.location} · {deal.daysListed}d{deal.delta < 0 ? ` · −€${Math.abs(deal.delta).toLocaleString()}` : ''}
+        {loading && <TableSkeleton rows={5} />}
+        {!loading && error && (
+          <EmptyState title="No se pudo cargar" message={error} />
+        )}
+        {!loading && !error && deals !== null && deals.length === 0 && (
+          <EmptyState
+            title="Sin chollos ahora mismo"
+            message="Ningún vehículo del censo servible supera el umbral z ≤ −2.0 con datos frescos (≤7 días) en este momento."
+          />
+        )}
+        {!loading && !error && deals !== null && deals.length > 0 && (
+          <div className="flex flex-1 flex-col gap-[7px] overflow-y-auto">
+            {deals.map((deal, i) => {
+              const sc = deal.band === 'chollo_fuerte' ? GOOD : WARN
+              const gauge = dealScoreGauge(deal.z)
+              return (
+                <motion.a
+                  key={deal.vehicle_ulid}
+                  href={deal.deep_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 + i * 0.04, duration: 0.3 }}
+                  className="flex items-center gap-[11px] rounded-xl p-[9px_11px] no-underline"
+                  style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderLeft: `2px solid ${sc}` }}
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]" style={{ background: `${sc}16`, border: `1px solid ${sc}28` }}>
+                    <span className="text-[12px] font-extrabold tabular-nums tracking-[-0.02em]" style={{ color: sc }}>{gauge}</span>
                   </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>€{deal.price.toLocaleString()}</div>
-                  <div className="mt-px text-[10px] font-bold" style={{ color: sc }}>−{pctUnder}% mkt</div>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {deal.title ?? `${deal.make} ${deal.model} (${deal.year ?? '—'})`}
+                    </div>
+                    <div className="mt-px flex items-center gap-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                      <MapPin className="h-2.5 w-2.5" />
+                      {deal.province_code ?? '—'} · {deal.days_on_market.toFixed(0)}d · frente a {deal.cohort.n} iguales
+                      {!deal.fresh && <span style={{ color: WARN }}> · sin re-verificar</span>}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                      {deal.price !== null ? fmtEur(deal.price) : '—'}
+                    </div>
+                    <div className="mt-px text-[10px] font-bold" style={{ color: sc }}>
+                      −{fmtEur(deal.savings_eur)} margen
+                    </div>
+                  </div>
+                  <ExternalLink className="h-3 w-3 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                </motion.a>
+              )
+            })}
+          </div>
+        )}
       </div>
     </Card>
   )
 }
 
-// ── CrossPlatformPanel ─────────────────────────────────────────────────────────
+// ── DesyncPanel — dealer<->platform price desync (honest rename of the old "gap
+// cross-platform" mock, per §4.2: real cross-platform gap stays gated until F6) ──
 
-function CrossPlatformPanel() {
+function DesyncPanel({ items, loading, error }: { items: DesyncItem[] | null; loading: boolean; error: string | null }) {
   return (
     <Card className="!p-0 h-full">
       <div className="flex h-full flex-col p-[18px_18px_14px]">
         <div className="mb-4 shrink-0">
-          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Gap cross-platform</h2>
-          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>mismo coche, distinto precio</p>
+          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Desync dealer↔plataforma</h2>
+          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
+            mismo coche, precio distinto en su web vs el portal
+          </p>
         </div>
 
-        <div className="flex flex-1 flex-col">
-          {CROSS_GAPS.map((gap, i) => (
-            <motion.div key={gap.id} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 + i * 0.08, duration: 0.34 }}>
-              <div className="mb-[7px] text-[12.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>{gap.model}</div>
-
-              <div className="mb-1 flex items-center justify-between rounded-lg p-[6px_10px]" style={{ background: `${ACCENT}14`, border: `1px solid ${ACCENT}30` }}>
-                <span className="text-[11px] font-semibold" style={{ color: ACCENT }}>{gap.platformA}</span>
-                <span className="text-[12.5px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>€{gap.priceA.toLocaleString()}</span>
-              </div>
-
-              <div className="mb-2 flex items-center justify-between rounded-lg p-[6px_10px]" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-                <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{gap.platformB}</span>
-                <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>€{gap.priceB.toLocaleString()}</span>
-              </div>
-
-              <div className="flex items-center gap-[5px]" style={{ marginBottom: i < CROSS_GAPS.length - 1 ? 16 : 0 }}>
-                <TrendingDown style={{ width: 10, height: 10, color: GOOD }} />
-                <span className="text-[11.5px] font-bold" style={{ color: GOOD }}>gap €{gap.gap.toLocaleString()}</span>
-              </div>
-
-              {i < CROSS_GAPS.length - 1 && <div className="mb-4 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
-            </motion.div>
-          ))}
-        </div>
+        {loading && <TableSkeleton rows={3} />}
+        {!loading && error && <EmptyState title="No se pudo cargar" message={error} />}
+        {!loading && !error && items !== null && items.length === 0 && (
+          <EmptyState
+            title="Sin desyncs frescos"
+            message="Ningún par dealer↔plataforma con delta ≥1% y ≥100€ verificado en las últimas 72h."
+          />
+        )}
+        {!loading && !error && items !== null && items.length > 0 && (
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            {items.map((it, i) => (
+              <motion.div key={it.vehicle_ulid} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.06, duration: 0.3 }}>
+                <div className="mb-[7px] text-[12.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {it.make} {it.model} {it.year ? `(${it.year})` : ''}
+                </div>
+                <a href={it.dealer.url} target="_blank" rel="noopener noreferrer"
+                   className="mb-1 flex items-center justify-between rounded-lg p-[6px_10px] no-underline"
+                   style={{ background: `${ACCENT}14`, border: `1px solid ${ACCENT}30` }}>
+                  <span className="text-[11px] font-semibold" style={{ color: ACCENT }}>{it.dealer.trade_name ?? it.dealer.cdp_code}</span>
+                  <span className="text-[12.5px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{fmtEur(it.dealer.price)}</span>
+                </a>
+                <a href={it.platform.url} target="_blank" rel="noopener noreferrer"
+                   className="mb-2 flex items-center justify-between rounded-lg p-[6px_10px] no-underline"
+                   style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                  <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{it.platform.trade_name ?? it.platform.cdp_code}</span>
+                  <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{fmtEur(it.platform.price)}</span>
+                </a>
+                <div className="flex items-center gap-[5px]" style={{ marginBottom: i < items.length - 1 ? 16 : 0 }}>
+                  {it.dealer.price < it.platform.price
+                    ? <ArrowDownRight style={{ width: 10, height: 10, color: GOOD }} />
+                    : <ArrowUpRight style={{ width: 10, height: 10, color: BAD }} />}
+                  <span className="text-[11.5px] font-bold" style={{ color: GOOD }}>
+                    gap {fmtEur(it.delta_eur)}{it.delta_pct !== null ? ` (${it.delta_pct.toFixed(1)}%)` : ''}
+                  </span>
+                </div>
+                {i < items.length - 1 && <div className="mb-4 border-t" style={{ borderColor: 'var(--border-subtle)' }} />}
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </Card>
   )
 }
 
-// ── SpreadPanel — honest gap: needs a wholesale partner feed, not just a plan
+// ── SpreadPanel — honest gap: needs a wholesale partner feed, not just a plan ───
+// Unchanged since 01-market-intelligence/04 audit (§4.5 "sin cambio").
 
 function SpreadPanel() {
   return (
@@ -245,47 +239,151 @@ function SpreadPanel() {
   )
 }
 
-// ── TimeArbitragePanel — the "suelo" number is the free teaser, chart is Enterprise
+// ── Cohort selector (shared by TimeArbitrage + Geo panels) ─────────────────────
 
-function TimeArbitragePanel({ dark }: { dark: boolean }) {
+interface CohortInputProps { make: string; model: string; year: number; onChange: (m: string, mo: string, y: number) => void }
+
+function CohortSelector({ make, model, year, onChange }: CohortInputProps) {
+  return (
+    <div className="flex shrink-0 flex-wrap gap-1.5">
+      <input
+        value={make} onChange={e => onChange(e.target.value, model, year)}
+        placeholder="Marca" aria-label="Marca"
+        className="w-[84px] rounded-lg p-[5px_8px] text-[11px] font-medium outline-none"
+        style={{ color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+      />
+      <input
+        value={model} onChange={e => onChange(make, e.target.value, year)}
+        placeholder="Modelo" aria-label="Modelo"
+        className="w-[84px] rounded-lg p-[5px_8px] text-[11px] font-medium outline-none"
+        style={{ color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+      />
+      <input
+        value={year} type="number" onChange={e => onChange(make, model, Number(e.target.value))}
+        aria-label="Año ancla"
+        className="w-[64px] rounded-lg p-[5px_8px] text-[11px] font-medium outline-none"
+        style={{ color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+      />
+    </div>
+  )
+}
+
+// ── TimeArbitragePanel — "Ritmo de mercado" (F4, real cycle/decay data) ─────────
+
+function TimeArbitragePanel({ dark, curves, loading, error }: { dark: boolean; curves: TimeCurves | null; loading: boolean; error: string | null }) {
   const gridColor = dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'
   const tickColor = dark ? '#3f3f5a' : '#94a3b8'
+  const chartData = curves?.buckets.map(b => ({ bucket: b.bucket_label, relative: Math.round(b.median_relative_price * 100) })) ?? []
 
   return (
     <Card className="!p-0 h-full">
       <div className="flex h-full flex-col p-[18px_20px_14px]">
-        <div className="mb-3.5 flex shrink-0 items-start justify-between">
-          <div>
-            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Time-arbitrage</h2>
-            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>trayectoria de precio · suelo estimado</p>
-          </div>
-          <div className="shrink-0 rounded-full px-2.5 py-[3px]" style={{ background: `${ACCENT}1f`, border: `1px solid ${ACCENT}3d` }}>
-            <span className="text-[10px] font-bold" style={{ color: ACCENT }}>suelo ~21d</span>
-          </div>
+        <div className="mb-3.5 shrink-0">
+          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Ritmo de mercado</h2>
+          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>días a salida · curva de decaimiento empírica</p>
         </div>
 
-        <div className="min-h-0 flex-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={TIME_DATA} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
-              <XAxis dataKey="day" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `€${(Number(v) / 1000).toFixed(0)}k`} domain={['dataMin - 300', 'dataMax + 300']} />
-              <ChartTooltip
-                contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
-                formatter={(v: number) => [`€${v.toLocaleString()}`, '']}
-                cursor={{ stroke: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}
+        {loading && <TableSkeleton rows={3} />}
+        {!loading && error && <EmptyState title="No se pudo cargar" message={error} />}
+
+        {!loading && !error && curves && (
+          <>
+            {curves.cycle_stats ? (
+              <div className="mb-2.5 text-[11.5px] leading-[1.5]" style={{ color: 'var(--text-secondary)' }}>
+                La mitad de los <strong>{curves.make} {curves.model}</strong> ({curves.year_band_start}-{curves.year_band_start + 1})
+                salen del mercado en <strong style={{ color: ACCENT }}>{curves.cycle_stats.median_days_to_gone.toFixed(0)} días</strong>
+                {' '}(P25 {curves.cycle_stats.p25_days_to_gone.toFixed(0)}d · P75 {curves.cycle_stats.p75_days_to_gone.toFixed(0)}d) ·{' '}
+                {(curves.cycle_stats.pct_price_drop_before_gone * 100).toFixed(0)}% baja de precio antes de salir
+                {' '}(n={curves.cycle_stats.n_cycles} ciclos)
+              </div>
+            ) : (
+              <EmptyState
+                className="!py-6"
+                title="Aún no hay historial suficiente"
+                message={curves.cycle_stats_reason ?? undefined}
               />
-              <ReferenceLine x="D+18" stroke={`${ACCENT}61`} strokeDasharray="3 5" strokeWidth={1} />
-              <Line type="monotone" dataKey="actual" stroke={ACCENT} strokeWidth={2.2} dot={false} activeDot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} connectNulls={false} name="Actual" />
-              <Line type="monotone" dataKey="floor" stroke={ACCENT} strokeWidth={2.2} strokeDasharray="4 5" dot={false} activeDot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} connectNulls={false} name="Estimado" />
-            </LineChart>
-          </ResponsiveContainer>
+            )}
+
+            {chartData.length > 0 ? (
+              <div className="min-h-0 flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
+                    <XAxis dataKey="bucket" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={['dataMin - 5', 'dataMax + 5']} />
+                    <ChartTooltip
+                      contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+                      formatter={(v: number) => [`${v}% del precio inicial`, '']}
+                    />
+                    <ReferenceLine y={100} stroke={`${ACCENT}61`} strokeDasharray="3 5" strokeWidth={1} />
+                    <Line type="monotone" dataKey="relative" stroke={ACCENT} strokeWidth={2.2} dot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} activeDot={{ r: 4 }} name="Precio relativo" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <EmptyState className="!py-6" title="Sin curva de decaimiento" message={curves.buckets_reason ?? undefined} />
+            )}
+
+            <div className="mt-2 shrink-0 text-[10px] leading-[1.4]" style={{ color: 'var(--text-muted)' }}>{curves.disclaimer}</div>
+          </>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+// ── GeoPanel — "Mapa de precio por provincia" (F5, real cell/gap data) ──────────
+
+function GeoPanel({ geo, loading, error }: { geo: GeoArbitrageResponse | null; loading: boolean; error: string | null }) {
+  return (
+    <Card className="!p-0 h-full">
+      <div className="flex h-full flex-col p-[18px_20px_14px]">
+        <div className="mb-3.5 shrink-0">
+          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Mapa de precio por provincia</h2>
+          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>mediana por provincia · rutas de compra significativas</p>
         </div>
 
-        <div className="mt-2 shrink-0 text-[10.5px] leading-[1.4]" style={{ color: 'var(--text-muted)' }}>
-          <span className="font-medium" style={{ color: 'var(--text-secondary)' }}>Audi A4 Avant</span>
-          {' '}· bajó €1.100 en 18 días · suelo estimado <span className="font-bold" style={{ color: ACCENT }}>€26.300</span> a ~21 días
-        </div>
+        {loading && <TableSkeleton rows={4} />}
+        {!loading && error && <EmptyState title="No se pudo cargar" message={error} />}
+
+        {!loading && !error && geo && (
+          <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
+            {geo.cells.length === 0 ? (
+              <EmptyState className="!py-6" title="Sin celdas suficientes" message={geo.cells_reason ?? undefined} />
+            ) : (
+              <div className="space-y-[3px]">
+                {geo.cells.map(c => {
+                  const maxPrice = Math.max(...geo.cells.map(x => x.median_price))
+                  const pct = (c.median_price / maxPrice) * 100
+                  return (
+                    <div key={c.province_code} className="flex items-center gap-2 text-[10.5px]">
+                      <span className="w-7 shrink-0 font-mono font-semibold" style={{ color: 'var(--text-secondary)' }}>{c.province_code}</span>
+                      <div className="h-[14px] flex-1 overflow-hidden rounded-full" style={{ background: 'var(--bg-surface)' }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: ACCENT }} />
+                      </div>
+                      <span className="w-16 shrink-0 text-right font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{fmtEur(c.median_price)}</span>
+                      <span className="w-10 shrink-0 text-right" style={{ color: 'var(--text-muted)' }}>n={c.n}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {geo.gaps.length > 0 && (
+              <div className="mt-1 border-t pt-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Rutas significativas</p>
+                {geo.gaps.slice(0, 5).map((g, i) => (
+                  <div key={i} className="mb-1 text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: GOOD }}>{fmtEur(g.gap_eur)}</strong> más barato en <strong>{g.province_cheap}</strong> que
+                    en <strong>{g.province_expensive}</strong> ({g.n_cheap} vs {g.n_expensive} anuncios)
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-auto shrink-0 pt-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>{geo.disclaimer}</div>
+          </div>
+        )}
       </div>
     </Card>
   )
@@ -297,16 +395,96 @@ export default function Arbitrage() {
   const dark = useIsDark()
   const { user } = useAuthContext()
   const plan: Plan = user?.plan ?? 'starter'
-  const [zona, setZona]         = useState('Toda España')
-  const [segmento, setSegmento] = useState('Todos los segmentos')
-  const [margen, setMargen]     = useState('Margen ≥ 1.500 €')
 
-  const kpiCards: MetricCardProps[] = [
-    { label: 'Chollos hoy',          value: 37,  sub: 'precio < mercado real',          trend: 'up',   trendLabel: '+5 vs ayer',        spark: [28, 30, 32, 33, 35, 37], delay: 0 },
-    { label: 'Margen medio',         value: 2_140, prefix: '€', sub: 'spread estimado',  trend: 'up',   trendLabel: '+€240 vs media',    spark: [1_800, 1_950, 2_000, 2_050, 2_100, 2_140], delay: 0.06 },
-    { label: 'Mejor deal-score',     value: 94,  sub: 'Peugeot 3008 · Madrid',           trend: 'flat', trendLabel: 'estable',           spark: [90, 92, 89, 93, 91, 94], delay: 0.12 },
-    { label: 'Gaps cross-platform',  value: 12,  sub: 'mismo coche, precio distinto',    trend: 'up',   trendLabel: '+2 nuevos',         spark: [8, 9, 10, 10, 11, 12], delay: 0.18 },
-  ]
+  const [make, setMake] = useState('')
+  const [province, setProvince] = useState('')
+  const [band, setBand] = useState<DealBand | ''>('')
+  const [minSavings, setMinSavings] = useState<number | ''>('')
+
+  const [summary, setSummary] = useState<ArbitrageSummary | null>(null)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(true)
+
+  const [deals, setDeals] = useState<DealScoreItem[] | null>(null)
+  const [dealsError, setDealsError] = useState<string | null>(null)
+  const [dealsLoading, setDealsLoading] = useState(true)
+
+  const [desync, setDesync] = useState<DesyncItem[] | null>(null)
+  const [desyncError, setDesyncError] = useState<string | null>(null)
+  const [desyncLoading, setDesyncLoading] = useState(true)
+
+  // Cohort selector shared by time-arbitrage + geo panels — default to a real,
+  // high-volume segment (Peugeot 208, confirmed n>5000 in the F1 verification log),
+  // never a fabricated one; the user can change it freely.
+  const [cohortMake, setCohortMake] = useState('Peugeot')
+  const [cohortModel, setCohortModel] = useState('208')
+  const [cohortYear, setCohortYear] = useState(2024)
+
+  const [curves, setCurves] = useState<TimeCurves | null>(null)
+  const [curvesError, setCurvesError] = useState<string | null>(null)
+  const [curvesLoading, setCurvesLoading] = useState(true)
+
+  const [geo, setGeo] = useState<GeoArbitrageResponse | null>(null)
+  const [geoError, setGeoError] = useState<string | null>(null)
+  const [geoLoading, setGeoLoading] = useState(true)
+
+  useEffect(() => {
+    let live = true
+    setSummaryLoading(true)
+    cardeep.arbitrageSummary()
+      .then(d => { if (live) setSummary(d) })
+      .catch((e: unknown) => { if (live) setSummaryError(e instanceof CardeepApiError ? e.message : 'Error al cargar el resumen') })
+      .finally(() => { if (live) setSummaryLoading(false) })
+    return () => { live = false }
+  }, [])
+
+  useEffect(() => {
+    let live = true
+    setDealsLoading(true)
+    cardeep.arbitrageDeals({
+      size: 30,
+      make: make || undefined,
+      province: province || undefined,
+      band: band || undefined,
+      minSavings: minSavings === '' ? undefined : minSavings,
+    })
+      .then(p => { if (live) { setDeals(p.items); setDealsError(null) } })
+      .catch((e: unknown) => { if (live) setDealsError(e instanceof CardeepApiError ? e.message : 'Error al cargar los chollos') })
+      .finally(() => { if (live) setDealsLoading(false) })
+    return () => { live = false }
+  }, [make, province, band, minSavings])
+
+  useEffect(() => {
+    let live = true
+    setDesyncLoading(true)
+    cardeep.arbitrageDesync({ size: 6 })
+      .then(p => { if (live) { setDesync(p.items); setDesyncError(null) } })
+      .catch((e: unknown) => { if (live) setDesyncError(e instanceof CardeepApiError ? e.message : 'Error al cargar los desyncs') })
+      .finally(() => { if (live) setDesyncLoading(false) })
+    return () => { live = false }
+  }, [])
+
+  useEffect(() => {
+    let live = true
+    if (!cohortMake || !cohortModel || !cohortYear) return
+    setCurvesLoading(true)
+    cardeep.arbitrageTimeCurves(cohortMake, cohortModel, cohortYear)
+      .then(d => { if (live) { setCurves(d); setCurvesError(null) } })
+      .catch((e: unknown) => { if (live) setCurvesError(e instanceof CardeepApiError ? e.message : 'Error al cargar el ritmo de mercado') })
+      .finally(() => { if (live) setCurvesLoading(false) })
+    return () => { live = false }
+  }, [cohortMake, cohortModel, cohortYear])
+
+  useEffect(() => {
+    let live = true
+    if (!cohortMake || !cohortModel || !cohortYear) return
+    setGeoLoading(true)
+    cardeep.arbitrageGeo(cohortMake, cohortModel, cohortYear)
+      .then(d => { if (live) { setGeo(d); setGeoError(null) } })
+      .catch((e: unknown) => { if (live) setGeoError(e instanceof CardeepApiError ? e.message : 'Error al cargar el mapa geo') })
+      .finally(() => { if (live) setGeoLoading(false) })
+    return () => { live = false }
+  }, [cohortMake, cohortModel, cohortYear])
 
   const selectClass = "cursor-pointer rounded-[10px] p-[8px_12px] text-[12.5px] font-semibold outline-none"
   const selectStyle: React.CSSProperties = { color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }
@@ -318,48 +496,81 @@ export default function Arbitrage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-        className="mb-[22px] flex flex-wrap items-end justify-between gap-3.5"
+        className="mb-[10px] flex flex-wrap items-end justify-between gap-3.5"
       >
         <div>
-          <p className="mb-[5px] font-mono text-[11px] tracking-[0.03em]" style={{ color: 'var(--text-muted)' }}>Censo vivo · oportunidades en tu radio</p>
-          <h1 className="text-[22px] font-extrabold leading-none tracking-[-0.02em]" style={{ color: 'var(--text-primary)' }}>Arbitrage</h1>
+          <p className="mb-[5px] font-mono text-[11px] tracking-[0.03em]" style={{ color: 'var(--text-muted)' }}>Censo vivo · oportunidades de reposición</p>
+          <h1 className="text-[22px] font-extrabold leading-none tracking-[-0.02em]" style={{ color: 'var(--text-primary)' }}>Reposición</h1>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <select value={zona} onChange={e => setZona(e.target.value)} className={selectClass} style={selectStyle}>
-            <option>Toda España</option><option>Madrid</option><option>Cataluña</option><option>Levante</option>
+          <input
+            value={make} onChange={e => setMake(e.target.value)} placeholder="Marca" aria-label="Filtrar por marca"
+            className={selectClass} style={{ ...selectStyle, width: 100 }}
+          />
+          <input
+            value={province} onChange={e => setProvince(e.target.value)} placeholder="Provincia (28)" aria-label="Filtrar por provincia"
+            maxLength={2}
+            className={selectClass} style={{ ...selectStyle, width: 110 }}
+          />
+          <select value={band} onChange={e => setBand(e.target.value as DealBand | '')} className={selectClass} style={selectStyle}>
+            <option value="">Todos los badges</option>
+            <option value="chollo_fuerte">Chollo fuerte</option>
+            <option value="bajo_mercado">Bajo mercado</option>
           </select>
-          <select value={segmento} onChange={e => setSegmento(e.target.value)} className={selectClass} style={selectStyle}>
-            <option>Todos los segmentos</option><option>Compacto</option><option>SUV</option><option>Berlina</option>
-          </select>
-          <select value={margen} onChange={e => setMargen(e.target.value)} className={selectClass} style={selectStyle}>
-            <option>Margen ≥ 1.500 €</option><option>Margen ≥ 1.000 €</option><option>Margen ≥ 500 €</option>
+          <select
+            value={minSavings} onChange={e => setMinSavings(e.target.value ? Number(e.target.value) : '')}
+            className={selectClass} style={selectStyle}
+          >
+            <option value="">Cualquier margen</option>
+            <option value="500">Margen ≥ 500 €</option>
+            <option value="1500">Margen ≥ 1.500 €</option>
+            <option value="3000">Margen ≥ 3.000 €</option>
           </select>
         </div>
       </motion.div>
 
-      <div className="mb-4 grid grid-cols-4 gap-3.5">
-        {kpiCards.map(card => <MetricCard key={card.label} {...card} />)}
+      <div className="mb-4 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+        <Info className="h-3 w-3 shrink-0" />
+        Precios de oferta del censo, verificados a ≤72h. No son precios de transacción.
       </div>
 
-      {/* Capa 2 completa (ARBITRAGE.md): un solo unlock para todo el bundle Enterprise,
-          en vez de 4 candados repetidos — es un producto, no 4 features sueltas. */}
-      <PremiumGate feature="sourcing-ranking" userPlan={plan} what="Ranking de chollos, gaps cross-platform y time-arbitrage completos">
+      <div className="mb-4 grid grid-cols-4 gap-3.5">
+        <MetricCard label="Chollos activos" value={summary?.chollos_activos ?? null} sub="z ≤ −2.0, datos frescos" loading={summaryLoading} delay={0} />
+        <MetricCard label="Ahorro mediano" value={summary?.ahorro_mediano_eur ?? null} prefix="€" sub="mediana de savings_eur" loading={summaryLoading} delay={0.06} />
+        <MetricCard label="Desyncs activos" value={summary?.desyncs_activos ?? null} sub="dealer↔plataforma, ≤72h" loading={summaryLoading} delay={0.12} />
+        <MetricCard
+          label="Mediana días a salida" value={summary?.mediana_dias_a_salida ?? null} suffix="d"
+          sub="mediana entre cohortes con historial" loading={summaryLoading}
+          emptyReason={summary?.mediana_dias_a_salida_reason} delay={0.18}
+        />
+      </div>
+      {summaryError && <p className="mb-4 text-[11px]" style={{ color: BAD }}>{summaryError}</p>}
+
+      {/* Capa 2 completa (ARBITRAGE.md): un solo unlock para todo el bundle Enterprise. */}
+      <PremiumGate feature="sourcing-ranking" userPlan={plan} what="Ranking de chollos, desync y ritmo de mercado completos">
         <div className="grid grid-cols-[3fr_2fr] gap-4">
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ minHeight: 320 }}>
-            <ChollosPanel />
+            <ChollosPanel deals={deals} loading={dealsLoading} error={dealsError} />
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}>
-            <CrossPlatformPanel />
+            <DesyncPanel items={desync} loading={desyncLoading} error={desyncError} />
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ minHeight: 260 }}>
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ minHeight: 280 }}>
+            <div className="mb-1.5 flex justify-end">
+              <CohortSelector make={cohortMake} model={cohortModel} year={cohortYear} onChange={(m, mo, y) => { setCohortMake(m); setCohortModel(mo); setCohortYear(y) }} />
+            </div>
+            <TimeArbitragePanel dark={dark} curves={curves} loading={curvesLoading} error={curvesError} />
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ minHeight: 280 }}>
+            <GeoPanel geo={geo} loading={geoLoading} error={geoError} />
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.46, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ minHeight: 220 }}>
             <SpreadPanel />
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.40, duration: 0.44, ease: [0.32, 0.72, 0, 1] }}>
-            <TimeArbitragePanel dark={dark} />
           </motion.div>
         </div>
       </PremiumGate>
