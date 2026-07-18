@@ -8,12 +8,17 @@ import Button from '../components/Button'
 import { Badge } from '../components/Badge'
 import Avatar from '../components/Avatar'
 import Modal from '../components/Modal'
+import Input from '../components/Input'
+import Select from '../components/Select'
+import EmptyState from '../components/EmptyState'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { cn } from '../lib/cn'
-import { useDeals, useDealMutations } from '../hooks/useDeals'
+import { useDeals, useDealMutations, useDealsSummary, type DealsSummary } from '../hooks/useDeals'
+import { useApi } from '../hooks/useApi'
 import { STAGES, STAGE_LABELS, type KanbanStage } from '../hooks/useKanban'
 import { useToast } from '../components/Toast'
-import type { Deal } from '../types'
+import { ApiError } from '../api/client'
+import type { Deal, Contact } from '../types'
 
 // ── Stage configuration — no violet/purple ────────────────────────────────────
 
@@ -48,19 +53,6 @@ const stageBar: Record<KanbanStage, string> = {
   lost:        'bg-rose-400',
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_DEALS: Deal[] = [
-  { id: 'd1', tenantId: 't', contactId: 'c1', vehicleId: 'v1', stage: 'lead',        createdAt: '2026-04-10T10:00:00Z', updatedAt: '2026-04-18T10:00:00Z', vehicleName: 'BMW 320d xDrive',   contactName: 'Maria Santos', price: 28500 },
-  { id: 'd2', tenantId: 't', contactId: 'c2', vehicleId: 'v2', stage: 'contacted',   createdAt: '2026-04-08T09:00:00Z', updatedAt: '2026-04-17T14:00:00Z', vehicleName: 'Audi A4 2.0 TDI',   contactName: 'John Doe',     price: 31000 },
-  { id: 'd3', tenantId: 't', contactId: 'c3', vehicleId: 'v3', stage: 'offer',       createdAt: '2026-04-06T08:00:00Z', updatedAt: '2026-04-16T11:00:00Z', vehicleName: 'Mercedes C220 AMG', contactName: 'Anna Weber',   price: 35000 },
-  { id: 'd4', tenantId: 't', contactId: 'c4', vehicleId: 'v4', stage: 'negotiation', createdAt: '2026-04-04T07:00:00Z', updatedAt: '2026-04-15T16:00:00Z', vehicleName: 'VW Golf 8 GTI',     contactName: 'Peter Klein',  price: 26000 },
-  { id: 'd5', tenantId: 't', contactId: 'c5', vehicleId: 'v5', stage: 'won',         createdAt: '2026-04-01T06:00:00Z', updatedAt: '2026-04-14T09:00:00Z', vehicleName: 'BMW X3 M40i',       contactName: 'Sophie L.',    price: 44000 },
-  { id: 'd6', tenantId: 't', contactId: 'c6', vehicleId: 'v6', stage: 'lost',        createdAt: '2026-03-28T05:00:00Z', updatedAt: '2026-04-11T12:00:00Z', vehicleName: 'Peugeot 308 GT',    contactName: 'Hans Müller',  price: 22500 },
-  { id: 'd7', tenantId: 't', contactId: 'c7', vehicleId: 'v7', stage: 'contacted',   createdAt: '2026-04-12T10:00:00Z', updatedAt: '2026-04-18T08:00:00Z', vehicleName: 'Seat Ateca FR',     contactName: 'Clara Rossi',  price: 27800 },
-  { id: 'd8', tenantId: 't', contactId: 'c8', vehicleId: 'v8', stage: 'offer',       createdAt: '2026-04-09T10:00:00Z', updatedAt: '2026-04-17T10:00:00Z', vehicleName: 'Skoda Octavia RS',  contactName: 'Tom Brown',    price: 23400 },
-]
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function dealAge(createdAt: string): string {
@@ -76,12 +68,16 @@ function formatDate(iso: string): string {
 
 // ── KPI summary row ───────────────────────────────────────────────────────────
 
-function KpiRow({ deals }: { deals: Deal[] }) {
+// Expected value (Sigma amount x probability) and lead time come from the backend's
+// /deals/summary (services/api/routers/crm_deals.py) — ONE computation, never a second
+// client-side formula that could silently diverge (00-MASTER.md doctrine). Raw sums
+// (won revenue, active count) are simple aggregates with no divergence risk and stay
+// client-side.
+function KpiRow({ deals, summary }: { deals: Deal[]; summary: DealsSummary | null }) {
   const active    = deals.filter(d => d.stage !== 'won' && d.stage !== 'lost')
   const won       = deals.filter(d => d.stage === 'won')
-  const pipeline  = active.reduce((s, d) => s + (d.price ?? 0), 0)
   const wonValue  = won.reduce((s, d) => s + (d.price ?? 0), 0)
-  const convRate  = deals.length > 0 ? Math.round((won.length / deals.length) * 100) : 0
+  const pipelineFallback = active.reduce((s, d) => s + (d.price ?? 0), 0)
 
   const kpis = [
     {
@@ -93,9 +89,9 @@ function KpiRow({ deals }: { deals: Deal[] }) {
     },
     {
       icon: <DollarSign className="w-4 h-4 text-amber-400" />,
-      label: 'Pipeline value',
-      value: `€${(pipeline / 1000).toFixed(0)}k`,
-      sub: 'active deals',
+      label: 'Expected value',
+      value: `€${((summary?.expectedValue ?? pipelineFallback) / 1000).toFixed(1)}k`,
+      sub: 'Σ amount × probability',
       accent: 'text-amber-400',
     },
     {
@@ -107,9 +103,9 @@ function KpiRow({ deals }: { deals: Deal[] }) {
     },
     {
       icon: <Target className="w-4 h-4 text-text-secondary" />,
-      label: 'Conversion',
-      value: `${convRate}%`,
-      sub: 'lead to close',
+      label: 'Lead time',
+      value: summary?.avgLeadTimeDays != null ? `${summary.avgLeadTimeDays.toFixed(0)}d` : '—',
+      sub: 'contact to close (90d)',
       accent: 'text-text-secondary',
     },
   ]
@@ -196,7 +192,9 @@ function DealDetailModal({
   deal: Deal; onClose: () => void; onAdvance: () => void; canAdvance: boolean
 }) {
   const stage   = deal.stage as KanbanStage
-  const prob    = STAGE_PROB[stage] ?? 0
+  // Server-computed probability (crm_deal.probability) is authoritative; the local
+  // STAGE_PROB map is only a fallback for a deal the API hasn't priced yet.
+  const prob    = deal.probability ?? STAGE_PROB[stage] ?? 0
   const stageIdx = STAGES.indexOf(stage)
 
   return (
@@ -253,6 +251,27 @@ function DealDetailModal({
           ))}
         </div>
 
+        {/* F5: census cross-reference chip — only rendered when it resolved for real */}
+        {deal.vehicleContext && (
+          <div className={cn(
+            'rounded-lg p-3 border text-xs',
+            deal.vehicleContext.stillListed
+              ? 'bg-accent-blue/5 border-accent-blue/20 text-text-secondary'
+              : 'bg-rose-500/5 border-rose-500/20 text-text-secondary',
+          )}>
+            {deal.vehicleContext.stillListed ? (
+              <>
+                <span className="font-semibold text-text-primary">{deal.vehicleContext.daysInStock} días en stock</span>
+                {deal.vehicleContext.price != null && (
+                  <> · precio actual €{deal.vehicleContext.price.toLocaleString()}</>
+                )}
+              </>
+            ) : (
+              <span className="font-semibold text-rose-500">Este vehículo ya no está anunciado</span>
+            )}
+          </div>
+        )}
+
         {canAdvance && (
           <Button onClick={onAdvance} className="w-full" icon={<ChevronRight className="w-4 h-4" />}>
             Advance to {STAGE_LABELS[STAGES[STAGES.indexOf(stage) + 1] as KanbanStage]}
@@ -281,7 +300,7 @@ const DealRow = React.forwardRef<HTMLDivElement, DealRowProps>(function DealRow(
   ref,
 ) {
   const stage = deal.stage as KanbanStage
-  const prob  = STAGE_PROB[stage] ?? 0
+  const prob  = deal.probability ?? STAGE_PROB[stage] ?? 0
 
   return (
     <motion.div
@@ -349,16 +368,187 @@ const DealRow = React.forwardRef<HTMLDivElement, DealRowProps>(function DealRow(
   )
 })
 
+// ── New deal modal ────────────────────────────────────────────────────────────
+
+interface ContactListResponse { contacts: Contact[]; total: number }
+
+// F5 matcher (carta §8): deterministic SQL candidates from the tenant's OWN live
+// inventory; the dealer confirms with a click — never auto-attached, never fabricated.
+interface VehicleCandidate { vehicleUlid: string; label: string; daysInStock: number }
+interface VehicleSearchResponse { candidates: VehicleCandidate[] }
+
+function VehiclePicker({
+  selected, onSelect, onClear,
+}: { selected: VehicleCandidate | null; onSelect: (v: VehicleCandidate) => void; onClear: () => void }) {
+  const [query, setQuery] = useState('')
+  const searchPath = query.trim().length >= 2 ? `/deals/vehicle-search?q=${encodeURIComponent(query.trim())}` : ''
+  const { data, loading } = useApi<VehicleSearchResponse>(searchPath, [searchPath])
+  const candidates = data?.candidates ?? []
+
+  if (selected) {
+    return (
+      <div className="w-full">
+        <label className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wide">
+          Vehicle (optional)
+        </label>
+        <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-md text-sm bg-glass-subtle border border-border-subtle">
+          <span className="text-text-primary truncate">
+            {selected.label} · {selected.daysInStock}d en stock
+          </span>
+          <button type="button" onClick={onClear} className="text-text-muted hover:text-text-primary shrink-0 text-xs">
+            Cambiar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full relative">
+      <Input
+        label="Vehicle (optional)"
+        placeholder="Buscar por marca/modelo… (ej. BMW 320d)"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+      />
+      {query.trim().length >= 2 && (
+        <div className="absolute z-10 mt-1 w-full rounded-md border border-border-subtle bg-bg-elevated shadow-elevation-2 max-h-48 overflow-y-auto">
+          {loading ? (
+            <p className="px-3 py-2 text-xs text-text-muted">Buscando…</p>
+          ) : candidates.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-text-muted">Sin coincidencias en tu inventario.</p>
+          ) : (
+            candidates.map(c => (
+              <button
+                key={c.vehicleUlid}
+                type="button"
+                onClick={() => { onSelect(c); setQuery('') }}
+                className="w-full text-left px-3 py-2 text-xs text-text-primary hover:bg-glass-medium transition-colors"
+              >
+                {c.label} · {c.daysInStock}d en stock
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NewDealModal({
+  open, onClose, onCreated,
+}: { open: boolean; onClose: () => void; onCreated: () => void }) {
+  const { data: contactData } = useApi<ContactListResponse>(open ? '/contacts' : '')
+  const { createDeal, loading } = useDealMutations()
+  const { success, error: toastErr } = useToast()
+
+  const [contactId, setContactId] = useState('')
+  const [vehicle, setVehicle] = useState<VehicleCandidate | null>(null)
+  const [price, setPrice] = useState('')
+  const [priority, setPriority] = useState<'' | 'low' | 'medium' | 'high'>('')
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const contacts = contactData?.contacts ?? []
+
+  function reset() {
+    setContactId(''); setVehicle(null); setPrice(''); setPriority(''); setFormError(null)
+  }
+
+  function handleClose() {
+    reset()
+    onClose()
+  }
+
+  async function handleSave() {
+    if (!contactId) return
+    setFormError(null)
+    try {
+      await createDeal({
+        contactId,
+        vehicleId: vehicle?.vehicleUlid || undefined,
+        price: price.trim() ? Number(price) : undefined,
+        priority: priority || undefined,
+      })
+      success('Deal created')
+      onCreated()
+      reset()
+      onClose()
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to create deal'
+      setFormError(message)
+      toastErr(message)
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={handleClose} title="New Deal" size="sm">
+      <div className="space-y-4">
+        {contacts.length === 0 ? (
+          <p className="text-xs text-text-muted">
+            No contacts yet — create a contact first from the Contacts page.
+          </p>
+        ) : (
+          <Select
+            label="Contact"
+            placeholder="Select a contact…"
+            value={contactId}
+            onChange={e => setContactId(e.target.value)}
+            options={contacts.map(c => ({ value: c.id, label: `${c.name} (${c.email || c.phone || 's/d'})` }))}
+          />
+        )}
+        <VehiclePicker selected={vehicle} onSelect={setVehicle} onClear={() => setVehicle(null)} />
+        <Input
+          label="Price (€, optional)"
+          type="number"
+          placeholder="25000"
+          value={price}
+          onChange={e => setPrice(e.target.value)}
+        />
+        <Select
+          label="Priority (optional)"
+          placeholder="—"
+          value={priority}
+          onChange={e => setPriority(e.target.value as typeof priority)}
+          options={[
+            { value: 'low', label: 'Low' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'high', label: 'High' },
+          ]}
+        />
+        {formError && <p className="text-xs text-accent-rose">{formError}</p>}
+        <div className="flex gap-2 pt-1">
+          <Button variant="secondary" size="sm" className="flex-1" onClick={handleClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="flex-1"
+            onClick={handleSave}
+            disabled={!contactId}
+            loading={loading}
+          >
+            Create deal
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Deals() {
-  const { data, loading }              = useDeals()
+  const { data, loading, error, reload }  = useDeals()
+  const { data: summary }                = useDealsSummary()
   const { moveStage, loading: mutating } = useDealMutations()
   const { success }                    = useToast()
   const [selectedStage, setSelectedStage] = useState<KanbanStage | 'all'>('all')
   const [selectedDeal,  setSelectedDeal]  = useState<Deal | null>(null)
+  const [newDealOpen,   setNewDealOpen]   = useState(false)
 
-  const deals = data?.deals ?? MOCK_DEALS
+  // Honest empty array on failure — never a fabricated pipeline.
+  const deals = data?.deals ?? []
 
   const grouped: Record<KanbanStage, Deal[]> = Object.fromEntries(
     STAGES.map(s => [s, deals.filter(d => d.stage === s)]),
@@ -394,13 +584,13 @@ export default function Deals() {
             €{(deals.filter(d => d.stage !== 'lost').reduce((s, d) => s + (d.price ?? 0), 0) / 1000).toFixed(0)}k pipeline
           </p>
         </div>
-        <Button icon={<Plus className="w-4 h-4" />} size="sm" loading={mutating}>
+        <Button icon={<Plus className="w-4 h-4" />} size="sm" loading={mutating} onClick={() => setNewDealOpen(true)}>
           New deal
         </Button>
       </div>
 
       {/* KPI row */}
-      <KpiRow deals={deals} />
+      <KpiRow deals={deals} summary={summary ?? null} />
 
       {/* Pipeline funnel */}
       <PipelineFunnel deals={deals} />
@@ -442,6 +632,13 @@ export default function Deals() {
           <div className="flex justify-center py-8">
             <LoadingSpinner />
           </div>
+        ) : error ? (
+          <EmptyState
+            icon={<Activity className="w-6 h-6" />}
+            title="No se pudo cargar los deals"
+            message="Hubo un error contactando al servidor."
+            action={<Button size="sm" onClick={reload}>Reintentar</Button>}
+          />
         ) : filteredDeals.length === 0 ? (
           <p className="text-sm text-text-muted text-center py-8">No deals in this stage.</p>
         ) : (
@@ -490,6 +687,13 @@ export default function Deals() {
           }
         />
       )}
+
+      {/* New deal modal */}
+      <NewDealModal
+        open={newDealOpen}
+        onClose={() => setNewDealOpen(false)}
+        onCreated={() => { reload() }}
+      />
     </motion.div>
   )
 }

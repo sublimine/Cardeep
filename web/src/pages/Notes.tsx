@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import {
   Pin, PinOff, Plus, Search, Trash2, X, StickyNote, Pencil,
 } from 'lucide-react'
@@ -7,21 +7,15 @@ import Input from '../components/Input'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
 import EmptyState from '../components/EmptyState'
+import LoadingSpinner from '../components/LoadingSpinner'
 import { cn } from '../lib/cn'
+import { useNotes, useNoteMutations } from '../hooks/useNotes'
+import { useToast } from '../components/Toast'
+import type { Note } from '../types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type NoteColor = 'neutral' | 'amber' | 'sky' | 'emerald' | 'rose'
-
-interface Note {
-  id: string
-  title: string
-  body: string
-  color: NoteColor
-  pinned: boolean
-  createdAt: string
-  updatedAt: string
-}
+type NoteColor = Note['color']
 
 // ── Note color config ─────────────────────────────────────────────────────────
 
@@ -71,114 +65,27 @@ const COLOR_CONFIG: Record<NoteColor, {
 
 const NOTE_COLORS: NoteColor[] = ['neutral', 'amber', 'sky', 'emerald', 'rose']
 
-// ── Sample notes ──────────────────────────────────────────────────────────────
+// ── One-shot localStorage migration (carta §6: "migración one-shot de localStorage
+// con banner") ──────────────────────────────────────────────────────────────────
 
-const SAMPLE_NOTES: Note[] = [
-  {
-    id: 'n1',
-    title: 'Call Maria Santos',
-    body: 'Discuss BMW 320d pricing — she wants a test drive next Saturday. Check availability and prepare comparison sheet. Preferred: automatic transmission, dark exterior.',
-    color: 'sky',
-    pinned: true,
-    createdAt: '2026-06-28T10:00:00Z',
-    updatedAt: '2026-06-28T10:00:00Z',
-  },
-  {
-    id: 'n2',
-    title: 'Stock review — end of month',
-    body: 'Prepare aging report. 3 vehicles over 60 days need repricing strategy before end of month. BMW 320d (72d), Audi A4 (68d), VW Golf (61d).',
-    color: 'rose',
-    pinned: true,
-    createdAt: '2026-06-27T09:00:00Z',
-    updatedAt: '2026-06-27T09:00:00Z',
-  },
-  {
-    id: 'n3',
-    title: 'Audi A4 inspection',
-    body: 'Book certified mechanic before listing. Target price €31k — cross-check AutoScout24 and mobile.de comps before publishing.',
-    color: 'amber',
-    pinned: false,
-    createdAt: '2026-06-26T14:00:00Z',
-    updatedAt: '2026-06-26T14:00:00Z',
-  },
-  {
-    id: 'n4',
-    title: 'Follow-up: John Doe',
-    body: 'He asked for extended warranty options on the VW Golf. Send comparison sheet by Friday. Budget: up to €28k.',
-    color: 'emerald',
-    pinned: false,
-    createdAt: '2026-06-25T11:00:00Z',
-    updatedAt: '2026-06-25T11:00:00Z',
-  },
-  {
-    id: 'n5',
-    title: 'Mercedes listing photos',
-    body: 'C220 photos scheduled for Tuesday morning. Remind photographer: full interior shots, dashboard, boot space. Uploader after shoot.',
-    color: 'neutral',
-    pinned: false,
-    createdAt: '2026-06-24T16:00:00Z',
-    updatedAt: '2026-06-24T16:00:00Z',
-  },
-  {
-    id: 'n6',
-    title: 'AutoScout24 ad renewal',
-    body: 'Premium listings expire June 30. Renew for BMW X3, Seat Ateca, VW Tiguan. Check ad spend vs conversion for last 30 days before renewing.',
-    color: 'neutral',
-    pinned: false,
-    createdAt: '2026-06-23T08:00:00Z',
-    updatedAt: '2026-06-23T08:00:00Z',
-  },
-]
+const LEGACY_STORAGE_KEY = 'cardeep_notes'
 
-// ── Local storage hook ────────────────────────────────────────────────────────
+interface LegacyNote { title: string; body: string; color: NoteColor; pinned: boolean }
 
-function useNotes() {
-  const [notes, setNotes] = useState<Note[]>(() => {
-    try {
-      const raw = localStorage.getItem('cardeep_notes')
-      return raw ? (JSON.parse(raw) as Note[]) : SAMPLE_NOTES
-    } catch {
-      return SAMPLE_NOTES
-    }
-  })
-
-  const persist = useCallback((next: Note[]) => {
-    setNotes(next)
-    try { localStorage.setItem('cardeep_notes', JSON.stringify(next)) } catch { /* noop */ }
-  }, [])
-
-  function createNote(data: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>): Note {
-    const note: Note = {
-      ...data,
-      id: `n-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    persist([note, ...notes])
-    return note
+function readLegacyNotes(): LegacyNote[] {
+  try {
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as Partial<LegacyNote>[]
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter(n => n && (n.title || n.body))
+      .map(n => ({
+        title: n.title ?? '', body: n.body ?? '', color: (n.color as NoteColor) ?? 'neutral', pinned: !!n.pinned,
+      }))
+  } catch {
+    return []
   }
-
-  function updateNote(id: string, patch: Partial<Omit<Note, 'id' | 'createdAt'>>) {
-    persist(
-      notes.map(n =>
-        n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n,
-      ),
-    )
-  }
-
-  function deleteNote(id: string) {
-    persist(notes.filter(n => n.id !== id))
-  }
-
-  function togglePin(id: string) {
-    persist(
-      notes.map(n =>
-        n.id === id ? { ...n, pinned: !n.pinned, updatedAt: new Date().toISOString() } : n,
-      ),
-    )
-  }
-
-  return { notes, createNote, updateNote, deleteNote, togglePin }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -398,10 +305,40 @@ const BLANK_NOTE: EditorState = { title: '', body: '', color: 'neutral' }
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Notes() {
-  const { notes, createNote, updateNote, deleteNote, togglePin } = useNotes()
+  const { data, error, loading, reload } = useNotes()
+  const { createNote, updateNote, deleteNote, loading: mutating } = useNoteMutations()
+  const { success, error: toastErr } = useToast()
+
+  // Honest empty array on failure — never a fabricated notebook (carta §4).
+  const notes = data?.notes ?? []
+
   const [search,      setSearch]      = useState('')
   const [editorOpen,  setEditorOpen]  = useState(false)
   const [editorState, setEditorState] = useState<EditorState>(BLANK_NOTE)
+
+  // One-shot localStorage migration banner (carta §6). Only offered once notes have
+  // actually loaded AND the server genuinely has none yet — never overwrites real data.
+  const [legacyNotes] = useState<LegacyNote[]>(() => readLegacyNotes())
+  const [migrating, setMigrating] = useState(false)
+  const [migrated, setMigrated] = useState(false)
+  const showMigrationBanner = !loading && !error && notes.length === 0 && legacyNotes.length > 0 && !migrated
+
+  async function handleMigrate() {
+    setMigrating(true)
+    try {
+      for (const n of legacyNotes) {
+        await createNote({ title: n.title, body: n.body, color: n.color, pinned: n.pinned })
+      }
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+      setMigrated(true)
+      success(`${legacyNotes.length} nota(s) migradas`)
+      reload()
+    } catch {
+      toastErr('No se pudieron migrar todas las notas')
+    } finally {
+      setMigrating(false)
+    }
+  }
 
   // Filter
   const filtered = search.trim()
@@ -423,20 +360,39 @@ export default function Notes() {
     setEditorOpen(true)
   }
 
-  function handleSave(data: EditorState) {
-    if (data.id) {
-      updateNote(data.id, { title: data.title, body: data.body, color: data.color })
-    } else {
-      createNote({ title: data.title, body: data.body, color: data.color, pinned: false })
+  async function handleSave(data: EditorState) {
+    try {
+      if (data.id) {
+        await updateNote(data.id, { title: data.title, body: data.body, color: data.color })
+      } else {
+        await createNote({ title: data.title, body: data.body, color: data.color, pinned: false })
+      }
+      setEditorOpen(false)
+      reload()
+    } catch {
+      toastErr('No se pudo guardar la nota')
+    }
+  }
+
+  async function handleDelete() {
+    if (editorState.id) {
+      try {
+        await deleteNote(editorState.id)
+        reload()
+      } catch {
+        toastErr('No se pudo eliminar la nota')
+      }
     }
     setEditorOpen(false)
   }
 
-  function handleDelete() {
-    if (editorState.id) {
-      deleteNote(editorState.id)
+  async function handleTogglePin(note: Note) {
+    try {
+      await updateNote(note.id, { pinned: !note.pinned })
+      reload()
+    } catch {
+      toastErr('No se pudo actualizar la nota')
     }
-    setEditorOpen(false)
   }
 
   return (
@@ -459,12 +415,38 @@ export default function Notes() {
           size="sm"
           icon={<Plus className="w-4 h-4" />}
           onClick={openNew}
+          loading={mutating}
         >
           New note
         </Button>
       </div>
 
+      {/* One-shot localStorage migration banner (carta §6) */}
+      {showMigrationBanner && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-accent-blue/25 bg-accent-blue/5">
+          <p className="text-xs text-text-secondary">
+            Encontramos {legacyNotes.length} nota(s) guardadas solo en este dispositivo. Migrarlas para verlas en cualquier equipo.
+          </p>
+          <Button size="sm" onClick={handleMigrate} loading={migrating}>Migrar ahora</Button>
+        </div>
+      )}
+
+      {/* Error state — honest failure, never a silently-swapped fallback */}
+      {error && (
+        <EmptyState
+          icon={<StickyNote className="w-6 h-6" />}
+          title="No se pudieron cargar las notas"
+          message="Hubo un error contactando al servidor."
+          action={<Button size="sm" onClick={reload}>Reintentar</Button>}
+        />
+      )}
+
+      {loading && (
+        <div className="flex justify-center py-8"><LoadingSpinner /></div>
+      )}
+
       {/* Search */}
+      {!loading && !error && (
       <Input
         icon={<Search className="w-4 h-4" />}
         placeholder="Search notes…"
@@ -482,9 +464,10 @@ export default function Notes() {
           ) : undefined
         }
       />
+      )}
 
       {/* Empty state */}
-      {filtered.length === 0 && (
+      {!loading && !error && filtered.length === 0 && (
         <EmptyState
           icon={<StickyNote className="w-6 h-6" />}
           title={search ? 'No notes match' : 'No notes yet'}
@@ -505,7 +488,7 @@ export default function Notes() {
 
       {/* Pinned section */}
       <AnimatePresence>
-        {pinned.length > 0 && (
+        {!loading && !error && pinned.length > 0 && (
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -527,7 +510,7 @@ export default function Notes() {
                     key={note.id}
                     note={note}
                     onEdit={() => openEdit(note)}
-                    onPin={() => togglePin(note.id)}
+                    onPin={() => handleTogglePin(note)}
                   />
                 ))}
               </AnimatePresence>
@@ -538,7 +521,7 @@ export default function Notes() {
 
       {/* All notes */}
       <AnimatePresence>
-        {unpinned.length > 0 && (
+        {!loading && !error && unpinned.length > 0 && (
           <motion.section
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -559,7 +542,7 @@ export default function Notes() {
                     key={note.id}
                     note={note}
                     onEdit={() => openEdit(note)}
-                    onPin={() => togglePin(note.id)}
+                    onPin={() => handleTogglePin(note)}
                   />
                 ))}
               </AnimatePresence>

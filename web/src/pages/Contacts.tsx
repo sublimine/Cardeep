@@ -13,56 +13,14 @@ import Modal from '../components/Modal'
 import Button from '../components/Button'
 import { cn } from '../lib/cn'
 import { useApi } from '../hooks/useApi'
+import { useContactMutations } from '../hooks/useContacts'
+import { useToast } from '../components/Toast'
+import { ApiError } from '../api/client'
 import type { Contact, Activity } from '../types'
 import type { TimelineItem } from '../components/Timeline'
 
 interface ContactList   { contacts: Contact[]; total: number }
 interface ContactDetail { contact: Contact; activities: Activity[] }
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_CONTACTS: Contact[] = Array.from({ length: 12 }, (_, i) => ({
-  id: `c${i}`,
-  tenantId: 't1',
-  name: [
-    'Maria Santos', 'John Doe', 'Anna Weber', 'Peter Klein', 'Sophie Leblanc',
-    'Hans Müller', 'Clara Rossi', 'Tom Brown', 'Lisa Chen', 'David Novak',
-    'Eva Fischer', 'Carlos Mora',
-  ][i],
-  email: [
-    'maria.santos@example.com', 'john.doe@example.com', 'anna.weber@example.com',
-    'p.klein@example.com', 'sophie.l@example.com', 'hans.m@example.com',
-    'c.rossi@example.com', 'tom.b@example.com', 'lisa.chen@example.com',
-    'd.novak@example.com', 'eva.fischer@example.com', 'c.mora@example.com',
-  ][i],
-  phone: [
-    '+49 170 481 2001', '+44 7700 900 123', '+49 151 234 5678',
-    '+49 163 987 6543', '+33 6 12 34 56 78', '+49 176 555 1234',
-    '+39 347 123 4567', '+44 7911 123 456', '+49 170 876 5432',
-    '+420 601 234 567', '+49 163 456 7890', '+34 612 345 678',
-  ][i],
-  createdAt: new Date(Date.now() - i * 86400000 * 14).toISOString(),
-  updatedAt: new Date(Date.now() - i * 86400000 * (i % 3 + 1)).toISOString(),
-  dealCount: [3, 0, 2, 1, 0, 4, 0, 1, 2, 0, 1, 3][i],
-}))
-
-const MOCK_ACTIVITIES: Activity[] = [
-  {
-    id: 'a1', tenantId: 't', dealId: 'd1', type: 'call',
-    body: 'Discussed BMW 320d pricing — interested at €26k. Wants Saturday test drive.',
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-  {
-    id: 'a2', tenantId: 't', dealId: 'd1', type: 'inquiry',
-    body: 'Requested full service history report and CARFAX check.',
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-  {
-    id: 'a3', tenantId: 't', dealId: 'd1', type: 'note',
-    body: 'Prefers automatic transmission, dark exterior. Budget flexible up to €30k.',
-    createdAt: new Date(Date.now() - 86400000 * 9).toISOString(),
-  },
-]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -336,13 +294,16 @@ function ContactDrawer({
               </div>
             </div>
 
-            {/* Footer */}
+            {/* Footer — anti-decorative-button (carta §1): real tel:/mailto: navigation,
+                the minimum functional floor until F4's in-app channel exists. */}
             <div className="px-4 py-3 border-t border-border-subtle shrink-0 flex gap-2">
               <Button
                 variant="primary"
                 size="sm"
                 className="flex-1"
                 icon={<Phone className="w-3.5 h-3.5" />}
+                disabled={!contact.phone}
+                onClick={() => { if (contact.phone) window.location.href = `tel:${contact.phone}` }}
               >
                 Call
               </Button>
@@ -351,6 +312,8 @@ function ContactDrawer({
                 size="sm"
                 className="flex-1"
                 icon={<Mail className="w-3.5 h-3.5" />}
+                disabled={!contact.email}
+                onClick={() => { if (contact.email) window.location.href = `mailto:${contact.email}` }}
               >
                 Email
               </Button>
@@ -364,14 +327,48 @@ function ContactDrawer({
 
 // ── New contact modal ─────────────────────────────────────────────────────────
 
-function NewContactModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function NewContactModal({
+  open, onClose, onCreated,
+}: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [name,  setName]  = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
+  const { createContact, loading } = useContactMutations()
+  const { success, error: toastErr } = useToast()
+
+  function reset() {
+    setName(''); setEmail(''); setPhone(''); setFormError(null)
+  }
 
   function handleClose() {
-    setName(''); setEmail(''); setPhone('')
+    reset()
     onClose()
+  }
+
+  // Anti-decorative-button (carta §1, "Save contact" POST real; modal NO cierra hasta
+  // 201; error -> mensaje visible): the modal only closes on a confirmed 201 from the
+  // server — never on a blind click.
+  async function handleSave() {
+    if (!name.trim()) return
+    setFormError(null)
+    try {
+      await createContact({
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+      })
+      success('Contact saved')
+      onCreated()
+      reset()
+      onClose()
+    } catch (err) {
+      const message = err instanceof ApiError
+        ? (err.status === 409 ? 'A contact with this phone or email already exists' : err.message)
+        : 'Failed to save contact'
+      setFormError(message)
+      toastErr(message)
+    }
   }
 
   return (
@@ -394,20 +391,24 @@ function NewContactModal({ open, onClose }: { open: boolean; onClose: () => void
         <Input
           label="Phone"
           type="tel"
-          placeholder="+49 170 000 0000"
+          placeholder="612 345 678"
           value={phone}
           onChange={e => setPhone(e.target.value)}
         />
+        {formError && (
+          <p className="text-xs text-accent-rose">{formError}</p>
+        )}
         <div className="flex gap-2 pt-1">
-          <Button variant="secondary" size="sm" className="flex-1" onClick={handleClose}>
+          <Button variant="secondary" size="sm" className="flex-1" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
           <Button
             variant="primary"
             size="sm"
             className="flex-1"
-            onClick={handleClose}
+            onClick={handleSave}
             disabled={!name.trim()}
+            loading={loading}
           >
             Save contact
           </Button>
@@ -425,8 +426,10 @@ export default function Contacts() {
   const [viewMode,   setViewMode]   = useState<'list' | 'grid'>('list')
   const [newOpen,    setNewOpen]    = useState(false)
 
-  const { data }        = useApi<ContactList>('/contacts')
-  const contacts        = data?.contacts ?? MOCK_CONTACTS
+  const { data, error, reload } = useApi<ContactList>('/contacts')
+  // Honest empty array on failure — never a fabricated roster (carta §4 "Regla
+  // transversal de honestidad de producto": ningun fallback simulado en ninguna pagina CRM).
+  const contacts        = data?.contacts ?? []
 
   const { data: detail } = useApi<ContactDetail>(
     selectedId ? `/contacts/${selectedId}` : '',
@@ -515,12 +518,20 @@ export default function Contacts() {
           <EmptyState
             key="empty"
             icon={<Users className="w-6 h-6" />}
-            title="No contacts found"
-            message="Try adjusting your search or add a new contact."
+            title={error ? 'No se pudo cargar los contactos' : 'No contacts found'}
+            message={
+              error
+                ? 'Hubo un error contactando al servidor. Reintenta.'
+                : 'Try adjusting your search or add a new contact.'
+            }
             action={
-              <Button size="sm" icon={<UserPlus className="w-4 h-4" />} onClick={() => setNewOpen(true)}>
-                Add contact
-              </Button>
+              error ? (
+                <Button size="sm" onClick={reload}>Reintentar</Button>
+              ) : (
+                <Button size="sm" icon={<UserPlus className="w-4 h-4" />} onClick={() => setNewOpen(true)}>
+                  Add contact
+                </Button>
+              )
             }
           />
         ) : viewMode === 'grid' ? (
@@ -581,12 +592,12 @@ export default function Contacts() {
       {/* Detail drawer */}
       <ContactDrawer
         contact={selected}
-        activities={detail?.activities ?? MOCK_ACTIVITIES}
+        activities={detail?.activities ?? []}
         onClose={() => setSelectedId(null)}
       />
 
       {/* New contact modal */}
-      <NewContactModal open={newOpen} onClose={() => setNewOpen(false)} />
+      <NewContactModal open={newOpen} onClose={() => setNewOpen(false)} onCreated={reload} />
     </motion.div>
   )
 }

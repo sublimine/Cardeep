@@ -1,5 +1,22 @@
 export type Plan = 'starter' | 'scale' | 'enterprise'
 
+// 06-unified-crm-chat F5: "chip de mercado" — days in stock, current price, price
+// history — resolved from the live census (services/api/vehicle_context.py). Present
+// on a Deal/Conversation ONLY when vehicleId resolves against a real vehicle; never
+// fabricated otherwise (carta §4/§5 negative-test discipline).
+export interface VehicleContext {
+  vehicleUlid: string
+  make: string
+  model: string
+  year: number
+  price: number | null
+  status: string
+  stillListed: boolean
+  daysInStock: number
+  firstSeen: string
+  priceHistory?: { price: number; observedAt: string }[]
+}
+
 export interface User {
   id: string
   email: string
@@ -44,6 +61,11 @@ export interface Deal {
   contactName?: string
   vehicleName?: string
   price?: number
+  // 06-unified-crm-chat F2: win probability 0-100, server-defaulted per stage
+  // (Salesforce Amount x Probability model), editable per deal.
+  probability?: number
+  // F5: census cross-reference chip, present only when vehicleId resolves.
+  vehicleContext?: VehicleContext | null
 }
 
 export interface Contact {
@@ -83,6 +105,8 @@ export interface Conversation {
   contactName?: string
   vehicleName?: string
   previewBody?: string
+  // F5: census cross-reference chip, present only when vehicleId resolves.
+  vehicleContext?: VehicleContext | null
 }
 
 export interface Message {
@@ -106,6 +130,31 @@ export interface Template {
   subject: string
   body: string
   isSystem: boolean
+}
+
+// 06-unified-crm-chat F6: replaces Notes.tsx's localStorage persistence.
+export interface Note {
+  id: string
+  title: string
+  body: string
+  color: 'neutral' | 'amber' | 'sky' | 'emerald' | 'rose'
+  pinned: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// F6: replaces Calendar.tsx's MOCK_EVENTS.
+export interface CalEvent {
+  id: string
+  title: string
+  startsAt: string
+  endsAt?: string | null
+  type: 'visit' | 'call' | 'reminder' | 'delivery'
+  location?: string | null
+  contactId?: string | null
+  contactName?: string | null
+  dealId?: string | null
+  createdAt: string
 }
 
 export interface KpiData {

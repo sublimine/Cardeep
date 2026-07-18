@@ -6,22 +6,17 @@ import Avatar from '../components/Avatar'
 import EmptyState from '../components/EmptyState'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { Badge } from '../components/Badge'
-import { useInbox, useConversation, useInboxMutations } from '../hooks/useInbox'
+import { useInbox, useConversation, useInboxMutations, useInboxStream } from '../hooks/useInbox'
 import { useToast } from '../components/Toast'
 import type { Conversation } from '../types'
 import { cn } from '../lib/cn'
 
-// 05-multiposting F2 (00-MASTER.md C-10, "regla del primer llegado"): 06-unified-crm-chat
-// owns Inbox.tsx/the CRM inbox backend, but had not landed when this pilar's F2 executed
-// (plans/cardeep-omni/PROGRESO.md BLOQUE 2 — 06 is scheduled for BLOQUE 3, not started).
-// The mock this file used to fall back to (`MOCK_CONVS`: 'mobile.de'/'autoscout24' fake
-// conversations, out-of-scope-for-Spain platform, fictional contacts) is retired here per
-// the first-arrival rule — replaced with the honest empty-state 06's OWN carta already
-// prescribes for this exact case (05-multiposting.md S1.4, 06-unified-crm-chat.md S"Prohibido
-// ?? MOCK_* en cualquier pagina CRM"). Registered in 06-unified-crm-chat.md's tracker (S0
-// note) so 06 does not re-discover this as a surprise. GET/POST /inbox/* still do not exist
-// in services/api (grep -rn "inbox" services/api/routers/ = 0 results) — 06-F4 builds
-// crm_inbox.py against the exact paths useInbox.ts already expects.
+// HISTORY (00-MASTER.md C-10, "regla del primer llegado"): 05-multiposting F2 retired this
+// file's original fake-conversations fallback before 06-unified-crm-chat had landed,
+// leaving an honest "not connected yet" empty state. 06-F4 now ships the real channel
+// (services/api/routers/crm_inbox.py + services/crm/email_ingest.py + email_send.py) against
+// the exact paths useInbox.ts already called — the empty state below reflects that reality:
+// a real, empty inbox ("conecta tu correo...") is distinct from a request that failed.
 
 const STATUS_COLOR: Record<string, NonNullable<Parameters<typeof Badge>[0]['color']>> = {
   open: 'blue', replied: 'green', closed: 'gray', spam: 'red',
@@ -76,6 +71,20 @@ function ConvItem({
 
         <p className="text-xs text-text-muted truncate mt-0.5">{conv.previewBody}</p>
 
+        {/* F5: census cross-reference chip — carta §6: "BMW 320d 2019 · 18.900 € ·
+            34 días en tu stock". Only rendered when it resolved for real. */}
+        {conv.vehicleContext && (
+          <p className={cn(
+            'text-[10px] truncate mt-1',
+            conv.vehicleContext.stillListed ? 'text-accent-blue' : 'text-rose-400 font-semibold',
+          )}>
+            {conv.vehicleName}
+            {conv.vehicleContext.stillListed
+              ? ` · ${conv.vehicleContext.daysInStock}d en tu stock`
+              : ' · ya no está anunciado'}
+          </p>
+        )}
+
         <div className="flex items-center gap-1.5 mt-2">
           <Badge color={STATUS_COLOR[conv.status] ?? 'gray'}>{conv.status}</Badge>
           <span className="text-[10px] text-text-muted">{conv.sourcePlatform}</span>
@@ -91,14 +100,16 @@ export default function Inbox() {
   const [filter, setFilter]         = useState<Filter>('all')
 
   const { data, loading, error, reload }             = useInbox()
-  // Honest empty array, never a fabricated fleet of conversations (C-10, see file-header
-  // note) -- /inbox does not exist in services/api yet, so `error` is always populated
-  // until 06-unified-crm-chat's F4 ships a real channel; the list below renders that
-  // reality plainly instead of a silently-swapped mock.
+  // Honest empty array on failure — never a fabricated fleet of conversations (carta §4
+  // "regla transversal de honestidad de producto").
   const conversations: Conversation[]                = data?.conversations ?? []
   const { data: thread, loading: threadLoading }    = useConversation(selectedId ?? '')
   const { reply, loading: sending }                 = useInboxMutations()
   const { success, error: toastErr }                = useToast()
+
+  // F4: SSE-driven live refresh — a new inbound lead or a status change elsewhere
+  // reloads the list without the dealer having to hit refresh manually.
+  useInboxStream(reload)
 
   const filtered = filter === 'unread' ? conversations.filter((c) => c.unread) : conversations
   const selected = conversations.find((c) => c.id === selectedId) ?? null
@@ -171,10 +182,10 @@ export default function Inbox() {
           {filtered.length === 0 ? (
             <EmptyState
               icon={<InboxIcon className="w-6 h-6" />}
-              title={error ? 'Bandeja aún no conectada' : 'Sin conversaciones'}
+              title={error ? 'No se pudo cargar la bandeja' : 'Sin conversaciones'}
               message={error
-                ? 'El canal de mensajería unificado (email/WhatsApp) está en construcción — todavía no hay backend real detrás de esta pantalla.'
-                : undefined}
+                ? 'Hubo un error contactando al servidor. Reintenta.'
+                : 'Conecta tu correo de leads y aquí aparecerán los mensajes de tus clientes.'}
             />
           ) : (
             <AnimatePresence initial={false}>
@@ -206,6 +217,23 @@ export default function Inbox() {
               <p className="text-xs text-text-muted mt-0.5">
                 {selected.contactName} · {selected.vehicleName} · {selected.sourcePlatform}
               </p>
+              {/* F5: census cross-reference chip — carta §6 example: "BMW 320d 2019 ·
+                  18.900 € · 34 días en tu stock". Only rendered when it resolved for real. */}
+              {selected.vehicleContext && (
+                <p className={cn(
+                  'text-xs mt-1 font-medium',
+                  selected.vehicleContext.stillListed ? 'text-accent-blue' : 'text-rose-400',
+                )}>
+                  {selected.vehicleContext.stillListed ? (
+                    <>
+                      {selected.vehicleContext.price != null && `€${selected.vehicleContext.price.toLocaleString()} · `}
+                      {selected.vehicleContext.daysInStock} días en tu stock
+                    </>
+                  ) : (
+                    'Este vehículo ya no está anunciado'
+                  )}
+                </p>
+              )}
             </div>
 
             {/* Messages */}

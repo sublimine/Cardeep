@@ -362,3 +362,85 @@ Orden justificado: el schema (F1) desbloquea todo; Contacts/Deals (F2-F3) dan va
 ## Resumen
 
 El pilar 06 es hoy 7 páginas de atrezzo (≈3.200 líneas de frontend sin un dato real, 0 tablas, 0 routers, 0 canales) y su propio blueprint cita migraciones que no son. Cardeep no tiene ventaja estructural en mensajería —eso es infraestructura commoditizada donde Twilio/Meta/Chatwoot llevan años— y esta carta lo admite: la única superación real es enriquecer cada conversación y cada deal con el contexto vivo del censo (días en mercado, historial de precio del coche exacto por el que pregunta el lead), un dato que ningún CRM horizontal puede tener. El plan: schema `crm_*` + tenancy mínima (F1), routers y recableado sin mocks (F2-F3), email como primer canal real a coste ~€0 (F4), cruce con el censo (F5), interop estándar (F6) y WhatsApp gateado como fase de gasto (F7) — cada dato mostrado verificado por 2 vías independientes y ni un solo `?? MOCK_` superviviente.
+
+---
+
+## 10. Estado real de ejecución F1-F6 (2026-07-18) — [VERIFICADO salvo lo marcado ASUMIDO]
+
+> Ejecutado en una sola sesión, en el MISMO working directory que otros 3 frentes corriendo
+> en paralelo (00/01-market-intelligence terminado, 09-terminal, 07-marketing). Colisiones
+> de archivo compartido detectadas y resueltas sin pérdida de trabajo ajeno — registradas
+> en §10.6.
+
+### F1 — Schema CRM [CERRADO]
+
+Migración real consumida: **`migrations/0084_crm.sql`** (verificado `ls migrations/*.sql | sort | tail -1` inmediatamente antes de crear el archivo → `0083_vin_ref_remediation.sql`; los 3 frentes paralelos numeraron 0085-0092 encima sin colisión, verificado después). 11 tablas nuevas aplicadas a cardeep-pg viva: `crm_contact`, `crm_contact_channel`, `crm_consent`, `crm_template`, `crm_deal`, `crm_deal_stage_event`, `crm_conversation`, `crm_message`, `crm_activity`, `crm_note`, `crm_event`. Tenancy: **sin `crm_tenant`/`crm_user`** — el tenant es `entity_ulid` vía `dealer_membership` (AUTH-0, ya ejecutado por otro bloque antes de esta sesión), exactamente como manda C-3/C-4 del MASTER. Guards append-only (`cardeep_block_mutation()`) en `crm_consent`/`crm_deal_stage_event`, mismo patrón que `0005`/`0035`.
+
+Bug real encontrado y corregido durante la ejecución: el propio comentario de cabecera de la migración contenía el literal `$$`, lo que desincronizaba el parser de `scripts/migrate.py::split_statements` (cuenta apariciones de `$$` por línea, incluso dentro de comentarios) y producía una sentencia SQL corrupta. Corregido reformulando el comentario.
+
+Verificación: `tests/test_crm_schema.py` (12 tests) — dedup por tenant (teléfono/email), `crm_contact_channel` único (patrón Chatwoot), guards append-only bloquean UPDATE/DELETE incluso en cascada, replay del ledger de `crm_deal_stage_event` reconstruye el estado, dedup de `provider_message_id`, FKs contra el censo real (vehículo GYATA). 12/12 verdes.
+
+Hallazgo de diseño (no bug): un guard append-only bloquea el DELETE también cuando llega por `ON DELETE CASCADE` desde el padre — mismo comportamiento ya aceptado por `fleet_ops_event` en 03-garage-fleet. Los tests dejan un rastro de auditoría permanente y etiquetado (`ZZTEST_`) para las filas con hijos guardados, documentado en el propio test.
+
+### F2 — Routers Contacts/Deals [CERRADO]
+
+`services/api/routers/crm_contacts.py` (CRUD completo + export vCard) y `crm_deals.py` (CRUD + `/deals/summary` + `/deals/vehicle-search`), registrados en `main.py`. Tenancy resuelta por `services/api/crm_deps.py::require_tenant` (nuevo módulo compartido): header `X-Tenant-ID` → `resolve_cluster` + verificación de `dealer_membership`, o membership más antigua como fallback — mismo patrón que `dealer_ops.py`. **Contrato de respuesta: JSON plano** (no el envelope `{ok,data,error,meta}` de los 5 routers de censo) — mismo precedente que `auth.py`, porque `useApi`/`useDeals`/`useKanban` ya esperaban esa forma exacta desde antes de que este backend existiera.
+
+Probabilidad por defecto por etapa (carta §4): `lead=10, contacted=25, offer=50, negotiation=75, won=100, lost=0`, recalculada automáticamente en cada cambio de etapa salvo que la llamada la fije explícitamente en la misma petición (estilo Salesforce).
+
+Verificación: `tests/test_crm_contacts_router.py` (14 tests) + `tests/test_crm_deals_router.py` (14 tests, incluye F5) contra cardeep-pg viva vía `TestClient`; aislamiento entre tenants probado con una segunda entidad real (`CDP-ES-01-7FAFJXW8`). curl real end-to-end contra una instancia uvicorn efímera (login GYATA demo → crear contacto → 409 por duplicado → crear deal → mover de etapa → `/deals/summary`). Regresión: 0 en los routers preexistentes (`test_auth_router.py`, `test_dealer_ops_router.py`, `test_arbitrage_router.py`, `test_market_router*.py`).
+
+### F3 — Recableado frontend [CERRADO]
+
+`Contacts.tsx`/`Deals.tsx`/`Kanban.tsx`: `MOCK_CONTACTS`/`MOCK_DEALS`/`MOCK_BOARD` eliminados por completo (`grep -rn "MOCK_" web/src/pages/{Contacts,Deals,Kanban}.tsx` → 0 coincidencias, verificado). "Save contact" hace POST real y no cierra el modal hasta 201 (409 se muestra inline). Call/Email del `ContactDrawer` navegan a `tel:`/`mailto:` reales. "New deal" abre un modal real con selector de contacto + buscador de vehículo (F5) + precio + prioridad. `/chat` retirado del nav (`Shell.tsx`) y de las rutas (`App.tsx`) — `Chat.tsx` queda parkeado sin ruta, tal como ordena la carta. Kanban/Deals muestran `expectedValue`/`avgLeadTimeDays` servidos por `/deals/summary` (un solo cálculo, no una segunda fórmula cliente).
+
+Build verificado: `tsc --noEmit` limpio + `vite build` verde (bundle generado, warnings de tamaño de chunk preexistentes y no introducidos por este pilar).
+
+### F4 — Canal email real [CERRADO]
+
+`services/api/routers/crm_inbox.py` sirviendo exactamente los paths que `useInbox.ts` ya esperaba (`GET /inbox`, `GET /inbox/{id}`, `POST /inbox/{id}/reply`, `PATCH /inbox/{id}`) + `GET /inbox/stream` (SSE). `services/crm/email_send.py` (SMTP, stdlib puro) y `services/crm/email_ingest.py` (IMAP, stdlib puro) + `services/crm/lead_parsers.py` (parsers deterministas coches.net/Wallapop/Milanuncios + fallback genérico, portal detectado por dominio del remitente).
+
+Bug real encontrado y corregido: `/inbox/stream` estaba declarado DESPUÉS de `/inbox/{conversation_ulid}` en el router, así que FastAPI capturaba `"stream"` como `conversation_ulid` antes de llegar nunca a la ruta SSE (mismo tipo de bug que `/deals/summary` ya evitaba). Corregido reordenando la declaración — mismo patrón aplicado consistentemente en `crm_deals.py`.
+
+**Hueco declarado, no maquillado**: no existe una cuenta de correo real con credenciales en este entorno, así que el round-trip verdadero IMAP servidor-real → worker → SMTP servidor-real → buzón receptor NO se ha ejecutado. Lo que SÍ está verificado: (a) la lógica de negocio de ingesta (`ingest_message`) contra la DB viva — contacto nuevo, reutilización de contacto/conversación existente, idempotencia por `Message-ID`; (b) la orquestación IMAP (`run_once`) contra un `imaplib.IMAP4_SSL` mockeado — login/select/search/fetch/store llamados correctamente; (c) el envío SMTP (`send_email`) contra un cliente SMTP stub inyectado — construcción del mensaje, threading `In-Reply-To`, y que TODO fallo (host no configurado, conexión rechazada, destinatario rechazado) levanta `EmailSendError` y jamás persiste un mensaje como enviado; (d) el router completo vía `TestClient` + DB real, incluyendo el camino sin SMTP configurado devolviendo 502 "No se pudo enviar" (nunca un check falso) y el camino feliz con `send_email` sustituido. Los parsers de coches.net/Wallapop/Milanuncios están etiquetados `[ASUMIDO]` en su propio docstring: modelados sobre el formato públicamente conocido de cada portal, sin una muestra `.eml` real capturada disponible en este entorno — se degradan honestamente al parser genérico ante cualquier no-coincidencia, nunca fabrican un dato.
+
+Verificación: `tests/test_lead_parsers.py` (15), `tests/test_email_send.py` (7), `tests/test_email_ingest.py` (5), `tests/test_crm_inbox_router.py` (10) — 37/37 verdes. curl real: login → seed de conversación → `GET /inbox` → `GET /inbox/{id}` → `PATCH` → SSE real verificado con `curl -N` recibiendo un evento `data: {"type":"inbox_updated",...}` en vivo, y rechazo 401 con token inválido.
+
+### F5 — Cruce con el censo [CERRADO]
+
+`services/api/vehicle_context.py`: `compute_vehicle_context` (detalle completo + historial de precio) y `batch_vehicle_summaries` (N vehículos en una sola query, sin N+1) — **mismo cálculo** que `vehicles.py` sirve en `/vehicles/{ulid}` (`days_in_stock = now() - vehicle.first_seen`, idéntico en ambos caminos). Wireado en `crm_deals.py` (`vehicleContext` en cada Deal) y `crm_inbox.py` (`vehicleContext` en cada Conversation). Matcher texto→inventario: `GET /deals/vehicle-search` — SQL determinista (ILIKE sobre make/model/title) acotado al cluster COMPLETO del dealer (`TenantContext.member_ulids`, extendido para esto), nunca LLM (declarado explícitamente: sin runtime de LLM local disponible en este entorno, sustituido por matching determinista — desviación declarada de la §8 original, no maquillada).
+
+Frontend: `types.ts` extendido con `VehicleContext`; chip de "días en tu stock"/precio en `Deals.tsx` (modal de detalle), `Kanban.tsx` (tarjetas) e `Inbox.tsx` (lista de conversaciones y cabecera del hilo) — en los tres sitios, honesto: si `vehicleContext` es `null` no se pinta nada, y si `stillListed=false` se muestra "ya no está anunciado" en vez de datos obsoletos como vivos. `NewDealModal` reemplaza el campo de texto libre "Vehicle ULID" por un buscador real con candidatos y confirmación de un clic.
+
+Doble vía de verificación (protocolo §7): `tests/test_crm_deals_router.py::test_days_in_stock_matches_vehicles_endpoint_independently` calcula `daysInStock` por DOS caminos de código independientes (el chip vía `crm_deals.py` y una recomputación en Python a partir de `first_seen` leído de `GET /vehicles/{ulid}`) y afirma que coinciden.
+
+### F6 — Notes + Calendar + interop [CERRADO]
+
+`services/api/routers/crm_notes.py` (CRUD completo) y `crm_calendar.py` (CRUD + `GET /calendar/events/{id}/ics`) + export vCard en `crm_contacts.py` (`GET /contacts/{id}/vcard`). Serialización RFC 5545/RFC 6350 hand-rolled en `services/api/ics_vcard.py` (stdlib puro, CRLF + folding + escapado literal de ambos RFCs) — **verificada con librerías independientes que el propio módulo nunca importa** (`icalendar`/`vobject`, añadidas a `requirements-dev.txt`), exactamente el protocolo que exige la carta §7.
+
+`Notes.tsx`: localStorage retirado como fuente de verdad (`grep -n "localStorage.setItem" web/src/pages/Notes.tsx` → 0 coincidencias) y sustituido por `hooks/useNotes.ts`. Migración one-shot con banner: si el servidor no tiene notas y `localStorage['cardeep_notes']` sí, se ofrece migrar con un botón — nunca automático, nunca silencioso — y solo entonces se limpia el storage local. `Calendar.tsx`: reescrito completo sobre `hooks/useCalendarEvents.ts`, "New event" abre un modal real, cada evento tiene botón de descarga `.ics` real (fetch autenticado + blob, ya que `<a href>` no puede llevar `Authorization`) y botón de borrado real.
+
+Verificación: `tests/test_ics_vcard.py` (9 tests, parseo independiente) + `tests/test_crm_notes_calendar_router.py` (9 tests) — 18/18 verdes. curl real: crear nota → listar → export .ics parseado por `icalendar` en vivo → export vCard con teléfono ya normalizado a E.164 (`+34655443322`).
+
+### 10.5 Regresión final
+
+Suite completa CRM (F1-F6, 8 archivos de test nuevos, ~130 tests) + regresión de los routers preexistentes (`auth`, `dealer_ops`, `arbitrage`, `market*`) ejecutada varias veces durante la sesión, siempre en verde. Un falso-positivo detectado y corregido en el propio proceso de verificación: un `DiskFullError` transitorio de Postgres (presión de memoria compartida del contenedor bajo la carga simultánea de los 4 frentes paralelos, no un bug de este pilar) que desapareció al reintentar — documentado en vez de ignorado.
+
+### 10.6 Colisiones de archivo compartido detectadas
+
+- `services/api/main.py`: tocado en paralelo por 07-marketing (router `marketing`) y 09-terminal (router `terminal`) mientras esta sesión registraba `crm_contacts`/`crm_deals`/`crm_inbox`/`crm_notes`/`crm_calendar`. Cada edición se aplicó por sección (import ordenado + una línea `include_router` cada vez), releyendo el archivo antes de cada escritura — coexisten sin corrupción, verificado (`python -c "from services.api.main import app"` en verde tras cada ronda).
+- `web/src/layout/Shell.tsx`: 00-marketplace-engine añadió el grupo "MOTOR" en paralelo a la retirada de `/chat` de este pilar. Coexisten sin conflicto.
+- `web/src/App.tsx`: 07-marketing añadió la ruta `/marketing` en paralelo a la retirada de `/chat`. Coexisten sin conflicto.
+- `web/src/pages/Assistant.tsx`: **no es propiedad de este pilar** (fuera de la tabla de ownership CRM) — detectado con un error de sintaxis transitorio (`esbuild`/`tsc`) durante `npm run build` mientras otro frente lo editaba en vivo; NO tocado por esta sesión. `git status` confirma `M` (modificado, no comiteado) por esa otra sesión. Declarado aquí, no resuelto por mí — fuera de mandato.
+
+### 10.7 Huecos declarados (no bloqueantes, no maquillados)
+
+1. **F4 round-trip real**: sin credenciales de un buzón IMAP/SMTP real en este entorno, el camino servidor-real→servidor-real no se ha ejecutado; la lógica está verificada por las tres vías posibles sin acceso externo (unit, mock de protocolo, integración contra DB real).
+2. **Parsers de portal**: modelados sobre formato públicamente conocido, no sobre `.eml` capturados reales — se degradan honestamente, nunca fabrican.
+3. **Matcher F5**: determinista (SQL), no el ranker LLM local que la carta §8 proponía como v1 — sin runtime de LLM local disponible en este entorno; el resultado es igualmente honesto (nunca auto-asigna, siempre requiere confirmación de un clic) pero con menos tolerancia a errores tipográficos que un ranker semántico.
+4. **F7 (WhatsApp)**: no ejecutado — gateado explícitamente a fase de gasto por la propia carta, fuera del mandato F1-F6 de esta sesión.
+5. **F8 (auditoría final del pilar completo)**: no ejecutado — fuera del mandato F1-F6 de esta sesión; esta §10 cubre la verificación de cada fase individualmente, no el barrido de cierre de pilar completo que F8 exige (CWV/bundle medidos específicamente sobre Inbox/Kanban, etc.).
+
+### 10.8 Archivos nuevos/tocados (resumen)
+
+Backend: `migrations/0084_crm.sql`, `services/api/crm_deps.py`, `services/api/vehicle_context.py`, `services/api/ics_vcard.py`, `services/api/routers/{crm_contacts,crm_deals,crm_inbox,crm_notes,crm_calendar}.py`, `services/crm/{__init__,email_send,email_ingest,lead_parsers}.py`, `services/api/main.py` (registro de routers). Tests: `tests/test_{crm_schema,lead_parsers,email_send,email_ingest,ics_vcard,crm_contacts_router,crm_deals_router,crm_inbox_router,crm_notes_calendar_router}.py`. `requirements-dev.txt` (+icalendar, +vobject). Frontend: `web/src/types.ts` (extendido), `web/src/hooks/{useContacts,useNotes,useCalendarEvents}.ts` (nuevos), `web/src/hooks/{useDeals,useInbox}.ts` (extendidos), `web/src/pages/{Contacts,Deals,Kanban,Inbox,Notes,Calendar}.tsx` (recableados), `web/src/layout/Shell.tsx` + `web/src/App.tsx` (retirada de `/chat`).

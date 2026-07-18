@@ -299,10 +299,34 @@ Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
 
 ## BLOQUE 3 — EN CURSO (lanzado 2026-07-18, 4 frentes en paralelo)
 
-1. 06-unified-crm-chat F1-F6 — CRM completo, dueño de Contacts/Deals/Kanban/Inbox (C-4/C-5/C-10),
-   email como primer canal, cruce censo con M2 de 01. Nota: Inbox.tsx ya tiene un empty-state honesto
-   dejado por 05 (§4.4 de PROGRESO arriba) — no es una sorpresa, ya registrado en la cabecera de
-   `06-unified-crm-chat.md`.
+1. 06-unified-crm-chat F1-F6 — **✅ CERRADAS 2026-07-18** (evidencia completa en
+   `06-unified-crm-chat.md` §10 "Estado real de ejecución F1-F6" — leer ahí, no re-auditar).
+   - **F1**: `migrations/0084_crm.sql` — 11 tablas (`crm_contact/_channel/_consent/_template/
+     _deal/_deal_stage_event/_conversation/_message/_activity/_note/_event`), sin `crm_tenant`
+     (tenant = `entity_ulid` vía `dealer_membership`, AUTH-0). Guards append-only en
+     `crm_consent`/`crm_deal_stage_event`. Bug real cazado y corregido: un `$$` literal en un
+     comentario de cabecera desincronizaba `scripts/migrate.py::split_statements`. 12/12 tests.
+   - **F2**: `crm_contacts.py`+`crm_deals.py` (+`crm_deps.py` compartido), JSON plano (precedente
+     `auth.py`), registrados en `main.py`. 28/28 tests + curl real.
+   - **F3**: `Contacts/Deals/Kanban.tsx` sin mocks (grep=0), `/chat` fuera de nav/rutas, botones
+     Save/Call/Email/New-deal reales. Build verde.
+   - **F4**: `crm_inbox.py` + `services/crm/{email_send,email_ingest,lead_parsers}.py` (stdlib
+     puro) + SSE. Bug real cazado: `/inbox/stream` capturado por `/{conversation_ulid}` (orden de
+     rutas) — corregido. Hueco declarado: sin credenciales de buzón real en este entorno, el
+     round-trip IMAP/SMTP servidor-real no se ejecutó (sí: lógica de negocio, mock de protocolo
+     IMAP, stub SMTP, router completo contra DB real — 37/37 tests). Parsers de portal
+     etiquetados `[ASUMIDO]` (sin `.eml` real capturado).
+   - **F5**: `vehicle_context.py` (mismo cálculo que `/vehicles/{ulid}`, doble vía verificada en
+     test) + `/deals/vehicle-search` (matcher determinista SQL, no LLM — sin runtime local
+     disponible, desviación declarada). Chip en Deals/Kanban/Inbox.
+   - **F6**: `crm_notes.py`+`crm_calendar.py`+export vCard, `ics_vcard.py` (RFC 5545/6350 stdlib,
+     verificado con `icalendar`/`vobject` independientes). `Notes.tsx`/`Calendar.tsx` reescritos,
+     localStorage retirado con migración one-shot + banner.
+   - Colisiones compartidas detectadas sin daño: `main.py` (marketing+terminal+crm en paralelo),
+     `Shell.tsx` (MOTOR), `App.tsx` (marketing). `Assistant.tsx` (fuera de ownership CRM) hallado
+     con error transitorio de otro frente en vivo — no tocado, declarado.
+   - Fuera de mandato (no ejecutado, gateado por la propia carta): F7 (WhatsApp, fase de gasto),
+     F8 (auditoría final de cierre de pilar completo).
 2. 07-marketing F0-F5 — **✅ CERRADAS 2026-07-18** (evidencia completa en
    `07-marketing.md` §10 "Estado de ejecución real" — leer ahí, no re-auditar). Commits en `main`
    (locales, push bloqueado — ver hueco de scope OAuth abajo): `8e501a8` (F0), `8b1c47d` (F1+F2),

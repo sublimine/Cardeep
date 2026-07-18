@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import { api } from '../api/client'
+import { useCallback, useEffect, useState } from 'react'
+import { api, getStoredToken, getStoredTenantId } from '../api/client'
 import { useApi } from './useApi'
 import type { Conversation, Message } from '../types'
 
@@ -48,4 +48,23 @@ export function useInboxMutations() {
   }, [])
 
   return { reply, patch, loading }
+}
+
+// 06-unified-crm-chat F4: live refresh signal via SSE (services/api/routers/crm_inbox.py's
+// GET /inbox/stream). EventSource cannot set an Authorization header, so the session
+// token travels as a query param — the endpoint verifies it the same way get_current_session
+// does, just sourced from the query string instead of the header.
+export function useInboxStream(onUpdate: () => void): void {
+  useEffect(() => {
+    const token = getStoredToken()
+    const tenant = getStoredTenantId()
+    if (!token || !tenant) return
+
+    const url = `/api/v1/inbox/stream?token=${encodeURIComponent(token)}&tenant=${encodeURIComponent(tenant)}`
+    const source = new EventSource(url)
+    source.onmessage = () => onUpdate()
+    source.onerror = () => { /* EventSource auto-reconnects; no action needed */ }
+    return () => source.close()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 }

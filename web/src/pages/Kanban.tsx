@@ -6,10 +6,13 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, AlertCircle } from 'lucide-react'
+import { GripVertical, AlertCircle, RefreshCw } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
+import EmptyState from '../components/EmptyState'
+import Button from '../components/Button'
 import { cn } from '../lib/cn'
 import { useKanban, STAGES, STAGE_LABELS, STAGE_WIPS, type KanbanStage } from '../hooks/useKanban'
+import { useDealsSummary } from '../hooks/useDeals'
 import type { Deal } from '../types'
 
 // ── Per-stage visual config — no violet/purple ────────────────────────────────
@@ -26,43 +29,6 @@ const stageConfig: Record<KanbanStage, {
   negotiation: { zoneBg: 'bg-orange-500/5 border-orange-500/15', cardBar: 'bg-orange-400',  headerColor: 'text-orange-400',  valuePill: 'bg-orange-500/10 text-orange-400' },
   won:         { zoneBg: 'bg-emerald-500/5 border-emerald-500/15', cardBar: 'bg-emerald-400', headerColor: 'text-emerald-400', valuePill: 'bg-emerald-500/10 text-emerald-400' },
   lost:        { zoneBg: 'bg-rose-500/5 border-rose-500/15',     cardBar: 'bg-rose-400',    headerColor: 'text-rose-400',    valuePill: 'bg-rose-500/10 text-rose-400' },
-}
-
-// ── Mock board ────────────────────────────────────────────────────────────────
-
-const MOCK_BOARD: Record<KanbanStage, Deal[]> = {
-  lead: [
-    { id: 'l1', tenantId: 't', contactId: 'c1', vehicleId: 'v1', stage: 'lead',
-      createdAt: '2026-04-14T10:00:00Z', updatedAt: '2026-04-18T10:00:00Z',
-      vehicleName: 'BMW 320d xDrive 2021', contactName: 'Maria S.', price: 28500 },
-    { id: 'l9', tenantId: 't', contactId: 'c9', vehicleId: 'v9', stage: 'lead',
-      createdAt: '2026-04-16T10:00:00Z', updatedAt: '2026-04-18T09:00:00Z',
-      vehicleName: 'Renault Megane E-Tech', contactName: 'Eva F.', price: 31200 },
-  ],
-  contacted: [
-    { id: 'l2', tenantId: 't', contactId: 'c2', vehicleId: 'v2', stage: 'contacted',
-      createdAt: '2026-04-12T09:00:00Z', updatedAt: '2026-04-17T14:00:00Z',
-      vehicleName: 'Audi A4 2.0 TDI 2020', contactName: 'John D.', price: 31000 },
-    { id: 'l3', tenantId: 't', contactId: 'c3', vehicleId: 'v3', stage: 'contacted',
-      createdAt: '2026-04-13T09:00:00Z', updatedAt: '2026-04-17T11:00:00Z',
-      vehicleName: 'VW Golf 8 GTI 2022', contactName: 'Anna W.', price: 26000 },
-  ],
-  offer: [
-    { id: 'l4', tenantId: 't', contactId: 'c4', vehicleId: 'v4', stage: 'offer',
-      createdAt: '2026-04-10T08:00:00Z', updatedAt: '2026-04-16T11:00:00Z',
-      vehicleName: 'Mercedes C220 AMG', contactName: 'Peter K.', price: 35000 },
-  ],
-  negotiation: [
-    { id: 'l5', tenantId: 't', contactId: 'c5', vehicleId: 'v5', stage: 'negotiation',
-      createdAt: '2026-04-08T07:00:00Z', updatedAt: '2026-04-15T16:00:00Z',
-      vehicleName: 'Peugeot 308 GT Pack', contactName: 'Sophie L.', price: 22500 },
-  ],
-  won: [
-    { id: 'l6', tenantId: 't', contactId: 'c6', vehicleId: 'v6', stage: 'won',
-      createdAt: '2026-04-05T06:00:00Z', updatedAt: '2026-04-14T09:00:00Z',
-      vehicleName: 'BMW X3 M40i 2020', contactName: 'Hans M.', price: 44000 },
-  ],
-  lost: [],
 }
 
 // ── Kanban card ───────────────────────────────────────────────────────────────
@@ -122,6 +88,18 @@ function KanbanCard({ deal, isDragging }: { deal: Deal; isDragging?: boolean }) 
               </span>
             )}
           </div>
+
+          {/* F5: census cross-reference chip — only when it resolved for real */}
+          {deal.vehicleContext && (
+            <p className={cn(
+              'text-[10px] mt-1.5 truncate',
+              deal.vehicleContext.stillListed ? 'text-text-muted' : 'text-rose-400 font-semibold',
+            )}>
+              {deal.vehicleContext.stillListed
+                ? `${deal.vehicleContext.daysInStock}d en tu stock`
+                : 'Ya no está anunciado'}
+            </p>
+          )}
         </div>
       </div>
     </div>
@@ -214,14 +192,14 @@ function KanbanColumn({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Kanban() {
-  const { board: apiBoard, loading, error, moveCard } = useKanban()
+  const { board: apiBoard, loading, error, moveCard, reload } = useKanban()
+  const { data: summary } = useDealsSummary()
   const [activeId,    setActiveId]    = useState<string | null>(null)
   const [activeStage, setActiveStage] = useState<KanbanStage | null>(null)
 
-  // useKanban leaves `board` at its empty initial state on fetch failure (it
-  // never calls setBoard in the catch branch) — falling back on `loading`
-  // alone hides the demo data the moment the failed request settles.
-  const board = loading || error ? MOCK_BOARD : apiBoard
+  // Honest board: on fetch failure useKanban's own empty initial state stands —
+  // never a fabricated pipeline (carta §4 "regla transversal de honestidad de producto").
+  const board = apiBoard
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -262,16 +240,40 @@ export default function Kanban() {
 
   const totalDeals = STAGES.reduce((n, s) => n + (board[s] as Deal[]).length, 0)
 
+  // carta §6 Kanban spec: "Tienes 41.300 € en juego" (Σ amount×probability) + "De contacto
+  // a venta: 12 días de media" (90d lead time) — both computed once by the backend
+  // (/deals/summary), never re-derived client-side (00-MASTER.md "un solo cálculo").
+  const expectedValueLabel = summary
+    ? `€${summary.expectedValue.toLocaleString('es-ES', { maximumFractionDigits: 0 })} en juego`
+    : null
+  const leadTimeLabel = summary?.avgLeadTimeDays != null
+    ? `${summary.avgLeadTimeDays.toFixed(0)} días de contacto a venta`
+    : null
+
   return (
     <div className="p-4 md:p-6 space-y-4 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Kanban Board</h1>
-          <p className="text-sm text-text-muted mt-0.5">{totalDeals} deals in pipeline</p>
+          <p className="text-sm text-text-muted mt-0.5">
+            {totalDeals} deals in pipeline
+            {expectedValueLabel && <> · {expectedValueLabel}</>}
+            {leadTimeLabel && <> · {leadTimeLabel}</>}
+          </p>
         </div>
         {loading && <LoadingSpinner size="sm" />}
       </div>
+
+      {/* Honest error banner — never a silently-swapped fabricated board */}
+      {error && (
+        <EmptyState
+          icon={<AlertCircle className="w-6 h-6" />}
+          title="No se pudo cargar el tablero"
+          message="Hubo un error contactando al servidor."
+          action={<Button size="sm" icon={<RefreshCw className="w-3.5 h-3.5" />} onClick={reload}>Reintentar</Button>}
+        />
+      )}
 
       {/* Board */}
       <DndContext

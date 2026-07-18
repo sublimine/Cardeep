@@ -8,6 +8,16 @@ interface DealList {
   total: number
 }
 
+// 06-unified-crm-chat F2/F3: pipeline expected value (Sigma amount x probability) + 90-day
+// rolling lead time — computed ONCE on the backend (services/api/routers/crm_deals.py)
+// so Deals.tsx and Kanban.tsx never run two divergent client-side formulas for the same
+// number (00-MASTER.md doctrine: "un solo cálculo").
+export interface DealsSummary {
+  expectedValue: number
+  avgLeadTimeDays: number | null
+  byStage: Record<string, number>
+}
+
 export function useDeals(stage?: string) {
   const query = stage ? `?stage=${stage}` : ''
   return useApi<DealList>(`/deals${query}`, [query])
@@ -15,6 +25,10 @@ export function useDeals(stage?: string) {
 
 export function useDeal(id: string) {
   return useApi<Deal>(`/deals/${id}`, [id])
+}
+
+export function useDealsSummary() {
+  return useApi<DealsSummary>('/deals/summary')
 }
 
 export function useDealMutations() {

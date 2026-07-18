@@ -25,3 +25,10 @@ splink>=4,<5               # T2.2: probabilistic CIF/name cross-source merge for
                            # falls back to the deterministic resolved unit if absent (so prod runtime need
                            # not carry it until the owner enables the splink capture unit).
 duckdb>=1,<2               # Splink's in-process engine (no PG/admin needed for the dedupe).
+
+# 06-unified-crm-chat F6: independent parsers for the RFC 5545/6350 double-check
+# (carta §7 "importación real del archivo... test con librería de parsing independiente").
+# services/api/ics_vcard.py NEVER imports either — these exist ONLY in
+# tests/test_ics_vcard.py so the generator and the verifier share zero code.
+icalendar>=6,<7            # RFC 5545 .ics parser (independent of ics_vcard.py's own serializer)
+vobject>=0.9,<1            # RFC 6350 vCard parser (same independence requirement)
