@@ -1,15 +1,22 @@
-"""/health, /alerts, /sources — operational monitoring endpoints.
+"""/health, /alerts, /sources, /engine/status — operational monitoring endpoints.
 
 SU-D2 additions:
   - /health: rate-limited at RATE_HEALTH (generous — liveness probes must pass).
   - /alerts: rate-limited at RATE_DEFAULT; NOT cached (near-real-time data).
   - /sources: rate-limited at RATE_DEFAULT; NOT cached (monitoring data).
+
+F5 addition (00-marketplace-engine.md):
+  - /engine/status: rate-limited at RATE_DEFAULT; NOT cached (the badge/uptime signal §7
+    exists to make trustworthy — a cached "live" reading would defeat the whole point).
 """
 from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
+from pipeline.ops.engine_uptime import bucket_uptime, clipped_window, uptime_report_to_dict
 from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, page_slice, require_api_key
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, RATE_HEALTH, limiter
@@ -193,3 +200,148 @@ async def list_sources(
             for r in rows
         ]
         return ok(items, count=len(items))
+
+
+# ---------------------------------------------------------------------------
+# F5 (00-marketplace-engine.md): /engine/status — motor status surface.
+#
+# Exposes the §4 badge (LATIENDO/DEGRADADO/PARADO), the harvest scheduler's lease/heartbeat,
+# apscheduler_jobs (the §7 vía-B signal — a caller polling this twice >=15min apart can confirm
+# next_run_time actually advanced, independent of scheduler_lease), an honest best-effort
+# cold-start replay-progress figure, and the F6 uptime track record (30d/90d).
+# ---------------------------------------------------------------------------
+
+# The harvest scheduler's singleton advisory-lock key (pipeline/ops/scheduler.py:
+# `_SCHEDULER_SINGLETON_LOCK = 0x43415244`). Duplicated as a LOCAL literal, never imported: this
+# async asyncpg API process must not import pipeline.ops.scheduler (sync psycopg2 + subprocess,
+# heavy import chain) — same "no shared import graph with what is observed" reasoning as
+# pipeline/ops/engine_watchdog.py's own local _HARVEST_LOCK_KEY.
+_HARVEST_LOCK_KEY: int = 0x43415244  # 1128354372
+
+# Mirrors pipeline.ops.scheduler.TICK_INTERVAL_MINUTES (local literal, same reasoning as above —
+# kept honest by a contract test, tests/test_engine_status_api.py::test_tick_interval_matches_
+# scheduler_constant, which imports the real constant and asserts equality without importing it
+# at runtime here).
+_TICK_INTERVAL_MINUTES: int = 15
+
+# §4 badge boundaries: LATIENDO age < 2xTICK (30min); DEGRADADO age < 24h; PARADO otherwise/no lease.
+_BADGE_LATIENDO_MAX_SECONDS: int = 2 * _TICK_INTERVAL_MINUTES * 60
+_BADGE_DEGRADADO_MAX_SECONDS: int = 24 * 3600
+
+
+def _engine_badge(age_seconds: float | None) -> str:
+    """Pure §4 badge classification. ``age_seconds=None`` (no lease row at all) is PARADO."""
+    if age_seconds is None:
+        return "PARADO"
+    if age_seconds < _BADGE_LATIENDO_MAX_SECONDS:
+        return "LATIENDO"
+    if age_seconds < _BADGE_DEGRADADO_MAX_SECONDS:
+        return "DEGRADADO"
+    return "PARADO"
+
+
+def _job_next_run_iso(next_run_time: float | None) -> str | None:
+    """apscheduler_jobs.next_run_time is a POSIX float (APScheduler's own storage format,
+    SQLAlchemyJobStore) — convert to an ISO-8601 UTC string for the JSON payload. None
+    (a paused/removed job) stays None."""
+    if next_run_time is None:
+        return None
+    return datetime.fromtimestamp(next_run_time, tz=timezone.utc).isoformat()
+
+
+@router.get("/engine/status")
+@limiter.limit(RATE_DEFAULT)
+async def engine_status(
+    request: Request,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """F5: motor status — badge + lease/heartbeat + apscheduler jobs + cold-start replay
+    progress + F6 uptime track record (30d/90d).
+
+    Badge (§4 row 1) is computed in SQL (``age_seconds = EXTRACT(EPOCH FROM now()-last_heartbeat)``)
+    so the LATIENDO/DEGRADADO/PARADO boundary is never skewed by API-host vs DB-host clock drift.
+
+    ``replay_progress`` is an honest APPROXIMATION, not the exact "fuentes DUE al arrancar" the
+    carta describes: that denominator (how many sources were overdue at the exact instant the
+    current holder claimed the lease) is not captured anywhere and cannot be reconstructed
+    retroactively. What IS verifiable — and is what this reports — is how many of the registered
+    sources have a successful harvest (``last_ok``) at or after the current holder's
+    ``started_at``, out of the total registered; the ``note`` field says so explicitly rather
+    than silently presenting an approximation as the exact promised metric.
+
+    ``uptime`` (F6) is computed from ``engine_heartbeat_log`` (migration 0085), which did not
+    exist before this fase shipped — a fresh deployment reports ``full_window_available: false``
+    and a short ``observed_from``/``observed_to`` span rather than fabricating pre-ledger history
+    as downtime (pipeline.ops.engine_uptime's own anti-alucinación guard).
+
+    Not cached: this endpoint IS the near-real-time trust signal §7 exists to serve.
+    """
+    async with request.app.state.pool.acquire() as c:
+        lease = await c.fetchrow(
+            """
+            SELECT holder, pid, started_at, last_heartbeat,
+                   EXTRACT(EPOCH FROM (now() - last_heartbeat)) AS age_seconds
+              FROM scheduler_lease
+             WHERE lock_key = $1
+            """,
+            _HARVEST_LOCK_KEY,
+        )
+        age_seconds = float(lease["age_seconds"]) if lease is not None else None
+
+        jobs = await c.fetch("SELECT id, next_run_time FROM apscheduler_jobs ORDER BY next_run_time")
+
+        sources_total = await c.fetchval("SELECT count(*) FROM source_health")
+        sources_harvested_since_start = None
+        if lease is not None:
+            sources_harvested_since_start = await c.fetchval(
+                "SELECT count(*) FROM source_health WHERE last_ok >= $1",
+                lease["started_at"],
+            )
+
+        # F6 — fetch once, derive BOTH 30d and 90d reports from the same beat list (no duplicate
+        # query for the two windows).
+        now_db = await c.fetchval("SELECT now()")
+        observed_since = await c.fetchval(
+            "SELECT min(beat_at) FROM engine_heartbeat_log WHERE lock_key = $1",
+            _HARVEST_LOCK_KEY,
+        )
+        beats: list[datetime] = []
+        if observed_since is not None:
+            beat_rows = await c.fetch(
+                "SELECT beat_at FROM engine_heartbeat_log "
+                "WHERE lock_key = $1 AND beat_at >= $2 ORDER BY beat_at",
+                _HARVEST_LOCK_KEY, now_db - timedelta(days=90),
+            )
+            beats = [r["beat_at"] for r in beat_rows]
+
+    uptime: dict[str, dict] = {}
+    for days in (30, 90):
+        win_start, win_end, full = clipped_window(
+            now=now_db, requested_days=days, observed_since=observed_since)
+        report = bucket_uptime(beats, window_start=win_start, window_end=win_end)
+        uptime[f"{days}d"] = uptime_report_to_dict(report, requested_days=days, full_window_available=full)
+
+    return ok({
+        "badge": _engine_badge(age_seconds),
+        "lease": {
+            "holder": lease["holder"] if lease is not None else None,
+            "pid": lease["pid"] if lease is not None else None,
+            "started_at": str(lease["started_at"]) if lease is not None else None,
+            "last_heartbeat": str(lease["last_heartbeat"]) if lease is not None else None,
+            "age_seconds": age_seconds,
+        },
+        "jobs": [
+            {"id": j["id"], "next_run_time": _job_next_run_iso(j["next_run_time"])}
+            for j in jobs
+        ],
+        "replay_progress": {
+            "sources_total": sources_total,
+            "sources_harvested_since_holder_started": sources_harvested_since_start,
+            "note": (
+                "aproximado: fuentes con last_ok posterior al arranque del holder actual, sobre "
+                "el total registrado — NO es 'fuentes DUE al arrancar' (ese dato no se captura "
+                "retroactivamente)"
+            ),
+        },
+        "uptime": uptime,
+    })

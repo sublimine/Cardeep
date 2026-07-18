@@ -146,6 +146,12 @@ CANONICAL_KEY_BACKFILL_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_CANONKEY
 # UPDATEs of the estimate columns only, migration 0076) — never flips cadence_mode.
 CADENCE_ESTIMATE_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_CADENCE_ESTIMATE_CADENCE_HOURS", "24"))
 
+# F6 uptime ledger (00-marketplace-engine.md): retention window for engine_heartbeat_log
+# (migration 0085) and how often the purge job runs. €0 (a single range DELETE, doctrine
+# INSERT-only + purge by range — see pipeline.ops.lock_heartbeat.purge_heartbeat_log).
+HEARTBEAT_LOG_RETENTION_DAYS: int = int(os.environ.get("CARDEEP_HEARTBEAT_LOG_RETENTION_DAYS", "90"))
+HEARTBEAT_LOG_PURGE_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_HEARTBEAT_LOG_PURGE_CADENCE_HOURS", "24"))
+
 # Circuit breaker: skip sources with consecutive_fails >= this threshold
 BREAKER_TRIP_AT: int = 3
 
@@ -773,6 +779,36 @@ def cadence_estimate_job() -> None:
     log.info("=== cadence_estimate END ===")
 
 
+def heartbeat_log_purge_job() -> None:
+    """Daily job (F6, 00-marketplace-engine.md): bulk-purge engine_heartbeat_log rows older
+    than HEARTBEAT_LOG_RETENTION_DAYS (default 90 days).
+
+    Pure range DELETE (pipeline.ops.lock_heartbeat.purge_heartbeat_log) — never an UPDATE, never
+    a per-row delete: the same anti-dead-tuple discipline the stack already applies to
+    vehicle_event/harvest_run. Best-effort: a missing table (DB without migration 0085) purges 0
+    rows silently; any other DB error is logged and the job exits so the scheduler continues —
+    a failed purge must never take down the heartbeat itself.
+    """
+    from pipeline.ops.lock_heartbeat import purge_heartbeat_log
+
+    log.info("=== heartbeat_log_purge START ===")
+    conn: psycopg2.extensions.connection | None = None
+    try:
+        conn = psycopg2.connect(_RAW_DSN)
+        conn.autocommit = True
+        deleted = purge_heartbeat_log(conn, retention_days=HEARTBEAT_LOG_RETENTION_DAYS)
+        log.info(
+            "heartbeat_log_purge: deleted %d row(s) older than %d days",
+            deleted, HEARTBEAT_LOG_RETENTION_DAYS,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.error("heartbeat_log_purge: unexpected error: %s", exc)
+    finally:
+        if conn is not None:
+            conn.close()
+    log.info("=== heartbeat_log_purge END ===")
+
+
 # ---------------------------------------------------------------------------
 # Dry-run mode
 # ---------------------------------------------------------------------------
@@ -1125,6 +1161,21 @@ def _start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=300,
+    )
+
+    # F6 (00-marketplace-engine.md): daily purge of engine_heartbeat_log rows past retention.
+    # Additive job id; touches no SourceEntry/source_health/connector key. Best-effort + inert
+    # without migration 0085.
+    scheduler.add_job(
+        heartbeat_log_purge_job,
+        trigger="interval",
+        hours=HEARTBEAT_LOG_PURGE_CADENCE_HOURS,
+        id="heartbeat_log_purge",
+        name="cardeep F6 heartbeat ledger purge",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
     )
 
     log.info(

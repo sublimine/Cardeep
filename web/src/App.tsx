@@ -27,8 +27,11 @@ import Pricing from './pages/Pricing'
 import Notes from './pages/Notes'
 import Profile from './pages/Profile'
 import Support from './pages/Support'
-import Chat from './pages/Chat'
+// Chat.tsx (internal team-chat simulator) intentionally NOT imported (06-unified-crm-chat
+// F3): decommissioned from the nav/routes, code left parked per the carta's decision.
 import Assistant from './pages/Assistant'
+import Motor from './pages/Motor'
+import Terminal from './pages/Terminal'
 import { useAuthContext } from './auth/AuthContext'
 
 function RootRedirect() {
@@ -92,8 +95,10 @@ export default function App() {
           <Route path="notes"      element={<Notes />} />
           <Route path="profile"    element={<Profile />} />
           <Route path="support"    element={<Support />} />
-          <Route path="chat"       element={<Chat />} />
+          {/* /chat route removed (06-unified-crm-chat F3): see import comment above. */}
           <Route path="assistant"  element={<Assistant />} />
+          <Route path="motor"      element={<Motor />} />
+          <Route path="terminal"   element={<Terminal />} />
           <Route path="settings"   element={<Settings />} />
           <Route path="*"          element={<Navigate to="/dashboard" replace />} />
         </Route>

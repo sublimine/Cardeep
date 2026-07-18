@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, 
 import { PageSkeleton } from '../components/LoadingSpinner'
 import Card from '../components/Card'
 import PremiumGate from '../components/PremiumGate'
+import EngineFreshnessStamp from '../components/EngineFreshnessStamp'
 import { useApi } from '../hooks/useApi'
 import { useIsDark } from '../hooks/useIsDark'
 import { useNavigate } from 'react-router-dom'
@@ -778,6 +779,11 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto p-[24px_24px_40px]" style={{ maxWidth: 1360 }}>
+
+      {/* F5 (00-marketplace-engine.md §6a): real freshness/coverage stamp — no-op when the
+          user has no claimed dealer profile or the read fails, so the mock sections below are
+          never blocked by it. */}
+      <EngineFreshnessStamp />
 
       {/* Page header */}
       <motion.div

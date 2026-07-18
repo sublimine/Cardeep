@@ -49,12 +49,22 @@ is_lease_stale(last_heartbeat, *, now=None, ttl_minutes=None) -> bool
     Pure TTL predicate: True when now - last_heartbeat exceeds the TTL. No DB.
 
 record_heartbeat(conn, lock_key, *, holder=None, pid=None) -> bool
-    Best-effort UPSERT bumping last_heartbeat=now() for lock_key. Returns whether
-    the write landed (False = lease table missing / DB error, logged, never raised).
+    Best-effort UPSERT bumping last_heartbeat=now() for lock_key, PLUS one append-only
+    row in engine_heartbeat_log (F6, migration 0085) — the uptime history scheduler_lease
+    itself cannot hold. Returns whether the LEASE write landed (False = lease table
+    missing / DB error, logged, never raised); the ledger insert is independently
+    best-effort and never affects this return value (see its own try/except below).
 
 read_lease(conn, lock_key) -> dict | None
     Best-effort read of the scheduler_lease row for lock_key, or None if absent /
     table missing. Never raises.
+
+purge_heartbeat_log(conn, *, retention_days=None, now=None) -> int
+    F6: bulk DELETE of engine_heartbeat_log rows older than the retention window
+    (default CARDEEP_HEARTBEAT_LOG_RETENTION_DAYS, else 90). Pure range purge — never an
+    UPDATE, never a row-by-row delete (the stack's anti-dead-tuple doctrine). Best-effort:
+    returns 0 (not an error) on a DB without migration 0085 applied. Returns the number of
+    rows removed.
 
 check_and_clear_stale_lease(conn, lock_key, *, now=None, ttl_minutes=None) -> bool
     Pre-acquire diagnostic: if a lease exists and is stale, log CRITICAL and return
@@ -90,6 +100,15 @@ _DEFAULT_TTL_MIN: int = 6  # 3× the 2-min heartbeat — matches the design spec
 
 # The lease table from migration 0054. Centralized so a rename is a one-line change.
 _LEASE_TABLE: str = "scheduler_lease"
+
+# F6 (migration 0085): the append-only heartbeat history table. Centralized for the same reason.
+_HEARTBEAT_LOG_TABLE: str = "engine_heartbeat_log"
+
+# Default retention for engine_heartbeat_log (F6 purge). 90 days matches the carta's own
+# suggestion (00-marketplace-engine.md §5.1 item 1) — long enough for the 90-day track record,
+# short enough that the ledger never becomes an unbounded table (~90d * 30 beats/hour * 2
+# lock_keys is a few hundred thousand rows at most, trivially indexed).
+_DEFAULT_RETENTION_DAYS: int = 90
 
 
 def _positive_int_env(name: str, default: int) -> int:
@@ -208,14 +227,95 @@ def record_heartbeat(
     try:
         with conn.cursor() as cur:
             cur.execute(sql, params)
-        return True
+        landed = True
     except psycopg2.errors.UndefinedTable:  # type: ignore[attr-defined]
         _warn_missing_lease_table(conn)
-        return False
+        landed = False
     except psycopg2.Error as exc:  # any other DB error — stay best-effort
         log.warning("lease heartbeat write failed for lock_key=%s: %s", lock_key, exc)
         _rollback_quietly(conn)
+        landed = False
+
+    # F6 (migration 0085): append one row to the INSERT-only ledger, independent of whether the
+    # lease UPSERT above landed — a ledger table missing on an older DB must never be conflated
+    # with a lease-table failure (they are separate migrations, separate failure modes). Wrapped
+    # in its own try/except so a ledger-only problem never turns into a lease-heartbeat failure.
+    _append_heartbeat_log(conn, lock_key, holder=holder, pid=effective_pid)
+
+    return landed
+
+
+def _append_heartbeat_log(
+    conn: "psycopg2.extensions.connection",
+    lock_key: int,
+    *,
+    holder: Optional[str],
+    pid: int,
+) -> bool:
+    """Best-effort INSERT of one row into engine_heartbeat_log (F6, migration 0085).
+
+    Never raises, never updates an existing row (append-only by construction — there is no
+    ON CONFLICT clause because there is no unique constraint to conflict on: every heartbeat is
+    its own new row). Returns whether the insert landed (False = table missing / DB error).
+    """
+    sql = (
+        f"INSERT INTO {_HEARTBEAT_LOG_TABLE} (lock_key, holder, pid, beat_at) "
+        "VALUES (%(lock_key)s, %(holder)s, %(pid)s, now())"
+    )
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, {"lock_key": lock_key, "holder": holder, "pid": pid})
+        return True
+    except psycopg2.errors.UndefinedTable:  # type: ignore[attr-defined]
+        log.warning(
+            "%s table is missing — migration 0085_engine_heartbeat_log.sql not applied; "
+            "uptime ledger is INERT (heartbeat/lease behavior is unaffected)",
+            _HEARTBEAT_LOG_TABLE,
+        )
+        _rollback_quietly(conn)
         return False
+    except psycopg2.Error as exc:  # any other DB error — stay best-effort
+        log.warning("heartbeat ledger insert failed for lock_key=%s: %s", lock_key, exc)
+        _rollback_quietly(conn)
+        return False
+
+
+def purge_heartbeat_log(
+    conn: "psycopg2.extensions.connection",
+    *,
+    retention_days: Optional[int] = None,
+    now: Optional[datetime] = None,
+) -> int:
+    """Bulk-DELETE engine_heartbeat_log rows older than the retention window (F6).
+
+    A pure range purge — ``DELETE ... WHERE beat_at < cutoff``, never a per-row delete and never
+    an UPDATE — the anti-dead-tuple discipline the rest of the stack already applies to
+    vehicle_event/harvest_run. Called from a daily scheduler job
+    (pipeline.ops.scheduler.heartbeat_log_purge_job), never on the request path.
+
+    Best-effort: returns 0 (not an error, never raises) when the table is missing (DB without
+    migration 0085) or on any DB error (logged + rolled back). Returns the number of rows removed.
+    """
+    days = _DEFAULT_RETENTION_DAYS if retention_days is None else retention_days
+    reference = datetime.now(timezone.utc) if now is None else _as_aware_utc(now)
+    cutoff = reference - timedelta(days=days)
+    sql = f"DELETE FROM {_HEARTBEAT_LOG_TABLE} WHERE beat_at < %(cutoff)s"
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, {"cutoff": cutoff})
+            deleted = cur.rowcount
+        return deleted
+    except psycopg2.errors.UndefinedTable:  # type: ignore[attr-defined]
+        log.warning(
+            "%s table is missing — migration 0085_engine_heartbeat_log.sql not applied; "
+            "nothing to purge", _HEARTBEAT_LOG_TABLE,
+        )
+        _rollback_quietly(conn)
+        return 0
+    except psycopg2.Error as exc:  # any other DB error — stay best-effort
+        log.warning("heartbeat ledger purge failed: %s", exc)
+        _rollback_quietly(conn)
+        return 0
 
 
 def read_lease(

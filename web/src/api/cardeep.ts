@@ -3,6 +3,8 @@
 // Base: VITE_API_BASE (default the canonical local API on :8090). This REPLACES the CARDEX
 // /api/v1 Bearer client for all CARDEEP-data wiring; pages import from here.
 
+import type { Bar } from '../components/chart-engine/types';
+
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? 'http://127.0.0.1:8090';
 const API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? '';
 
@@ -358,6 +360,161 @@ export interface GeoArbitrageResponse {
   disclaimer: string;
 }
 
+// ---------------------------------------------------------------------------
+// 00-marketplace-engine F5/F6 — engine status ("Sala de máquinas") + ops surface.
+// Append-only section (00-MASTER.md §5.1): do not reorder/rename methods above.
+// ---------------------------------------------------------------------------
+export type SourceHealthStatus = 'healthy' | 'degraded' | 'down' | 'unknown';
+export interface SourceHealthRow {
+  source_key: string;
+  status: SourceHealthStatus;
+  consecutive_fails: number;
+  last_ok: string | null;
+  last_fail: string | null;
+  is_tier1: boolean;
+}
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+export interface AlertRow {
+  id: number;
+  origin: string;
+  severity: AlertSeverity;
+  message: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+}
+export type EngineBadge = 'LATIENDO' | 'DEGRADADO' | 'PARADO';
+export interface EngineLease {
+  holder: string | null;
+  pid: number | null;
+  started_at: string | null;
+  last_heartbeat: string | null;
+  age_seconds: number | null;
+}
+export interface EngineJob {
+  id: string;
+  next_run_time: string | null;
+}
+export interface EngineReplayProgress {
+  sources_total: number;
+  sources_harvested_since_holder_started: number | null;
+  note: string;
+}
+export interface EngineUptimeWindow {
+  requested_days: number;
+  full_window_available: boolean;
+  observed_from: string;
+  observed_to: string;
+  bucket_minutes: number;
+  buckets_total: number;
+  buckets_with_beat: number;
+  uptime_pct: number | null;
+}
+export interface EngineStatus {
+  badge: EngineBadge;
+  lease: EngineLease;
+  jobs: EngineJob[];
+  replay_progress: EngineReplayProgress;
+  uptime: { '30d': EngineUptimeWindow; '90d': EngineUptimeWindow };
+}
+
+// ---- 09-trading-terminal (F2): /terminal/* — real market_bucket_daily aggregation ----
+// Ownership: 00-MASTER.md C-1 — this pilar owns services/api/routers/terminal.py and the
+// /terminal/* namespace exclusively (SEPARATE from 01's market.py/market.py). C1 symbol =
+// make+model+province_code (NULL province = national roll-up), no fuel/year axis.
+export interface TerminalSymbol {
+  symbol_key: string;
+  make: string;
+  model: string;
+  province_code: string | null;
+  level: 'model_prov' | 'model_nat';
+  first_bucket: string;
+  last_bucket: string;
+}
+export type TerminalRange = '1M' | '3M' | '6M' | '1Y' | 'ALL';
+export interface TerminalPricePressure {
+  n_active: number;
+  n_with_price_cut: number;
+  pct: number | null;
+  window_days: number;
+  alert: boolean;
+}
+export interface TerminalLatestBucket {
+  bucket_date: string;
+  new_count: number;
+  gone_count: number;
+  dom_p50_days: number | null;
+  computed_at: string;
+}
+export interface TerminalStatsInsufficient {
+  symbol_key: string;
+  insufficient_sample: true;
+  active_count: number;
+  min_required: number;
+  reason: string;
+}
+export interface TerminalStats {
+  symbol_key: string;
+  insufficient_sample: false;
+  active_count: number;
+  n_dealers: number;
+  n_dealers_on_platform: number;
+  top5_stock: number;
+  concentration_top5_pct: number | null;
+  price_pressure: TerminalPricePressure;
+  dealers_new_30d: number;
+  latest_bucket: TerminalLatestBucket | null;
+  sample_vehicles: TerminalSampleVehicle[];
+}
+export interface TerminalSampleVehicle {
+  vehicle_ulid: string;
+  year: number | null;
+  km: number | null;
+  price: number | null;
+  deep_link: string;
+  cdp_code: string;
+}
+export interface TerminalRating {
+  vehicle_ulid: string;
+  symbol_key: string;
+  price?: number;
+  segment?: { make: string | null; model: string | null; year: number | null; fuel: string | null; province_code: string | null };
+  position: {
+    ratio: number;
+    band: PricePositionBand;
+    cuts: { below_market_lt: number; above_market_gt: number };
+    segment_p50: number;
+    segment_n: number;
+    scope: 'prov' | 'nat';
+    fallback_to_national: boolean;
+  } | null;
+  reason?: string;
+}
+export interface TerminalScreenerRow {
+  symbol_key: string;
+  make: string;
+  model: string;
+  province_code: string | null;
+  bucket_date: string;
+  active_count: number;
+  median_price: number | null;
+  new_count: number;
+  gone_count: number;
+  price_change_down_count: number;
+  price_change_up_count: number;
+  dom_p50_days: number | null;
+}
+export interface TerminalSaleInferenceBucket { n: number; avg_confidence: number | null }
+export interface TerminalSaleInference {
+  symbol_key: string;
+  probable_sale: TerminalSaleInferenceBucket;
+  relisted: TerminalSaleInferenceBucket;
+  delisted: TerminalSaleInferenceBucket;
+  badge: 'verificado' | 'sin_verificar';
+  false_positive_rate_pct: number | null;
+  latest_audit_at: string | null;
+  audit_freshness_days: number;
+}
+
 export const cardeep = {
   stats: (signal?: AbortSignal) => getData<{ counts: Stats }>('/stats', undefined, signal).then((d) => d.counts),
   geoSeal: (signal?: AbortSignal) => getData<GeoSeal>('/geo/seal', undefined, signal),
@@ -399,4 +556,31 @@ export const cardeep = {
       { year, fuel, province: province ?? undefined },
     ),
   marketPricePosition: (ulid: string) => getData<PricePosition>(`/market/price-position/${ulid}`),
+  // 00-marketplace-engine F5/F6
+  engineStatus: (signal?: AbortSignal) => getData<EngineStatus>('/engine/status', undefined, signal),
+  sources: (signal?: AbortSignal) => getData<SourceHealthRow[]>('/sources', undefined, signal),
+  alerts: (page = 1, size = 50, signal?: AbortSignal) =>
+    getPaged<AlertRow>('/alerts', { page, size }, signal),
+  // 09-trading-terminal F2
+  terminalSymbols: (q: string, opts: { province?: string; limit?: number } = {}, signal?: AbortSignal) =>
+    getData<TerminalSymbol[]>('/terminal/symbols', { q, province: opts.province, limit: opts.limit }, signal),
+  terminalOhlc: (symbolKey: string, range: TerminalRange = 'ALL', signal?: AbortSignal) =>
+    getData<Bar[]>(`/terminal/${encodeURIComponent(symbolKey)}/ohlc`, { range }, signal),
+  terminalStats: (symbolKey: string, signal?: AbortSignal) =>
+    getData<TerminalStats | TerminalStatsInsufficient>(`/terminal/${encodeURIComponent(symbolKey)}/stats`, undefined, signal),
+  terminalRating: (symbolKey: string, vehicleUlid: string, signal?: AbortSignal) =>
+    getData<TerminalRating>(`/terminal/${encodeURIComponent(symbolKey)}/rating/${vehicleUlid}`, undefined, signal),
+  terminalMethodology: (signal?: AbortSignal) =>
+    getData<Record<string, unknown>>('/terminal/methodology', undefined, signal),
+  terminalScreener: (
+    opts: { province?: string; make?: string; sort?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ) =>
+    getData<TerminalScreenerRow[]>(
+      '/terminal/screener',
+      { province: opts.province, make: opts.make, sort: opts.sort, limit: opts.limit },
+      signal,
+    ),
+  terminalSaleInference: (symbolKey: string, signal?: AbortSignal) =>
+    getData<TerminalSaleInference>(`/terminal/${encodeURIComponent(symbolKey)}/sale-inference`, undefined, signal),
 };

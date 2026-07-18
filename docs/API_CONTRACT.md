@@ -496,6 +496,40 @@ Ordered `down → degraded → unknown → ok` then `consecutive_fails DESC`. Pe
 `source_key, status, consecutive_fails, last_ok, last_fail, is_tier1`. Live
 `[VERIFIED]`: `degraded` sources with timestamps.
 
+### 4.19 `GET /engine/status` — motor status (00-marketplace-engine.md F5/F6)
+
+`ops.py` (F5). **Not cached** — this endpoint IS the near-real-time trust signal
+the carta's §7 two-path verification discipline exists to serve. `RATE_DEFAULT`.
+
+- `badge`: `LATIENDO` (age<30min) / `DEGRADADO` (age<24h) / `PARADO` (>=24h or
+  no lease row) — computed in SQL (`EXTRACT(EPOCH FROM now()-last_heartbeat)`)
+  against `scheduler_lease` so the boundary is never skewed by API-host vs
+  DB-host clock drift.
+- `lease`: `holder, pid, started_at, last_heartbeat, age_seconds` of the harvest
+  scheduler's singleton advisory lock (`scheduler_lease`, migration 0054).
+- `jobs`: every `apscheduler_jobs` row (`id, next_run_time` ISO) — the §7 vía-B
+  signal (poll twice ≥15min apart and confirm `next_run_time` actually
+  advanced, independent of `scheduler_lease`).
+- `replay_progress`: `sources_total` (all of `source_health`) and
+  `sources_harvested_since_holder_started` (`last_ok >= lease.started_at`) —
+  an honest APPROXIMATION of cold-start replay, not the exact "fuentes DUE al
+  arrancar" the carta's §4 names (that denominator is not captured
+  retroactively); the `note` field says so explicitly.
+- `uptime`: `{"30d": ..., "90d": ...}` (F6) computed from `engine_heartbeat_log`
+  (migration 0085, INSERT-only, one row per ~2-min heartbeat). Each window:
+  `requested_days, full_window_available, observed_from, observed_to,
+  bucket_minutes (15), buckets_total, buckets_with_beat, uptime_pct`.
+  `full_window_available=false` and a short `observed_from`↔`observed_to` span
+  is the HONEST answer before the ledger has 30/90 days of real history — a
+  fresh deployment never reports a fabricated 0%/100%
+  (`pipeline/ops/engine_uptime.py`'s anti-alucinación guard).
+
+Live `[VERIFIED]` 2026-07-18: `badge=LATIENDO`, `lease.holder=harvest`,
+`replay_progress` `39/56` sources harvested since the current holder's
+`started_at`, `uptime.30d.uptime_pct=100.0` (buckets_total=1 — the ledger had
+just started; see the carta §9 F6 for the destructive-test evidence of a real
+provoked outage reflected in this same field).
+
 ---
 
 ## 5. Authentication — `CARDEEP_API_KEY`

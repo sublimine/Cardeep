@@ -229,16 +229,21 @@ single-producer).
    `migrations/0076...`, `scripts/{backtest,enable}_adaptive_cadence.py`, tests nuevos,
    esta carta).
 
-## BLOQUE 2 — EN CURSO (lanzado 2026-07-18, 3 frentes en paralelo)
+## BLOQUE 2 — CERRADO 2026-07-18 (3/3, 0 errores, task w2k2swd6o)
 
 Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
-1. 03-garage-fleet F1-F4 — primeras escrituras reales de la API (hoy 100% solo-lectura); consume
-   AUTH-0 (`app_user`/`dealer_membership`) y 01 (`GET /market/price-position/{vehicle_ulid}` para K9,
-   ventana MDS 45d por C-7).
-2. 04-arbitrage F1-F5 + F6 (identidad-captura de fondo, C-9) — deal-score sobre
-   `pipeline/market/cohort.py` (helper ya factorizado por 01), dueño único de `/arbitrage` (C-2);
-   F6 puebla `photo_hash`/extiende captura de VIN — desbloquea al 02 (hoy 0 edges por vin_ref
-   100% OEM-CPO).
+1. 03-garage-fleet F1-F4 — **✅ CERRADAS** (`03-garage-fleet.md` §10). Primera escritura real de
+   toda la API (`fleet_ops`/`fleet_ops_event`, router `dealer_ops.py`), auth real dealer↔cdp vía
+   AUTH-0, aislamiento entre dealers verificado (403 cruzado probado), comparables consumiendo M1-M10
+   de 01. Commits `b9bd4d9 84017db 4b27834 17f378f`.
+2. 04-arbitrage F1-F5 + F6 (identidad-captura de fondo, C-9) — **✅ F1-F5 CERRADAS, F6 parcial y
+   declarado** (`04-arbitrage.md` §10). Deal-score real (1.582.295 vehículos, doble vía 0,0%
+   divergencia), dueño único de `/arbitrage`. **Hallazgo crítico F6**: de 2.520.623 `vin_ref`, solo
+   41.510 (1,6%) eran VINs reales — 2.479.113 (98,4%) eran IDs de listado mal etiquetados
+   (`autoscout24.py:208`); remediado en vivo (migración `0083`, 0 contaminados restantes). Explica
+   directamente por qué 02-history-reports dio 0 edges. Hueco declarado: ~15 conectores más con el
+   mismo patrón siguen sin corregir (recontaminarán en el próximo harvest, lista exacta en §10).
+   Commits `bfb4aa1 cac2f0c 1bda49f 32f127a`.
 3. 05-multiposting F0-F2 (Frente A, solo-lectura) — matriz de publicación.
    **✅ CERRADAS 2026-07-18** (evidencia completa en `05-multiposting.md` — corrección de
    deriva + F0/F1/F2 registrados inline en esa misma carta — leer ahí, no re-auditar).
@@ -292,9 +297,50 @@ Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
      y Frente C (coches.net/Wallapop/Milanuncios) explícitamente NO tocados — gated F4/F5/F7,
      fuera del mandato de esta ejecución.
 
+## BLOQUE 3 — EN CURSO (lanzado 2026-07-18, 4 frentes en paralelo)
+
+1. 06-unified-crm-chat F1-F6 — CRM completo, dueño de Contacts/Deals/Kanban/Inbox (C-4/C-5/C-10),
+   email como primer canal, cruce censo con M2 de 01. Nota: Inbox.tsx ya tiene un empty-state honesto
+   dejado por 05 (§4.4 de PROGRESO arriba) — no es una sorpresa, ya registrado en la cabecera de
+   `06-unified-crm-chat.md`.
+2. 07-marketing F0-F5 — auditoría de anuncio, feeds, copy grounded; consume M2/C2 de 01; F6 integra
+   con 05/06.
+3. 09-trading-terminal Fases1-6 — agregación diaria + terminal real bajo `/terminal/*` (C-1);
+   inferencia de venta consumiendo `lifetime_link` de 02 (C-9) — con el hallazgo de 04-F6 (vin_ref
+   remediado, aunque ~15 conectores siguen sin corregir) como contexto de calidad de dato disponible.
+4. 00-F5/F6 — superficie de estado (`/engine/status`) + ledger de uptime — **✅ AMBAS CERRADAS
+   2026-07-18** (evidencia completa en `00-marketplace-engine.md` §9 F5/F6 — leer ahí, no
+   re-auditar). F5: endpoint `/engine/status` (badge §4 + lease + apscheduler jobs + replay
+   progress honesto + uptime) + página `Motor.tsx` ("Sala de máquinas", ruta `/motor`, grupo
+   de nav propio "MOTOR") + sello de frescura/cobertura dealer (`EngineFreshnessStamp.tsx`,
+   integrado en `Dashboard.tsx` con una inserción de 2 líneas para no crecer un archivo ya en
+   el límite de tamaño) — cero mock, cero SQL propio donde ya existía endpoint (`/sources`,
+   `/alerts`, `/geo/seal`, `/entities/{cdp}/delta` reutilizados tal cual). F6: migración
+   `0085_engine_heartbeat_log.sql` (ledger INSERT-only) + `pipeline/ops/lock_heartbeat.py`
+   extendido (escritura doble lease+ledger, independiente por fallos) +
+   `pipeline/ops/engine_uptime.py` (nuevo, bucketing puro + guardia antialucinación
+   `clipped_window` que nunca fabrica historial pre-ledger como caída) + job diario de purga
+   por rango (retención 90d). **Prueba destructiva real ejecutada**: ~6 min de caída
+   provocada de `cardeep-autopilot` (2026-07-18T02:25:58Z→02:32:03Z), verificada por 3 vías
+   independientes que coinciden al segundo (ledger propio 476,19s bruto = 107s slack normal +
+   364,07s caída real de Docker + 5s arranque; el watchdog externo de F1 corrobora
+   `DB_UNREACHABLE`→`LATIENDO` en la misma ventana). 40 tests nuevos (20
+   `test_engine_uptime.py` + 20 `test_engine_status_api.py`, estos últimos contra la DB VIVA)
+   + `test_lock_heartbeat.py` extendido (75 tests, 0 regresión) — todos verdes. Desplegado en
+   vivo vía `docker cp` (NO rebuild — los otros 3 frentes de este bloque tienen trabajo sin
+   commitear en `services/api/cache.py`/`marketing.py`/`crm_*`/`terminal/*`, confirmado por
+   `git status` antes de tocar nada) + `docker restart cardeep-autopilot`; API nativa de
+   `:8090` reiniciada para servir el endpoint nuevo. Frontend: `tsc --noEmit` + `vite build`
+   verdes (3617 módulos) integrando en caliente el trabajo concurrente de 06/07/09. Colisión
+   de archivo compartido observada y resuelta sola: `App.tsx` tuvo un estado transitorio
+   roto (`Cannot find name 'Chat'`) durante ~1 typecheck mientras 06-F3 completaba su propio
+   retiro de `/chat` en dos pasos — se resolvió solo antes de que yo tocara el archivo, cero
+   intervención necesaria, declarado aquí para que no se lea como sorpresa. Queda F7 (governor
+   Redis), gateado al horizonte EU por la propia carta — YAGNI mientras España quepa en un
+   proceso.
+
 ## Próximos bloques (no empezar sin cerrar el anterior — ver 00-MASTER.md §4)
 
-- BLOQUE 3: 06-CRM + 07-marketing + 09 (resto) + 00-F5/F6.
 - BLOQUE 4 (último a propósito): 08-forum-community — requiere OK explícito del owner (gate duro
   ya registrado) antes de una sola línea de frontend.
 

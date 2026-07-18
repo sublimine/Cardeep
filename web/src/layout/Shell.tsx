@@ -6,7 +6,7 @@ import {
   MessageSquare, Calendar, BarChart3, Settings,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
   TrendingUp, Zap, Code2, LineChart, StickyNote, Receipt, CreditCard, UserCircle, LifeBuoy,
-  MessagesSquare, Bot, Radio,
+  Bot, Radio,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -23,6 +23,15 @@ const NAV_GROUPS = [
     items: [
       { to: '/dashboard', label: 'Dashboard',  icon: LayoutDashboard, end: true  },
       { to: '/vehicles',  label: 'Inventario', icon: Car,             end: false },
+    ],
+  },
+  {
+    // 00-marketplace-engine F5: "Sala de máquinas" — the operator surface (§6b). Its own
+    // group so the engine's health is impossible to miss, the lesson of the 18-day silent
+    // outage (§1) made permanent interface.
+    label: 'MOTOR',
+    items: [
+      { to: '/motor', label: 'Sala de máquinas', icon: Activity, end: false },
     ],
   },
   {
@@ -47,7 +56,9 @@ const NAV_GROUPS = [
     items: [
       { to: '/inbox',    label: 'Inbox',      icon: MessageSquare,  end: false },
       { to: '/publicaciones', label: 'Publicaciones', icon: Radio,  end: false },
-      { to: '/chat',     label: 'Chat',       icon: MessagesSquare, end: false },
+      // '/chat' removed from nav (06-unified-crm-chat F3): internal team-chat simulator
+      // (5 fictional employees) is not this pilar's product; the client conversation
+      // lives in Inbox. Chat.tsx code stays parked, unrouted, per the carta's decision.
       { to: '/calendar', label: 'Calendario', icon: Calendar,       end: false },
     ],
   },

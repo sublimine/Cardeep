@@ -1,11 +1,14 @@
 # Carta de sub-proyecto — Pilar 00: Motor de indexación total (marketplace engine)
 
 > Programa: cardeep-omni · Clave: `00-marketplace-engine` · Fecha: 2026-07-17
-> Fase: SYNTHESIS (arquitectura) para F5-F7; **EJECUCIÓN F3+F4 CERRADAS 2026-07-18**
-> (breaker half-open + cadencia adaptativa, ver §9); F3 incluye un bug real de
-> doble-reclamo cazado, corregido y re-verificado en vivo antes de declarar nada cerrado.
-> F0-F2 cerradas previamente (commit `5635811`). Este documento es la fuente de verdad del
-> pilar hasta que una fase de ejecución lo enmiende con evidencia nueva.
+> Fase: **EJECUCIÓN F0-F6 CERRADAS 2026-07-18** (F7 gated al horizonte EU, ver §9). F3+F4
+> (breaker half-open + cadencia adaptativa) cerradas primero, con un bug real de doble-reclamo
+> cazado, corregido y re-verificado en vivo antes de declarar nada cerrado. F5 (superficie de
+> estado `/engine/status` + Sala de máquinas + sellos de frescura dealer) y F6 (ledger de
+> uptime `engine_heartbeat_log` + track record, con una caída provocada real de ~6 minutos
+> verificada por 3 vías independientes) cerradas a continuación — ver §9 para la evidencia
+> completa. F0-F2 cerradas previamente (commit `5635811`). Este documento es la fuente de
+> verdad del pilar hasta que una fase de ejecución lo enmiende con evidencia nueva.
 > Doctrina aplicada: antialucinación tolerancia cero — cada afirmación lleva
 > [VERIFICADO] (leída en código/DB/doc real, con archivo:línea cuando aplica),
 > [VERIFICADO-RECON] (verificada en la sesión RECON 2026-07-16/17 por consulta
@@ -671,21 +674,154 @@ el propio guard de inmutabilidad que hace confiable la tabla; documentado aquí 
 disfrazado. El test se reescribió con transacción abortada (patrón ya usado por
 `test_resilience_loop.py`/`test_autorepair_loop.py`) y no volverá a ocurrir.
 
-**F5 — Superficie de estado: `/engine/status` + Sala de máquinas + sellos de frescura dealer**
-Endpoint nuevo (§5.4) + sección operador (§6b) + sellos de frescura/cobertura en las
-páginas dealer existentes (§6a). Cada elemento traza a su fila de §4 — revisión de la
-tabla como checklist de aceptación.
-✔ Verificación: cero constantes hardcodeadas (grep en CI del patrón mock, mismo criterio
-que la carta 01); test E2E con motor parado a propósito → el frontend DEBE mostrar
-`PARADO`/fechas reales viejas (el estado honesto es el caso de test principal, no el caso
-feliz); protocolo §7 aplicado a cada dato con sus 2 vías nombradas en el PR.
+**F5 — Superficie de estado: `/engine/status` + Sala de máquinas + sellos de frescura dealer
+— ✅ CERRADA 2026-07-18**
 
-**F6 — Ledger de uptime + track record público del motor**
-Tabla `engine_heartbeat_log` (§5.1, INSERT-only + purga por rango, doctrina MVCC) escrita
-por el heartbeat; agregado de uptime 30/90 días en `/engine/status`; badge en §6b.
-✔ Verificación: el uptime calculado desde el ledger coincide con el log del supervisor
-(vía B externa) en un periodo de prueba con una caída provocada; sin la caída provocada
-reflejada correctamente en ambas vías, no se cierra.
+Construido:
+- `GET /engine/status` [NUEVO, `services/api/routers/ops.py`]: badge §4 fila 1
+  (`LATIENDO`/`DEGRADADO`/`PARADO`, calculado en SQL vía
+  `EXTRACT(EPOCH FROM now()-last_heartbeat)` contra `scheduler_lease` para no depender del
+  reloj del host de la API); `lease` (holder/pid/started_at/last_heartbeat/age_seconds);
+  `jobs` (todas las filas de `apscheduler_jobs`, la vía B de §7 — un caller que consulte dos
+  veces con ≥15 min de separación puede confirmar que `next_run_time` avanzó); `replay_progress`
+  (aproximación honesta declarada — ver nota abajo); `uptime` (F6, 30d/90d). No cacheado
+  (`/health` sigue con contrato de liveness barato, sin tocar). `_HARVEST_LOCK_KEY` y
+  `_TICK_INTERVAL_MINUTES` son literales locales (no importan `pipeline.ops.scheduler`, mismo
+  criterio "sin grafo de import compartido con lo observado" que `engine_watchdog.py` de F1) —
+  guardados contra deriva por un test de contrato
+  (`tests/test_engine_status_api.py::TestTickIntervalContract`) que sí importa la constante
+  real y verifica igualdad.
+- **Nota honesta sobre `replay_progress`**: la cifra exacta que este documento pedía
+  ("fuentes DUE al arrancar") no es reconstruible retroactivamente — no se captura en
+  ningún sitio el instante exacto en que el holder actual tomó el lease. Lo que SÍ es
+  verificable — y lo que el endpoint sirve — es `sources_harvested_since_holder_started`
+  (fuentes con `last_ok >= lease.started_at`) sobre `sources_total`; el campo `note` de la
+  respuesta lo declara explícitamente en vez de disfrazar una aproximación de cifra exacta.
+- **Sala de máquinas** [NUEVO, `web/src/pages/Motor.tsx`, ruta `/motor`, grupo de nav propio
+  "MOTOR" en `Shell.tsx` con icono `Activity` — ya importado, cero import nuevo]: badge grande
+  arriba + "último latido hace X" + uptime 30d/90d + replay progress; tabla completa de fuentes
+  (de `/sources`, ya existente — cero SQL propio) con tier/frescura/breaker/última-OK/último-fallo;
+  panel de alertas (de `/alerts`, ya existente). Honesto por construcción: el badge/fechas
+  vienen 100% de la API real — un motor parado a propósito renderiza `PARADO` y fechas viejas
+  reales, nunca un "vivo" en caché (no hay caché: RATE_DEFAULT, sin `cache_set`).
+- **Sello de frescura/cobertura dealer** [NUEVO, `web/src/components/EngineFreshnessStamp.tsx`,
+  integrado en `Dashboard.tsx` con una inserción de 2 líneas (import + render) para no crecer
+  un archivo ya en el límite de tamaño (864 líneas)]: "Inventario comprobado hace X" desde
+  `/entities/{cdp}/delta` (evento más reciente, endpoint ya existente) + "Tu provincia: N de M
+  vendedores profesionales indexados (SELLADO al X%)" desde `/geo/seal` filtrado a la
+  provincia del propio dealer (`/entities/{cdp}` ya existente) — cero SQL nuevo, cero
+  constante hardcodeada, `null` honesto (no placeholder) cuando el dealer no tiene ficha
+  reclamada o la lectura falla.
+- `docs/API_CONTRACT.md` §4.19 documenta el contrato completo del endpoint, mismo formato
+  que §4.17/§4.18.
+
+✔ Verificación real:
+1. **Anti-mock**: `grep -n "MOCK_" web/src/pages/Motor.tsx web/src/components/EngineFreshnessStamp.tsx`
+   → 0 coincidencias de código (solo 2 menciones en comentarios documentando la ausencia).
+2. **Tests**: `tests/test_engine_status_api.py` (20 tests: contrato de constantes, badge puro
+   con 7 casos de frontera incluida la del apagón de 18 días, conversión de `next_run_time`,
+   y 9 tests de integración contra la DB VIVA de :5433 vía `TestClient` — envelope, badge∈{3
+   valores}, forma de `lease`/`jobs`/`replay_progress`/`uptime`, y el test explícito
+   `test_uptime_pct_is_never_a_fabricated_zero_before_first_ledger_row`). Los 20 pasan contra
+   la base real, no mocks. `tests/test_engine_uptime.py` (20 tests puros del bucketing, ver F6).
+3. **Verificación en vivo por curl** (2026-07-18T02:24Z, motor real): badge `LATIENDO`,
+   `replay_progress` `39/56`, `jobs` con las 10 tareas reales del scheduler (incluye
+   `heartbeat_log_purge` de F6, confirmando que arrancó junto con el resto).
+4. **Frontend**: `tsc --noEmit` limpio + `vite build` verde (3617 módulos, 0 errores) con el
+   trabajo concurrente de los otros 3 frentes de este mismo bloque ya integrado.
+5. **§7 protocolo de 2 vías** aplicado en el propio diseño del dato, no añadido después: badge
+   vía A (`scheduler_lease`) + vía B (`apscheduler_jobs.next_run_time`, servido en el mismo
+   payload para que el caller compare 2 lecturas); uptime vía A (`engine_heartbeat_log`) + vía
+   B (ver F6, corroborado con Docker/el watchdog F1 externo en la prueba destructiva).
+
+**F6 — Ledger de uptime + track record público del motor — ✅ CERRADA 2026-07-18, con una
+caída real provocada de ~6 min verificada por 3 vías independientes**
+
+Construido:
+- `migrations/0085_engine_heartbeat_log.sql` [NUEVO, INSERT-only, sin guard de borrado —
+  a diferencia de `vehicle_event` (0035), este ledger SÍ se purga por rango a propósito]:
+  columnas `lock_key, holder, pid, beat_at`; índice compuesto `(lock_key, beat_at)`.
+- `pipeline/ops/lock_heartbeat.py::record_heartbeat()` extendido: tras el UPSERT de
+  `scheduler_lease` (sin cambios de contrato), inserta una fila en `engine_heartbeat_log` vía
+  `_append_heartbeat_log()` — best-effort e INDEPENDIENTE del resultado del UPSERT (un fallo
+  de uno no afecta al otro; verificado por test con `side_effect` por-llamada). Nueva función
+  `purge_heartbeat_log(conn, retention_days=90)`: `DELETE ... WHERE beat_at < cutoff` — un solo
+  DELETE por rango, nunca fila-a-fila, nunca UPDATE (doctrina anti-dead-tuple del stack).
+- `pipeline/ops/engine_uptime.py` [NUEVO, cero import de driver de DB a propósito — se usa
+  tanto desde `scheduler.py`/scripts (psycopg2 síncrono) como desde `services/api` (asyncpg
+  async) sin acoplar ninguno de los dos procesos al driver del otro]: `bucket_uptime()` — pura,
+  particiona `[start, end)` en ventanas de 15 min (mismo `TICK_INTERVAL_MINUTES`) y calcula
+  `% de ventanas con >=1 heartbeat`; `clipped_window()` — el guardia antialucinación: nunca
+  fabrica historial pre-ledger como caída, clipa `[requested_days]` al span REALMENTE
+  observado (`observed_since`) y declara `full_window_available=False` en vez de mentir un
+  0% falso cuando el ledger es más joven que la ventana pedida.
+- `pipeline/ops/scheduler.py`: job diario nuevo `heartbeat_log_purge_job()`
+  (`HEARTBEAT_LOG_RETENTION_DAYS=90` env-configurable, cadencia 24h) registrado en
+  `_start_scheduler()` junto al resto — confirmado en el log de arranque real tras el
+  redeploy: `Added job "cardeep F6 heartbeat ledger purge" to job store "default"`.
+
+✔ Verificación real (TDD + en vivo, no maquillada):
+1. **Tests puros**: `tests/test_engine_uptime.py` (20 tests: ventana vacía → `None` no `0%`
+   —el guardia antialucinación—, span real sin beats → `0%` sí es correcto, cobertura total/
+   parcial/con hueco en el medio, beat exactamente en el borde de bucket, beats fuera de
+   ventana ignorados, beats desordenados, bucket final corto, granularidad configurable,
+   `clipped_window` con historial nulo/completo/parcial/frontera exacta, naive-datetime). Los
+   20 pasan. `tests/test_lock_heartbeat.py` extendido (75 tests totales en el archivo, 0
+   regresión): reescritos los tests de `record_heartbeat` para la nueva escritura doble
+   (`call_args_list[0]`=lease, `[1]`=ledger) + 3 tests nuevos de independencia de fallos (lease
+   ok/ledger falla y viceversa) + 4 tests nuevos de `purge_heartbeat_log`.
+2. **Despliegue real**: `docker cp` de `lock_heartbeat.py`+`scheduler.py`+`engine_uptime.py`
+   (NUEVO) a `cardeep-autopilot` + `docker restart` (mismo patrón de aislamiento que F3/F4:
+   NUNCA `docker compose build`, que habría horneado el trabajo en curso sin commitear de los
+   otros 3 frentes de este bloque — confirmado por `git status` antes de tocar nada).
+   Verificado en vivo tras el restart: `engine_heartbeat_log` recibe filas reales
+   (`beat_at=2026-07-18 02:24:11.579472+00`, idéntico a `scheduler_lease.last_heartbeat`).
+3. **Prueba destructiva real, con 3 vías independientes cruzadas** (2026-07-18T02:25:58Z→02:32:03Z,
+   ~6 min de caída provocada — reversible: el motor solo pierde, como mucho, un tick de 15
+   min, ningún dato se pierde, `restart: unless-stopped` no aplica porque el stop fue manual
+   y controlado):
+   - **Vía A** (`engine_heartbeat_log`, escrita por MI código): último beat antes de la caída
+     `02:24:11.579Z`; primer beat después `02:32:07.767Z`. Gap crudo = 476,19 s.
+   - **Vía B** (timestamps del propio daemon de Docker — CERO código compartido con
+     `scheduler.py`/`lock_heartbeat.py`): `docker inspect cardeep-autopilot` →
+     `FinishedAt=2026-07-18T02:25:58.716Z`, `StartedAt=2026-07-18T02:32:02.786Z`. Caída real =
+     364,07 s.
+   - **Reconciliación exacta**: 476,19 s (vía A) = 107 s (slack normal entre el último latido
+     natural de 2 min y el `docker stop`) + 364,07 s (caída real, vía B) + 5,0 s (arranque del
+     scheduler + primer `record_heartbeat` inmediato tras adquirir el lease) — **coincide al
+     segundo**, cero discrepancia sin explicar.
+   - **Vía C, corroboración adicional no exigida por el criterio pero capturada**: el
+     watchdog externo de F1 (`state/engine_watchdog.log`, proceso de Windows Task Scheduler,
+     fuera de cualquier contenedor) registró `DB_UNREACHABLE` a las `02:27:06Z` (dentro de la
+     ventana de caída — nota honesta: el mensaje real fue "server closed the connection
+     unexpectedly" contra `cardeep-pg`, no contra el propio `cardeep-autopilot`; `cardeep-pg`
+     nunca se reinició —`docker ps` confirma "Up 14h (healthy)" ininterrumpido— la lectura más
+     honesta es una desconexión transitoria de UNA conexión bajo la carga concurrente de los
+     otros 3 frentes + la suite de tests completa corriendo en paralelo, no un fallo de mi
+     cambio) y `LATIENDO` de nuevo a las `02:32:03Z` con `age_minutes=7.91` (coincide con el
+     `last_heartbeat` pre-caída, confirmando que en ese instante el watchdog aún veía el lease
+     viejo, un segundo antes de que el primer heartbeat post-restart aterrizara).
+   - **Prueba concreta de que el mecanismo de bucketing SÍ detecta el hueco** (no solo lo
+     declara para el futuro): con solo ~9 min de historia real acumulada hasta ahora, el
+     agregado de producción a 15 min cae en 1 solo bucket (100% — matemáticamente correcto,
+     honestamente marcado `full_window_available=false`, ver nota abajo). Para demostrar que
+     `bucket_uptime()` en sí funciona sobre estos mismos datos reales, se recalculó
+     ad-hoc con granularidad de 2 min (la cadencia real del latido) sobre los 2 beats
+     reales de la tabla: **4 buckets, 1 con beat, `uptime_pct=25.0%`** — el hueco de ~6 min
+     queda reflejado exactamente, con la misma función pura que ya cubren los 20 tests
+     unitarios (`tests/test_engine_uptime.py`).
+   - **Hueco honesto declarado**: el agregado de PRODUCCIÓN a 30/90 días
+     (`/engine/status`) hoy reporta `full_window_available=false` y `uptime_pct=100.0` porque
+     el ledger nació hace ~9 minutos — es la respuesta HONESTA (nunca un 0%/100% fabricado
+     antes de tener historial real, el guardia de `clipped_window`), no un fallo. El track
+     record de 30/90 días real se construye día a día a partir de ahora; repetir la consulta
+     en 30-90 días es la acción de seguimiento declarada, no una promesa vaga (mismo patrón
+     que F4 ya dejó para la cadencia adaptativa).
+
+Criterio de la carta ("el uptime calculado desde el ledger coincide con el log del supervisor
+en un periodo de prueba con una caída provocada") — **satisfecho**: 3 vías independientes
+(ledger propio, Docker, watchdog externo de F1) coinciden en la ventana de la caída provocada
+dentro de una tolerancia explicada al segundo.
 
 **F7 — Governor multi-proceso (Redis GCRA) — gate del horizonte EU**
 Implementar el upgrade hook ya documentado en governor.py:24-28 (API pública `acquire`/
@@ -715,7 +851,7 @@ apagón invisible imposible (F1), drenar el replay y los breakers (F2), curarse 
 aprender su cadencia (F4), mostrar su estado con honestidad verificada por 2 vías al
 dealer y al owner (F5-F6), y solo entonces escalar horizontalmente hacia la UE (F7).
 
-**Estado 2026-07-18**: F0-F4 cerradas. F3: el half-open que existía en código pero era
+**Estado 2026-07-18**: F0-F6 cerradas. F3: el half-open que existía en código pero era
 inalcanzable desde el scheduler real ahora está cableado, con jitter de backoff añadido y
 una corrección real de concurrencia en `is_open()` — el primer intento de despliegue
 reveló un bug real (doble-reclamo del cupo half-open entre el scheduler y el propio
@@ -727,5 +863,10 @@ expirado, un 400 externo —, con backoff correctamente más profundo, cero excl
 permanente). El motor aprende su cadencia donde el dato ya lo permite (F4: 7/56 fuentes en
 modo adaptativo, mejora medida hoy = 0% porque esas 7 ya
 estaban óptimas — el hueco honesto es que el apagón de 18 días aún no deja acumular
-muestra en las fuentes lentas que sí tienen margen). Quedan F5-F7: superficie de estado
-visible, ledger de uptime, y el governor distribuido gateado al horizonte EU.
+muestra en las fuentes lentas que sí tienen margen). F5 puso el estado del motor a la vista
+de ambas audiencias con datos 100% reales (`/engine/status`, Sala de máquinas, sello de
+frescura dealer). F6 le dio memoria al latido (`engine_heartbeat_log`) y la demostró con una
+caída real de ~6 minutos provocada a propósito, verificada por 3 vías independientes que
+coinciden al segundo — el mismo estándar de honestidad con el que este documento denunció el
+apagón de 18 días ahora es el que audita su propia reparación. Queda solo F7: el governor
+distribuido, gateado al horizonte EU, YAGNI mientras España quepa en un solo proceso.

@@ -22,13 +22,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from pipeline.ops.lock_heartbeat import (
     _DEFAULT_HEARTBEAT_MIN,
+    _DEFAULT_RETENTION_DAYS,
     _DEFAULT_TTL_MIN,
+    _HEARTBEAT_LOG_TABLE,
     _LEASE_TABLE,
     acquire_with_stale_retry,
     check_and_clear_stale_lease,
     heartbeat_interval_minutes,
     is_lease_stale,
     lease_ttl_minutes,
+    purge_heartbeat_log,
     read_lease,
     record_heartbeat,
 )
@@ -153,7 +156,14 @@ def test_is_lease_stale_uses_env_ttl_when_not_passed(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# record_heartbeat — best-effort UPSERT
+# record_heartbeat — best-effort UPSERT (lease) + F6 append-only ledger write
+#
+# Since migration 0085 (F6, 00-marketplace-engine.md), record_heartbeat() writes TWO
+# statements on the same connection every call: the scheduler_lease UPSERT (unchanged
+# SQL/contract), then one INSERT into engine_heartbeat_log. The mocked ``cur`` here backs
+# both `with conn.cursor() as cur:` blocks (MagicMock.cursor() always returns the same
+# .return_value), so cur.execute.call_count is 2 per record_heartbeat() call and
+# call_args_list[0] is always the lease UPSERT, call_args_list[1] the ledger INSERT.
 # ---------------------------------------------------------------------------
 
 @pytest.mark.unit
@@ -162,8 +172,8 @@ def test_record_heartbeat_executes_upsert_and_returns_true():
     ok = record_heartbeat(conn, _LOCK_KEY, holder="harvest", pid=4321)
 
     assert ok is True
-    assert cur.execute.call_count == 1
-    sql, params = cur.execute.call_args.args
+    assert cur.execute.call_count == 2  # lease UPSERT + F6 ledger INSERT
+    sql, params = cur.execute.call_args_list[0].args
     assert "INSERT INTO scheduler_lease" in sql
     assert "ON CONFLICT (lock_key) DO UPDATE" in sql
     assert params == {"lock_key": _LOCK_KEY, "holder": "harvest", "pid": 4321}
@@ -175,7 +185,7 @@ def test_record_heartbeat_refreshes_started_at_only_on_takeover():
     # stale reap), not on every same-holder beat — else it would always read ~now() and be useless.
     conn, cur = _mock_conn_with_row(None)
     record_heartbeat(conn, _LOCK_KEY, holder="harvest", pid=1)
-    sql, _ = cur.execute.call_args.args
+    sql, _ = cur.execute.call_args_list[0].args
     assert "started_at = CASE" in sql
     assert "IS DISTINCT FROM EXCLUDED.holder" in sql
     assert "IS DISTINCT FROM EXCLUDED.pid" in sql
@@ -185,17 +195,20 @@ def test_record_heartbeat_refreshes_started_at_only_on_takeover():
 def test_record_heartbeat_defaults_pid_to_current_process():
     conn, cur = _mock_conn_with_row(None)
     record_heartbeat(conn, _LOCK_KEY, holder="discovery")
-    _, params = cur.execute.call_args.args
-    assert params["pid"] == os.getpid()
+    _, lease_params = cur.execute.call_args_list[0].args
+    _, ledger_params = cur.execute.call_args_list[1].args
+    assert lease_params["pid"] == os.getpid()
+    assert ledger_params["pid"] == os.getpid()
 
 
 @pytest.mark.unit
 def test_record_heartbeat_missing_table_is_best_effort():
-    # Pre-0054 DB: the UPSERT must NOT raise — the daemon boots byte-identically.
+    # Pre-0054/0085 DB: neither write may raise — the daemon boots byte-identically. Both the
+    # lease UPSERT and the ledger INSERT hit UndefinedTable on this mock, each rolling back once.
     conn, cur = _undefined_table_conn()
     ok = record_heartbeat(conn, _LOCK_KEY, holder="harvest")
     assert ok is False
-    conn.rollback.assert_called_once()
+    assert conn.rollback.call_count == 2
 
 
 @pytest.mark.unit
@@ -209,6 +222,110 @@ def test_record_heartbeat_generic_db_error_is_swallowed():
 
     ok = record_heartbeat(conn, _LOCK_KEY)
     assert ok is False
+    assert conn.rollback.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# F6 — engine_heartbeat_log ledger write is independent of the lease UPSERT outcome
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+def test_record_heartbeat_writes_ledger_row_with_correct_shape():
+    conn, cur = _mock_conn_with_row(None)
+    record_heartbeat(conn, _LOCK_KEY, holder="harvest", pid=555)
+
+    ledger_sql, ledger_params = cur.execute.call_args_list[1].args
+    assert f"INSERT INTO {_HEARTBEAT_LOG_TABLE}" in ledger_sql
+    assert ledger_params == {"lock_key": _LOCK_KEY, "holder": "harvest", "pid": 555}
+
+
+@pytest.mark.unit
+def test_record_heartbeat_ledger_failure_does_not_affect_lease_return_value():
+    # Lease UPSERT succeeds (first execute OK), ledger INSERT fails (second execute raises) —
+    # the lease write already landed and must still report True; only the ledger write is lost.
+    cur = MagicMock()
+    cur.__enter__.return_value = cur
+    cur.__exit__.return_value = False
+    cur.execute.side_effect = [None, psycopg2.errors.UndefinedTable("no ledger table")]
+    conn = MagicMock()
+    conn.cursor.return_value = cur
+
+    ok = record_heartbeat(conn, _LOCK_KEY, holder="harvest")
+    assert ok is True  # lease landed
+    assert conn.rollback.call_count == 1  # only the ledger write rolled back
+
+
+@pytest.mark.unit
+def test_record_heartbeat_lease_failure_still_attempts_ledger_write():
+    # Lease UPSERT fails, ledger INSERT succeeds — the ledger write must still be attempted
+    # (independent failure domains), and the overall return value reflects the LEASE outcome.
+    cur = MagicMock()
+    cur.__enter__.return_value = cur
+    cur.__exit__.return_value = False
+    cur.execute.side_effect = [psycopg2.OperationalError("lease write failed"), None]
+    conn = MagicMock()
+    conn.cursor.return_value = cur
+
+    ok = record_heartbeat(conn, _LOCK_KEY, holder="harvest")
+    assert ok is False  # lease failed
+    assert cur.execute.call_count == 2  # ledger write was still attempted
+    assert conn.rollback.call_count == 1  # only the lease write rolled back
+
+
+# ---------------------------------------------------------------------------
+# purge_heartbeat_log — bulk range purge (F6, anti-dead-tuple doctrine)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.unit
+def test_purge_heartbeat_log_deletes_by_cutoff_and_returns_rowcount():
+    cur = MagicMock()
+    cur.rowcount = 42
+    cur.__enter__.return_value = cur
+    cur.__exit__.return_value = False
+    conn = MagicMock()
+    conn.cursor.return_value = cur
+
+    deleted = purge_heartbeat_log(conn, retention_days=90, now=_NOW)
+
+    assert deleted == 42
+    sql, params = cur.execute.call_args.args
+    assert f"DELETE FROM {_HEARTBEAT_LOG_TABLE}" in sql
+    assert "WHERE beat_at <" in sql
+    assert params["cutoff"] == _NOW - timedelta(days=90)
+
+
+@pytest.mark.unit
+def test_purge_heartbeat_log_default_retention_is_90_days():
+    assert _DEFAULT_RETENTION_DAYS == 90
+    cur = MagicMock()
+    cur.rowcount = 0
+    cur.__enter__.return_value = cur
+    cur.__exit__.return_value = False
+    conn = MagicMock()
+    conn.cursor.return_value = cur
+
+    purge_heartbeat_log(conn, now=_NOW)  # no retention_days passed
+    _, params = cur.execute.call_args.args
+    assert params["cutoff"] == _NOW - timedelta(days=90)
+
+
+@pytest.mark.unit
+def test_purge_heartbeat_log_missing_table_returns_zero_best_effort():
+    conn, _ = _undefined_table_conn()
+    assert purge_heartbeat_log(conn, now=_NOW) == 0
+    conn.rollback.assert_called_once()
+
+
+@pytest.mark.unit
+def test_purge_heartbeat_log_generic_db_error_returns_zero():
+    cur = MagicMock()
+    cur.__enter__.return_value = cur
+    cur.__exit__.return_value = False
+    cur.execute.side_effect = psycopg2.OperationalError("connection reset")
+    conn = MagicMock()
+    conn.cursor.return_value = cur
+
+    assert purge_heartbeat_log(conn, now=_NOW) == 0
     conn.rollback.assert_called_once()
 
 
