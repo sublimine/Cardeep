@@ -54,6 +54,15 @@ tests/test_crm_inbox_router.py
 tests/test_crm_notes_calendar_router.py
 tests/test_dealer_ops_router.py
 tests/test_api_marketing.py
+# 06-unified-crm-chat F1 schema tests (2026-07-19, found live in CI's actual db-tests run —
+# missed in earlier local dry-runs because a `tail -100`-truncated log cut off pytest's ERROR
+# block, which prints before the FAILURES block this session already caught and fixed). Same
+# GYATA gap as the router batch above, by the file's own docstring ("same auto-skip pattern as
+# tests/test_dealer_ops_router.py / test_auth_router.py"): 11 of 12 tests need the real seeded
+# demo dealer (CDP-ES-28-YCZB8JYW) to exercise FK integrity / append-only guards against a real
+# entity — scripts/seed_ci_fixture.py's synthetic CDP-ES-28-FXTRE0xx dealers cannot substitute
+# (seed_demo_dealer.py itself requires the entity to already exist in a real populated census).
+tests/test_crm_schema.py
 # 06-unified-crm-chat F4 IMAP ingestion worker (2026-07-19, same gap as the CRM router batch
 # above, discovered independently against a truly empty DB): tests/test_email_ingest.py's
 # module-scoped `entity_ulid` fixture does `SELECT entity_ulid FROM entity WHERE cdp_code =
