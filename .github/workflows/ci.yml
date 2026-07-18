@@ -340,3 +340,41 @@ jobs:
           print('PASS: cross-border isolation mechanically enforced' if ok else 'FAIL: regression, or goldens SKIPPED (silent no-op gate), or suite shrank below floor 207')
           sys.exit(0 if ok else 1)
           "
+
+  terminal-anti-mock:
+    name: Terminal anti-mock gate (09-trading-terminal V6 · BLOCKING)
+    runs-on: ubuntu-latest
+    # 09-trading-terminal.md §7, row V6: "grep-gate en CI: cero imports de terminal/market.ts/
+    # intelligence.ts (muertos), cero seedRng/generadores sembrados, cero literal de NEWS_SOURCES
+    # fabricado en web/src/. El pecado de carNews() queda estructuralmente imposible de reintroducir."
+    #
+    # NOTE (00-MASTER.md rule 8, "Gate CI anti-mock único repo-wide"): this job covers ONLY the
+    # 09-specific literals this pilar's Fase 0 demolished — it is NOT the full cross-pillar
+    # consolidated gate the MASTER envisions (01/04/05/07 each declared their own anti-mock
+    # criteria in their own cartas). Consolidating all of them into one job is a MASTER-level
+    # action item for whoever closes that thread, not fabricated here as if already done.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zero references to the demolished synthetic terminal (market.ts / intelligence.ts / carNews)
+        run: |
+          set -e
+          FOUND=0
+          if grep -rn "from.*terminal/market'" web/src --include="*.tsx" --include="*.ts" 2>/dev/null; then FOUND=1; fi
+          if grep -rln "carNews\|NEWS_SOURCES" web/src 2>/dev/null; then FOUND=1; fi
+          if grep -rln "seedRng" web/src 2>/dev/null; then FOUND=1; fi
+          if [ -d web/src/pages/terminal ] && [ -f web/src/pages/terminal/market.ts ]; then FOUND=1; fi
+          if [ "$FOUND" = "1" ]; then
+            echo "FAIL: a demolished synthetic-terminal literal was reintroduced (carNews/NEWS_SOURCES/seedRng/terminal/market.ts)"
+            exit 1
+          fi
+          echo "PASS: zero synthetic-terminal literals in web/src"
+
+      - name: Zero violet brand literals in live chart-engine files (post brand-clean sweep)
+        run: |
+          set -e
+          if grep -rEn "#a78bfa|#8b5cf6|#c4b5fd|#7c3aed" web/src/components/chart-engine web/src/pages/Terminal.tsx web/src/pages/terminal 2>/dev/null; then
+            echo "FAIL: a violet literal reappeared in the rescued chart-engine or terminal frontend"
+            exit 1
+          fi
+          echo "PASS: zero violet literals"
