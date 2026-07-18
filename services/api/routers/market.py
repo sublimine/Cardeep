@@ -1,16 +1,17 @@
-"""/market/* — market-intelligence endpoints (pilar 01-market-intelligence, F3+F4).
+"""/market/* — market-intelligence endpoints (pilar 01-market-intelligence, F3-F5).
 
 Ownership: 00-MASTER.md resolution C-1 assigns this file and the ``/market/*``
 namespace to pilar 01 exclusively. Pilar 09 (trading-terminal) owns a SEPARATE
-``services/api/routers/terminal.py`` with ``/terminal/*`` — never this file.
+``services/api/routers/terminal.py`` with ``/terminal/*`` — never this file. This
+is ALSO the shared comparables engine pilar 03 (K9/K10/K11) and 07 (C2) are
+expected to consume rather than re-derive (00-MASTER.md §98) — one implementation.
 
-Scope built so far: M1/M3/M4/M5/M7/M9/M10 (F3, served from ``market_stat``) and M8
-(F4, served from ``dgt_corroboration`` — DGT-vs-GONE cohort corroboration). One
-metric is DELIBERATELY absent, not an oversight:
-
-  - M2 (price-position, ``/market/price-position/{vehicle_ulid}``) is F5's scope —
-    it is NOT built here. Creating that path now with no real ratio logic behind it
-    would BE the exact mock violation this pilar exists to remove from `Api.tsx`.
+Scope built so far: M1/M3/M4/M5/M7/M9/M10 (F3, served from ``market_stat``), M8
+(F4, served from ``dgt_corroboration``), and M2 (F5, price-position — computed
+live against the latest published M1 row, never precomputed/stored per-vehicle:
+storing a ratio for millions of vehicles that only changes when a NEW market_stat
+run publishes would be pure staleness risk for zero benefit over a cheap live
+lookup+division).
 
 DECLARED GAP (not hidden): M6 (value curve by age cohort) is named in the carta's
 router design (§5) but was never assigned a construction phase in §9's F0-F5 list
@@ -39,9 +40,29 @@ from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 
 router = APIRouter()
 
-# Metrics this router is authorized to serve today (F3 scope — see module docstring
-# for why M2/M6/M8 are deliberately excluded).
+# Metrics served by /market/segments/.../stats (M2/M8 have their own dedicated
+# endpoints below; M6 is a declared gap — see module docstring).
 _SERVED_METRICS: tuple[str, ...] = ("M1", "M3", "M4", "M5", "M7", "M9", "M10")
+
+# M2 price-position bands (carta §4 M2 row). [ASUMIDO -> re-verified in F5 against
+# the REAL distribution of price/p50 ratios across 1,183,432 live canonical
+# vehicles: p25=0.898, p50=1.000, p75=1.127 (01-market-intelligence-f5.md has the
+# full percentile table). These cuts land close to the natural IQR split and are
+# KEPT, not silently changed — a METHODOLOGY recalibration is explicitly reserved
+# by the project's own model-routing doctrine for a caro-model adversarial gate
+# (Fable 5/Opus), which this execution context could not invoke as a literal
+# separate model call; the full analysis needed for that gate is written up in
+# the F5 report so the decision can be made quickly, not re-derived from scratch.
+M2_BELOW_MARKET_CUT: float = 0.92
+M2_ABOVE_MARKET_CUT: float = 1.08
+
+
+def _price_position_band(ratio: float) -> str:
+    if ratio < M2_BELOW_MARKET_CUT:
+        return "below_market"
+    if ratio > M2_ABOVE_MARKET_CUT:
+        return "above_market"
+    return "at_market"
 
 
 async def _latest_published_run(conn) -> dict[str, Any] | None:
@@ -282,3 +303,113 @@ async def dgt_corroboration(
             count=len(items),
         )
         return cache_set(request, response)
+
+
+# ---------------------------------------------------------------------------
+# GET /market/price-position/{vehicle_ulid} — M2 (F5)
+# ---------------------------------------------------------------------------
+
+@router.get("/market/price-position/{vehicle_ulid}")
+@limiter.limit(RATE_DEFAULT)
+async def price_position(
+    vehicle_ulid: str,
+    request: Request,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """M2: is THIS specific listing priced below/at/above its segment's market
+    (M1's p50), and by how much. This is the shared comparables engine 03
+    (garage-fleet K9) and 07 (marketing C2) are meant to consume rather than
+    re-derive (00-MASTER.md §98) — one implementation, used by every consumer.
+
+    Computed LIVE against the latest published M1 row for this vehicle's own
+    segment (make+model+its own year as the +/-1 band anchor+fuel+province, with
+    the same national fallback as ``/market/segments/.../stats``) — never
+    precomputed/stored per-vehicle.
+
+    Cuts (<0.92 / 0.92-1.08 / >1.08) are PUBLISHED in the response, not a black
+    box (carta §4 M2 row, explicit contrast with CarGurus' undisclosed thresholds).
+
+    Honest degradation, never a fabricated ratio:
+      - vehicle_ulid not found -> 404.
+      - vehicle exists but has no price, or make/model/year/fuel/province
+        incomplete, or its segment never cleared MIN_COHORT_N even nationally in
+        the latest published run -> 200 with ``position: null`` and a ``reason``.
+    """
+    async with request.app.state.pool.acquire() as c:
+        vrow = await c.fetchrow(
+            """
+            SELECT v.vehicle_ulid, v.make, v.model, v.year, v.fuel, v.price,
+                   e.province_code
+              FROM vehicle v
+              JOIN entity e ON e.entity_ulid = v.entity_ulid
+             WHERE v.vehicle_ulid = $1
+            """,
+            vehicle_ulid,
+        )
+        if vrow is None:
+            return err(f"vehicle {vehicle_ulid} not found", status=404)
+
+        if vrow["price"] is None:
+            return ok(
+                {"vehicle_ulid": vehicle_ulid, "position": None, "reason": "vehicle has no price"}
+            )
+        if any(vrow[f] is None for f in ("make", "model", "year", "fuel", "province_code")):
+            return ok(
+                {"vehicle_ulid": vehicle_ulid, "position": None,
+                 "reason": "vehicle is missing make/model/year/fuel/province — cannot resolve a segment"}
+            )
+
+        run = await _latest_published_run(c)
+        if run is None:
+            return err("no published market_stat run yet", status=503)
+
+        m1_rows = await c.fetch(
+            """
+            SELECT province_code, p50, n
+              FROM market_stat
+             WHERE run_id = $1 AND metric_id = 'M1' AND make = $2 AND model = $3
+               AND year = $4 AND fuel = $5 AND (province_code = $6 OR province_code IS NULL)
+            """,
+            run["run_id"], vrow["make"], vrow["model"], vrow["year"], vrow["fuel"], vrow["province_code"],
+        )
+        if not m1_rows:
+            return ok(
+                {"vehicle_ulid": vehicle_ulid, "position": None,
+                 "reason": "no M1 data for this segment (n<8 even nationally, or segment never computed)"},
+                run_id=run["run_id"],
+            )
+
+        prov_row = next((r for r in m1_rows if r["province_code"] is not None), None)
+        chosen = prov_row if prov_row is not None else next(r for r in m1_rows if r["province_code"] is None)
+        scope = "prov" if chosen is prov_row else "nat"
+
+        p50 = float(chosen["p50"])
+        price = float(vrow["price"])
+        ratio = price / p50 if p50 > 0 else None
+        if ratio is None:
+            return ok(
+                {"vehicle_ulid": vehicle_ulid, "position": None, "reason": "segment p50 is zero"},
+                run_id=run["run_id"],
+            )
+
+        return ok(
+            {
+                "vehicle_ulid": vehicle_ulid,
+                "price": price,
+                "segment": {
+                    "make": vrow["make"], "model": vrow["model"], "year": vrow["year"],
+                    "fuel": vrow["fuel"], "province_code": vrow["province_code"],
+                },
+                "position": {
+                    "ratio": ratio,
+                    "band": _price_position_band(ratio),
+                    "cuts": {"below_market_lt": M2_BELOW_MARKET_CUT, "above_market_gt": M2_ABOVE_MARKET_CUT},
+                    "segment_p50": p50,
+                    "segment_n": chosen["n"],
+                    "scope": scope,
+                    "fallback_to_national": scope == "nat",
+                },
+            },
+            run_id=run["run_id"],
+            run_at=str(run["run_at"]),
+        )
