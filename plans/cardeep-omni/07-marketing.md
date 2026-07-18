@@ -282,6 +282,156 @@ Regresión transversal: al cierre de cada fase, suite completa del repo verde + 
 
 ---
 
+## 10. Estado de ejecución real — F0 a F5 CERRADAS (2026-07-18)
+
+> Ejecutado en Bloque 3 (00-MASTER.md §4), en paralelo con 06-unified-crm-chat y
+> 09-trading-terminal en el mismo working tree compartido (no worktrees aislados).
+> Mandato de esta ejecución: F0-F5 exclusivamente — F6 (integración con 05/06) queda
+> **fuera de este mandato**, pendiente y declarado, no ejecutado.
+
+**F0 — Recon SQL + demolición del atrezzo. CERRADA.** Commit `8e501a8`.
+Recon real vía `scripts/f0_marketing_recon.py` (re-ejecutable), persistido en
+`07-notes/F0-RECON.md`: `vin_ref` 1,45% (30.752/2.124.671 disponibles — coherente con
+el hallazgo de 04-F6 sobre contaminación de `vin_ref`), `photo_url` 92,40%,
+`photo_hash` 0,00% (tercera confirmación independiente del hueco ya documentado por
+02-F0/04-F6), `fuel`+`transmission` 52,71%, `platform_listing` listed con precio
+99,23%, 10.664 divergencias reales de precio cross-plataforma, 505.487 vehículos GONE
+con ≥1 arista de plataforma (de 567.858). Demoliciones: modo `image` de `Assistant.tsx`
+eliminado por completo (no renombrado) — el `Math.random()` sobre 5 fotos de stock de
+Unsplash etiquetado "Imagen generada" queda erradicado. `Inbox.tsx`'s `?? MOCK_CONVS`
+ya lo había retirado 05-multiposting F2 antes de que esta fase arrancara (regla del
+primer llegado, C-10) — verificado, no re-tocado. Panel `CHANNELS` de `Analitica.tsx`
+etiquetado "Ilustrativo" en la propia UI (no solo en comentario de código) a la espera
+de F4. Verificado: `tsc --noEmit` limpio, `vite build` verde (3599 módulos), grep 0
+`Math.random`-para-imágenes, grep 0 `MOCK_CONVS`-como-fallback.
+
+**F1 — Motor de auditoría de anuncio (C1). CERRADA.** Commit `8b1c47d`. Migración
+`0087_listing_audit.sql` (número re-verificado — 0086 ya tomado por
+`market_bucket_daily` de 09 en este mismo bloque). `pipeline/marketing/listing_audit.py`:
+11 checks puros (c1-c11, pesos suman 100 exacto, pineado por test), c5 (VIN) aplica el
+charset real NHTSA/ISO-3779 en vez de solo verificar no-nulo — decisión deliberada más
+estricta que la literalidad de la carta, justificada por el hallazgo de 04-F6 (98,4% de
+`vin_ref` contaminado con IDs de listado). `pipeline/marketing/photo_dims.py`: fetch de
+dimensiones de foto gobernado por el MISMO token-bucket per-host que usa la flota de
+scraping (`pipeline.engine.governor`), no un egress sin coordinar. Endpoint
+`GET /entities/{cdp}/listing-audit` en router nuevo `marketing.py`. **Corridas de
+producción reales**: CDP-ES-46-AD9ZXC65 (359 vehículos, sin fotos) — histograma real
+{50:1, 60:355, 70:3}; CDP-ES-28-5K6CNPCE (146 vehículos, CON fetch de fotos gobernado
+real) — 28/146 fotos descargadas y medidas de verdad (el resto 404 en algunos hosts,
+probablemente protección hotlink — declarado, nunca tratado como aprobado), **hallazgo
+real**: las 28 fotos medidas eran TODAS 400×300 (thumbnail de un proxy de resize), 0
+pasaron el mínimo 800×600 — señal honesta, no fabricada. Verificación vía-2 (protocolo
+§7, fila 1): `scripts/verify_listing_audit.py`, script SEPARADO que NO importa el motor,
+recalcula los 11 checks con SQL directo — ejecutado contra ambas corridas reales
+(muestra 100 c/u): **0 divergencias**. 31 tests unitarios puros + 4 tests de contrato
+contra datos vivos, todos verdes.
+
+**F2 — Comparables y posición de precio (C2). CERRADA — fase delgada por diseño.**
+Commit `8b1c47d` (mismo commit que F1's cierre operativo, ver el propio texto de F2:
+"si la capa estadística de 01 ya existe: consumirla"). 01-market-intelligence ya había
+cerrado F5 (M2, `compute_price_position`) antes de que este bloque arrancara —
+`GET /entities/{cdp}/listing-audit` ganó un flag opt-in `include_price_position` que
+llama esa MISMA función (importada de `market.py`, cero re-derivación), acotado a la
+página actual (nunca la flota completa) para no pagar N consultas secuenciales sin
+límite. Verificado vía curl real contra CDP-ES-46-AD9ZXC65.
+
+**F3 — Feeds C6 + `feed_export`. CERRADA.** Commit `532d07c`. Migración
+`0089_feed_export.sql` (0088 tomado por 09's `terminal_event_asof_index`) — ledger de
+METADATOS solamente (item/valid count, invalid_report, content_hash); el fichero se
+genera en vivo en cada request, nunca se guarda (doctrina de capacidad,
+cf. `capacity_ledger`/0033). `pipeline/marketing/feeds.py`: 3 generadores deterministas
+cero-LLM (Google Vehicle Ads CSV, Meta AIA CSV, schema.org JSON-LD), cada uno con su
+propio set de campos obligatorios codificado del §2. Dos huecos de esquema declarados
+honestamente: Meta AIA's `body_style`/`exterior_color` OMITIDOS (la tabla `vehicle` no
+tiene esas columnas) en vez de enviados en blanco. `GET /entities/{cdp}/feed/{target}`
+(descarga) + `/feed/{target}/report` (JSON). **Verificado en vivo**: descarga real
+contra CDP-ES-46-AD9ZXC65 — `google_vehicle_ads` 0/359 válido (100% bloqueado por `vin`
++ `image_link`, coherente con F0), `schema_org_jsonld` 354/359 válido (solo exige
+`itemCondition`+`mileageFromOdometer`, casi universal), `meta_aia` 0/359 (mismo cuello
+de botella). Validación EXTERNA (protocolo §7, fila 6 — Rich Results Test/Merchant
+Center diagnóstico) **NO ejecutada**: exige una cuenta/sesión de Google/Meta que esta
+ejecución no tiene — hueco declarado, no maquillado, mismo patrón que otras fases de
+acceso gated del programa. 20 tests unitarios puros + tests de contrato en vivo, todos
+verdes.
+
+**F4 — `Marketing.tsx` + sustitución del panel CHANNELS. CERRADA.** Commit `5928022`.
+Backend: `GET /entities/{cdp}/channel-radar` (C3+C4+C5 combinados) — C3/C4 reutilizan
+las funciones puras `_coverage_band`/`_price_divergence` YA extraídas por
+05-multiposting's `publishing.py` (importadas, no re-derivadas — mismo patrón que
+`tests/test_api_publishing.py` ya establece); C5 (mediana días-hasta-baja por
+plataforma) es cómputo nuevo, gateado por `MIN_COHORT_N` del registro compartido
+`pipeline.market.cohort` (01), nunca un umbral inventado aparte. Verificado en vivo:
+CDP-ES-46-AD9ZXC65 — plataforma `mercedes_benz` (oem_vo_portal) 98,05% cobertura/0
+divergentes/15,65d mediana (N=7.086), `milanuncios` 1,95%/0 divergentes/10,66d mediana
+(N=303.081) — ambos muy por encima del umbral mínimo. Frontend `Marketing.tsx` (nuevo):
+Bloque 1 "Arregla estos primero" (gratis), Bloque 2 "Radar de canales"
+(`PremiumGate feature="channel-radar"`, Capa 1 nueva en `entitlements.ts`), Bloque 3
+"Feed listo para anunciarte". Ruta `/marketing` + nav bajo INTELIGENCIA. Panel
+`CHANNELS` de `Analitica.tsx` reemplazado por el MISMO cálculo (una llamada, dos
+superficies) con estados vacío/carga/error honestos. **Hueco declarado, no de este
+pilar**: se intentó una verificación E2E autenticada por navegador real y se descubrió
+que `AuthContext.tsx`/`client.ts` (territorio AUTH-0) llaman rutas relativas
+`/api/v1/*` sin proxy configurado en el servidor de desarrollo compartido
+(`vite.config.ts` documenta el proxy como "orphaned, removido") — login vía UI no
+funciona hoy en este entorno para NINGUNA página autenticada, no solo Marketing. No es
+un bug de este pilar ni se tocó ese código (fuera de ownership); declarado para quien
+posea AUTH-0/AuthContext.tsx. Verificación de este pilar se apoyó en llamadas HTTP
+directas contra el backend vivo (mostradas arriba) + `tsc`/`vite build`.
+
+**F5 — Copy grounded (C7) + `adcopy_generation`. CERRADA.** Commit `9a071c4`. Migración
+`0092_adcopy_generation.sql` (0091 tomado por 09's `sector_news`). `pipeline/marketing/adcopy.py`:
+pipeline hechos→claims→prompt→LLM→gate determinista. El gate cotejat todo numeral del
+texto generado contra los `numeric_values` de un claim; un numeral sin respaldo =
+`rejected`, nunca servido. TDD real: la primera versión falló 3 tests (nombres de
+modelo como "320d" se contaban como numerales sin respaldo) — causa raíz corregida con
+un claim `vehicle_identity` que pre-respalda los dígitos del propio make/model/title
+(no son afirmaciones de mercado, son la identidad fija del coche). **Frontera de
+GASTO, declarada sin maquillaje**: cero credencial de LLM configurada en todo el
+repositorio (verificado de nuevo en F5: grep de requirements/.env.example/services/api)
+— `generate_copy()` exige un `LlmClient` inyectado sin default; el endpoint
+`POST /vehicles/{ulid}/adcopy` resuelve un proveedor real vía `ANTHROPIC_API_KEY` y
+devuelve 503 declarando el hueco cuando falta (hoy, siempre) — la llamada real al
+proveedor queda sin implementar a propósito (`NotImplementedError`) en vez de enviar un
+camino de API viva sin nada que lo pruebe en esta sesión. **Decisión de seguridad
+tomada durante la fase** (mejora sobre el diseño inicial): el endpoint exige sesión de
+dealer real (`get_current_session` + `_authorize_vehicle`, el MISMO guard que
+`dealer_ops.py`), no la X-API-Key pública de censo — una acción gateada por gasto real
+nunca debe ser alcanzable por la clave compartida. Caché verificada en vivo: una
+generación `grounded` previa para el mismo `(vehicle_ulid, snapshot_hash)` se sirve SIN
+exigir proveedor configurado (sembrado un registro de prueba
+`__CARDEEP_TEST_ADCOPY_CACHE__`, limpiado tras el test). `Assistant.tsx`'s modo
+`listing` ya no fabrica copy con regex+plantilla — redirige a Marketing Bloque 4
+(`ListingRedirectPanel`), demolición completa, no solo inalcanzable. 20 tests puros +
+5 tests de contrato (401/404/503/cache-hit/no-fila-falsa-en-503) contra el dealer demo
+sembrado (`demo@cardeep.local`/`CDP-ES-28-YCZB8JYW`, la MISMA fixture de
+`test_dealer_ops_router.py`), todos verdes.
+
+**F6 — Integración con 05/06. NO EJECUTADA — fuera del mandato de esta sesión**
+(instrucción literal: "ejecuta las fases F0 a F5"). Queda pendiente, declarada, para
+una ejecución futura que confirme que 06-unified-crm-chat aterrizó sus partes
+relevantes (F5 "cruce con el censo" seguía `in_progress` al cierre de esta sesión).
+
+**Regresión y verificación transversal**: 93 tests propios de este pilar (71 puros +
+22 de contrato/DB), todos verdes en la corrida final. `tsc --noEmit` limpio, `vite
+build` verde (3621 módulos). Colisiones reales detectadas y resueltas sin destruir
+trabajo ajeno: `services/api/main.py`/`web/src/App.tsx`/`web/src/layout/Shell.tsx`/
+`web/src/api/cardeep.ts` compartidos con 06 y 09 en el mismo working tree — cada commit
+de esta fase verificó por `git diff` que su porción del archivo era puramente aditiva
+antes de comitear. Servidor de desarrollo compartido (`:8090`) reiniciado dos veces
+para recoger cambios acumulativos de main.py — declarado, no silencioso. **Hueco
+operativo declarado, no de este pilar**: contención real observada durante la
+ejecución (disco del host al 98%, `DiskFullError` transitorio de PostgreSQL bajo carga
+concurrente de los 3 frentes — 5 ocurrencias, las 5 confirmadas transitorias por
+reintento exitoso). **Bloqueo de push declarado, no de este pilar**: el credential de
+`git`/`gh` de esta sesión carece de scope `workflow` — un commit local de
+09-trading-terminal que toca `.github/workflows/ci.yml` bloquea CUALQUIER push a
+`origin/main` (incluidos los commits de este pilar) hasta que el propietario ejecute
+`gh auth refresh --scopes workflow` (interactivo, requiere navegador) o equivalente.
+Los 5 commits de este pilar (F0-F5) están íntegros en `main` local, listos para push
+en cuanto se resuelva el scope.
+
+---
+
 ## Resumen
 
 El pilar 07 no existe hoy en ninguna capa: lo que aparenta marketing en Cardeep es mock (Analítica) o falsificación cliente-side (Assistant/Inbox), verificado archivo:línea. La investigación (19 referencias) demuestra que el pilar completo son 4 capas y que 3 (distribución, CDP de demanda, mensajería) son inalcanzables con los activos actuales — se declara sin maquillaje; distribución y mensajería quedan además en manos de los pilares hermanos 05/06, con fronteras selladas para no duplicar ni una tabla. La cabeza de puente real y defendible es una sola: contenido/feed/observación **anclados en el censo cross-plataforma dedupado + VAM**, que ningún competidor local tiene. Se construye en 7 fases (F0-F6): demoler el atrezzo, auditoría determinista de anuncio, posición de precio con N declarado, feeds compliant validados por la plataforma destino, radar de canales real, copy con gate de afirmaciones e integración con 05/06 — cada dato confirmado por 2 vías independientes antes de llegar al dealer.

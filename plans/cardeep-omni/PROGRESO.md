@@ -303,8 +303,49 @@ Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
    email como primer canal, cruce censo con M2 de 01. Nota: Inbox.tsx ya tiene un empty-state honesto
    dejado por 05 (§4.4 de PROGRESO arriba) — no es una sorpresa, ya registrado en la cabecera de
    `06-unified-crm-chat.md`.
-2. 07-marketing F0-F5 — auditoría de anuncio, feeds, copy grounded; consume M2/C2 de 01; F6 integra
-   con 05/06.
+2. 07-marketing F0-F5 — **✅ CERRADAS 2026-07-18** (evidencia completa en
+   `07-marketing.md` §10 "Estado de ejecución real" — leer ahí, no re-auditar). Commits en `main`
+   (locales, push bloqueado — ver hueco de scope OAuth abajo): `8e501a8` (F0), `8b1c47d` (F1+F2),
+   `532d07c` (F3), `5928022` (F4), `9a071c4` (F5).
+   - **F0**: recon SQL real (`vin_ref` 1,45%, `photo_hash` 0,00% — tercera confirmación
+     independiente tras 02-F0/04-F6), demolición completa del modo `image` de `Assistant.tsx`
+     (Math.random sobre Unsplash, no renombrado), panel CHANNELS etiquetado "Ilustrativo" en la UI.
+   - **F1**: migración `0087_listing_audit.sql`, motor de 11 checks (c5-VIN usa el charset real
+     NHTSA, más estricto que la carta, por la contaminación que 04-F6 encontró), fetch de fotos
+     gobernado por el mismo token-bucket del harvest. Corridas reales: 359+146 vehículos auditados
+     (hallazgo real: fotos medidas de un dealer eran TODAS 400×300, 0% cumple el mínimo de Google).
+     Verificación vía-2 (script separado, sin importar el motor): 0 divergencias en 200 muestras.
+   - **F2**: delgada por diseño — reusa M2 (`compute_price_position` de 01) vía flag opt-in, cero
+     re-derivación.
+   - **F3**: migración `0089_feed_export.sql`, 3 generadores de feed deterministas cero-LLM. Real:
+     `schema_org_jsonld` 354/359 válido, `google_vehicle_ads`/`meta_aia` 0/359 (bloqueados por
+     vin_ref/foto — coherente con F0/F1). Validación EXTERNA (Merchant Center/Rich Results Test)
+     NO ejecutada — exige cuenta Google/Meta, hueco declarado.
+   - **F4**: `GET /entities/{cdp}/channel-radar` (C3/C4 reusan funciones puras de 05-multiposting's
+     publishing.py, C5 nuevo gateado por `MIN_COHORT_N` de 01). `Marketing.tsx` nuevo (3 bloques),
+     panel CHANNELS de Analitica.tsx sustituido por el mismo cálculo. **Hueco NO de este pilar**:
+     login vía navegador real no funciona en este entorno de dev compartido (AuthContext.tsx llama
+     `/api/v1/*` relativo sin proxy configurado, `vite.config.ts` documenta el proxy como
+     "orphaned, removido") — bloquea E2E autenticado de CUALQUIER página, declarado para AUTH-0.
+   - **F5**: migración `0092_adcopy_generation.sql`, pipeline hechos→claims→prompt→gate. TDD real
+     cazó un bug propio (nombres de modelo como "320d" contados como numeral sin respaldo, corregido
+     con claim `vehicle_identity`). Frontera de GASTO declarada: 0 credencial LLM en todo el repo,
+     endpoint devuelve 503 honesto; decisión de seguridad tomada en la fase — el endpoint exige
+     sesión de dealer real (mismo guard que dealer_ops.py), no la API-key pública. Caché verificada
+     en vivo (sirve una generación previa sin exigir proveedor). Assistant.tsx modo listing ya
+     redirige a Marketing Bloque 4, demolición completa.
+   - **F6 explícitamente fuera de este mandato** (instrucción literal): integración con 05/06 queda
+     pendiente y declarada.
+   - **Regresión**: 93 tests propios (71 puros + 22 contrato/DB), todos verdes. `tsc`/`vite build`
+     limpios. Colisiones reales en archivos compartidos (`main.py`/`App.tsx`/`Shell.tsx`/
+     `cardeep.ts`) con 06 y 09 detectadas y resueltas sin destruir trabajo ajeno (verificación por
+     `git diff` antes de cada commit). **Hueco operativo declarado**: contención real del host
+     durante la ejecución (disco 98%, 5 `DiskFullError` transitorios de Postgres bajo carga
+     concurrente, las 5 confirmadas transitorias por reintento). **Bloqueo de push declarado, no
+     de este pilar**: el credential git/gh de esta sesión carece de scope `workflow`; un commit
+     local de 09 (`ci.yml`) bloquea el push de main hasta que el propietario ejecute
+     `gh auth refresh --scopes workflow` (interactivo). Los 5 commits de F0-F5 están íntegros en
+     `main` local.
 3. 09-trading-terminal Fases1-6 — **✅ CONSTRUIDAS E INTEGRADAS 2026-07-18** (evidencia completa en
    `09-trading-terminal.md` §"CIERRE DE FASES 1-6" — leer ahí, no re-auditar). F1: `market_bucket_daily`
    (migración `0086`) con bucketing por día REAL de cosecha (14 días de calendario reales medidos,
