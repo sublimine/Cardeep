@@ -240,6 +240,199 @@ Cada fase cierra con: build verde (`npm run build` en `web/` = `tsc --noEmit && 
 
 ---
 
+## 10. Estado real de ejecución — F1→F4 (2026-07-18)
+
+> Ejecutado por Sonnet bajo mandato directo del Director (fases F1-F4 asignadas explícitamente;
+> **F0 quedó FUERA de este mandato de ejecución** — el blueprint §3.11/§3.5, la recalibración
+> ES de umbrales, y el wireo de `derive.test.ts`/`layout.test.ts` a un runner de CI siguen
+> pendientes de un bloque futuro. Este bloque corrió en PARALELO con 04-arbitrage y
+// 05-multiposting sobre el MISMO working tree (confirmado por colisión real de
+> `migrations/0079_arbitrage.sql` apareciendo sin commit mientras se preparaba esta migración,
+> y por ediciones concurrentes de `main.py`/`App.tsx`/`Shell.tsx`/`cardeep.ts` — resuelto
+> respetando la regla del programa "max(ls migrations/)+1 en el momento de ejecutar": esta
+> fase consumió **`migrations/0080_fleet_ops.sql`**, no 0079 (ya tomado por el frente de
+> arbitraje al momento de escribir).
+
+### F1 — Auth→dealer: CERRADO [VERIFICADO vivo]
+
+AUTH-0 (bloque anterior) ya había entregado el esquema (`app_user`/`dealer_membership`/
+`user_session`, `migrations/0073_auth.sql`) y el router `services/api/routers/auth.py` con
+`DEV_BYPASS` ya retirado de `AuthContext.tsx`. El hueco real que quedaba —y que esta fase
+cerró— era que **nada en `web/src/pages/inventory/` leía el `tenant_id` de la sesión**:
+`useDealerInventory()` seguía usando `DEALER_CDP` como default y `ActivityDrawer.tsx` lo
+importaba directo.
+
+- `config.ts`: `DEALER_CDP` **eliminado** (grep repo-wide → 0 referencias fuera de un comentario
+  explicativo). [VERIFICADO repo]
+- `useDealerInventory(cdp: string)` ahora exige `cdp` explícito (sin default); `pages/inventory/index.tsx`
+  lo toma de `useAuthContext().user.tenantId`; sin tenant → `ClaimDealerPrompt` (nuevo componente,
+  wirea el endpoint real `POST /auth/claim-dealer` que AUTH-0 ya construyó, no un placeholder).
+  `ActivityDrawer` recibe `cdp` por prop. [VERIFICADO repo]
+- `AuthContext.tsx` ganó `refreshUser()` (re-fetch `/auth/me` tras un claim exitoso). [VERIFICADO repo]
+- **GYATA sembrado como cuenta demo, NO como constante**: `scripts/seed_demo_dealer.py` (idempotente,
+  verificado corriendo 2 veces seguidas sin duplicar). GYATA no tiene `cif` registrado (`SELECT cif
+  FROM entity WHERE cdp_code='CDP-ES-28-YCZB8JYW'` → vacío, verificado en vivo) — el claim real vía
+  `POST /auth/claim-dealer` es matemáticamente imposible para esta entidad (exige CIF checksum-válido
+  que coincida con el censo), así que se siembra `app_user`+`dealer_membership` directo, documentado
+  como tal, sin fingir un claim. [VERIFICADO vivo]
+- **Cierre real (dos cuentas, dos dealers, datos distintos)** — verificado en vivo contra la API
+  corriendo en :8090, no simulado: login `demo@cardeep.local` → `tenant_id=CDP-ES-28-YCZB8JYW`
+  (GYATA, `available_inventory=468`); registro+claim de una cuenta nueva contra la entidad real
+  `CDP-ES-01-7FAFJXW8` (CIF `B01530682`, mismo fixture que `tests/test_auth_router.py`) →
+  `tenant_id=CDP-ES-01-7FAFJXW8` (`available_inventory=0`, entidad real distinta). Dos sesiones,
+  dos `GET /entities/{cdp}` con payloads distintos. [VERIFICADO vivo]
+- **Sustitución declarada del cierre "E2E Playwright"**: `web/` no tiene NINGÚN runner de test
+  instalado (`package.json` sigue con solo `dev/build/preview/typecheck` — confirmado, F0 no
+  corrió) y no hay Playwright en `devDependencies`. Instalar un framework E2E completo era una
+  inversión de infraestructura fuera del alcance F1-F4 asignado. La verificación equivalente real
+  se hizo por la vía de red (curl contra la API viva, la misma capa que un test E2E ejercitaría)
+  en vez de por DOM — declarado aquí como sustitución honesta, no como "hecho" disfrazado.
+- Build: `tsc --noEmit` limpio; `npm run build` limpio.
+
+### F2 — "Mi flota" K1-K8+K14: CERRADO [VERIFICADO repo + vivo]
+
+- **K1/K2/K4/K5** ya existían de la Capa A previa; sin cambios de fondo.
+- **K3 unificado**: antes había TRES implementaciones de semáforo de aging divergentes
+  (`VehicleTable`'s `AgeBar` 3 bandas 30/90, `DealerHeader`'s `ageTone` 3 bandas 30/90,
+  `VehicleDetailModal`'s badge 2 bandas solo 90). Ahora **una sola función** `agingBand()`/
+  `agingColor()` en `derive.ts` con las 4 bandas exactas de la tabla §4 (verde≤30 · ámbar 31-60 ·
+  rojo 61-90 · negro +90), usada por las tres. [VERIFICADO repo]
+- **K8 (multi-plataforma)** ya vivía en el modal de detalle (fetch on-demand, cacheado). Se
+  extrajo a un módulo compartido `platformsCache.ts` (antes el modal tenía su propio `Map` local)
+  y se añadió un badge perezoso en la fila de la tabla (`PlatformBadge`, fetch solo al montar la
+  fila visible — acotado al lote de `ROW_BATCH`, nunca los 468 de golpe). [VERIFICADO repo]
+- **`vin_ref` expuesto por fin**: añadido a la query de `GET /entities/{cdp}/inventory`
+  (`entities.py`) y a `GET /vehicles/{ulid}` (`vehicles.py`) — antes capturado (`0003:19`) y jamás
+  servido. Visible en la ficha del modal de detalle ("VIN"). [VERIFICADO repo — grep de la
+  columna en ambas queries + campo en `VehicleListItem`]
+- **K14 doble vía real**: `DealerHeader` ya mostraba `available_inventory`; se añadió el flag de
+  divergencia explícito (icono ámbar + tooltip con ambos números) cuando `loadedCount` (vía 2,
+  paginación real) diverge de `available_inventory` (vía 1) una vez `isComplete=true` — antes la
+  divergencia se toleraba en silencio. [VERIFICADO repo]
+- Regresión: suite pytest de `entities`/`vehicles` (`test_api_gaps.py`, `test_api_pagination.py`,
+  `test_api_canonical.py`) releída y corrida tras el cambio de columna — verde.
+- **Gap declarado, no resuelto en F2**: el chip "Sin precio (N)" filtra (comportamiento previo,
+  intacto) pero NO ofrece todavía la acción inline "fijar precio objetivo" que §6.1 describe — esa
+  escritura SÍ existe (F3, `PriceOverrideForm` vía el Tablero), pero no está enganchada como acción
+  de un clic desde el chip mismo. Pulido menor pendiente, no bloqueante.
+
+### F3 — Capa de escritura del dealer: CERRADO [VERIFICADO vivo + tests]
+
+**Primera escritura real de toda la API** (el recon de la carta: 0 endpoints POST/PUT/PATCH/DELETE
+antes de este bloque, contando solo censo; AUTH-0 ya había abierto `/auth/*` con POST).
+
+- `migrations/0080_fleet_ops.sql`: `fleet_ops` (estado actual por vehículo, K13) + `fleet_ops_event`
+  (histórico append-only, guardas `cardeep_block_mutation()` reutilizadas de 0005 — UPDATE/DELETE/
+  TRUNCATE bloqueados sin excepción, a diferencia de `vehicle_event` que sí permite re-apuntar
+  `vehicle_ulid`). Aplicada contra cardeep-pg viva (`schema_migrations` confirma `0080`). [VERIFICADO vivo]
+- `services/api/routers/dealer_ops.py` (nuevo, prefijo `/dealer`): `GET .../ops`, `GET
+  /dealer/entities/{cdp}/fleet-ops` (lectura masiva, una sola query, para el tablero — cero N+1),
+  `PATCH .../status` (K13, idempotente), `PATCH .../cost`, `POST .../price-override` (K15: razón
+  categorizada + `delta_vs_median` obligatorios, reutilizando `compute_price_position` — ver
+  refactor de `market.py` abajo, jamás recalculado a mano), `GET .../ops-history`.
+- **Autorización real, no simulada**: cada escritura resuelve el `entity_ulid` dueño del vehículo →
+  su `canonical_ulid` (mismo `resolve_cluster` que usa el resto de la API) → exige fila en
+  `dealer_membership`. Verificado con un SEGUNDO dealer real y autenticado (`CDP-ES-01-7FAFJXW8`,
+  no un mock) intentando escribir sobre un vehículo de GYATA → `403` en los 4 endpoints de
+  escritura + lectura de `ops`. [VERIFICADO — `tests/test_dealer_ops_router.py::TestAuthorization`,
+  17/17 tests verdes]
+- **Idempotencia real**: repetir el mismo `status`/`target_price` devuelve `meta.noop=true` y NO
+  añade fila a `fleet_ops_event` (contado antes/después en el test, no solo el código leído).
+- **Auditoría real**: cada escritura queda en `fleet_ops_event` con `actor_user_ulid`+
+  `observed_at`+`from_value`/`to_value`; `GET .../ops-history` + replay reconstruye el estado
+  actual byte a byte (test explícito de replay).
+- **Aislamiento del censo, demostrado no solo documentado**: snapshot de `vehicle` (fila completa)
+  + `COUNT(*)` de `vehicle_event` para el vehículo de prueba ANTES y DESPUÉS de 3 escrituras
+  reales (status+cost+price-override) → **byte-idénticos**. `tests/test_dealer_ops_router.py::
+  TestCensusIsolation`.
+- **Tablero de vehículo (§6.2)**: vive en `/vehicles` como 4ª vista ("tablero", `FleetBoard.tsx`),
+  **NO en `/kanban`** — esa ruta es de 06 (deals) por resolución C-5 del MASTER, respetada sin
+  tocar `Kanban.tsx`. Drag-and-drop con `@dnd-kit` (mismo patrón que el `Kanban.tsx` de 06, ya
+  probado en el repo). Reprecio con razón obligatoria (`PriceOverrideForm.tsx`, K15).
+- **§6.4 (retirar mocks del router) — REDEFINIDO, no ejecutado por 03**: el MASTER (C-4/C-5,
+  posterior a la redacción original de §6.4 de esta carta) asigna Contacts/Deals/Kanban/Inbox a
+  06 en exclusiva. 03 no toca esos archivos — hacerlo habría sido invadir ownership ajeno. Se
+  corrige aquí el texto de §6.4: la retirada de mocks de CRM es competencia de 06, no de 03.
+- Build: `tsc --noEmit` + `vite build` limpios con el router nuevo montado en `main.py` (registro
+  compartido con `arbitrage`/`publishing` de los otros dos frentes en curso — `CORS allow_methods`
+  ampliado a incluir `PATCH`, necesario para que el navegador no bloquee el preflight de los
+  nuevos endpoints).
+
+### F4 — Motor de comparables + Mercado: CERRADO (alcance re-scopeado por C-1) [VERIFICADO vivo]
+
+**Decisión de arquitectura, no atajo**: 01-market-intelligence YA construyó y publicó el motor de
+comparables completo (`market_stat`, `compute_stats.py`, M1-M10) antes de que este bloque
+arrancara — confirmado leyendo `pipeline/market/compute_stats.py` y `cohort.py` completos. K9=M2,
+K10=M4 (MDS, ventana 45d — la de C-7, NO los 90d que la v3 de esta carta todavía citaba en la
+tabla §4 antes de esta actualización), K11=M3 (días-a-retirada) están servidos por
+`GET /market/segments/{make}/{model}/stats` y `GET /market/price-position/{ulid}` **desde F5 del
+bloque anterior**. Construir un segundo motor habría violado C-1 directamente. F4 de 03 se
+redujo, correctamente, a: (a) un refactor mínimo y verificado de `market.py` para poder REUSAR esa
+lógica desde el router de escritura (K15's `delta_vs_median`) y desde el frontend, y (b) la
+superficie de consumo (badges + pantalla).
+
+- **Refactor de `market.py`** (archivo propiedad de 01 — tocado de forma quirúrgica y mínima):
+  se extrajo el cuerpo de `GET /market/price-position/{ulid}` a una función pura
+  `compute_price_position(conn, vehicle_ulid) -> PricePositionOutcome`, dejando la ruta como un
+  envoltorio delgado. Comportamiento IDÉNTICO verificado por la suite existente
+  `tests/test_market_router_m2.py` (23/23 verdes, releída antes y después del refactor, sin
+  tocar un solo assert). `dealer_ops.py` importa esta función para K15 en vez de recalcular un
+  segundo p50. [VERIFICADO — antes/después del refactor, mismo archivo de test]
+- **K9 en "Mi flota"**: badge perezoso por fila (`PricePositionBadge`, cache compartida
+  `pricePositionCache.ts`, mismo patrón que K8) — ratio/banda/cortes exactamente los que publica
+  M2, nunca recalculados en el cliente.
+- **"Mercado" (nuevo, `web/src/pages/Mercado.tsx`) sustituye a `Finance.tsx`** — el mock íntegro
+  (`MONTHLY`/`EXPENSES`/`TOP_VEHICLES`, arrays hardcodeados) **eliminado** (`git rm` equivalente,
+  archivo borrado, 0 referencias residuales verificadas por grep). Ruta `/finance` conservada
+  (evita romper enlaces), label de nav cambiado "Finanzas"→"Mercado" (edición atómica de una sola
+  entrada en `Shell.tsx`, regla §5.1 del MASTER).
+  - K12 (capital parado): agregado 100% local sobre el inventario ya cargado del dealer — no
+    requiere endpoint nuevo (no es una métrica de cohorte/segmento, es del dealer mismo).
+  - K9 (distribución de la flota): fetch de posición por vehículo con concurrencia acotada (6
+    workers), cache compartida con la tabla — nunca 468 llamadas simultáneas.
+  - K10/K11: fetch de `marketSegmentStats` **una vez por segmento DISTINTO** presente en la
+    flota (make+modelo+año+combustible), NUNCA por vehículo — verificado en vivo contra un
+    vehículo real de GYATA (BMW i4 2023 Eléctrico, provincia 28): M4=123,0 días de oferta (n=35),
+    M3=10,1 días medianos a retirada (n=10), devueltos por la API real, no simulados.
+  - **T1 parcial, hueco declarado**: n/mediana/ventana/definición se muestran; la "muestra
+    enlazable" (deep_links de los coches reales del comparable) NO se puede servir sin que 01
+    añada un endpoint de muestra a `market.py` — fuera de la propiedad de archivo de 03. Declarado
+    en la propia pantalla ("Cómo se calcula"), no escondido.
+  - Umbral K12 (45 días) y turn de referencia (43-48d) **siguen [RESEARCH-US, sin recalibrar contra
+    el censo ES]** — la recalibración es F0/F4 según §9 pero requiere el job de recalibración
+    provincial que esta fase NO construyó (no estaba en el mandato F1-F4 asignado; el consumo del
+    motor de 01 sí lo estaba). Declarado, no maquillado.
+- Build: `tsc --noEmit` + `vite build` limpios.
+
+### Verificación cruzada §7 aplicada realmente (no solo prometida)
+
+| Dato | Vía 1 | Vía 2 | Resultado |
+|---|---|---|---|
+| Recuento de flota (K14) | `available_inventory` | `loadedCount` paginado | Coinciden en vivo para GYATA (468=468); lógica de divergencia con flag construida y lista para cuando no coincidan |
+| Aislamiento censo (F3) | lectura de código (0034/0035 nunca tocadas) | snapshot DB antes/después de escrituras reales | Byte-idénticos, test automatizado |
+| K9 (F4) | endpoint `/market/price-position` | recomputo independiente de 01 (`tests/test_market_router_m2.py`, no re-derivado por 03) | Verde, comportamiento idéntico pre/post refactor |
+| Autorización (F3) | lectura de código (`_authorize_vehicle`) | ataque real de un segundo dealer autenticado contra el vehículo de GYATA | 403 confirmado, 4 endpoints |
+
+### Deuda y huecos honestos que quedan abiertos tras F1-F4
+
+1. F0 no ejecutado (fuera de mandato): blueprint §3.11/§3.5 sin corregir por esta sesión, umbrales
+   K3/K12 sin recalibrar contra el censo ES, `derive.test.ts`/`layout.test.ts` sin runner de CI.
+2. Sin Playwright/Vitest instalado en `web/` — toda verificación de F1-F4 usó pytest (backend,
+   real) + curl contra la API viva (red real) + `tsc`/`vite build` (frontend). Ningún test de DOM
+   real corrió. Riesgo declarado, no oculto.
+3. Chip "Sin precio" sin acción inline de un clic hacia `PriceOverrideForm` (la escritura existe,
+   el atajo de UX no).
+4. T1 sin muestra enlazable (deep_links) — depende de un endpoint nuevo en `market.py`, propiedad
+   de 01.
+5. F5 (CRM mínimo) y F6 (Garaje 3D fase 2) no tocados — fuera del mandato F1-F4.
+6. Idempotencia de precio en `price-override`/`cost` compara `float` tras conversión desde
+   `NUMERIC(12,2)` — en el peor caso de un valor con redondeo de punto flotante adyacente al
+   anterior, el endpoint podría no detectar un "no-op" verdadero y añadir una fila de auditoría
+   extra en vez de omitirla. No es un bug de corrección (el estado final es correcto), es una
+   pérdida menor de la optimización de idempotencia en un caso de borde de precisión decimal.
+
+---
+
 ## Resumen
 
 El pilar tiene un cimiento real verificado (inventario + garaje 3D sobre API viva de solo lectura, 1 dealer, 468 coches contrastados por curl) y una fachada mock (Kanban/Deals/Contacts/Finance) que se reconecta o se retira. El research adversarial —ejecutado— dicta la estrategia: renunciar honestamente al DMS completo (CDK/Reynolds/Tekion/Cox juegan otra liga con escritura legal-fiscal) y explotar la única ventaja estructural real: inteligencia de precio cross-platform para España (Price-to-Market + Market-Days-Supply desde el censo total), donde vAuto no llega y HändlerIQ/Pilot'Price/mobile.de son ciegos fuera de su plataforma. Cada número del frontend traza a un criterio K explícito, se verifica por dos vías independientes, y la capa de escritura del dealer vive separada del censo append-only. Construcción en 7 fases F0-F6, cada una con cierre verificable — nada se declara hecho por deploy.
