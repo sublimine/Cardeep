@@ -72,13 +72,14 @@ const NAV_GROUPS = [
     ],
   },
   {
-    // 08-forum-community F3: "Se busca" board (§6.1, PRIORITY 1 of the pilar). "/community"
-    // (foro completo, §6.2-§6.4) lands in F5, behind the carta's own masa-crítica gate — no
-    // entry for it here yet (a ghost-forum nav link is exactly what the carta's Forocoches
-    // case study (§2.5) warns against exhibiting before there are real users to serve).
+    // 08-forum-community F3+F5: "Se busca" board (§6.1, PRIORITY 1) + forum feed (§6.2-§6.4,
+    // PRIORITY 2). The "Foro" entry lands only at F5's close — the carta's Forocoches case
+    // study (§2.5) warns against exhibiting a ghost-forum nav link before there is real
+    // conversation to serve; by F5, real threads exist end-to-end against the live census.
     label: 'COMUNIDAD',
     items: [
       { to: '/community/wanted', label: 'Se busca', icon: Search, end: false },
+      { to: '/community', label: 'Foro', icon: MessageSquare, end: true },
     ],
   },
   {

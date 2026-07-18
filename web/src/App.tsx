@@ -34,6 +34,9 @@ import Motor from './pages/Motor'
 import Terminal from './pages/Terminal'
 import Marketing from './pages/Marketing'
 import Wanted from './pages/Wanted'
+import Community from './pages/Community'
+import CommunityThread from './pages/CommunityThread'
+import CommunityProfile from './pages/CommunityProfile'
 import { useAuthContext } from './auth/AuthContext'
 
 function RootRedirect() {
@@ -93,9 +96,11 @@ export default function App() {
           <Route path="api"        element={<Api />} />
           <Route path="analitica"  element={<Analitica />} />
           <Route path="marketing"  element={<Marketing />} />
-          {/* 08-forum-community F3: "Se busca" board. /community (foro) lands in F5,
-              behind masa-crítica gate per the carta's own priority order (§3/§9). */}
+          {/* 08-forum-community F3/F5: "Se busca" board + forum (feed/hilo/perfil). */}
           <Route path="community/wanted" element={<Wanted />} />
+          <Route path="community" element={<Community />} />
+          <Route path="community/thread/:id" element={<CommunityThread />} />
+          <Route path="community/user/:id" element={<CommunityProfile />} />
           <Route path="invoices"   element={<Invoices />} />
           <Route path="pricing"    element={<Pricing />} />
           <Route path="notes"      element={<Notes />} />

@@ -117,20 +117,30 @@ async def _verify_anchor(conn: asyncpg.Connection, anchor_type: str, anchor_ref:
     carta's drift-detection intent, but flagged unverified via a null snapshot)."""
     if anchor_type == "vehicle":
         row = await conn.fetchrow(
-            "SELECT make, model, year, price, status FROM vehicle WHERE vehicle_ulid = $1", anchor_ref
+            "SELECT make, model, year, price, status, photo_url, deep_link, last_seen "
+            "FROM vehicle WHERE vehicle_ulid = $1",
+            anchor_ref,
         )
         if row is None:
             return None
         return {
             "make": row["make"], "model": row["model"], "year": row["year"],
             "price": float(row["price"]) if row["price"] is not None else None, "status": row["status"],
+            "photo_url": row["photo_url"], "deep_link": row["deep_link"], "last_seen": str(row["last_seen"]),
         }
     if anchor_type == "entity":
         cluster = await resolve_cluster(conn, anchor_ref)
         if cluster is None:
             return None
         row = await conn.fetchrow("SELECT trade_name FROM entity WHERE entity_ulid = $1", cluster.canonical_ulid)
-        return {"cdp_code": cluster.canonical_cdp_code, "trade_name": row["trade_name"] if row else None}
+        stock = await conn.fetchval(
+            "SELECT COUNT(*) FROM vehicle WHERE entity_ulid = ANY($1::text[]) AND status = 'available'",
+            cluster.member_ulids,
+        )
+        return {
+            "cdp_code": cluster.canonical_cdp_code, "trade_name": row["trade_name"] if row else None,
+            "stock_available": int(stock),
+        }
     if anchor_type == "province":
         row = await conn.fetchrow(
             "SELECT name FROM geo_province WHERE country_code = 'ES' AND code = $1", anchor_ref
