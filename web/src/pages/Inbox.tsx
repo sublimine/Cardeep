@@ -11,12 +11,17 @@ import { useToast } from '../components/Toast'
 import type { Conversation } from '../types'
 import { cn } from '../lib/cn'
 
-const MOCK_CONVS: Conversation[] = [
-  { id: 'cv1', tenantId: 't', contactId: 'c1', vehicleId: 'v1', dealId: 'd1', sourcePlatform: 'mobile.de',   externalId: 'ext1', subject: 'BMW 320d inquiry',     status: 'open',    unread: true,  lastMessageAt: '2026-04-18T10:15:00Z', createdAt: '2026-04-18T10:00:00Z', contactName: 'Maria Santos',  vehicleName: 'BMW 320d',      previewBody: 'Hello, I am interested in this vehicle…' },
-  { id: 'cv2', tenantId: 't', contactId: 'c2', vehicleId: 'v2', dealId: 'd2', sourcePlatform: 'autoscout24', externalId: 'ext2', subject: 'Audi A4 question',       status: 'replied', unread: false, lastMessageAt: '2026-04-17T14:30:00Z', createdAt: '2026-04-17T14:00:00Z', contactName: 'John Doe',      vehicleName: 'Audi A4',       previewBody: 'Is the service history available?' },
-  { id: 'cv3', tenantId: 't', contactId: 'c3', vehicleId: 'v3', dealId: 'd3', sourcePlatform: 'mobile.de',   externalId: 'ext3', subject: 'Mercedes C220',         status: 'open',    unread: true,  lastMessageAt: '2026-04-17T11:00:00Z', createdAt: '2026-04-17T10:00:00Z', contactName: 'Anna Weber',    vehicleName: 'Mercedes C220', previewBody: 'Can I arrange a test drive this week?' },
-  { id: 'cv4', tenantId: 't', contactId: 'c4', vehicleId: 'v4', dealId: 'd4', sourcePlatform: 'manual',      externalId: 'ext4', subject: 'VW Golf 8',             status: 'closed',  unread: false, lastMessageAt: '2026-04-16T09:00:00Z', createdAt: '2026-04-15T08:00:00Z', contactName: 'Peter Klein',   vehicleName: 'VW Golf 8',     previewBody: 'Thank you for your time.' },
-]
+// 05-multiposting F2 (00-MASTER.md C-10, "regla del primer llegado"): 06-unified-crm-chat
+// owns Inbox.tsx/the CRM inbox backend, but had not landed when this pilar's F2 executed
+// (plans/cardeep-omni/PROGRESO.md BLOQUE 2 — 06 is scheduled for BLOQUE 3, not started).
+// The mock this file used to fall back to (`MOCK_CONVS`: 'mobile.de'/'autoscout24' fake
+// conversations, out-of-scope-for-Spain platform, fictional contacts) is retired here per
+// the first-arrival rule — replaced with the honest empty-state 06's OWN carta already
+// prescribes for this exact case (05-multiposting.md S1.4, 06-unified-crm-chat.md S"Prohibido
+// ?? MOCK_* en cualquier pagina CRM"). Registered in 06-unified-crm-chat.md's tracker (S0
+// note) so 06 does not re-discover this as a surprise. GET/POST /inbox/* still do not exist
+// in services/api (grep -rn "inbox" services/api/routers/ = 0 results) — 06-F4 builds
+// crm_inbox.py against the exact paths useInbox.ts already expects.
 
 const STATUS_COLOR: Record<string, NonNullable<Parameters<typeof Badge>[0]['color']>> = {
   open: 'blue', replied: 'green', closed: 'gray', spam: 'red',
@@ -85,8 +90,12 @@ export default function Inbox() {
   const [replyBody, setReplyBody]   = useState('')
   const [filter, setFilter]         = useState<Filter>('all')
 
-  const { data, loading, reload }                   = useInbox()
-  const conversations                               = data?.conversations ?? MOCK_CONVS
+  const { data, loading, error, reload }             = useInbox()
+  // Honest empty array, never a fabricated fleet of conversations (C-10, see file-header
+  // note) -- /inbox does not exist in services/api yet, so `error` is always populated
+  // until 06-unified-crm-chat's F4 ships a real channel; the list below renders that
+  // reality plainly instead of a silently-swapped mock.
+  const conversations: Conversation[]                = data?.conversations ?? []
   const { data: thread, loading: threadLoading }    = useConversation(selectedId ?? '')
   const { reply, loading: sending }                 = useInboxMutations()
   const { success, error: toastErr }                = useToast()
@@ -160,7 +169,13 @@ export default function Inbox() {
           className="md:w-80 shrink-0 overflow-y-auto"
         >
           {filtered.length === 0 ? (
-            <EmptyState icon={<InboxIcon className="w-6 h-6" />} message="No conversations" />
+            <EmptyState
+              icon={<InboxIcon className="w-6 h-6" />}
+              title={error ? 'Bandeja aún no conectada' : 'Sin conversaciones'}
+              message={error
+                ? 'El canal de mensajería unificado (email/WhatsApp) está en construcción — todavía no hay backend real detrás de esta pantalla.'
+                : undefined}
+            />
           ) : (
             <AnimatePresence initial={false}>
               {filtered.map((c) => (
