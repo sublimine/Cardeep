@@ -29,6 +29,13 @@ from typing import Any
 
 import asyncpg
 
+from pipeline.gestionador.cohorts import (
+    COHORT_MAD_FLOOR,
+    COHORT_MIN_TIER_A,
+    COHORT_MIN_TIER_B,
+    cohort_ctes_sql,
+)
+
 # ---------------------------------------------------------------------------
 # Configuration constants (V4 §3 — "thresholds live in config, not code")
 # ---------------------------------------------------------------------------
@@ -106,9 +113,12 @@ PRICE_TRAP_FLOOR: dict[str, float] = {
     "subasta":               300.0,
 }
 PRICE_TRAP_COHORT_Z = 6.0              # robust-z threshold, both sides (|z| >= 6)
-PRICE_TRAP_COHORT_MIN_A = 15           # min cohort size, Tier-A (make, model, year)
-PRICE_TRAP_COHORT_MIN_B = 30           # min cohort size, Tier-B fallback (make, year; model NULL)
-PRICE_TRAP_MAD_FLOOR = 0.05            # skip near-degenerate cohorts (log-price MAD < 5%) — Law I
+# Cohort-size/MAD guards factored to pipeline/gestionador/cohorts.py (04-arbitrage.md F1:
+# shared with the deal-score primitive, 00-MASTER.md C-1/C-12 — one cohort implementation).
+# Aliased here under the original names so no external reference breaks.
+PRICE_TRAP_COHORT_MIN_A = COHORT_MIN_TIER_A    # min cohort size, Tier-A (make, model, year)
+PRICE_TRAP_COHORT_MIN_B = COHORT_MIN_TIER_B    # min cohort size, Tier-B fallback (make, year; model NULL)
+PRICE_TRAP_MAD_FLOOR = COHORT_MAD_FLOOR        # skip near-degenerate cohorts (log-price MAD < 5%) — Law I
 PRICE_TRAP_HIGH_ABS_FLOOR = 150_000.0  # HIGH flag ALSO requires price >= this (Law I co-guard)
 PRICE_TRAP_LOW_MEDIAN_FRAC = 0.25      # LOW flag ALSO requires price < 0.25 * cohort median (Law I)
 PRICE_TRAP_MAX_ROWS = 5000             # hard cap on flags per run
@@ -841,53 +851,22 @@ async def detect_price_trap(conn: asyncpg.Connection) -> list[AnomalyResult]:
     never amplify a normal-priced car's small deviation into a spurious z and quarantine legit stock.
     Pure async DB-only (zero external cost). Idempotent within a UTC day via dedupe_key.
     """
-    # One cohort pass. NULL-safe join (IS NOT DISTINCT FROM) so the Tier-B model-NULL group joins
-    # back to itself. Tier min-size is chosen per-row in the HAVING (model present -> A, else B).
-    # The cohort is keyed by (country_code, make, model, year): a "VW Golf 2020" in ES and one in DE
-    # must NOT pool into one median/MAD (a second tenant's price distribution would shift the ES cohort
-    # statistic and flag/clear ES cars wrongly). The base joins entity ONLY for country_code (kind is
-    # still resolved later for the few flagged rows). ES is byte-identical: a single tenant means the
-    # country column is constant, so the cohorts and statistics are exactly the previous ones.
-    sql = """
-        WITH base AS (
-            SELECT v.vehicle_ulid, v.price::float8 AS price, ln(v.price::float8) AS lp,
-                   v.make, v.model, v.year, e.country_code
-              FROM vehicle v
-              JOIN entity e ON e.entity_ulid = v.entity_ulid
-             WHERE v.status = 'available' AND v.price IS NOT NULL AND v.price > 0
-               AND v.make IS NOT NULL AND v.year IS NOT NULL
-        ),
-        med AS (
-            SELECT country_code, make, model, year, count(*) AS n,
-                   percentile_cont(0.5) WITHIN GROUP (ORDER BY lp)    AS med_lp,
-                   percentile_cont(0.5) WITHIN GROUP (ORDER BY price) AS med_price
-              FROM base
-             GROUP BY country_code, make, model, year
-            -- $1/$2 cast to int: in a CASE both untyped params resolve to `text`, so `count(*) >= ...`
-            -- raised `bigint >= text` and the whole detector errored on prepare (PG16/asyncpg) — a
-            -- pre-existing latent bug surfaced when validating this SQL against the dry-run. The cast
-            -- is behaviour-preserving (the params are ints).
-            HAVING count(*) >= CASE WHEN model IS NOT NULL THEN $1::int ELSE $2::int END
-        ),
-        mad AS (
-            SELECT * FROM (
-                SELECT b.country_code, b.make, b.model, b.year, m.n, m.med_lp, m.med_price,
-                       percentile_cont(0.5) WITHIN GROUP (ORDER BY abs(b.lp - m.med_lp)) AS mad_lp
-                  FROM base b
-                  JOIN med m ON b.country_code = m.country_code AND b.make = m.make AND b.year = m.year
-                            AND COALESCE(b.model, '§§NULL§§') = COALESCE(m.model, '§§NULL§§')
-                 GROUP BY b.country_code, b.make, b.model, b.year, m.n, m.med_lp, m.med_price
-            ) q WHERE mad_lp >= $3
-        ),
-        scored AS (
-            SELECT b.vehicle_ulid, b.price, b.make, b.model, b.year, b.country_code,
-                   mad.n, mad.med_price,
-                   (b.lp - mad.med_lp) / (1.4826 * mad.mad_lp) AS z,
-                   (mad.model IS NULL) AS tier_b
-              FROM base b
-              JOIN mad ON b.country_code = mad.country_code AND b.make = mad.make AND b.year = mad.year
-                      AND COALESCE(b.model, '§§NULL§§') = COALESCE(mad.model, '§§NULL§§')
-        )
+    # One cohort pass via the shared primitive (pipeline/gestionador/cohorts.py, 04-arbitrage.md F1:
+    # factored out so detect_price_trap and the deal-score job share ONE cohort implementation,
+    # 00-MASTER.md C-1/C-12). Tier min-size is chosen per-row in the HAVING (model present -> A, else
+    # B). The cohort is keyed by (country_code, make, model, year): a "VW Golf 2020" in ES and one in
+    # DE must NOT pool into one median/MAD. The base joins entity ONLY for country_code (kind is still
+    # resolved later for the few flagged rows). ES is byte-identical: a single tenant means the country
+    # column is constant, so the cohorts and statistics are exactly the previous ones.
+    # Verified byte-identical against production cardeep-pg pre/post this refactor (04-F1 log):
+    # same 5000-row flagged set, same order (hash cb132238020735529dc11d422e0ce1dd38d9e568b54a670ec6c9905db66a039c).
+    base_select_sql = (
+        "SELECT v.vehicle_ulid, v.price, v.make, v.model, v.year, e.country_code "
+        "FROM vehicle v JOIN entity e ON e.entity_ulid = v.entity_ulid "
+        "WHERE v.status = 'available'"
+    )
+    sql = f"""
+        WITH {cohort_ctes_sql(base_select_sql)}
         SELECT vehicle_ulid, price, make, model, year, country_code, n, med_price, z, tier_b,
                CASE WHEN z >=  $4 AND price >= $5            THEN 'high'
                     WHEN z <= -$4 AND price <  $6 * med_price THEN 'low' END AS side
