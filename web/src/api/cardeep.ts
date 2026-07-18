@@ -64,6 +64,29 @@ async function getPaged<T>(path: string, params?: Params, signal?: AbortSignal):
   };
 }
 
+/** Like getPaged, but preserves the FULL `meta` object (page/size/returned/has_more
+ * PLUS any endpoint-specific extras, e.g. listing-audit's avg_score/incoherent_price_count)
+ * instead of stripping it down to the four standard pagination fields. Use when a
+ * paginated endpoint's meta carries a page-independent summary the caller needs. */
+interface PagedWithMeta<T> extends Paginated<T> { meta: Record<string, unknown> }
+
+async function getPagedWithMeta<T>(path: string, params?: Params, signal?: AbortSignal): Promise<PagedWithMeta<T>> {
+  const url = new URL(BASE + path);
+  if (params) for (const [k, v] of Object.entries(params)) if (v !== undefined) url.searchParams.set(k, String(v));
+  const res = await fetch(url.toString(), { headers: API_KEY ? { 'X-API-Key': API_KEY } : undefined, signal });
+  const body = (await res.json()) as Envelope<T[]>;
+  if (!res.ok || !body.ok || body.data === null) throw new CardeepApiError(res.status, body.error ?? `HTTP ${res.status}`);
+  const m = body.meta ?? {};
+  return {
+    items: body.data,
+    page: (m.page as number) ?? 1,
+    size: (m.size as number) ?? body.data.length,
+    returned: (m.returned as number) ?? body.data.length,
+    has_more: (m.has_more as boolean) ?? false,
+    meta: m,
+  };
+}
+
 // ---- Types (mirror the verified API contract) ----
 export type EntityKind =
   | 'compraventa' | 'concesionario_oficial' | 'desguace' | 'garaje' | 'plataforma'
@@ -514,6 +537,90 @@ export interface TerminalSaleInference {
   latest_audit_at: string | null;
   audit_freshness_days: number;
 }
+export interface TerminalNewsItem {
+  news_ulid: string;
+  source_name: string;
+  source_url: string;
+  title: string;
+  published_at: string | null;
+  verified_at: string;
+  symbol_keys: string[];
+}
+
+// ---------------------------------------------------------------------------
+// 07-marketing F1-F4 — listing audit (C1), channel radar (C3/C4/C5), feed export (C6).
+// Append-only section (00-MASTER.md S5.1): do not reorder/rename methods above.
+// ---------------------------------------------------------------------------
+export interface ListingAuditCheck {
+  check_id: string;
+  label: string;
+  passed: boolean;
+  points_awarded: number;
+  points_possible: number;
+  message: string;
+  evidence: Record<string, unknown>;
+}
+export interface ListingAuditItem {
+  vehicle_ulid: string;
+  deep_link: string;
+  title: string | null;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  price: number | null;
+  currency: string | null;
+  photo_url: string | null;
+  score: number;
+  checks: ListingAuditCheck[];
+  computed_at: string;
+  price_position?: PricePosition['position'] | { position: null; reason?: string };
+}
+export type ChannelCoverageBand = 'verde' | 'ambar' | 'rojo';
+export interface ChannelRadarPlatform {
+  cdp_code: string;
+  trade_name: string | null;
+  kind: EntityKind;
+  n_listed: number;
+  coverage_pct: number;
+  band: ChannelCoverageBand;
+  n_divergent: number;
+  median_days_to_gone: number | null;
+  median_days_to_gone_n: number;
+  median_days_to_gone_reason: string | null;
+}
+export interface ChannelRadar {
+  dealer: { cdp_code: string };
+  total_available: number;
+  platforms: ChannelRadarPlatform[];
+}
+export type MarketingFeedTarget = 'google_vehicle_ads' | 'meta_aia' | 'schema_org_jsonld';
+export interface FeedInvalidRow {
+  vehicle_ulid: string;
+  missing_fields: string[];
+}
+export interface ListingAuditMeta {
+  page: number;
+  size: number;
+  returned: number;
+  has_more: boolean;
+  dealer: { cdp_code: string };
+  total_available: number;
+  audited_count: number;
+  avg_score: number | null;
+  incoherent_price_count: number;
+  latest_run_id: string | null;
+  latest_run_finished_at: string | null;
+  price_position_included: boolean;
+}
+export interface FeedReport {
+  export_ulid: string;
+  item_count: number;
+  valid_count: number;
+  valid_pct: number;
+  invalid_report: FeedInvalidRow[];
+  content_hash: string;
+  created_at: string;
+}
 
 export const cardeep = {
   stats: (signal?: AbortSignal) => getData<{ counts: Stats }>('/stats', undefined, signal).then((d) => d.counts),
@@ -583,4 +690,25 @@ export const cardeep = {
     ),
   terminalSaleInference: (symbolKey: string, signal?: AbortSignal) =>
     getData<TerminalSaleInference>(`/terminal/${encodeURIComponent(symbolKey)}/sale-inference`, undefined, signal),
+  // 07-marketing F1-F4
+  listingAudit: (
+    cdp: string,
+    opts: { page?: number; size?: number; includePricePosition?: boolean } = {},
+    signal?: AbortSignal,
+  ) =>
+    getPagedWithMeta<ListingAuditItem>(`/entities/${cdp}/listing-audit`, {
+      page: opts.page ?? 1, size: opts.size ?? 50,
+      include_price_position: opts.includePricePosition ? 'true' : undefined,
+    }, signal),
+  channelRadar: (cdp: string, signal?: AbortSignal) =>
+    getData<ChannelRadar>(`/entities/${cdp}/channel-radar`, undefined, signal),
+  // Feed download deliberately bypasses getData (the response is CSV/JSON-LD text,
+  // not the {ok,data,error,meta} envelope) — returns the raw Blob + export headers so
+  // the caller can trigger a browser download.
+  feedDownloadUrl: (cdp: string, target: MarketingFeedTarget) => `${BASE}/entities/${cdp}/feed/${target}`,
+  feedReport: (cdp: string, target: MarketingFeedTarget, signal?: AbortSignal) =>
+    getData<FeedReport>(`/entities/${cdp}/feed/${target}/report`, undefined, signal),
+  // 09-trading-terminal F5 — real sector news (C10), V5-fresh-verified only.
+  terminalNews: (opts: { symbolKey?: string; limit?: number } = {}, signal?: AbortSignal) =>
+    getData<TerminalNewsItem[]>('/terminal/news', { symbol_key: opts.symbolKey, limit: opts.limit }, signal),
 };

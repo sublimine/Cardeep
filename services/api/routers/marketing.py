@@ -24,13 +24,19 @@ from fastapi import APIRouter, Depends, Path, Query, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from pipeline.ids import ulid
-from pipeline.marketing.feeds import TARGETS, DealerFeedInput, FeedTarget, VehicleFeedInput, generate_feed
+from pipeline.market.cohort import MIN_COHORT_N
+from pipeline.marketing.feeds import TARGETS, DealerFeedInput, VehicleFeedInput, generate_feed
 from services.api.cache import cache_set, try_cache_get
 from services.api.deps import err, ok, page_slice, require_api_key, resolve_cluster
 from services.api.ratelimit import RATE_DEFAULT, RATE_EXPENSIVE, limiter
 from services.api.routers.market import compute_price_position
+from services.api.routers.publishing import _coverage_band, _price_divergence
 
 router = APIRouter()
+
+# C5's lookback window (GONE events only within this many days count toward "current"
+# platform velocity — a 2-year-old GONE says nothing about today's market).
+C5_LOOKBACK_DAYS = 180
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +117,22 @@ async def listing_audit(
                 WHERE v.entity_ulid = ANY($1::text[]) AND v.status = 'available'""",
             cluster.member_ulids,
         )
+        # Cabecera KPI (carta S6): nota media + coches con precio incoherente (c10
+        # failed) — computed over the FULL audited set, not just the current page.
+        # JSONB containment (@>) partial-matches the c10 element regardless of its
+        # other keys (label/message/evidence) — verified live against real data.
+        summary_row = await c.fetchrow(
+            """SELECT avg(la.score) AS avg_score,
+                      count(*) FILTER (
+                          WHERE la.checks @> '[{"check_id":"c10","passed":false}]'::jsonb
+                      ) AS incoherent_price_count
+                 FROM v_latest_listing_audit la
+                 JOIN vehicle v ON v.vehicle_ulid = la.vehicle_ulid
+                WHERE v.entity_ulid = ANY($1::text[]) AND v.status = 'available'""",
+            cluster.member_ulids,
+        )
+        avg_score = float(summary_row["avg_score"]) if summary_row["avg_score"] is not None else None
+        incoherent_price_count = summary_row["incoherent_price_count"] or 0
 
         offset = (page - 1) * size
         rows = await c.fetch(_LISTING_AUDIT_SQL, cluster.member_ulids, size + 1, offset)
@@ -148,6 +170,8 @@ async def listing_audit(
             dealer={"cdp_code": cluster.canonical_cdp_code},
             total_available=total_available,
             audited_count=audited_count,
+            avg_score=avg_score,
+            incoherent_price_count=incoherent_price_count,
             latest_run_id=latest_run["run_ulid"] if latest_run else None,
             latest_run_finished_at=str(latest_run["finished_at"]) if latest_run and latest_run["finished_at"] else None,
             price_position_included=include_price_position,
@@ -325,3 +349,138 @@ async def feed_export_report(
             "content_hash": row["content_hash"],
             "created_at": str(row["created_at"]),
         })
+
+
+# ---------------------------------------------------------------------------
+# GET /entities/{cdp_code}/channel-radar -- C3 + C4 + C5 (F4)
+# ---------------------------------------------------------------------------
+# C3 (coverage) and C4 (divergence classification) reuse 05-multiposting's own
+# pure functions (_coverage_band, _price_divergence) rather than a second
+# implementation of the same formula (00-MASTER.md C-1/C-12) -- this endpoint's OWN
+# SQL differs from publishing.py's (it aggregates PER PLATFORM for one dealer in a
+# single round trip, rather than coverage+matrix as two separate calls), but the
+# classification thresholds are the exact same code, imported, not copied. C5 (median
+# days-to-GONE per platform) is new -- no prior pilar computed it -- and reuses
+# pipeline.market.cohort.MIN_COHORT_N (01's shared threshold registry, 00-MASTER.md
+# C-12) rather than inventing a new magic number.
+
+_RADAR_EDGES_SQL = """
+    SELECT p.entity_ulid AS platform_entity_ulid, p.cdp_code, p.trade_name, p.kind,
+           pl.vehicle_ulid,
+           v.price AS dealer_price,
+           pl.platform_price
+      FROM platform_listing pl
+      JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
+      JOIN entity p ON p.entity_ulid = pl.platform_entity_ulid
+     WHERE v.entity_ulid = ANY($1::text[]) AND v.status = 'available' AND pl.status = 'listed'
+"""
+
+_RADAR_C5_SQL = """
+    SELECT pl.platform_entity_ulid,
+           count(*) AS n,
+           percentile_cont(0.5) WITHIN GROUP (
+               ORDER BY EXTRACT(EPOCH FROM (ve.observed_at - v.first_seen)) / 86400.0
+           ) AS median_days
+      FROM vehicle_event ve
+      JOIN vehicle v ON v.vehicle_ulid = ve.vehicle_ulid
+      JOIN platform_listing pl ON pl.vehicle_ulid = v.vehicle_ulid
+     WHERE ve.event_type = 'GONE'
+       AND ve.observed_at > now() - ($2 || ' days')::interval
+       AND pl.platform_entity_ulid = ANY($1::text[])
+     GROUP BY pl.platform_entity_ulid
+"""
+
+
+@router.get("/entities/{cdp_code}/channel-radar")
+@limiter.limit(RATE_EXPENSIVE)
+async def channel_radar(
+    cdp_code: str,
+    request: Request,
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """Bloque 2 "Radar de canales" (carta S6): per platform this dealer is listed on —
+    coches visibles (C3), divergencias de precio (C4), mediana de días-hasta-baja de
+    coches como los tuyos en esa plataforma con su N (C5). A platform absent from this
+    list simply has zero edges from this dealer — never a fabricated zero row.
+
+    C5 is a GLOBAL market signal (not scoped to this dealer's own GONE history, whose N
+    would usually be too small) — carta S4 C5: "mediana observada con su N... cuando
+    el pilar 01 entregue days-to-sell con backtest, este criterio se eleva a
+    predictivo." Below MIN_COHORT_N, ``median_days_to_gone`` is null with a `reason`,
+    never a number computed on too few observations.
+    """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
+    async with request.app.state.pool.acquire() as c:
+        cluster = await resolve_cluster(c, cdp_code)
+        if cluster is None:
+            return err(f"dealer {cdp_code} not found", status=404)
+
+        total_available = await c.fetchval(
+            "SELECT count(*) FROM vehicle WHERE entity_ulid = ANY($1::text[]) AND status = 'available'",
+            cluster.member_ulids,
+        )
+        edge_rows = await c.fetch(_RADAR_EDGES_SQL, cluster.member_ulids)
+
+        # Aggregate per platform in Python so the divergence flag reuses the EXACT
+        # same threshold function as 05-multiposting's /publishing/*/matrix (2% relative
+        # OR EUR200 absolute floor) instead of a naive SQL inequality that would count
+        # cent-level rounding noise as a "divergence" (00-MASTER.md C-1: one formula).
+        by_platform: dict[str, dict[str, Any]] = {}
+        for e in edge_rows:
+            key = e["platform_entity_ulid"]
+            bucket = by_platform.setdefault(key, {
+                "cdp_code": e["cdp_code"], "trade_name": e["trade_name"], "kind": e["kind"],
+                "vehicle_ulids": set(), "n_divergent": 0,
+            })
+            bucket["vehicle_ulids"].add(e["vehicle_ulid"])
+            dealer_price = float(e["dealer_price"]) if e["dealer_price"] is not None else None
+            platform_price = float(e["platform_price"]) if e["platform_price"] is not None else None
+            divergence = _price_divergence(dealer_price, platform_price)
+            if divergence is not None and divergence["flag"]:
+                bucket["n_divergent"] += 1
+
+        platform_ulids = list(by_platform.keys())
+        c5_rows = await c.fetch(_RADAR_C5_SQL, platform_ulids, str(C5_LOOKBACK_DAYS))
+        c5_by_platform = {r["platform_entity_ulid"]: r for r in c5_rows}
+
+        platforms = []
+        for platform_ulid, bucket in sorted(by_platform.items(), key=lambda kv: -len(kv[1]["vehicle_ulids"])):
+            n_listed = len(bucket["vehicle_ulids"])
+            pct = (n_listed / total_available) if total_available else 0.0
+            c5row = c5_by_platform.get(platform_ulid)
+            if c5row is not None and c5row["n"] >= MIN_COHORT_N:
+                median_days = float(c5row["median_days"])
+                median_days_n = c5row["n"]
+                median_days_reason = None
+            else:
+                median_days = None
+                median_days_n = c5row["n"] if c5row is not None else 0
+                median_days_reason = f"muestra insuficiente (N={median_days_n}, mínimo {MIN_COHORT_N})"
+
+            platforms.append({
+                "cdp_code": bucket["cdp_code"],
+                "trade_name": bucket["trade_name"],
+                "kind": bucket["kind"],
+                "n_listed": n_listed,
+                "coverage_pct": pct,
+                "band": _coverage_band(pct),
+                "n_divergent": bucket["n_divergent"],
+                "median_days_to_gone": median_days,
+                "median_days_to_gone_n": median_days_n,
+                "median_days_to_gone_reason": median_days_reason,
+            })
+
+        response = ok(
+            {
+                "dealer": {"cdp_code": cluster.canonical_cdp_code},
+                "total_available": total_available,
+                "platforms": platforms,
+            },
+            n_platforms=len(platforms),
+            c5_lookback_days=C5_LOOKBACK_DAYS,
+            c5_min_cohort_n=MIN_COHORT_N,
+        )
+    return cache_set(request, response)

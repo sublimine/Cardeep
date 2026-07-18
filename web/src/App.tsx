@@ -32,6 +32,7 @@ import Support from './pages/Support'
 import Assistant from './pages/Assistant'
 import Motor from './pages/Motor'
 import Terminal from './pages/Terminal'
+import Marketing from './pages/Marketing'
 import { useAuthContext } from './auth/AuthContext'
 
 function RootRedirect() {
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="arbitrage"  element={<Arbitrage />} />
           <Route path="api"        element={<Api />} />
           <Route path="analitica"  element={<Analitica />} />
+          <Route path="marketing"  element={<Marketing />} />
           <Route path="invoices"   element={<Invoices />} />
           <Route path="pricing"    element={<Pricing />} />
           <Route path="notes"      element={<Notes />} />

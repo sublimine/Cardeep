@@ -6,7 +6,7 @@ import {
   MessageSquare, Calendar, BarChart3, Settings,
   ChevronLeft, ChevronRight, Sun, Moon, LogOut, X, Menu, Activity,
   TrendingUp, Zap, Code2, LineChart, StickyNote, Receipt, CreditCard, UserCircle, LifeBuoy,
-  Bot, Radio,
+  Bot, Radio, CandlestickChart, Megaphone,
 } from 'lucide-react'
 import MobileNav from './MobileNav'
 import Breadcrumb from './Breadcrumb'
@@ -40,6 +40,15 @@ const NAV_GROUPS = [
       { to: '/inteligencia', label: 'Inteligencia', icon: TrendingUp, end: false },
       { to: '/arbitrage',    label: 'Arbitrage',    icon: Zap,        end: false },
       { to: '/analitica',    label: 'Analítica',    icon: LineChart,  end: false },
+      // 07-marketing F4: auditoría de anuncio + radar de canales + feeds, anclados en
+      // el censo verificado — vive junto a Inteligencia/Arbitrage/Analítica.
+      { to: '/marketing',    label: 'Marketing',    icon: Megaphone,  end: false },
+      // 09-trading-terminal Fase 3 close: real terminal (dato real, cero mock) enters the
+      // nav here per the carta's own §6 ("Entra en NAV_GROUPS bajo INTELIGENCIA solo al
+      // cerrar Fase 3") — 00-MASTER.md §5.1 cites this pilar's own Fase3 as the nav-touching
+      // phase (not deferred to Fase 6, whose own "Entrada en NAV_GROUPS" criterion is
+      // superseded by this earlier, MASTER-aligned entry; Fase 6 verifies it stays, not re-adds it).
+      { to: '/terminal',     label: 'Terminal',     icon: CandlestickChart, end: false },
     ],
   },
   {

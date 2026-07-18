@@ -8,6 +8,8 @@ import {
 } from 'recharts'
 import Card from '../components/Card'
 import { useIsDark } from '../hooks/useIsDark'
+import { useAuthContext } from '../auth/AuthContext'
+import { cardeep, CardeepApiError, type ChannelRadar } from '../api/cardeep'
 import { ACCENT, GOOD, BAD } from '../lib/theme'
 
 // ── Types & mock data ─────────────────────────────────────────────────────────
@@ -65,22 +67,14 @@ const STOCK_SEGMENTS = [
   { segment: 'Furgoneta', days: 61, target: 45, count: 12, color: BAD },
 ]
 
-// 07-marketing F0 (00-MASTER.md §5.1: "01 decide el destino de la página; 07 posee
-// SOLO el panel CHANNELS"): esta constante y ChannelPerfPanel de abajo son mock
-// (leads/ventas/CPL inventados), igual que el resto de esta página — pero es la
-// única sección que este pilar POSEE, así que se etiqueta honestamente aquí y ahora
-// en vez de esperar a F4. F4 la sustituye por el radar real (cobertura C3 +
-// divergencia de precio C4, consumidos de 05-multiposting's /publishing/*, más
-// días-hasta-baja C5 nuevo) — 01-F6 (dueño de la página) aún no ha ejecutado, así
-// que el resto de paneles (SALES_DATA/KPI_VALUES/TOP_MODELS/STOCK_SEGMENTS/
-// FUNNEL_STAGES/REGION_SALES) permanece exactamente como estaba, fuera de este
-// pilar's alcance.
-const CHANNELS = [
-  { name: 'coches.net',  leads: 142, sales: 12, cpl: 9.40, color: ACCENT, pct: 42 },
-  { name: 'AutoScout24', leads:  88, sales:  7, cpl: 8.10, color: ACCENT, pct: 26 },
-  { name: 'Web propia',  leads:  67, sales:  3, cpl: 6.20, color: GOOD,   pct: 20 },
-  { name: 'Particular',  leads:  45, sales:  1, cpl: 3.50, color: '#d97706', pct: 12 },
-]
+// 07-marketing F4 (00-MASTER.md §5.1: "01 decide el destino de la página; 07 posee
+// SOLO el panel CHANNELS"): la constante CHANNELS mock (leads/ventas/CPL inventados)
+// y su panel de abajo quedaron reemplazados por el radar real (cobertura C3 +
+// divergencia de precio C4, MISMO cálculo que la página Marketing consume via
+// GET /entities/{cdp}/channel-radar) — 01-F6 (dueño de la página) aún no ha
+// ejecutado, así que el resto de paneles (SALES_DATA/KPI_VALUES/TOP_MODELS/
+// STOCK_SEGMENTS/FUNNEL_STAGES/REGION_SALES) permanece exactamente como estaba,
+// fuera de este pilar's alcance.
 
 const FUNNEL_STAGES = [
   { label: 'Leads',    count: 342, color: ACCENT },
@@ -297,55 +291,80 @@ function TopModelsChart({ dark }: { dark: boolean }) {
   )
 }
 
-// ── Channel performance ───────────────────────────────────────────────────────
+// ── Channel performance (07-marketing F4: real radar, replaces the CHANNELS mock) ──
+// C3 (cobertura) + C4 (divergencia) vía GET /entities/{cdp}/channel-radar — el MISMO
+// cálculo que la página Marketing usa (00-MASTER.md C-1: un solo cálculo). Sin dealer
+// reclamado o sin datos aún: empty-state honesto, nunca el mock que vivía aquí antes.
 
 function ChannelPerfPanel() {
+  const { user } = useAuthContext()
+  const cdp = user?.tenantId || null
+  const [radar, setRadar] = useState<ChannelRadar | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!cdp) { setLoading(false); return }
+    setLoading(true)
+    cardeep.channelRadar(cdp)
+      .then(setRadar)
+      .catch((e: unknown) => setError(e instanceof CardeepApiError ? e.message : 'Error al cargar el radar de canales'))
+      .finally(() => setLoading(false))
+  }, [cdp])
+
   return (
     <Card className="!p-0 h-full">
       <div className="flex h-full flex-col p-[18px_18px_14px]">
         <div className="mb-0.5 flex items-center gap-1.5">
           <Globe style={{ width: 12, height: 12, color: ACCENT }} />
           <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Rendimiento por canal</h2>
-          <span
-            className="ml-1 rounded-full px-[7px] py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em]"
-            style={{ background: 'rgba(217,119,6,0.14)', border: '1px solid rgba(217,119,6,0.32)', color: '#d97706' }}
-            title="Datos ilustrativos: leads/ventas/CPL de ejemplo. El radar real (cobertura y divergencia de precio verificadas) llega en la página Marketing."
-          >
-            Ilustrativo
-          </span>
         </div>
-        <p className="mb-3.5 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>coches.net · AutoScout24 · Web · Particular — datos de ejemplo, ver Marketing para el radar real</p>
+        <p className="mb-3.5 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Cobertura y divergencia de precio reales, por plataforma</p>
 
-        <div className="grid shrink-0 gap-1 border-b pb-2" style={{ gridTemplateColumns: '1fr 52px 50px 52px', borderColor: 'var(--border-subtle)' }}>
-          {['Canal', 'Leads', 'Ventas', 'CPL'].map(h => (
-            <span key={h} className="text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>{h}</span>
-          ))}
-        </div>
-
-        <div className="mt-3 flex flex-1 flex-col gap-2.5">
-          {CHANNELS.map((ch, i) => (
-            <motion.div key={ch.name} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 + i * 0.07 }}>
-              <div className="mb-[5px] grid items-center gap-1" style={{ gridTemplateColumns: '1fr 52px 50px 52px' }}>
-                <div className="flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ch.color }} />
-                  <span className="truncate text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>{ch.name}</span>
-                </div>
-                <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{ch.leads}</span>
-                <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{ch.sales}</span>
-                <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>€{ch.cpl.toFixed(2)}</span>
-              </div>
-              <div className="h-[3px] overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${ch.pct}%` }}
-                  transition={{ delay: 0.32 + i * 0.08, duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-                  className="h-full rounded-full"
-                  style={{ background: ch.color, opacity: 0.75 }}
-                />
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {!cdp ? (
+          <p className="flex-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>Reclama tu ficha de dealer para ver tu radar de canales.</p>
+        ) : loading ? (
+          <div className="flex-1 animate-pulse rounded-lg" style={{ background: 'var(--bg-surface)' }} />
+        ) : error ? (
+          <p className="flex-1 text-[11px]" style={{ color: BAD }}>{error}</p>
+        ) : !radar || radar.platforms.length === 0 ? (
+          <p className="flex-1 text-[11px]" style={{ color: 'var(--text-muted)' }}>Ningún coche cross-listado en otra plataforma todavía.</p>
+        ) : (
+          <>
+            <div className="grid shrink-0 gap-1 border-b pb-2" style={{ gridTemplateColumns: '1fr 60px 60px', borderColor: 'var(--border-subtle)' }}>
+              {['Plataforma', 'Cobertura', 'Diverg.'].map(h => (
+                <span key={h} className="text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>{h}</span>
+              ))}
+            </div>
+            <div className="mt-3 flex flex-1 flex-col gap-2.5">
+              {radar.platforms.slice(0, 6).map((p, i) => {
+                const bandColor = p.band === 'verde' ? GOOD : p.band === 'ambar' ? '#d97706' : BAD
+                return (
+                  <motion.div key={p.cdp_code} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.18 + i * 0.07 }}>
+                    <div className="mb-[5px] grid items-center gap-1" style={{ gridTemplateColumns: '1fr 60px 60px' }}>
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: bandColor }} />
+                        <span className="truncate text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>{p.trade_name ?? p.cdp_code}</span>
+                      </div>
+                      <span className="text-[11px] font-bold tabular-nums" style={{ color: bandColor }}>{Math.round(p.coverage_pct * 100)}%</span>
+                      <span className="text-[11px] font-bold tabular-nums" style={{ color: p.n_divergent > 0 ? BAD : 'var(--text-primary)' }}>{p.n_divergent}</span>
+                    </div>
+                    <div className="h-[3px] overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${p.coverage_pct * 100}%` }}
+                        transition={{ delay: 0.32 + i * 0.08, duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
+                        className="h-full rounded-full"
+                        style={{ background: bandColor, opacity: 0.75 }}
+                      />
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+            <a href="/marketing" className="mt-2 text-[10.5px] font-medium" style={{ color: ACCENT }}>Ver radar completo en Marketing →</a>
+          </>
+        )}
       </div>
     </Card>
   )

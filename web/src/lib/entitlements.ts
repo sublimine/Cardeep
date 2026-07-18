@@ -15,6 +15,10 @@ export type Feature =
   | 'sourcing-ranking'         // Capa 2 — ranking completo de chollos + filtros
   | 'arbitrage-alerts'         // Capa 2 — alertas push
   | 'flip-calculator'          // Capa 2 — calculadora de ROI
+  // 07-marketing F4 (07-marketing.md S3.3/S6): el radar de canales cruza el censo
+  // propio contra la observación de mercado (C3/C4/C5) — Capa 1, con teaser gratis
+  // (la fila agregada visible; el desglose por plataforma tras el gate).
+  | 'channel-radar'            // Capa 1 — radar de canales completo (Bloque 2)
 
 const PLAN_RANK: Record<Plan, number> = { starter: 0, scale: 1, enterprise: 2 }
 
@@ -27,6 +31,7 @@ const REQUIRED_PLAN: Record<Feature, Plan> = {
   'sourcing-ranking':       'enterprise',
   'arbitrage-alerts':       'enterprise',
   'flip-calculator':        'enterprise',
+  'channel-radar':          'scale',
 }
 
 export function hasFeature(userPlan: Plan, feature: Feature): boolean {

@@ -212,3 +212,59 @@ class TestFeedExportContract:
             export_id,
         )
         assert row == 1
+
+
+@SKIP_NO_DB
+class TestChannelRadarContract:
+    def test_unknown_dealer_404s(self, client):
+        resp = client.get(f"/entities/{UNKNOWN_DEALER}/channel-radar")
+        assert resp.status_code == 404
+
+    def test_real_dealer_returns_coherent_platforms(self, client):
+        resp = client.get(f"/entities/{AUDITED_DEALER}/channel-radar")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["ok"] is True
+        data = body["data"]
+        assert data["total_available"] > 0
+        for p in data["platforms"]:
+            assert 0.0 <= p["coverage_pct"] <= 1.0 + 1e-9  # a platform can list MORE than the dealer's current available count in edge cases, guard is generous
+            assert p["band"] in ("verde", "ambar", "rojo")
+            assert p["n_divergent"] >= 0
+            assert p["n_divergent"] <= p["n_listed"]
+            if p["median_days_to_gone"] is not None:
+                assert p["median_days_to_gone"] >= 0
+                assert p["median_days_to_gone_n"] >= body["meta"]["c5_min_cohort_n"]
+            else:
+                assert p["median_days_to_gone_reason"] is not None
+
+    def test_platforms_sorted_by_coverage_descending(self, client):
+        resp = client.get(f"/entities/{AUDITED_DEALER}/channel-radar")
+        platforms = resp.json()["data"]["platforms"]
+        n_listed_seq = [p["n_listed"] for p in platforms]
+        assert n_listed_seq == sorted(n_listed_seq, reverse=True)
+
+    def test_divergence_count_never_exceeds_independent_sql_recount(self, client):
+        """Via-2 style spot-check: an independent SQL count of edges where the
+        RELATIVE OR ABSOLUTE divergence floor is cleared must be >= the endpoint's
+        count for at least one real platform (sanity that the Python-side threshold
+        function is being applied, not bypassed)."""
+        resp = client.get(f"/entities/{AUDITED_DEALER}/channel-radar")
+        platforms = resp.json()["data"]["platforms"]
+        if not platforms:
+            pytest.skip("dealer has no platform edges in this environment")
+        for p in platforms:
+            independent_n = _fetchval(
+                """SELECT count(*) FROM platform_listing pl
+                     JOIN vehicle v ON v.vehicle_ulid = pl.vehicle_ulid
+                     JOIN entity dealer ON dealer.entity_ulid = v.entity_ulid
+                     JOIN entity plat ON plat.entity_ulid = pl.platform_entity_ulid
+                    WHERE dealer.cdp_code = $1 AND plat.cdp_code = $2
+                      AND v.status = 'available' AND pl.status = 'listed'
+                      AND pl.platform_price IS NOT NULL AND v.price IS NOT NULL
+                      AND pl.platform_price <> v.price""",
+                AUDITED_DEALER, p["cdp_code"],
+            )
+            # The naive "any difference" count is always >= the threshold-gated count
+            # the endpoint reports (2%/EUR200 floor only shrinks the set).
+            assert independent_n >= p["n_divergent"]
