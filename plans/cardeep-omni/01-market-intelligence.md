@@ -280,3 +280,44 @@ Cada fase cierra con el patrón ya probado del repo: **Sonnet construye, gate ad
 ## Resumen
 
 El pilar tiene una investigación competitiva real (693 empresas, 109 auditorías, 3.131 campos) y una materia prima única (`vehicle`+`vehicle_event` append-only sobre censo cross-platform), pero HOY el 100% de la superficie de inteligencia es atrezzo hardcodeado y no existe ni una línea de cómputo de mercado en backend. La ventaja estructural defendible no es el censo (MarketCheck/Cazana ya lo hacen fuera) sino la fusión inédita para España de censo-a-nivel-de-anuncio con los microdatos abiertos de transferencias de la DGT — que convierte el proxy débil "GONE=vendido" en señal corroborada contra registro oficial. El plan: 8 fases (F0-F7) que construyen `market_stat`+`market.py`+ingesta DGT con verificación de cada número por dos vías independientes, gate humano estilo CAP HPI para publicar, cero LLM en el camino crítico, y demolición de las 7.597 líneas de mercado sintético huérfano (coordinada con el pilar 09, que custodia el motor de indicadores real). Nada se muestra al dealer sin `n`, ventana y trazabilidad a un criterio M1-M10 de esta carta.
+
+---
+
+## ⭐ CIERRE DE BLOQUE F0-F5 (2026-07-18) — AUTORITATIVO, leer antes de re-auditar
+
+Las 6 fases mandatadas para este bloque están **HECHAS Y VERIFICADAS** con prueba real
+(SQL ejecutado, migraciones aplicadas con rollback probado, tests corriendo en verde,
+runs de producción reales). Detalle completo por fase en
+`01-market-intelligence-f{0,1,2,3,4,5}.md` — este resumen es el mapa, no sustituye esas
+notas.
+
+- **F0**: verdad de volumen (1.241.426 canónico-estricto; span real 35d; gate M7/M3/M4
+  disparado con el dato, no antes).
+- **F1**: `market_stat`/`market_stat_run` (migración `0074`) + M1, helper compartido
+  `pipeline/market/cohort.py` (16 tests, cero DB) factorizado para 03/04/06/07/09.
+- **F2**: M3/M4/M5/M7/M9/M10 + gate ±3%. **Bug real de producción encontrado y
+  corregido dentro de la propia fase**: M7 escribía 0 filas (canon estricto excluía
+  408.155 vehículos nunca clusterizados); corregido con `_COALESCE_CANON_CTE`
+  (mismo patrón que `entities.py:74`). 33/33 tests tras el fix.
+- **F3**: `services/api/routers/market.py` + `Api.tsx` con catálogo 100% real (26
+  endpoints reales enumerados por grep, cero ficticios). 107/107 tests preexistentes
+  sin regresión.
+- **F4**: ingesta DGT real (junio 2026, 396.069 filas, doble-descarga hash idéntico) +
+  M8. Dos hallazgos no anticipados por la carta, corregidos en la raíz: mapeo de
+  provincia DGT-alfa↔INE, filtrado por tipo de vehículo (turismo). Reconciliado contra
+  GANVAM con desviación explicada.
+- **F5**: M2 price-position, calculado en vivo. Distribución real analizada
+  (1.183.432 vehículos) confirma los cortes 0,92/1,08. **Bloqueo declarado**: el gate
+  adversarial formal de modelo caro (Fable 5/Opus) para la recalibración de
+  METODOLOGÍA no fue ejecutable en este contexto de sesión — análisis completo listo,
+  decisión final pendiente de ese gate.
+
+**Migraciones reales aplicadas** (renumeradas desde las propuestas originalmente en
+esta carta por colisión con frentes paralelos, protocolo de numeración respetado en
+cada caso): `0074_market_stat`, `0077_dgt_transfer`, `0078_dgt_corroboration`.
+
+**Pendiente explícito, no bloqueante para este bloque**: F6 (reconstrucción frontend +
+demolición del atrezzo) y F7 (M6 longitudinal) quedan fuera de este mandato por
+instrucción explícita del Director — no se tocó `Inteligencia.tsx`, `Arbitrage.tsx`,
+`Analitica.tsx`, ni `Shell.tsx`. El gate adversarial de modelo caro para M2 (F5) queda
+como único bloqueo real declarado dentro del alcance F0-F5.

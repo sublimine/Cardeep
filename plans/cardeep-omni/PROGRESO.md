@@ -66,7 +66,61 @@ single-producer).
 
 ## BLOQUE 1 — EN CURSO (lanzado 2026-07-17, 4 frentes en paralelo, task wkzzck2q4)
 
-1. 01-market-intelligence F0-F5 (market_stat, M1-M10, market.py, DGT, price-position)
+1. 01-market-intelligence F0-F5 (market_stat, M1-M10, market.py, DGT, price-position) —
+   **✅ CERRADAS 2026-07-18** (evidencia completa en
+   `01-market-intelligence-f{0,1,2,3,4,5}.md` — leer ahí, no re-auditar). Commits en `main`:
+   `d10365f` (F0), `bdca888` (F1), `55bef8e` (F2), `529b102` (F3), `b4af8d2` (F4), `9d2afbc` (F5).
+   - **F0**: verdad de volumen por SQL directo (`scripts/f0_market_volume_truth.py`, re-ejecutable):
+     `vehicle` 2.670.827 (2.124.671 disponibles), `vehicle_event` 3.749.360 (verificado 2ª vía contra
+     `product_stats`), span real **35 días** (gate disparado: ventanas de M3/M4/M7 reducidas en F2, nunca
+     fingiendo 90/45/30d), 1 run `vam_verified` (M1-M10 usan `v_canonical_vehicle` estricto).
+   - **F1**: migración `0074_market_stat.sql` (renumerada de 0073 por colisión real con
+     `0073_auth.sql` del frente AUTH-0 de este mismo bloque) + `pipeline/market/compute_stats.py`
+     (M1) + helper compartido `pipeline/market/cohort.py` (percentiles/cohortes, factorizado UNA vez
+     per 00-MASTER.md C-1/C-12 para que 03/04/06/07/09 lo importen, 16 tests sin DB). Cross-check
+     SQL-vs-Python sobre 5 segmentos reales: **divergencia 0,0%**. Run de producción real: 117.652
+     filas, `published=FALSE` (criterio F1).
+   - **F2**: M3/M4/M5/M7/M9/M10 + gate ±3% (`pipeline/market/publish_gate.py`). **Bug real de
+     producción encontrado y corregido dentro de la propia fase**: la primera corrida escribió 0
+     filas de M7 — causa raíz, el `canon` estricto (copiado de M1) excluye 408.155 vehículos
+     (15,3% de la flota) nunca tocados por el resolver `vehicle_cluster` (último `vam_verified`
+     2026-06-22); la ventana "reciente" de M7 cae entera después de esa fecha. Corregido con un
+     `_COALESCE_CANON_CTE` (mismo patrón ya probado en `entities.py:74` para la clase idéntica de
+     bug). Corrida defectuosa despublicada (no borrada, nota de auditoría); corrida corregida
+     publicada: 502.749 filas (M7 pasó de 0 a 4.386). 33/33 tests tras el fix.
+   - **F3**: `services/api/routers/market.py` (M1/M3/M4/M5/M7/M9/M10) + `web/src/pages/Api.tsx`
+     reescrito línea a línea (catálogo de 6 endpoints ficticios `/v1/*` reemplazado por 6 endpoints
+     reales, verificados contra los 26 endpoints reales del proyecto por grep). M2/M8 deliberadamente
+     ausentes (alcance F5/F4); M6 declarado como hueco de numeración heredado de la propia carta
+     (nunca asignado a F0-F5 ni F7 salvo su mitad longitudinal). 11/11 tests de contrato + **107/107
+     tests de API preexistentes sin regresión**.
+   - **F4**: ingesta real DGT (`migrations/0077_dgt_transfer.sql`+`0078_dgt_corroboration.sql`,
+     renumeradas de 0074/0075 por colisión con frentes paralelos) + `pipeline/market/ingest_dgt.py`
+     + `corroborate.py` (M8). Esquema DGT confirmado byte a byte contra el documento oficial (69
+     campos, suma exacta 714 bytes). **Dos hallazgos reales no anticipados por la carta, corregidos
+     en la raíz antes de comprometer datos**: (1) códigos de provincia DGT son letras de matrícula
+     histórica, no los códigos INE de Cardeep — mapeo `pipeline/market/dgt_provinces.py` construido
+     cruzando el Anexo I oficial + `geo_province` en vivo, 52/52 provincias mapeadas sin huecos; (2)
+     el fichero de transferencias cubre TODO tipo de vehículo, no solo turismos — `cod_tipo` añadido
+     al esquema, filtrado a `'40'` antes de cualquier cómputo de M8. Además: un bug de sintaxis real
+     en `scripts/migrate.py` (comentario `--` terminado en `;` corta el CREATE TABLE) evitado en la
+     propia migración, y un error de FK real (`geo_province`'s PK es compuesta
+     `(country_code, code)`, no la forma de una sola columna que documentaba `0002_entities.sql`)
+     corregido tras verificar `pg_constraint` en vivo. Ingesta real junio 2026: 396.069 filas, doble
+     descarga con hash SHA256 idéntico. M8 real: 89.144 cohortes, ratios de ejemplo (Madrid) 25%-66%,
+     reconciliado contra GANVAM con desviación explicada (censo DGT ≠ ventas mediadas por negocio).
+     27 tests nuevos, todos verdes.
+   - **F5**: `GET /market/price-position/{vehicle_ulid}` (M2), calculado en vivo. Distribución real
+     analizada sobre 1.183.432 vehículos (p25=0,898 p50=1,000 p75=1,127) confirma los cortes
+     0,92/1,08 de la carta. `03-garage-fleet`/`07-marketing` (consumidores previstos de este motor)
+     verificados por grep: no existen todavía — nada con qué verificar consistencia cross-pilar aún.
+     **Bloqueo real declarado, no maquillado**: el gate adversarial formal de modelo caro (Fable
+     5/Opus) que la doctrina del operador reserva para recalibrar METODOLOGÍA no fue ejecutable en
+     este contexto de sesión (sin herramienta para invocar un modelo distinto como segunda opinión
+     literal) — el análisis completo queda listo para que ese gate decida, la validación adversarial
+     en sí NO se reclama como hecha. 6/6 tests de contrato + 17/17 de F3/F4 sin regresión.
+   - **F6/F7 explícitamente fuera de este mandato** (instrucción literal del Director): no se tocó
+     `Inteligencia.tsx`/`Arbitrage.tsx`/`Analitica.tsx`/`Shell.tsx` — quedan para el siguiente bloque.
 2. 02-history-reports F0-F2 — **✅ CERRADAS 2026-07-18** (evidencia completa en
    `02-history-reports.md` §10/§11/§12 — leer ahí, no re-auditar). Commits en `main`:
    `36bf903` (F0), `2fcf1f9` (F1), pendiente el de F2 (este cierre).
