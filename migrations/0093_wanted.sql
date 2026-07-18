@@ -21,9 +21,9 @@
 --                            constraint, no convención"), 4 named axes (OfferUp pattern, carta
 --                            §2.3 exact), double-blind reveal fields (Airbnb pattern, carta §2.3
 --                            exact, REVIEW_REVEAL_DAYS=14 lives in pipeline/wanted/matcher.py).
---   geo_province_adjacency — static geo data for the §4.4 "geo" match component. Populated below
---                            with REAL province-to-province land borders, verified by TWO
---                            independent paths (carta §5.2 requirement):
+--   geo_province_adjacency — static geo data (schema only, see NOTE below) for the §4.4 "geo"
+--                            match component: REAL province-to-province land borders, verified
+--                            by TWO independent paths (carta §5.2 requirement):
 --                              (1) cartographic: computed from a real IGN-derived province-
 --                                  boundary polygon dataset (codeforgermany/click_that_hood,
 --                                  spain-provinces.geojson, cod_prov = the same INE 2-digit code
@@ -39,6 +39,16 @@
 --                            Zaragoza (8), Cuenca (7) and Toledo (6) — all match. The 5 island/
 --                            exclave provinces (Balears, Las Palmas, Santa Cruz de Tenerife,
 --                            Ceuta, Melilla) correctly resolve to ZERO land neighbours.
+--
+-- NOTE (2026-07-19, real CI bug fixed at the root): the 222-row INSERT that used to live here
+-- broke `migrate up` on any empty database — its FK into geo_province (populated only by
+-- scripts/load_geo.py, never by a migration) violates on a fresh DB with no seed step, which is
+-- exactly what the country-proof-invariant and bring-up-smoke CI jobs run (deliberately: see
+-- .github/workflows/ci.yml's "DO NOT add a census/geo seed step" comment on that job — those
+-- goldens self-seed inside rolled-back transactions and MUST NOT see prior seed data). The DATA
+-- now lives in scripts/load_geo_adjacency.py (idempotent, ON CONFLICT DO NOTHING, same pattern as
+-- load_geo.py), run from CI's "Seed geo backbone" step alongside load_geo/seed_geo_centroides.
+-- This migration keeps only the DDL (CREATE TABLE + FKs), which is schema and belongs here.
 --
 -- Additive, idempotent, reversible. migrate.py applies only the forward section (strip_rollback).
 
@@ -159,119 +169,8 @@ CREATE TABLE IF NOT EXISTS geo_province_adjacency (
     FOREIGN KEY (country_code, adjacent_province_code) REFERENCES geo_province (country_code, code)
 );
 
-INSERT INTO geo_province_adjacency (country_code, province_code, adjacent_province_code) VALUES
-    ('ES', '01', '09'), ('ES', '09', '01'),
-    ('ES', '01', '20'), ('ES', '20', '01'),
-    ('ES', '01', '26'), ('ES', '26', '01'),
-    ('ES', '01', '31'), ('ES', '31', '01'),
-    ('ES', '01', '48'), ('ES', '48', '01'),
-    ('ES', '02', '03'), ('ES', '03', '02'),
-    ('ES', '02', '13'), ('ES', '13', '02'),
-    ('ES', '02', '16'), ('ES', '16', '02'),
-    ('ES', '02', '18'), ('ES', '18', '02'),
-    ('ES', '02', '23'), ('ES', '23', '02'),
-    ('ES', '02', '46'), ('ES', '46', '02'),
-    ('ES', '03', '46'), ('ES', '46', '03'),
-    ('ES', '04', '18'), ('ES', '18', '04'),
-    ('ES', '04', '30'), ('ES', '30', '04'),
-    ('ES', '05', '10'), ('ES', '10', '05'),
-    ('ES', '05', '28'), ('ES', '28', '05'),
-    ('ES', '05', '37'), ('ES', '37', '05'),
-    ('ES', '05', '40'), ('ES', '40', '05'),
-    ('ES', '05', '45'), ('ES', '45', '05'),
-    ('ES', '05', '47'), ('ES', '47', '05'),
-    ('ES', '06', '10'), ('ES', '10', '06'),
-    ('ES', '06', '13'), ('ES', '13', '06'),
-    ('ES', '06', '14'), ('ES', '14', '06'),
-    ('ES', '06', '21'), ('ES', '21', '06'),
-    ('ES', '06', '41'), ('ES', '41', '06'),
-    ('ES', '06', '45'), ('ES', '45', '06'),
-    ('ES', '08', '25'), ('ES', '25', '08'),
-    ('ES', '08', '43'), ('ES', '43', '08'),
-    ('ES', '09', '26'), ('ES', '26', '09'),
-    ('ES', '09', '34'), ('ES', '34', '09'),
-    ('ES', '09', '40'), ('ES', '40', '09'),
-    ('ES', '09', '42'), ('ES', '42', '09'),
-    ('ES', '09', '47'), ('ES', '47', '09'),
-    ('ES', '09', '48'), ('ES', '48', '09'),
-    ('ES', '10', '37'), ('ES', '37', '10'),
-    ('ES', '10', '45'), ('ES', '45', '10'),
-    ('ES', '11', '21'), ('ES', '21', '11'),
-    ('ES', '11', '41'), ('ES', '41', '11'),
-    ('ES', '12', '43'), ('ES', '43', '12'),
-    ('ES', '12', '44'), ('ES', '44', '12'),
-    ('ES', '12', '46'), ('ES', '46', '12'),
-    ('ES', '13', '14'), ('ES', '14', '13'),
-    ('ES', '13', '16'), ('ES', '16', '13'),
-    ('ES', '13', '23'), ('ES', '23', '13'),
-    ('ES', '13', '45'), ('ES', '45', '13'),
-    ('ES', '14', '18'), ('ES', '18', '14'),
-    ('ES', '14', '41'), ('ES', '41', '14'),
-    ('ES', '15', '27'), ('ES', '27', '15'),
-    ('ES', '15', '36'), ('ES', '36', '15'),
-    ('ES', '16', '19'), ('ES', '19', '16'),
-    ('ES', '16', '28'), ('ES', '28', '16'),
-    ('ES', '16', '44'), ('ES', '44', '16'),
-    ('ES', '16', '45'), ('ES', '45', '16'),
-    ('ES', '16', '46'), ('ES', '46', '16'),
-    ('ES', '17', '08'), ('ES', '08', '17'),
-    ('ES', '17', '25'), ('ES', '25', '17'),
-    ('ES', '19', '28'), ('ES', '28', '19'),
-    ('ES', '19', '40'), ('ES', '40', '19'),
-    ('ES', '19', '42'), ('ES', '42', '19'),
-    ('ES', '19', '44'), ('ES', '44', '19'),
-    ('ES', '19', '50'), ('ES', '50', '19'),
-    ('ES', '20', '31'), ('ES', '31', '20'),
-    ('ES', '20', '48'), ('ES', '48', '20'),
-    ('ES', '21', '41'), ('ES', '41', '21'),
-    ('ES', '22', '25'), ('ES', '25', '22'),
-    ('ES', '22', '31'), ('ES', '31', '22'),
-    ('ES', '22', '50'), ('ES', '50', '22'),
-    ('ES', '23', '14'), ('ES', '14', '23'),
-    ('ES', '23', '18'), ('ES', '18', '23'),
-    ('ES', '24', '27'), ('ES', '27', '24'),
-    ('ES', '24', '34'), ('ES', '34', '24'),
-    ('ES', '24', '47'), ('ES', '47', '24'),
-    ('ES', '24', '49'), ('ES', '49', '24'),
-    ('ES', '25', '43'), ('ES', '43', '25'),
-    ('ES', '25', '50'), ('ES', '50', '25'),
-    ('ES', '26', '31'), ('ES', '31', '26'),
-    ('ES', '26', '42'), ('ES', '42', '26'),
-    ('ES', '26', '50'), ('ES', '50', '26'),
-    ('ES', '28', '40'), ('ES', '40', '28'),
-    ('ES', '28', '45'), ('ES', '45', '28'),
-    ('ES', '29', '11'), ('ES', '11', '29'),
-    ('ES', '29', '14'), ('ES', '14', '29'),
-    ('ES', '29', '18'), ('ES', '18', '29'),
-    ('ES', '29', '41'), ('ES', '41', '29'),
-    ('ES', '30', '02'), ('ES', '02', '30'),
-    ('ES', '30', '03'), ('ES', '03', '30'),
-    ('ES', '30', '18'), ('ES', '18', '30'),
-    ('ES', '31', '50'), ('ES', '50', '31'),
-    ('ES', '32', '24'), ('ES', '24', '32'),
-    ('ES', '32', '27'), ('ES', '27', '32'),
-    ('ES', '32', '49'), ('ES', '49', '32'),
-    ('ES', '33', '24'), ('ES', '24', '33'),
-    ('ES', '33', '27'), ('ES', '27', '33'),
-    ('ES', '33', '39'), ('ES', '39', '33'),
-    ('ES', '34', '47'), ('ES', '47', '34'),
-    ('ES', '36', '27'), ('ES', '27', '36'),
-    ('ES', '36', '32'), ('ES', '32', '36'),
-    ('ES', '37', '47'), ('ES', '47', '37'),
-    ('ES', '37', '49'), ('ES', '49', '37'),
-    ('ES', '39', '09'), ('ES', '09', '39'),
-    ('ES', '39', '24'), ('ES', '24', '39'),
-    ('ES', '39', '34'), ('ES', '34', '39'),
-    ('ES', '39', '48'), ('ES', '48', '39'),
-    ('ES', '40', '47'), ('ES', '47', '40'),
-    ('ES', '42', '40'), ('ES', '40', '42'),
-    ('ES', '42', '50'), ('ES', '50', '42'),
-    ('ES', '43', '44'), ('ES', '44', '43'),
-    ('ES', '43', '50'), ('ES', '50', '43'),
-    ('ES', '44', '46'), ('ES', '46', '44'),
-    ('ES', '44', '50'), ('ES', '50', '44'),
-    ('ES', '47', '49'), ('ES', '49', '47')
-ON CONFLICT DO NOTHING;
+-- Data (222 rows / 111 real land-border pairs) moved to scripts/load_geo_adjacency.py — see
+-- NOTE above. Run: python -m scripts.load_geo_adjacency
 
 -- Rollback:
 -- DROP TABLE IF EXISTS geo_province_adjacency;

@@ -5,7 +5,7 @@
 # root configs) where a real CARDEEP secret would ever live -- the upstream rule set is kept in full, so
 # an AWS key / GCP key / private key / prod DB credential anywhere there still FAILS the build.
 #
-# The allowlisted entries below are, verified one by one (2026-06-20), NOT CARDEEP secrets:
+# The allowlisted entries below are, verified one by one (2026-06-20; +2026-07-19), NOT CARDEEP secrets:
 #   - scan noise: .wf/ workflow scratch (JS object props named `key:`), gitignored scratch/ dumps,
 #     __pycache__ bytecode, node_modules, the npm lockfile.
 #   - docs/ and countries/: runbooks and per-entity scraping recipes that DOCUMENT third-party PUBLIC
@@ -18,6 +18,12 @@
 #     JLR NetDirector, Mercedes dealer-locator) -- each documented in-line as a client-side public key;
 #     allowlisted by their exact value so a NEW/unknown secret on any other line still trips the gate.
 #   - one false positive (group_vo_chains data_surface="internal_api" -> a field value, not a key).
+#   - .obsidian/plugins/: vendored third-party plugin bundles (verified 2026-07-19: main.js is the
+#     obsidian-local-rest-api plugin's own bundled node-forge crypto library, 87k lines, added whole in
+#     f837463 "add Obsidian second-brain vault"; CARDEEP wrote none of it). Same class as node_modules/.
+#   - the shared test fixture password "correct-horse-battery-staple-9" (XKCD-936 placeholder, verified
+#     2026-07-19 identical literal across 5 router test files) -- allowlisted by exact value, not by
+#     path, so a real credential accidentally pasted into tests/ still trips the gate.
 
 title = "CARDEEP gitleaks config"
 
@@ -37,6 +43,7 @@ paths = [
   '''(^|/)docs/''',
   '''(^|/)countries/''',
   '''(^|/)plans/intel-audit/''',
+  '''(^|/)\.obsidian/plugins/''',
 ]
 regexes = [
   '''3b2cc62fd26c4e29a762db3de181266b''',                 # group_subastas: ALD public gateway subscription key
@@ -45,4 +52,5 @@ regexes = [
   '''ce7d9916-6a3d-407a-b086-fea4cbae05f6''',             # oem_mercedes: dealer-locator public x-apikey
   '''7f665f5b3cb8fe8e83293052367c575f666078b87570d5557f02f248ec98''',  # bmw_used: STOLO public stock-locator x-api-key (BMW client-side bundle, not a CARDEEP secret)
   '''data_surface="internal_api", surface_intent="json_api"''',  # group_vo_chains: false positive (field value)
+  '''correct-horse-battery-staple-9''',                   # tests/: shared XKCD-936 placeholder password fixture, not a real credential
 ]

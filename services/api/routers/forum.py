@@ -361,9 +361,11 @@ async def anchor_search(
         if kind == "vehicle":
             rows = await c.fetch(
                 """
-                SELECT vehicle_ulid, make, model, year, price, deep_link
-                  FROM vehicle
-                 WHERE status = 'available' AND (make ILIKE $1 OR model ILIKE $1 OR title ILIKE $1)
+                SELECT v.vehicle_ulid, v.make, v.model, v.year, v.price, v.deep_link
+                  FROM vehicle v
+                  JOIN entity e ON e.entity_ulid = v.entity_ulid
+                 WHERE v.status = 'available' AND e.country_code = 'ES'
+                   AND (v.make ILIKE $1 OR v.model ILIKE $1 OR v.title ILIKE $1)
                  LIMIT 20
                 """,
                 f"%{q}%",
@@ -379,7 +381,7 @@ async def anchor_search(
             ]
         else:
             rows = await c.fetch(
-                "SELECT cdp_code, trade_name FROM entity WHERE trade_name ILIKE $1 OR cdp_code ILIKE $1 LIMIT 20",
+                "SELECT cdp_code, trade_name FROM entity WHERE country_code = 'ES' AND (trade_name ILIKE $1 OR cdp_code ILIKE $1) LIMIT 20",
                 f"%{q}%",
             )
             items = [

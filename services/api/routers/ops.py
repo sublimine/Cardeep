@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import asyncpg
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
@@ -288,7 +289,19 @@ async def engine_status(
         )
         age_seconds = float(lease["age_seconds"]) if lease is not None else None
 
-        jobs = await c.fetch("SELECT id, next_run_time FROM apscheduler_jobs ORDER BY next_run_time")
+        # apscheduler_jobs is owned by APScheduler's SQLAlchemyJobStore, not a migration — it is
+        # created lazily the first time pipeline.ops.scheduler's live daemon starts (see
+        # pipeline/ops/scheduler.py::_start_scheduler, `jobstores = {"default": SQLAlchemyJobStore(...)}`).
+        # On a freshly migrated DB where the harvest daemon has never run yet (fresh deploy / the
+        # db-tests CI seed, which only migrates + seeds — it never starts the scheduler process), the
+        # table does not exist. An honest "no jobs registered yet" (empty list) rather than a 500 —
+        # same anti-alucinación posture as the F6 uptime ledger below (never fabricate, degrade
+        # explicitly), and the same UndefinedTableError idiom services/api/stats.py::fetch_stats
+        # already uses for product_stats pre-migration/pre-first-refresh.
+        try:
+            jobs = await c.fetch("SELECT id, next_run_time FROM apscheduler_jobs ORDER BY next_run_time")
+        except asyncpg.exceptions.UndefinedTableError:
+            jobs = []
 
         sources_total = await c.fetchval("SELECT count(*) FROM source_health")
         sources_harvested_since_start = None

@@ -110,6 +110,7 @@ _DEAL_JOIN_SQL = """
       FROM crm_deal d
       LEFT JOIN crm_contact ct ON ct.contact_ulid = d.contact_ulid
       LEFT JOIN vehicle v ON v.vehicle_ulid = d.vehicle_ulid
+          AND EXISTS (SELECT 1 FROM entity ve WHERE ve.entity_ulid = v.entity_ulid AND ve.country_code = 'ES')
 """
 
 

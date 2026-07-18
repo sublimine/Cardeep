@@ -200,7 +200,8 @@ async def liveness(request: Request) -> JSONResponse:
                 COUNT(*) AS total_clicks
               FROM wanted_match wm
               JOIN vehicle v ON v.vehicle_ulid = wm.vehicle_ulid
-             WHERE wm.clicked_at > now() - interval '30 days'
+              JOIN entity e ON e.entity_ulid = v.entity_ulid
+             WHERE wm.clicked_at > now() - interval '30 days' AND e.country_code = 'ES'
             """
         )
     total = row["total_clicks"] or 0
@@ -425,7 +426,8 @@ async def get_matches(
                    v.entity_ulid, v.status
               FROM wanted_match wm
               JOIN vehicle v ON v.vehicle_ulid = wm.vehicle_ulid
-             WHERE wm.wanted_ulid = $1 AND v.status = 'available'
+              JOIN entity e ON e.entity_ulid = v.entity_ulid
+             WHERE wm.wanted_ulid = $1 AND v.status = 'available' AND e.country_code = 'ES'
              ORDER BY wm.match_score DESC, wm.wanted_match_ulid
              LIMIT $2 OFFSET $3
             """,
@@ -508,7 +510,8 @@ async def submit_review(
             "FROM wanted_match wm "
             "JOIN wanted_listing wl ON wl.wanted_ulid = wm.wanted_ulid "
             "JOIN vehicle v ON v.vehicle_ulid = wm.vehicle_ulid "
-            "WHERE wm.wanted_match_ulid = $1",
+            "JOIN entity e ON e.entity_ulid = v.entity_ulid "
+            "WHERE wm.wanted_match_ulid = $1 AND e.country_code = 'ES'",
             wanted_match_ulid,
         )
         if match is None:

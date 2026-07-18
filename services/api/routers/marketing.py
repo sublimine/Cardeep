@@ -399,6 +399,7 @@ _RADAR_C5_SQL = """
      WHERE ve.event_type = 'GONE'
        AND ve.observed_at > now() - ($2 || ' days')::interval
        AND pl.platform_entity_ulid = ANY($1::text[])
+       AND v.country_code = 'ES'
      GROUP BY pl.platform_entity_ulid
 """
 
@@ -554,7 +555,7 @@ async def _resolve_adcopy_facts(conn, vehicle_ulid: str) -> AdCopyFacts | None:
         province_name = None
         if pos["scope"] == "prov" and province_code:
             province_name = await conn.fetchval(
-                "SELECT name FROM geo_province WHERE code = $1", province_code,
+                "SELECT name FROM geo_province WHERE country_code = 'ES' AND code = $1", province_code,
             )
         price_position = PricePositionFact(
             ratio=pos["ratio"], band=pos["band"], segment_n=pos["segment_n"],

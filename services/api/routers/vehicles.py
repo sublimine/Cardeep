@@ -220,10 +220,11 @@ async def vehicle_lifetime(
 
         vehicle_rows = await c.fetch(
             """
-            SELECT vehicle_ulid, entity_ulid, make, model, year, km, price,
-                   status, first_seen, last_seen
-              FROM vehicle
-             WHERE vehicle_ulid = ANY($1::text[])
+            SELECT v.vehicle_ulid, v.entity_ulid, v.make, v.model, v.year, v.km, v.price,
+                   v.status, v.first_seen, v.last_seen
+              FROM vehicle v
+              JOIN entity e ON e.entity_ulid = v.entity_ulid
+             WHERE v.vehicle_ulid = ANY($1::text[]) AND e.country_code = 'ES'
             """,
             node_ulids,
         )

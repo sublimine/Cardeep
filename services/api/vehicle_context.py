@@ -75,8 +75,9 @@ async def batch_vehicle_summaries(conn, vehicle_ulids: list[str]) -> dict[str, d
     if not vehicle_ulids:
         return {}
     rows = await conn.fetch(
-        "SELECT vehicle_ulid, make, model, year, price, status, first_seen "
-        "FROM vehicle WHERE vehicle_ulid = ANY($1::text[])",
+        "SELECT v.vehicle_ulid, v.make, v.model, v.year, v.price, v.status, v.first_seen "
+        "FROM vehicle v JOIN entity e ON e.entity_ulid = v.entity_ulid "
+        "WHERE v.vehicle_ulid = ANY($1::text[]) AND e.country_code = 'ES'",
         list(set(vehicle_ulids)),
     )
     now = datetime.now(timezone.utc)

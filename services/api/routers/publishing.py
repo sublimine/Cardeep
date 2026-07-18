@@ -265,7 +265,7 @@ async def publishing_matrix(
                       pl.first_seen, pl.last_seen, pl.removed_at
                  FROM platform_listing pl
                  JOIN entity p ON p.entity_ulid = pl.platform_entity_ulid
-                WHERE pl.vehicle_ulid = ANY($1::text[])
+                WHERE pl.vehicle_ulid = ANY($1::text[]) AND p.country_code = 'ES'
                 ORDER BY pl.vehicle_ulid, pl.first_seen DESC""",
             ulids,
         )

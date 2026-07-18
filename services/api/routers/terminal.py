@@ -335,7 +335,7 @@ async def symbol_stats(
                 ) AS n_dealers_on_platform
               FROM vehicle v
               JOIN entity e ON e.entity_ulid = v.entity_ulid
-             WHERE v.make = $1 AND v.model = $2 AND {prov_filter}
+             WHERE v.make = $1 AND v.model = $2 AND e.country_code = 'ES' AND {prov_filter}
             """,
             *base_params,
         )
@@ -354,7 +354,7 @@ async def symbol_stats(
             f"""
             SELECT v.entity_ulid, count(*) AS n
               FROM vehicle v JOIN entity e ON e.entity_ulid = v.entity_ulid
-             WHERE v.make = $1 AND v.model = $2 AND {prov_filter} AND v.status = 'available'
+             WHERE v.make = $1 AND v.model = $2 AND e.country_code = 'ES' AND {prov_filter} AND v.status = 'available'
              GROUP BY v.entity_ulid ORDER BY n DESC LIMIT {TOP_N_CONCENTRATION}
             """,
             *base_params,
@@ -370,7 +370,7 @@ async def symbol_stats(
             f"""
             SELECT v.vehicle_ulid, v.year, v.km, v.price, v.deep_link, e.cdp_code
               FROM vehicle v JOIN entity e ON e.entity_ulid = v.entity_ulid
-             WHERE v.make = $1 AND v.model = $2 AND {prov_filter} AND v.status = 'available'
+             WHERE v.make = $1 AND v.model = $2 AND e.country_code = 'ES' AND {prov_filter} AND v.status = 'available'
              ORDER BY v.last_seen DESC LIMIT 8
             """,
             *base_params,
@@ -381,7 +381,7 @@ async def symbol_stats(
             f"""
             WITH active AS (
                 SELECT v.vehicle_ulid FROM vehicle v JOIN entity e ON e.entity_ulid = v.entity_ulid
-                 WHERE v.make = $1 AND v.model = $2 AND {prov_filter} AND v.status = 'available'
+                 WHERE v.make = $1 AND v.model = $2 AND e.country_code = 'ES' AND {prov_filter} AND v.status = 'available'
             )
             SELECT count(*) AS n_active,
                    count(*) FILTER (
@@ -420,7 +420,7 @@ async def symbol_stats(
             f"""
             SELECT count(DISTINCT v.entity_ulid) FROM vehicle v JOIN entity e ON e.entity_ulid = v.entity_ulid
               JOIN vehicle_event ev ON ev.vehicle_ulid = v.vehicle_ulid
-             WHERE v.make = $1 AND v.model = $2 AND {prov_filter}
+             WHERE v.make = $1 AND v.model = $2 AND e.country_code = 'ES' AND {prov_filter}
                AND ev.event_type = 'NEW' AND ev.observed_at > $4
             """,
             *base_params, activity_since,

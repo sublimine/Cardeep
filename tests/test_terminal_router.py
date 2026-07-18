@@ -38,6 +38,25 @@ def client() -> TestClient:
         yield c
 
 
+def _run_in_own_loop(coro_factory):
+    """Run one coroutine in a DEDICATED, throwaway event loop rather than
+    ``asyncio.get_event_loop()`` (which resolves to fragile, implicit per-thread "current
+    loop" state — a real bug this session's own full-suite run caught: when this module runs
+    in the SAME pytest session right after tests/test_terminal_compute_buckets.py or
+    tests/test_terminal_infer_sales.py, both of which use pytest-asyncio's documented
+    module-scoped ``event_loop`` fixture pattern, that fixture's teardown clears the thread's
+    "current" event loop, so a later ``asyncio.get_event_loop()`` call here raised
+    "RuntimeError: There is no current event loop in thread 'MainThread'" instead of
+    resolving the fixture). A self-contained loop never depends on what a sibling module left
+    behind, matching the same ``asyncio.new_event_loop()`` + ``loop.close()`` idiom those
+    sibling modules already use for their own async fixtures."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro_factory())
+    finally:
+        loop.close()
+
+
 @pytest.fixture(scope="module")
 def real_active_symbol_key() -> str | None:
     """The symbol_key with the highest active_count in the live corpus, or None if F1's
@@ -51,7 +70,25 @@ def real_active_symbol_key() -> str | None:
             return row["symbol_key"] if row else None
         finally:
             await conn.close()
-    return asyncio.get_event_loop().run_until_complete(_fetch())
+    return _run_in_own_loop(_fetch)
+
+
+@pytest.fixture(scope="module")
+def known_vehicle_exists() -> bool:
+    """KNOWN_VEHICLE_ULID is a REAL production vehicle_ulid (see module-level comment above)
+    — the CI db-tests job's synthetic 25-row fixture (scripts/seed_ci_fixture.py) can never
+    contain it, only the developer's live populated census can. Mirrors this same file's own
+    real_active_symbol_key fixture: honest degradation (skip), never a fabricated stand-in
+    ULID (project rule: never hardcode a fake "looks real" ID pretending to be production
+    data)."""
+    async def _fetch() -> bool:
+        conn = await asyncpg.connect(_DSN)
+        try:
+            row = await conn.fetchval("SELECT 1 FROM vehicle WHERE vehicle_ulid = $1", KNOWN_VEHICLE_ULID)
+            return row is not None
+        finally:
+            await conn.close()
+    return _run_in_own_loop(_fetch)
 
 
 class TestParseSymbolKey:
@@ -159,7 +196,16 @@ class TestSymbolStats:
 
 
 class TestSymbolRating:
-    def test_delegates_to_m2_and_adds_symbol_key(self, client: TestClient) -> None:
+    def test_delegates_to_m2_and_adds_symbol_key(
+        self, client: TestClient, known_vehicle_exists: bool
+    ) -> None:
+        if not known_vehicle_exists:
+            pytest.skip(
+                "KNOWN_VEHICLE_ULID is a real production vehicle (see module-level comment) "
+                "not present in this DB — needs the live populated census, same category as "
+                "tests/ci_local_only.txt section (1); the rest of this file self-seeds and "
+                "stays CI-safe, see known_vehicle_exists fixture."
+            )
         # Any syntactically valid symbol_key works — the rating computation itself
         # (compute_price_position) resolves the vehicle's OWN segment, ignoring the
         # symbol_key path param except to echo it back (see module docstring: this

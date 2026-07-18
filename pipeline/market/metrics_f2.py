@@ -479,11 +479,24 @@ async def fetch_m7(
     mid = now_anchor - timedelta(days=half)
     early_start = now_anchor - timedelta(days=2 * half)
 
+    # _M7_HALF_SQL's upper bound is exclusive ("< $5") so early/late never double-count a
+    # row that lands exactly on `mid`. But `now_anchor` itself IS `MAX(observed_at)` from
+    # the query above, and vehicle_event.observed_at defaults to Postgres now() (transaction
+    # start time, migrations/0003_vehicles_events.sql) — every event written by the SAME
+    # ingest transaction shares one identical timestamp. Passing `now_anchor` unmodified as
+    # the late half's exclusive upper bound would therefore silently drop the single most
+    # recent ingest batch from its own "late" window every time (found via the CI fixture's
+    # tiny universe, where it zeroed out M7 entirely — but the same exclusion silently
+    # under-counts the freshest batch in production too). Nudge by 1 microsecond (finer than
+    # timestamptz's own resolution) so events observed exactly AT now_anchor are correctly
+    # counted as "late" without touching the early/mid boundary at all.
+    late_upper = now_anchor + timedelta(microseconds=1)
+
     early_rows = await conn.fetch(
         _M7_HALF_SQL, MIN_COHORT_N, YEAR_BAND_RADIUS, make_filter, early_start, mid
     )
     late_rows = await conn.fetch(
-        _M7_HALF_SQL, MIN_COHORT_N, YEAR_BAND_RADIUS, make_filter, mid, now_anchor
+        _M7_HALF_SQL, MIN_COHORT_N, YEAR_BAND_RADIUS, make_filter, mid, late_upper
     )
 
     def _index(rows):

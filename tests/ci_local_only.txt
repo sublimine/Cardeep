@@ -31,6 +31,130 @@ tests/test_dedup_invariants.py
 tests/test_km_enrichment.py
 tests/test_province_seal_view.py
 tests/test_inquisition_lenses_db.py
+# 05-multiposting Frente A (2026-07-19, first run against a clean CI DB): hardcodes 3
+# REAL_DEALERS cdp_codes (>=2 distinct platforms each, per scripts/f0_publishing_census.py) plus
+# one NON_PLATAFORMA_DEALER cross-post example (F0.2b finding) selected live from the populated
+# census -- same DB-guard pattern as test_api_gaps.py above (hardcoded 127.0.0.1:5433, skip when
+# unreachable). Verified against the live populated cardeep-pg: 23/23 pass, so publishing.py
+# itself is correct -- no router bug. Verified against a fresh ci-fixture-only DB (25 synthetic
+# dealers in province 28, CDP-ES-28-FXTRE0xx): 12 of the real-dealer-parametrized tests fail with
+# 404 "dealer not found" or a None-subscript on the envelope, because none of REAL_DEALERS /
+# NON_PLATAFORMA_DEALER can exist in a 25-row synthetic fixture -- the same structural gap already
+# covered for test_api_gaps.py, not something db-tests can ever self-seed its way out of.
+tests/test_api_publishing.py
+# 08-forum-community / 03-garage-fleet / marketing pilots (2026-07-19): these hardcode the REAL
+# GYATA demo dealer (CDP-ES-28-YCZB8JYW, scripts/seed_demo_dealer.py) and/or one specific real
+# vehicle (01KV00MAMCMJ9QCW0JY3T4XJY9) from the live census — by design (carta tests assert
+# against real data, never a fabricated fixture standing in for it), so they cannot self-seed on
+# an empty CI database. First run against a truly empty DB was 2026-07-19 (CI had been red since
+# 2026-07-15 for unrelated reasons, so this gap was never previously surfaced).
+tests/test_crm_contacts_router.py
+tests/test_crm_deals_router.py
+tests/test_crm_inbox_router.py
+tests/test_crm_notes_calendar_router.py
+tests/test_dealer_ops_router.py
+tests/test_api_marketing.py
+# 06-unified-crm-chat F4 IMAP ingestion worker (2026-07-19, same gap as the CRM router batch
+# above, discovered independently against a truly empty DB): tests/test_email_ingest.py's
+# module-scoped `entity_ulid` fixture does `SELECT entity_ulid FROM entity WHERE cdp_code =
+# $1` for the REAL GYATA demo dealer (CDP-ES-28-YCZB8JYW) and asserts the row exists, so it
+# can attach synthetic ZZTEST_ contacts/conversations/messages to a real tenant — same "assert
+# against real data, never a fabricated stand-in" design as the router batch above (module
+# docstring: "same auto-skip pattern as tests/test_crm_schema.py"). scripts/seed_ci_fixture.py
+# only creates the 25 synthetic CDP-ES-28-FXTRE0xx dealers, never GYATA, so on a truly empty
+# migrate+load_geo+seed_ci_fixture-only DB every test in the module ERRORS at fixture setup
+# (`assert row is not None`) before any test body runs — verified directly against an isolated
+# ephemeral Postgres seeded exactly like db-tests (5 of 5 setup errors, all on the same
+# assertion). Not a router/pipeline bug: services/crm/email_ingest.py itself is correct.
+tests/test_email_ingest.py
+# tests/test_forum_router.py (2026-07-19, first run against a clean CI DB): SAME structural gap
+# as the block above — test_price_check_with_real_vehicle_anchor_verifies and
+# test_anchor_price_confirmed_matches_ledger_reconstruction hardcode RARE_VEHICLE_ULID
+# (01KV00MAMCMJ9QCW0JY3T4XJY9, the same real GYATA "Lynk & Co" vehicle) and assert the §4.2
+# two-condition badge (existence + vehicle_event price cross-check via §7.1 vía B) against its
+# REAL price history — unfixable by more seed data: migrations/0035_append_only_row_guards.sql
+# makes vehicle_event permanently undeletable, so inventing a throwaway vehicle+PRICE_CHANGE row
+# under a fake ulid could never be cleaned up, and inventing one under the real ulid would corrupt
+# a real vehicle's permanent price history (same tradeoff already documented in this file's own
+# test_price_confirmed_pure_comparison docstring). test_vehicle_search_returns_real_candidates
+# searches for the real make "Lynk" via /forum/anchor-search — seed_ci_fixture.py's 25 synthetic
+# vehicles carry no make/model at all, so it can never surface a match. This run ALSO surfaced and
+# fixed a REAL, environment-independent bug in services/api/routers/forum.py::anchor_search — the
+# SAME bug already documented below for wanted.py: the vehicle-kind query filtered on
+# `country_code` directly on `vehicle` (which has no such column, only `entity` does), so it raised
+# asyncpg.exceptions.UndefinedColumnError on ANY Postgres, live or ephemeral. Fixed at the root
+# (JOIN entity e ON e.entity_ulid = v.entity_ulid, filter e.country_code = 'ES'), confirmed against
+# a fresh ephemeral DB: the query now executes cleanly (0 rows, since the fixture has no "Lynk"
+# vehicle) instead of raising; the remaining 3 failures are exclusively the RARE_VEHICLE_ULID/
+# RARE-make census gap described above, unfixable by more seed data without fabricating a fake row
+# under a real production vehicle_ulid. 21/24 tests in this file pass against the ephemeral DB.
+tests/test_forum_router.py
+# tests/test_wanted_router.py (2026-07-19, first run against a clean CI DB): SAME structural
+# gap as the block above — TestLiveMatching/TestCloseClickReview hardcode RARE_MAKE "Lynk & Co"
+# (a deliberately rare make so the candidate query stays fast/deterministic, per the file's own
+# docstring) and RARE_VEHICLE_CDP/RARE_VEHICLE_ULID (the GYATA demo dealer's real vehicle,
+# CDP-ES-28-YCZB8JYW / 01KV00MAMCMJ9QCW0JY3T4XJY9) from the live census; seed_ci_fixture.py's 25
+# synthetic vehicles carry no make/model at all, so the matcher can never surface them and
+# _create_with_match()'s "fixture expects at least one match" assumption cannot hold on an
+# ephemeral DB. This run ALSO surfaced and fixed a REAL, environment-independent bug in
+# services/api/routers/wanted.py: liveness(), get_matches() and submit_review() filtered on
+# `v.country_code` (v = the vehicle alias) — vehicle has no country_code column, only entity
+# does (confirmed via \d vehicle / \d entity and every correct sibling usage in
+# pipeline/wanted/matcher.py, auth.py, terminal.py, arbitrage.py) — so those 3 endpoints raised
+# asyncpg.exceptions.UndefinedColumnError on ANY Postgres, live or ephemeral. Fixed at the root
+# (JOIN entity e ON e.entity_ulid = v.entity_ulid, filter e.country_code = 'ES'), confirmed
+# against a fresh ephemeral DB: the country_code-caused failures (test_matches_never_show_a_gone_
+# vehicle, test_liveness_null_rate_when_no_clicks_in_window) now pass; the remaining 8 failures
+# are exclusively the RARE_MAKE/RARE_VEHICLE census gap described above, unfixable by more seed
+# data without fabricating a fake row under a real production CDP/vehicle_ulid.
+tests/test_wanted_router.py
+# Country-isolation goldens (2026-07-19): these 4 are ALREADY mechanically verified for real by
+# the dedicated country-proof-invariant CI job (.github/workflows/ci.yml, its own hardcoded
+# 29-file list against a fresh, unseeded :5434 Postgres — confirmed 212/212 passing there). The
+# db-tests job's generic `pytest -m "not unit"` sweep also picks them up (not `unit`-marked) but
+# against a DB already holding seed_ci_fixture.py's + load_geo.py's rows, which breaks their
+# "insert exactly this ES/DE scenario first, assert the ordering-sensitive trigger/JOIN result"
+# assumptions — a false failure from running the SAME golden twice in two incompatible
+# environments, not a real regression. Excluded here only; still runs (and is the real gate) in
+# country-proof-invariant.
+tests/test_seed_centroides_country.py
+tests/test_denominator_country.py
+tests/test_backfill_comarca_country.py
+tests/test_comarca_trigger_country.py
+# Needs a genuinely EMPTY entity table to test dry-run rollup isolation (self-guards with
+# `assert count(*) FROM entity == 0, "refusing to seed"`) — permanently incompatible with
+# db-tests' OWN by-design seed_ci_fixture.py step (25 synthetic dealers), which always runs
+# first. Not census-dependent in the usual sense; the conflict is structural, not fixable by
+# more/different seed data. Verified 2026-07-19: passes against a genuinely empty DB.
+tests/test_autopilot_supervisor.py
+# 01-market-intelligence F3/F4/F5 routers (2026-07-19, first run against a clean CI DB): by their
+# OWN module docstrings, these three files pin fixtures to the REAL F2/F4/F5 production runs —
+# KNOWN_MAKE/MODEL/YEAR/FUEL="Peugeot 208 2024 Gasolina" re-verified against the live published
+# market_stat run, province "42" (Soria, chosen specifically as one of Spain's lowest-population
+# provinces so its n<8 nationally-scoped fallback is real, not synthetic), the real June 2026 DGT
+# batch (month="202606"), and a real vehicle_ulid (01KTZ8N8VMC28V7YXG9RNRN9T8, Sevilla, with a
+# hand-verified ratio against the real published p50=13390) plus a real no-price vehicle_ulid.
+# services/api/routers/market.py itself is correct, not the bug: /market/segments/.../stats and
+# /market/provinces/demand legitimately 503 ("no published market_stat run yet") because F1/F2's
+# compute_stats.run_compute_full only ever runs (and only ever sets published=TRUE) against the
+# real census — publishing a run is the OUTPUT of a full production batch job, not something
+# scripts/seed_ci_fixture.py's 25-dealer/25-vehicle snapshot could fabricate without inventing
+# numbers; same for /market/dgt-corroboration's 503 (no dgt_corroboration_run — that table is
+# populated by pipeline/market/corroborate.py against the real DGT monthly file) and
+# /market/price-position/{ulid}'s 404 (the hardcoded real vehicle_ulid does not exist in the
+# synthetic fixture). Confirmed directly against a fresh ephemeral Postgres seeded exactly like
+# db-tests: 21 of 25 tests across the three files fail this way (503/404/None-subscript
+# TypeErrors on the envelope), and the remaining 4 (band-boundary pure function,
+# missing-required-param 422, nonexistent-vehicle 404, case-insensitive-make no-op) pass because
+# they don't depend on real data at all — consistent with a pure data gap, not a router defect.
+# tests/test_market_compute_stats.py + tests/test_market_metrics_f2.py (SAME db-tests run, kept
+# CI-safe, not listed here) already exercise compute_stats.py/metrics_f2.py's actual SQL/logic
+# end-to-end against a fully self-seeded synthetic cohort inside a rolled-back transaction — this
+# trio only pins the SERVED/published-run HTTP contract against specific real numbers, which is a
+# genuinely different (and here, un-satisfiable) precondition.
+tests/test_market_router.py
+tests/test_market_router_m8.py
+tests/test_market_router_m2.py
 
 # (2) Network / external-engine / display dependent (real fetch cascade / fingerprints / engine
 #     licensing / inquisition engines+lenses+prosecutor / quorum precision gate / virtual display):

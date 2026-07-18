@@ -142,6 +142,7 @@ jobs:
         run: |
           python -m scripts.load_geo
           python -m scripts.seed_geo_centroides
+          python -m scripts.load_geo_adjacency
 
       - name: Seed CI census fixture (tiny synthetic dealers/vehicles — recovers census-dependent tests)
         # Idempotent, additive: a handful of active compraventa dealers in province 28 + available

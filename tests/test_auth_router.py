@@ -55,6 +55,34 @@ DB_AVAILABLE = _db_available()
 pytestmark = pytest.mark.skipif(not DB_AVAILABLE, reason="cardeep-pg not reachable at 127.0.0.1:5433")
 
 
+def _real_entity_available() -> bool:
+    """Whether REAL_ENTITY_CDP exists at DSN. False on CI's ephemeral db-tests Postgres
+    (also bound to host port 5433, but seeded only by seed_ci_fixture.py's synthetic
+    dealers, never the real census) — distinguishes "a DB answers on 5433" (DB_AVAILABLE)
+    from "it's the real populated one" (this check)."""
+    if not DB_AVAILABLE:
+        return False
+    try:
+        import asyncpg
+
+        async def _check() -> bool:
+            conn = await asyncpg.connect(DSN, timeout=3)
+            try:
+                row = await conn.fetchval(
+                    "SELECT 1 FROM entity WHERE cdp_code = $1", REAL_ENTITY_CDP
+                )
+                return row is not None
+            finally:
+                await conn.close()
+
+        return asyncio.run(_check())
+    except Exception:
+        return False
+
+
+REAL_ENTITY_AVAILABLE = _real_entity_available()
+
+
 def _fresh_email() -> str:
     """A unique, obviously-fake address per test — never collides across parallel runs."""
     return f"authtest-{uuid.uuid4().hex}@authtest.invalid"
@@ -273,6 +301,11 @@ class TestClaimDealer:
         )
         assert r.status_code == 404
 
+    @pytest.mark.skipif(
+        not REAL_ENTITY_AVAILABLE,
+        reason=f"{REAL_ENTITY_CDP} not present at {DSN} — needs the live populated census, "
+               "not CI's synthetic seed_ci_fixture.py dealers",
+    )
     def test_rejects_mismatched_tax_id(self, client: TestClient) -> None:
         """A checksum-VALID tax id that simply belongs to nobody at this entity must still
         be rejected — the check is against the CENSUS record, not just the checksum."""
@@ -290,6 +323,11 @@ class TestClaimDealer:
         )
         assert r.status_code == 403
 
+    @pytest.mark.skipif(
+        not REAL_ENTITY_AVAILABLE,
+        reason=f"{REAL_ENTITY_CDP} not present at {DSN} — needs the live populated census, "
+               "not CI's synthetic seed_ci_fixture.py dealers",
+    )
     def test_claim_dealer_success_path(self, client: TestClient) -> None:
         data = _register(client)
         r = client.post(

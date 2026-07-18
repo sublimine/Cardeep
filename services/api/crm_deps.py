@@ -45,7 +45,7 @@ async def _primary_membership(conn, user_ulid: str) -> tuple[str, str] | None:
         SELECT dm.entity_ulid, e.cdp_code
           FROM dealer_membership dm
           JOIN entity e ON e.entity_ulid = dm.entity_ulid
-         WHERE dm.user_ulid = $1
+         WHERE dm.user_ulid = $1 AND e.country_code = 'ES'
          ORDER BY dm.created_at ASC
          LIMIT 1
         """,

@@ -274,7 +274,11 @@ class TestFetchM7:
             async with db_conn.transaction():
                 run_id = await vam_verified_run_id(db_conn)
                 anchor_row = await db_conn.fetchrow("SELECT max(observed_at) AS mx FROM vehicle_event")
-                anchor = anchor_row["mx"]
+                # Same NULL-safe fallback as fetch_m7 itself (pipeline/market/metrics_f2.py):
+                # on a genuinely empty vehicle_event table (e.g. this exact test, first to
+                # touch the table in a fresh CI DB — every earlier test's events were rolled
+                # back), max(observed_at) is NULL and the anchor must default to "now".
+                anchor = anchor_row["mx"] if anchor_row and anchor_row["mx"] is not None else datetime.now(timezone.utc)
 
                 early_prices = [100.0 * (i + 1) for i in range(10)]   # 100..1000, p50=550
                 late_prices = [110.0 * (i + 1) for i in range(10)]    # 110..1100, p50=605
@@ -325,7 +329,8 @@ class TestFetchM7:
             async with db_conn.transaction():
                 run_id = await vam_verified_run_id(db_conn)
                 anchor_row = await db_conn.fetchrow("SELECT max(observed_at) AS mx FROM vehicle_event")
-                anchor = anchor_row["mx"]
+                # Same NULL-safe fallback as fetch_m7 itself — see the sibling test above.
+                anchor = anchor_row["mx"] if anchor_row and anchor_row["mx"] is not None else datetime.now(timezone.utc)
                 # ONLY late-half entries (no early-half data at all for this make)
                 for i in range(10):
                     price = 100.0 * (i + 1)

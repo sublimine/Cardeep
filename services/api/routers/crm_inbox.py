@@ -107,6 +107,7 @@ _CONV_LIST_SQL = """
       FROM crm_conversation conv
       LEFT JOIN crm_contact ct ON ct.contact_ulid = conv.contact_ulid
       LEFT JOIN vehicle v ON v.vehicle_ulid = conv.vehicle_ulid
+          AND EXISTS (SELECT 1 FROM entity ve WHERE ve.entity_ulid = v.entity_ulid AND ve.country_code = 'ES')
 """
 
 
