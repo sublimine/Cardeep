@@ -1,18 +1,16 @@
-"""/market/* — market-intelligence endpoints (pilar 01-market-intelligence, F3).
+"""/market/* — market-intelligence endpoints (pilar 01-market-intelligence, F3+F4).
 
 Ownership: 00-MASTER.md resolution C-1 assigns this file and the ``/market/*``
 namespace to pilar 01 exclusively. Pilar 09 (trading-terminal) owns a SEPARATE
 ``services/api/routers/terminal.py`` with ``/terminal/*`` — never this file.
 
-Scope of THIS phase (F3): serves M1/M3/M4/M5/M7/M9/M10 — every metric that F1+F2
-already compute into ``market_stat`` and cross-verify (01-market-intelligence-f1.md,
--f2.md). Two metrics are DELIBERATELY absent from this router, not an oversight:
+Scope built so far: M1/M3/M4/M5/M7/M9/M10 (F3, served from ``market_stat``) and M8
+(F4, served from ``dgt_corroboration`` — DGT-vs-GONE cohort corroboration). One
+metric is DELIBERATELY absent, not an oversight:
 
   - M2 (price-position, ``/market/price-position/{vehicle_ulid}``) is F5's scope —
     it is NOT built here. Creating that path now with no real ratio logic behind it
     would BE the exact mock violation this pilar exists to remove from `Api.tsx`.
-  - M8 (DGT corroboration, ``/market/dgt-corroboration``) is F4's scope — the
-    ``dgt_corroboration`` table does not exist yet.
 
 DECLARED GAP (not hidden): M6 (value curve by age cohort) is named in the carta's
 router design (§5) but was never assigned a construction phase in §9's F0-F5 list
@@ -202,6 +200,85 @@ async def provinces_demand(
             run_id=run["run_id"],
             run_at=str(run["run_at"]),
             window_description=run["window_description"],
+            count=len(items),
+        )
+        return cache_set(request, response)
+
+
+# ---------------------------------------------------------------------------
+# GET /market/dgt-corroboration — M8 (F4): DGT-vs-GONE cohort corroboration
+# ---------------------------------------------------------------------------
+
+async def _latest_corroboration_run(conn) -> dict[str, Any] | None:
+    row = await conn.fetchrow(
+        "SELECT run_id, run_at, month, methodology_version, notes "
+        "FROM dgt_corroboration_run ORDER BY run_at DESC LIMIT 1"
+    )
+    return dict(row) if row is not None else None
+
+
+@router.get("/market/dgt-corroboration")
+@limiter.limit(RATE_DEFAULT)
+async def dgt_corroboration(
+    request: Request,
+    province: str | None = Query(default=None, description="2-char province code; omitted = national rows"),
+    make: str | None = Query(default=None, description="Make, case-insensitive"),
+    model: str | None = Query(default=None, description="Model, case-insensitive; omitted = make-level rows only"),
+    _: None = Depends(require_api_key),
+) -> JSONResponse:
+    """M8: what fraction of Cardeep's GONE signal is corroborated against the DGT's
+    official monthly transfer registry, per (province+make[+model]) cohort.
+
+    Published as a DATA-QUALITY metric (carta §4 M8 row) — a low ratio is not hidden,
+    it is the honest measurement of how much of the "listing removed" proxy actually
+    lines up with an official ownership-transfer record for that cohort+month. No
+    per-VIN join is possible (DGT restricts the chassis number since 2025-02-01);
+    this is COHORT-level corroboration only, never a per-unit "this exact car sold"
+    claim (carta §3.2 declared limit).
+    """
+    cached = try_cache_get(request)
+    if cached is not None:
+        return cached
+
+    async with request.app.state.pool.acquire() as c:
+        run = await _latest_corroboration_run(c)
+        if run is None:
+            return err("no dgt_corroboration run yet", status=503)
+
+        make_norm = make.strip().upper() if make else None
+        model_norm = model.strip().upper() if model else None
+
+        rows = await c.fetch(
+            """
+            SELECT province_code, make, model, gone_count, dgt_count, ratio
+              FROM dgt_corroboration
+             WHERE run_id = $1
+               AND (province_code = $2 OR $2 IS NULL)
+               AND (make = $3 OR $3 IS NULL)
+               AND (model IS NOT DISTINCT FROM $4)
+             ORDER BY gone_count DESC
+             LIMIT 200
+            """,
+            run["run_id"], province, make_norm, model_norm,
+        )
+        items = [
+            {
+                "province_code": r["province_code"],
+                "make": r["make"],
+                "model": r["model"],
+                "gone_count": r["gone_count"],
+                "dgt_count": r["dgt_count"],
+                "ratio": float(r["ratio"]) if r["ratio"] is not None else None,
+            }
+            for r in rows
+        ]
+        response = ok(
+            items,
+            run_id=run["run_id"],
+            run_at=str(run["run_at"]),
+            month=run["month"],
+            methodology_version=run["methodology_version"],
+            notes=run["notes"],
             count=len(items),
         )
         return cache_set(request, response)
