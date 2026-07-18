@@ -309,6 +309,114 @@ async def dgt_corroboration(
 # GET /market/price-position/{vehicle_ulid} — M2 (F5)
 # ---------------------------------------------------------------------------
 
+class PricePositionOutcome:
+    """Result of ``compute_price_position`` — status/data/meta, NOT a JSONResponse, so
+    it is reusable outside a route handler (03-garage-fleet F3/F4: dealer_ops.py's
+    price-override endpoint and the "Mercado" screen both need this exact computation,
+    00-MASTER.md C-1: "un solo cálculo... prohibido un tercer cálculo independiente")."""
+
+    __slots__ = ("ok", "status", "error", "data", "meta")
+
+    def __init__(self, *, ok: bool, status: int = 200, error: str | None = None,
+                 data: dict[str, Any] | None = None, meta: dict[str, Any] | None = None) -> None:
+        self.ok = ok
+        self.status = status
+        self.error = error
+        self.data = data
+        self.meta = meta or {}
+
+
+async def compute_price_position(conn, vehicle_ulid: str) -> PricePositionOutcome:
+    """M2 core computation — extracted from the route below so it has exactly ONE
+    body, called both by ``GET /market/price-position/{ulid}`` and by any other
+    pilar that needs "is this price below/at/above its segment's market" (03-K9).
+    Behaviour is IDENTICAL to the original inline route (see git history) — every
+    branch below maps 1:1 to what used to be a direct ``return err(...)``/``return
+    ok(...)`` in the handler; ``tests/test_market_router_m2.py`` pins this contract.
+    """
+    vrow = await conn.fetchrow(
+        """
+        SELECT v.vehicle_ulid, v.make, v.model, v.year, v.fuel, v.price,
+               e.province_code
+          FROM vehicle v
+          JOIN entity e ON e.entity_ulid = v.entity_ulid
+         WHERE v.vehicle_ulid = $1
+        """,
+        vehicle_ulid,
+    )
+    if vrow is None:
+        return PricePositionOutcome(ok=False, status=404, error=f"vehicle {vehicle_ulid} not found")
+
+    if vrow["price"] is None:
+        return PricePositionOutcome(
+            ok=True,
+            data={"vehicle_ulid": vehicle_ulid, "position": None, "reason": "vehicle has no price"},
+        )
+    if any(vrow[f] is None for f in ("make", "model", "year", "fuel", "province_code")):
+        return PricePositionOutcome(
+            ok=True,
+            data={"vehicle_ulid": vehicle_ulid, "position": None,
+                  "reason": "vehicle is missing make/model/year/fuel/province — cannot resolve a segment"},
+        )
+
+    run = await _latest_published_run(conn)
+    if run is None:
+        return PricePositionOutcome(ok=False, status=503, error="no published market_stat run yet")
+
+    m1_rows = await conn.fetch(
+        """
+        SELECT province_code, p50, n
+          FROM market_stat
+         WHERE run_id = $1 AND metric_id = 'M1' AND make = $2 AND model = $3
+           AND year = $4 AND fuel = $5 AND (province_code = $6 OR province_code IS NULL)
+        """,
+        run["run_id"], vrow["make"], vrow["model"], vrow["year"], vrow["fuel"], vrow["province_code"],
+    )
+    if not m1_rows:
+        return PricePositionOutcome(
+            ok=True,
+            data={"vehicle_ulid": vehicle_ulid, "position": None,
+                  "reason": "no M1 data for this segment (n<8 even nationally, or segment never computed)"},
+            meta={"run_id": run["run_id"]},
+        )
+
+    prov_row = next((r for r in m1_rows if r["province_code"] is not None), None)
+    chosen = prov_row if prov_row is not None else next(r for r in m1_rows if r["province_code"] is None)
+    scope = "prov" if chosen is prov_row else "nat"
+
+    p50 = float(chosen["p50"])
+    price = float(vrow["price"])
+    ratio = price / p50 if p50 > 0 else None
+    if ratio is None:
+        return PricePositionOutcome(
+            ok=True,
+            data={"vehicle_ulid": vehicle_ulid, "position": None, "reason": "segment p50 is zero"},
+            meta={"run_id": run["run_id"]},
+        )
+
+    return PricePositionOutcome(
+        ok=True,
+        data={
+            "vehicle_ulid": vehicle_ulid,
+            "price": price,
+            "segment": {
+                "make": vrow["make"], "model": vrow["model"], "year": vrow["year"],
+                "fuel": vrow["fuel"], "province_code": vrow["province_code"],
+            },
+            "position": {
+                "ratio": ratio,
+                "band": _price_position_band(ratio),
+                "cuts": {"below_market_lt": M2_BELOW_MARKET_CUT, "above_market_gt": M2_ABOVE_MARKET_CUT},
+                "segment_p50": p50,
+                "segment_n": chosen["n"],
+                "scope": scope,
+                "fallback_to_national": scope == "nat",
+            },
+        },
+        meta={"run_id": run["run_id"], "run_at": str(run["run_at"])},
+    )
+
+
 @router.get("/market/price-position/{vehicle_ulid}")
 @limiter.limit(RATE_DEFAULT)
 async def price_position(
@@ -336,80 +444,7 @@ async def price_position(
         the latest published run -> 200 with ``position: null`` and a ``reason``.
     """
     async with request.app.state.pool.acquire() as c:
-        vrow = await c.fetchrow(
-            """
-            SELECT v.vehicle_ulid, v.make, v.model, v.year, v.fuel, v.price,
-                   e.province_code
-              FROM vehicle v
-              JOIN entity e ON e.entity_ulid = v.entity_ulid
-             WHERE v.vehicle_ulid = $1
-            """,
-            vehicle_ulid,
-        )
-        if vrow is None:
-            return err(f"vehicle {vehicle_ulid} not found", status=404)
-
-        if vrow["price"] is None:
-            return ok(
-                {"vehicle_ulid": vehicle_ulid, "position": None, "reason": "vehicle has no price"}
-            )
-        if any(vrow[f] is None for f in ("make", "model", "year", "fuel", "province_code")):
-            return ok(
-                {"vehicle_ulid": vehicle_ulid, "position": None,
-                 "reason": "vehicle is missing make/model/year/fuel/province — cannot resolve a segment"}
-            )
-
-        run = await _latest_published_run(c)
-        if run is None:
-            return err("no published market_stat run yet", status=503)
-
-        m1_rows = await c.fetch(
-            """
-            SELECT province_code, p50, n
-              FROM market_stat
-             WHERE run_id = $1 AND metric_id = 'M1' AND make = $2 AND model = $3
-               AND year = $4 AND fuel = $5 AND (province_code = $6 OR province_code IS NULL)
-            """,
-            run["run_id"], vrow["make"], vrow["model"], vrow["year"], vrow["fuel"], vrow["province_code"],
-        )
-        if not m1_rows:
-            return ok(
-                {"vehicle_ulid": vehicle_ulid, "position": None,
-                 "reason": "no M1 data for this segment (n<8 even nationally, or segment never computed)"},
-                run_id=run["run_id"],
-            )
-
-        prov_row = next((r for r in m1_rows if r["province_code"] is not None), None)
-        chosen = prov_row if prov_row is not None else next(r for r in m1_rows if r["province_code"] is None)
-        scope = "prov" if chosen is prov_row else "nat"
-
-        p50 = float(chosen["p50"])
-        price = float(vrow["price"])
-        ratio = price / p50 if p50 > 0 else None
-        if ratio is None:
-            return ok(
-                {"vehicle_ulid": vehicle_ulid, "position": None, "reason": "segment p50 is zero"},
-                run_id=run["run_id"],
-            )
-
-        return ok(
-            {
-                "vehicle_ulid": vehicle_ulid,
-                "price": price,
-                "segment": {
-                    "make": vrow["make"], "model": vrow["model"], "year": vrow["year"],
-                    "fuel": vrow["fuel"], "province_code": vrow["province_code"],
-                },
-                "position": {
-                    "ratio": ratio,
-                    "band": _price_position_band(ratio),
-                    "cuts": {"below_market_lt": M2_BELOW_MARKET_CUT, "above_market_gt": M2_ABOVE_MARKET_CUT},
-                    "segment_p50": p50,
-                    "segment_n": chosen["n"],
-                    "scope": scope,
-                    "fallback_to_national": scope == "nat",
-                },
-            },
-            run_id=run["run_id"],
-            run_at=str(run["run_at"]),
-        )
+        result = await compute_price_position(c, vehicle_ulid)
+    if not result.ok:
+        return err(result.error or "unknown error", status=result.status)
+    return ok(result.data, **result.meta)

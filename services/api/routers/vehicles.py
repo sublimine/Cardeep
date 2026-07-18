@@ -103,7 +103,7 @@ async def vehicle_detail(
             """
             SELECT v.vehicle_ulid, v.make, v.model, v.year, v.km, v.price, v.currency,
                    v.photo_url, v.deep_link, v.title, v.fuel, v.transmission,
-                   v.status, v.first_seen, v.last_seen,
+                   v.vin_ref, v.status, v.first_seen, v.last_seen,
                    vc.canonical_vehicle_ulid
               FROM vehicle v
               LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid

@@ -130,7 +130,7 @@ async def get_inventory(
               SELECT DISTINCT ON (COALESCE(vc.canonical_vehicle_ulid, v.vehicle_ulid))
                      v.vehicle_ulid, v.deep_link, v.title, v.make, v.model, v.year,
                      v.km, v.price, v.currency, v.fuel, v.transmission, v.photo_url,
-                     v.status, v.first_seen, v.last_seen
+                     v.vin_ref, v.status, v.first_seen, v.last_seen
                 FROM servable_vehicle v
                 LEFT JOIN v_canonical_vehicle vc ON vc.vehicle_ulid = v.vehicle_ulid
                WHERE v.entity_ulid = ANY($1::text[])

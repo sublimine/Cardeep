@@ -79,7 +79,7 @@ from services.api.deps import (  # noqa: F401
     resolve_cluster,
 )
 from services.api.ratelimit import limiter, rate_limit_handler
-from services.api.routers import auth, entities, geo, market, ops, platforms, vehicles
+from services.api.routers import arbitrage, auth, dealer_ops, entities, geo, market, ops, platforms, publishing, vehicles
 
 # Prod-gated fail-fast: in CARDEEP_ENV=prod, refuse to start on the dev-default DSN OR without an
 # API key configured. No-op in dev/test (CARDEEP_ENV unset) — startup stays byte-identical.
@@ -139,9 +139,11 @@ _cors_origins = os.environ.get(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _cors_origins.split(",") if o.strip()],
-    # AUTH-0: POST added for /auth/* (register/login/logout/refresh/claim-dealer) — the
-    # first write endpoints in this API; the other 5 routers stay GET-only.
-    allow_methods=["GET", "POST", "OPTIONS"],
+    # AUTH-0: POST added for /auth/* (register/login/logout/refresh/claim-dealer).
+    # 03-garage-fleet F3: PATCH added for /dealer/vehicles/{ulid}/status|cost (the
+    # dealer's own fleet_ops write surface, POST for /price-override). The census
+    # routers (entities/geo/vehicles/platforms/market) stay GET-only.
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     # Authorization (bearer session token) and X-Tenant-ID (sent once AuthContext.tsx has a
     # real tenant) must be preflight-allowed or the browser drops the request before it
     # ever reaches FastAPI.
@@ -155,6 +157,9 @@ app.include_router(vehicles.router)
 app.include_router(platforms.router)
 app.include_router(auth.router)
 app.include_router(market.router)
+app.include_router(publishing.router)
+app.include_router(arbitrage.router)
+app.include_router(dealer_ops.router)
 
 
 if __name__ == "__main__":
