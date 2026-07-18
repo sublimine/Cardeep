@@ -62,6 +62,9 @@ CACHEABLE_PATH_PREFIXES: tuple[str, ...] = (
     "/market/",       # /market/segments/.../stats, /market/provinces/demand — change
                       # only when a NEW market_stat_run is published (batch cadence,
                       # not per-request), 01-market-intelligence F3.
+    "/terminal/",     # /terminal/symbols|{symbol}/ohlc|stats|rating|methodology — buckets
+                      # only change once/day (pipeline/terminal/compute_buckets.py's cadence),
+                      # 09-trading-terminal F2.
 )
 
 # Paths that MUST NOT be cached regardless of prefix match.
