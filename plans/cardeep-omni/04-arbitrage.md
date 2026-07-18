@@ -1,7 +1,8 @@
 # 04 — Arbitraje de otro nivel
 
 > Carta de sub-proyecto institucional. Pilar `04-arbitrage` del programa cardeep-omni.
-> Fase: SYNTHESIS (arquitectura). Fecha: 2026-07-17.
+> Fase: F1-F5 EJECUTADAS Y VERIFICADAS EN VIVO contra cardeep-pg; F6 (identidad-captura) workstream
+> de fondo — mecanismo construido y verificado, ejecución parcial (ver §10). Fecha ejecución: 2026-07-18.
 > Doctrina: cada afirmación es [VERIFICADO] (leída en código/DB real) o [ASUMIDO]/[HUECO] (declarado como tal).
 > Nada de lo aquí planificado existe todavía salvo lo marcado como existente.
 > Verificación de segunda vía (2026-07-17, pasada independiente): 14 anclajes archivo:línea re-leídos en
@@ -477,13 +478,159 @@ final o cuando el pilar de auth llegue.
 
 ---
 
+## 10. Estado real de ejecución (2026-07-18) — F1-F6
+
+Todo lo declarado abajo es [VERIFICADO]: corrido contra `cardeep-pg` en vivo, con conteos reales tomados en
+el momento de la ejecución (no estimaciones). Commits atómicos en `main`, push aplicado.
+
+### F0 — Reconciliación de superficies
+Ya resuelto ANTES de esta ejecución por `09-Fase0` (commit `672259f`): `web/src/pages/terminal/` no existe,
+`/terminal` no está en `App.tsx`, no hay ruta navegable con datos sintéticos sin etiquetar. Cero acción
+adicional requerida.
+
+### F1 — Deal-score backend — CERRADO
+- Migración `0079_arbitrage.sql`: `cohort_stats` + `deal_score` + `arbitrage_run`.
+- `pipeline/gestionador/cohorts.py` (nuevo): primitivo de cohorte robust-z factorizado de
+  `detect_price_trap`. Refactor de `detect.py` verificado **byte-idéntico** contra producción: mismo
+  conjunto de 5000 vehículos flaggeados, mismo orden, mismo hash SHA-256
+  (`cb132238020735529dc11d422e0ce1dd38d9e568b54a670ec6c9905db66a039c`) antes y después.
+- `pipeline/arbitrage/score.py` (nuevo): bandas `chollo_fuerte`/`bajo_mercado`, universo `servable_vehicle`.
+- **Run real**: 1.582.295 vehículos escaneados, 10.289 cohortes (9.587 Tier-A + 702 Tier-B), 48.474 filas
+  `deal_score` (9.681 chollo_fuerte + 38.793 bajo_mercado). Verificación doble vía (§7): 20 cohortes,
+  divergencia máxima **0,0%**.
+- TDD: 8 tests (`tests/test_arbitrage_score.py`), cohortes sintéticas con media/MAD calculadas a mano,
+  frontera de cuarentena, exclusión Tier-A/B.
+
+### F2 — API — CERRADO
+- `services/api/routers/arbitrage.py`: `/arbitrage/deals`, `/desync`, `/summary`, `/methodology`,
+  `/time-curves/{make}/{model}`, `/geo/{make}/{model}`. Registrado en `main.py`.
+- **Regresión real cazada por la suite del propio proyecto**: `tests/test_served_queries_have_country.py`
+  detectó 4 queries mías sirviendo censo sin dimensión `country_code`. Corregido (JOIN entity +
+  `country_code=$N`, `DEFAULT_COUNTRY` de `pipeline.paths`); re-verificado en verde.
+- 9+ tests de contrato (`tests/test_arbitrage_router.py`) contra la API real (FastAPI TestClient + DB viva).
+
+### F3 — Frontend — CERRADO
+- `web/src/pages/Arbitrage.tsx`: reescritura completa. Los 5 arrays hardcodeados (`CHOLLOS`, `CROSS_GAPS`,
+  `SPREAD`, `TIME_DATA`, `MAX_SPREAD_PCT`) eliminados; cada número viene de `cardeep.ts` (nuevos métodos
+  `arbitrage*`). Ranking de chollos, panel de desync, panel de ritmo de mercado (curva de decaimiento real,
+  selector de cohorte), panel de mapa geo (barras de mediana por provincia + rutas significativas),
+  `SpreadPanel`/`PremiumGate` intactos.
+- Guardia de regresión permanente: `tests/test_arbitrage_no_fabricated_data.py` (hermano de
+  `tests/test_web_no_fabricated_data.py`) — falla si los arrays vuelven.
+- `tsc --noEmit` limpio, `vite build` limpio (verificado tras la turbulencia de ediciones concurrentes de
+  otros pilares sobre `cardeep.ts`/`main.py` — ver nota de concurrencia abajo).
+
+### F4 — Time-arbitrage — CERRADO
+- Migración `0081_arbitrage_decay.sql`: **desviación declarada** del nombre de tabla único que sugería
+  §5.2 — dos tablas (`market_cycle_stats` + `market_decay`) en vez de una, porque las dos señales se
+  computan sobre poblaciones distintas (documentado en la cabecera de la migración).
+- `pipeline/arbitrage/decay.py`: ciclos NEW→GONE (≥50/cohorte, últimos 12 meses) + curva de decaimiento por
+  bucket de edad (≥30 obs/bucket).
+- **Run real**: 164.163 ciclos escaneados, 1.093 cohortes de ciclo, 7.760 filas de bucket. Doble vía:
+  20+20 muestras, divergencia máxima **0,0%** en ambas señales.
+- Verificación §7 **simplificada respecto al diseño de la carta** (declarado, no oculto): recompute
+  SQL+Python independiente, NO el backtest de holdout temporal completo que la carta imaginaba — ese
+  backtest queda como hueco declarado para una pasada futura.
+- TDD: 6 tests (`tests/test_arbitrage_decay.py`).
+
+### F5 — Geo-arbitrage — CERRADO
+- Migración `0082_arbitrage_geo.sql`: `geo_price_cell` + `geo_price_gap`.
+- `pipeline/arbitrage/geo.py`: celda (make, model, banda de 2 años, provincia), n≥15, sin fallback Tier-B.
+- **Juicio dimensional declarado**: la fórmula literal de §4.4 mezcla una mediana en euros con un MAD en
+  dominio ln sin convertir — este job deriva `sigma_eur = mediana_precio × MAD_ln × 1,4826` antes de
+  comparar, documentado en el módulo y la migración.
+- **Run real**: 18.080 celdas, 1.614 rutas significativas (ej. Land Rover Range Rover Sport 2022-23:
+  43.810€ más barato en provincia 35 que en 29). Doble vía: 20 celdas, divergencia máxima **0,0%**.
+- TDD: 7 tests (`tests/test_arbitrage_geo.py`).
+
+### F6 — Identidad-captura (background) — MECANISMO CONSTRUIDO, EJECUCIÓN PARCIAL
+
+**photo_hash**:
+- `pipeline/identity/photo_hash.py` (nuevo): reutiliza `pipeline/delta_photo.py::hash_image_bytes` (el
+  MISMO pHash DCT que el delta PHOTO_CHANGE en vivo ya usa — no una segunda implementación; se descartó un
+  primer intento propio con la librería `imagehash` al descubrir que `delta_photo.py` ya resolvía esto sin
+  dependencia nueva) y el governor per-host real (`pipeline/engine/governor.py`) — ningún host se golpea
+  fuera de su bucket, doctrina de la cicatriz AS24 aplicada literalmente a los CDNs de fotos.
+- **Run real acotado**: 200 vehículos, concurrencia 15, pacing conservador del governor (perfil STEALTH sin
+  override, sin evidencia para acelerar `cdn.wallapop.com`/`images.milanuncios.com`). Resultado:
+  **65 hasheados, 135 HTTP 404** (fotos ya no existen en el CDN — esperable en listados antiguos),
+  312,7s. `vehicle.photo_hash`: 0 → 65.
+- **Hueco declarado, no maquillado**: 1.963.278 vehículos disponibles tienen `photo_url`. A este ritmo
+  conservador (dominado por 2 hosts al 0,7-1,0 req/s), cubrir el corpus completo es un job de fondo de
+  varios días, no una sesión. El mecanismo es idempotente y reanudable (`--limit`); escalar la tasa para
+  `cdn.wallapop.com`/`images.milanuncios.com` requiere medir su tolerancia real primero (la propia
+  doctrina del governor: "nunca subir sin evidencia") — no se hizo aquí, es la siguiente acción concreta.
+- TDD: 6 tests (`tests/test_photo_hash.py`), servidor aiohttp local real (sin red externa), governor
+  aislado por test.
+
+**VIN — hallazgo crítico no anticipado por la carta**:
+- Auditoría en vivo: de 2.520.623 vehículos con `vin_ref` no-nulo, **solo 41.510 (1,6%) eran VINs de 17
+  caracteres bien formados**. Los otros **2.479.113 (98,4%)** eran IDs de listado internos de la fuente
+  (wallapop 789.654, milanuncios 559.049, coches.net 375.204, AS24 combinado ~680.000, autocasion
+  ~225.000, motor.es ~91.000, ...) almacenados bajo el nombre de columna equivocado — bug de código real,
+  verificado línea por línea en `pipeline/sources/autoscout24.py:208`
+  (`vin_ref=str(raw.get("id") or raw.get("identifier") or "")`, corregido en este commit a `vin_ref=None`).
+  Contraejemplo correcto ya existente en el propio repo: `pipeline/platform/oem_ford_wholesale.py`
+  ("matrícula is not a VIN, so vin_ref stays NULL").
+- **Impacto**: cualquier consumidor cross-platform por VIN estaba expuesto a 2,48M falsos identificadores
+  — peor que la columna vacía, porque un ID falso puede coincidir por azar entre fuentes y fabricar un
+  cruce inexistente. 02-history-reports' `link_lifetimes.py::_normalize_vin` YA se defendía de esto en
+  lectura (rechaza longitud≠17 y letras I/O/Q) — mitiga el riesgo de falso-positivo mostrado al usuario,
+  pero no limpia el dato en reposo.
+- **Remediación aplicada**: migración `0083_vin_ref_remediation.sql` — `UPDATE vehicle SET vin_ref = NULL
+  WHERE vin_ref IS NOT NULL AND upper(vin_ref) !~ '^[A-HJ-NPR-Z0-9]{17}$'`. Verificado antes de escribir:
+  2.479.113 a limpiar, 41.510 a conservar (contraste de formato VIN estándar sin I/O/Q: 41.510/44.727
+  del conteo bruto por longitud pasan el charset estricto). Guardia de regresión permanente:
+  `tests/test_vin_ref_remediation.py`.
+- **Alcance declarado, NO completado**: la corrección de código se aplicó solo a
+  `pipeline/sources/autoscout24.py::parse_listing_vehicle` — confirmado en vivo que cubre
+  `pipeline/platform/autoscout24_wholesale.py` (source_key `as24_wholesale`, 310.194 filas) y
+  `pipeline/platform/as24_facet.py`. **NO cubre** `autoscout24_census` (150.638 filas): ese módulo
+  (`pipeline/sources/autoscout24_census.py`) importa `parse_page_dealer`, una función de parseo
+  DISTINTA que no fue auditada en esta pasada — sigue con el mismo riesgo de contaminación hasta que
+  se revise por separado. **Otros conectores con el mismo patrón anti-VIN siguen sin corregir en
+  código** (re-contaminarán en el próximo harvest si no se arreglan): `coches_net_wholesale`,
+  `coches_com_wholesale`, `autocasion_wholesale`/
+  `_census`, `motor_es_wholesale`/`_census` (motor.es además tiene su propio caveat conocido: su
+  `vehicleIdentificationNumber` de JSON-LD es un placeholder estático, verificado idéntico en dos coches
+  distintos — `docs/architecture/tier1_recipes/motor_es.md:164` — NUNCA usar sin re-verificar por coche),
+  `wallapop_wholesale`, `milanuncios_wholesale`, `dasweltauto_wholesale`/`seat_dasweltauto`,
+  `group_vo_chains_flexicar`/`ocasionplus`/`clicars`, `group_subastas_wholesale`,
+  `group_rentacar_vo_arval`, `oem_seat`/`oem_seat_cupra_new_stock`, `hyundai_used`, `renault_renew`,
+  `faciliteacoches_wholesale` (nota: `faciliteacoches_racc_wholesale.py` SÍ intenta extraer un VIN real de
+  `vehicleIdentificationNumber` vía JSON-LD — a diferencia de motor.es, sin caveat de valor-duplicado
+  documentado — pero el dato en BD para ese source_key sigue sin ser longitud=17, por lo que el flujo
+  completo dealer→BD de ese conector necesita auditoría propia antes de confiar en él). Este es el mapa
+  de trabajo para la siguiente pasada de "extender captura de VIN" — no una lista cerrada, es la evidencia
+  recogida hoy.
+- **Fuentes con VIN real confirmado** (sin cambios, ya correctas): `spoticar_wholesale`/`_api`,
+  `oem_toyota_lexus_wholesale`/`toyota_used`, `oem_bmw_premium_selection_wholesale`,
+  `oem_hyundai_wholesale`, `audi_used` (parcial: 3.052/4.086), `oem_volvo_jlr_suzuki_wholesale`,
+  `nissan_intelligent_choice_wholesale`/`nissan_used`, `oem_mini_next_wholesale`, `renew_wholesale`.
+
+### Nota de concurrencia (transparencia operativa)
+Esta ejecución corrió con **múltiples agentes concurrentes sobre el MISMO working directory** (no clones
+separados): se observaron sobrescrituras completas de `web/src/api/cardeep.ts` y colisiones de `git commit`
+(ref lock) de otros pilares (`05-multiposting`, `03-garage-fleet`) en curso simultáneo. Mis adiciones a
+`cardeep.ts`/`main.py` se restauraron cada vez que fueron pisadas (verificado con `tsc --noEmit` limpio al
+final) y los commits se aislaron por pathspec explícito (nunca `git add -A`) para no arrastrar el trabajo
+en curso de otros pilares. Un commit ajeno ("feat(publishing): F0...") terminó incluyendo mis archivos F4
+ya *staged* en el mismo índice compartido — el código quedó correcto en `main`, solo la atribución del
+commit es imprecisa; no se reescribió historia para corregirlo (doctrina: nunca amend/force-push).
+
+---
+
 ## Resumen
 
-El pilar tiene 5 señales diseñadas y 0 construidas: hoy es un mock hardcodeado tras un paywall mock, con una
-superficie sintética paralela fuera de mandato. La ventaja realizable de Cardeep no es "dedup cross-platform"
-(hoy 0 pares reales) sino el delta temporal nativo del censo español (`vehicle_event`, 5,4M eventos) más la
-maquinaria robust-z ya viva en `detect_price_trap`, que ponen el deal-score y el time-arbitrage a distancia
-corta con disciplina MMR/Mercari de mínimo-N-o-silencio. El plan: reconciliar superficies, construir
-deal-score→API→frontend real con verificación de doble vía por cada número mostrado, sumar curvas de tiempo
-y geo, y desbloquear cross-platform solo cuando la identidad (photo_hash/VIN/Fellegi-Sunter) supere una
-precisión auditada — sin un solo literal inventado en pantalla.
+F1-F5 cerradas y verificadas en vivo contra `cardeep-pg`: deal-score (48.474 chollos reales), API completa,
+frontend sin un solo literal de negocio (guardia de regresión propia), time-arbitrage (7.760 puntos de
+curva de decaimiento reales) y geo-arbitrage (1.614 rutas de precio significativas) — las 5 señales
+diseñadas por la carta original, 5 construidas, con verificación de doble vía en cada una. F6 entregó dos
+resultados: el mecanismo de `photo_hash` (construido, probado, ejecutado en real contra 200 vehículos,
+65 hasheados — cobertura total es multi-día, declarado) y un hallazgo crítico no anticipado — el 98,4% de
+la columna `vin_ref` no era VIN sino contaminación de IDs de listado, ahora limpiada a nivel de dato
+(migración 0083) con un caso de código corregido (AutoScout24) y una lista explícita de conectores
+pendientes de la misma corrección. La ventaja realizable de Cardeep confirmada en producción: el delta
+temporal nativo (`vehicle_event`) y la maquinaria robust-z compartida entre higiene y oportunidad, con
+mínimo-N-o-silencio respetado en cada tabla nueva y ningún número servido sin su segunda vía de
+verificación.

@@ -51,6 +51,19 @@ argon2-cffi>=23,<26
 # heavier fronts come online.
 curl_cffi>=0.15,<0.16   # TLS-fingerprint HTTP client; required to import the live connectors
 
+aiohttp>=3.9,<4         # pipeline/identity/photo_hash.py (04-arbitrage F6): async image download for
+                        # the vehicle.photo_hash backfill batch. Module-level import — was UNDECLARED
+                        # (present in the environment only incidentally; a clean `pip install -r
+                        # requirements.txt` would ModuleNotFoundError on import).
+
+Pillow>=10,<13          # pipeline/delta_photo.py::hash_image_bytes (lazy-imported) is now on the
+                        # PRODUCTION path: pipeline/identity/photo_hash.py (04-arbitrage F6) calls it
+                        # for real against the live vehicle.photo_hash backfill. Previously dev-only
+                        # (requirements-dev.txt) because the runtime photo hot-path was GASTO-gated
+                        # and never activated — F6 crosses that gate, so this moves to runtime deps.
+scipy>=1.13,<2          # delta_photo.py's DCT (lazy-imported, scipy.fftpack.dct) — same F6 activation
+                        # as Pillow above; >=1.13 for numpy-2 compatibility.
+
 lxml>=5.2,<7            # HTML/XML parser. Module-level import in pipeline/recipe_extract_css.py and
                         # recipe_extract_llm.py (`from lxml import html`) + platform/generic_dealer_site.py
                         # (`from lxml import etree`). Importing those modules — or COLLECTING their tests —

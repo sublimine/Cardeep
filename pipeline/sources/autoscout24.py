@@ -40,7 +40,7 @@ class DealerInfo:
 @dataclass
 class Vehicle:
     deep_link: str
-    vin_ref: str
+    vin_ref: str | None
     title: str | None
     make: str | None
     model: str | None
@@ -205,7 +205,13 @@ def parse_listing_vehicle(raw: dict) -> Vehicle:
     title = " ".join(p for p in title_parts if p) or None
     return Vehicle(
         deep_link=_BASE + raw["url"] if raw.get("url") else "",
-        vin_ref=str(raw.get("id") or raw.get("identifier") or ""),
+        # 04-arbitrage F6 fix (vin_ref contamination audit, 2026-07-18): this WAS
+        # `str(raw.get("id") or raw.get("identifier") or "")` — AS24's internal LISTING id,
+        # not a VIN. AS24's SSR __NEXT_DATA__ surface exposes no vehicleIdentificationNumber
+        # field (verified: no such key anywhere in the listing/vehicle/tracking dicts this
+        # parser walks). vin_ref must be a real VIN or NULL, never a source-native id
+        # wearing a VIN's name — the listing's OWN identity already lives in deep_link.
+        vin_ref=None,
         title=title,
         make=v.get("make"),
         model=v.get("model"),
