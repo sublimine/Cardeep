@@ -305,9 +305,30 @@ Prerrequisitos AUTH-0 y 01 confirmados cerrados (Bloque 1). Frentes:
    `06-unified-crm-chat.md`.
 2. 07-marketing F0-F5 — auditoría de anuncio, feeds, copy grounded; consume M2/C2 de 01; F6 integra
    con 05/06.
-3. 09-trading-terminal Fases1-6 — agregación diaria + terminal real bajo `/terminal/*` (C-1);
-   inferencia de venta consumiendo `lifetime_link` de 02 (C-9) — con el hallazgo de 04-F6 (vin_ref
-   remediado, aunque ~15 conectores siguen sin corregir) como contexto de calidad de dato disponible.
+3. 09-trading-terminal Fases1-6 — **✅ CONSTRUIDAS E INTEGRADAS 2026-07-18** (evidencia completa en
+   `09-trading-terminal.md` §"CIERRE DE FASES 1-6" — leer ahí, no re-auditar). F1: `market_bucket_daily`
+   (migración `0086`) con bucketing por día REAL de cosecha (14 días de calendario reales medidos,
+   no ~35 continuos — el apagón de 18 días de 00 es visible en el hueco), AS-OF exacto, C4 corregido
+   contra la fuente primaria de Manheim (era OR en el texto F0, la fuente real dice AND). Índice
+   `idx_event_vehicle_time_desc` (migración `0088`) añadido tras medir el cuello de botella real.
+   `tests/test_terminal_compute_buckets.py` 8/8 verde (con un bug de fixture real corregido en el
+   propio test). **Suite completa del pilar: 37/37 tests verdes** (8 compute_buckets + 17 router +
+   3 infer_sales + 9 ingest_news). F2: router `services/api/routers/terminal.py` — **bug de producción real
+   encontrado por curl E2E contra la API viva** (Decimal no serializable en `/ohlc`, 500 → corregido
+   con `float()`), verificado tras el fix con curl real (Volkswagen Golf, SEAT Ibiza, Peugeot 208
+   con datos reales). F3: `Terminal.tsx` + chart real + nav en INTELIGENCIA (`tsc` verde, 0 errores).
+   F4: C7 delega en M2 de 01 (enmienda declarada, evita "mismo coche dos veredictos" C-1/C-12);
+   inferencia de venta consume `v_vehicle_lifetime` per C-9 — **verificado en vivo que la
+   remediación de vin_ref de 04-F6 NO produjo señal real (0 aristas, medido tras re-ejecutar
+   `link_lifetimes.py` fresco)**, contrario a la premisa optimista de la tarea original; bug de
+   rendimiento real (INSERT por fila → `executemany`) encontrado y corregido en el propio test.
+   F5: ingesta RSS real ANFAC+GANVAM (60 items, 58 V5-verificados en vivo) — Faconauto confirmado
+   vacío (no roto). F6: gate CI `terminal-anti-mock` verde localmente, metodología versionada
+   (`docs/architecture/09-TERMINAL-METHODOLOGY.md`). Huecos declarados no bloqueantes: V3
+   Playwright (no existe infraestructura en el repo), V4 auditoría N≥50 (cero ejecutada, badge
+   correctamente `sin_verificar`), backfill histórico completo (job idempotente, procesó 10-14/14
+   días reales al cierre de la sesión bajo contención compartida de 4 frentes — re-ejecutable sin
+   duplicar).
 4. 00-F5/F6 — superficie de estado (`/engine/status`) + ledger de uptime — **✅ AMBAS CERRADAS
    2026-07-18** (evidencia completa en `00-marketplace-engine.md` §9 F5/F6 — leer ahí, no
    re-auditar). F5: endpoint `/engine/status` (badge §4 + lease + apscheduler jobs + replay

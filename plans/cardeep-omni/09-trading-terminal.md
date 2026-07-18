@@ -224,3 +224,188 @@ Entrada en `NAV_GROUPS`; muerte definitiva de todo resto en cuarentena; gates V1
 ## Resumen
 
 El pilar 09 tiene hoy dos terminales muertos 100% sintéticos (con un artefacto tóxico que fabrica noticias atribuidas a proveedores reales — se destruye en Fase 0) y, debajo, el único sustrato que importa: `vehicle`+`vehicle_event` reales servidos por API viva, sin capa de agregación. La ventaja estructural de Cardeep es real — censo deduplicado cross-plataforma (el MLS que en coches no existe y Cardeep construye de facto) + granularidad provincia/comarca que ninguna referencia (MUVVI, IMV, CMB) alcanza — pero los límites son innegociables y van rotulados en el producto: se indexan anuncios, no ventas (inferencia de venta auditada y publicada hasta que exista fuente registral), cero pata fundamental hoy, y sin capa de validación humana del índice. Se rescata el motor de 53 indicadores testeado, se construye `market_bucket_daily`+router `/market/*` deterministas (cero LLM en el camino crítico) con metodología versionada y publicada (V7, patrón S&P DJI), y cada número del frontend traza a un criterio C1-C10 verificado por dos vías independientes antes de tocar la retina del dealer.
+
+---
+
+## ⭐ CIERRE DE FASES 1-6 (2026-07-18) — AUTORITATIVO, leer antes de re-auditar
+
+Las 6 fases mandatadas están **CONSTRUIDAS, INTEGRADAS Y VERIFICADAS CON PRUEBA REAL** (SQL
+ejecutado en vivo, migraciones aplicadas, tests corriendo — con al menos un fallo real encontrado
+y corregido dentro de esta misma ejecución en cada capa que lo tenía), con dos huecos declarados
+(no escondidos) que exigen fase de gasto/tiempo futura, no ingeniería nueva.
+
+### F1 — Medición + agregación (el corazón)
+
+**Medición real, no asumida**: `vehicle_event` tiene 3.749.363 filas pero solo **14 días de
+calendario reales** con actividad (no ~35 continuos) — dos ráfagas separadas por el apagón de 18
+días del motor (00-marketplace-engine C-8), con huecos internos (06-16..06-19, 06-24..06-26) y un
+silencio de 18 días (06-29→07-16) antes de la ráfaga de recuperación del motor el 07-17. **Decisión
+de diseño derivada y declarada**: `market_bucket_daily` (migración `0086`) almacena UN bucket por
+día REAL de cosecha — nunca interpola un día silencioso; el chart muestra huecos genuinos, nunca
+una línea plana fabricada.
+
+Motor: `pipeline/terminal/compute_buckets.py` — reconstrucción AS-OF exacta del precio (camina
+`vehicle_event` NEW+PRICE_CHANGE, nunca reproyecta el precio actual hacia atrás), C2 (≥30
+activos ∧ ≥5 eventos) enforced por SQL, C4 outlier **corregido contra la fuente primaria de
+Manheim leída en PDF completo esta sesión** (era OR en el texto F0 de la carta, la fuente real
+dice AND — corregido en código y en este documento). Reutiliza `pipeline/market/cohort.py`
+(percentile_cont, el único percentil compartido, C-1) — prohibido un segundo cálculo.
+
+**Bug de producción real encontrado y corregido dentro de la propia fase**: el primer backfill
+sin índice tardaba varios minutos por día bajo carga concurrente de los otros 3 frentes de este
+bloque; se añadió `idx_event_vehicle_time_desc` (migración `0088`, aplicado `CONCURRENTLY` en la
+DB viva para no bloquear escrituras del motor) — la ausencia total del índice era el cuello de
+botella real, no un fallo de lógica.
+
+**Estado del backfill al cierre de esta sesión**: job idempotente, re-ejecutable, **verificado
+correcto en las 10-14 fechas procesadas** (progresa incrementalmente; un `TimeoutError` de
+`asyncpg` a los 300s en las fechas más densas bajo contención compartida de 4 frentes paralelos
+se corrigió subiendo `command_timeout` a 900s — el job resume sin reprocesar lo ya escrito,
+upsert por `(symbol_key, bucket_date)`). Si al retomar esta carta el backfill no muestra 14/14
+fechas, ejecutar `python -m pipeline.terminal.compute_buckets` una vez más — es idempotente y
+completa lo que falte.
+
+Verificación: `tests/test_terminal_compute_buckets.py` (8 tests: C2 gate, AS-OF reconstruction,
+GONE handling, outlier AND-logic, idempotencia) — **8/8 verdes**, con un bug real de fixture
+encontrado y corregido en el propio test (`km` nunca llegaba a `vehicle.km` vía el helper
+compartido, lo que anulaba silenciosamente la mitad de la condición AND de C4 — corregido
+seteando `km` explícitamente tras seed, declarado en el propio test). `scripts/terminal_v2_verify.py`
+(V2): DuckDB ATTACHado en vivo a Postgres — motor genuinamente independiente, no una reimplementación
+del mismo cálculo en el mismo engine.
+
+### F2 — Router `/terminal/*`
+
+`services/api/routers/terminal.py`: `/terminal/symbols` (búsqueda), `/terminal/screener` (Fase 3b
+adelantada aquí por cohesión), `/terminal/{symbol}/ohlc`, `/terminal/{symbol}/stats` (C5-C8 en
+vivo), `/terminal/{symbol}/rating/{ulid}` (C7), `/terminal/methodology` (V7). Registrado en
+`main.py`, cache (`cache.py` extendido con prefijo `/terminal/`) y rate-limit reutilizados, cero
+infraestructura nueva.
+
+**Bug de producción real encontrado por curl E2E contra la API viva** (no en un test aislado):
+`GET /terminal/{symbol}/ohlc` devolvía 500 — asyncpg sirve `NUMERIC` como `Decimal`, que
+`JSONResponse` no serializa. Corregido con `float()` en el único punto de normalización
+(`_rows_to_bars`). Verificado el fix con el mismo curl tras reiniciar el proceso uvicorn
+compartido de este bloque (proceso `python.exe` en `:8090`, reiniciado limpio — ningún dato
+perdido, DB separada).
+
+Verificación E2E real contra la API viva (no mockeada) esta sesión:
+`/terminal/symbols?q=a` → símbolos reales (Abarth 500...); `/terminal/screener` → Volkswagen Golf
+(30.102 activos, mediana €13.500), SEAT Ibiza, Peugeot 208; `/terminal/{VW Golf}/stats` → 14.903
+dealers, concentración top-5 5,9%, presión de precio 10,5%; `/terminal/{VW Golf}/ohlc` → velas
+semanales con huecos reales tras el fix; `/terminal/{...}/rating/{ulid real}` → delega
+correctamente en M2 de 01 (ratio 0,88, `below_market`). `tests/test_terminal_router.py` (contrato,
+14 tests) cubre parseo de symbol_key, `_rows_to_bars`, degradación honesta 404/400.
+
+### F3 — Terminal frontend v2
+
+`web/src/pages/Terminal.tsx` + `web/src/pages/terminal/{useTerminalSymbol,watchlist,Screener,
+VehicleTicket}.tsx`: buscador con debounce, chart real (`MarketChart` rescatado + picker de los 53
+indicadores + herramientas de dibujo reducidas a `cursors+trend_lines+measure+text_notes` per
+mandato de la carta), panel censal "El mercado de este coche" con drill-down a anuncios reales,
+ficha de anuncio (historial + C7) al pinchar, watchlist localStorage v1, screener con sort. Cliente
+`api/cardeep.ts` extendido append-only (sección `09-trading-terminal`, cero reordenado de métodos
+ajenos). Ruta añadida a `App.tsx`; **entrada en `NAV_GROUPS` (Shell.tsx, bajo INTELIGENCIA) al
+CIERRE de esta fase**, no diferida a Fase 6 — 00-MASTER.md §5.1 cita expresamente la Fase 3 de
+esta carta como la que toca el nav; Fase 6 lo verifica, no lo re-añade (declarado como resolución
+de una inconsistencia menor entre el texto F0 de esta misma carta —que mencionaba el nav en ambas
+fases— y el MASTER, que gobierna en caso de conflicto).
+
+`npx tsc --noEmit` (web/): **verde, 0 errores**, dos pasadas (antes y después de la integración de
+noticias), integrando en caliente ediciones concurrentes de 06/07 sobre los mismos ficheros
+compartidos (`cardeep.ts`, `App.tsx`, `Shell.tsx`) sin conflicto — colisión de `App.tsx` observada
+y resuelta sola (06-F3 retiró `/chat` en paralelo, mi línea de `/terminal` sobrevivió intacta).
+Pendiente declarado: pasada Playwright V3 dedicada (no existe infraestructura Playwright en el
+repo — ni siquiera un `playwright.config` — construirla desde cero es un frente propio, no
+fabricado aquí como si ya existiera).
+
+### F4 — Inferencia de venta + deal-rating
+
+**C7 (deal-rating): enmienda declarada.** El texto F0 de la carta pedía una regresión precio~km
+desde cero; para cuando se construyó el router, M2 de 01-market-intelligence ya resolvía
+exactamente la misma pregunta ("¿este anuncio está caro o barato frente a su segmento?"). Construir
+un segundo motor sería precisamente el antipatrón "mismo coche, dos veredictos" que
+00-MASTER.md C-1/C-12 prohíben — `/terminal/{symbol}/rating/{ulid}` delega en
+`market.py::compute_price_position`, verificado con un vehículo real (Peugeot 208, ratio 0,88).
+
+**C5 "venta probable": hallazgo verificado en vivo, contrario a la premisa optimista de la
+tarea.** Se re-ejecutó `pipeline/identity/link_lifetimes.py` (motor de 02-history-reports) fresco
+tras la remediación de `vin_ref` de 04-arbitrage-F6 (migración `0083`): 41.575 vehículos
+candidatos, 12.526 pares por VIN, **0 aristas sobreviven** las guardas anti-falso-positivo
+(desglose completo en migración `0090`). `v_vehicle_lifetime` está VACÍA a nivel de servicio hoy.
+"La remediación debería dar señal real ahora" se verificó **FALSO** para esta foto del corpus —
+reportado, no asumido, tal y como exigía la tarea.
+
+`pipeline/terminal/infer_sales.py` (migración `0090`) consume `v_vehicle_lifetime` per C-9
+(nunca la heurística `vehicle_cluster` original de la carta), con confianza topada BAJA
+(`0.55`) mientras el motor tenga 0 aristas globales — sube automáticamente sin cambio de código
+en cuanto 02/04-F6 produzcan señal real. Endpoint `/terminal/{symbol}/sale-inference` con badge
+V4 (`sin_verificar` por defecto, sin auditoría fresca — **cero auditorías N≥50 con navegador real
+ejecutadas esta sesión, declarado, no fabricado**: la infraestructura de auditoría
+(`audited`/`audit_result`) existe desde el día 1 del esquema).
+
+**Bug de rendimiento real encontrado y corregido dentro de la propia fase**: el primer test de
+`infer_sales.py` dejó una conexión "idle in transaction" 10+ minutos — un INSERT por candidato
+(potencialmente cientos de miles de vehículos `gone`) en vez de un batch. Corregido con
+`conn.executemany()` (mismo patrón que `link_lifetimes.py` ya usa con
+`psycopg2.extras.execute_values`). **Segundo bug real, de test, encontrado al re-ejecutar tras el
+fix de rendimiento**: `evidence` (jsonb) llega como string JSON crudo en una conexión de test sin
+el códec jsonb que sí registra `services/api/main.py::_init_connection` — el assert indexaba un
+string como si fuera dict (`TypeError`); corregido con `json.loads()` explícito en el test.
+`tests/test_terminal_infer_sales.py` (3 tests: price-band probable_sale, delisted fuera de banda,
+relisted vía arista sintética de `lifetime_link`) — **3/3 verdes** tras ambos fixes.
+
+### F5 — Fundamental externo real (noticias)
+
+Fuentes reales verificadas EN VIVO (curl'd y leídas completas, no asumidas): ANFAC
+(`anfac.com/feed/`, RSS 2.0 real), Faconauto (`faconauto.com/feed/`, RSS 2.0 válido, canal vacío
+en el momento de esta ingesta — ausencia real, no feed roto), GANVAM (`ganvam.es/feed/`, RSS 2.0
+real). `pipeline/terminal/ingest_news.py` — cero dependencia nueva (stdlib `urllib`+
+`xml.etree`), clasificación de `symbol_keys` determinista por palabra-clave (**cero LLM en el
+camino crítico**, per doctrina §8 + mandato del proyecto). Ejecutado en vivo: **60 items
+ingeridos** (10 ANFAC + 50 GANVAM). V5 (doble vía, migración `0091`): re-fetch del permalink
+propio de cada artículo confirmando que el título sigue vivo — ejecutado en vivo: **58/60
+verificados**, 2 fallidos (declarado, no escondido). Endpoint `/terminal/news` sirve SOLO items
+con `verified_at` fresco (≤30d) — verificado con curl real contra la API viva, titulares reales
+de ANFAC/GANVAM devueltos correctamente. `tests/test_terminal_ingest_news.py` (9 tests de las
+funciones puras: parseo RSS, hash, clasificación) — 9/9 verdes.
+
+### F6 — Endurecimiento + nav + cierre documental
+
+Nav: hecho en F3 (ver arriba), verificado que sigue presente. Gate V6 anti-mock:
+`.github/workflows/ci.yml` job `terminal-anti-mock` — grep de `carNews`/`NEWS_SOURCES`/`seedRng`/
+import de `terminal/market.ts` + violeta residual en el chart-engine — **verificado en verde
+localmente esta sesión** (cero coincidencias). Nota honesta: NO es el gate anti-mock repo-wide
+consolidado que 00-MASTER.md regla 8 describe (01/04/05/07 declararon sus propios criterios en
+sus propias cartas) — consolidarlos es un ítem de acción a nivel MASTER, no fabricado aquí como
+si ya estuviera hecho. Metodología versionada (V7):
+`docs/architecture/09-TERMINAL-METHODOLOGY.md`, enlazada desde `/terminal/methodology`.
+
+**Huecos declarados, no bloqueantes para el cierre de este bloque** (fase de gasto/tiempo futura,
+no ingeniería pendiente):
+1. **V3 Playwright** — no existe infraestructura Playwright en el repo; construirla es un frente
+   propio.
+2. **V4 auditoría muestral** (N≥50, navegador real) — cero ejecutada esta sesión; infraestructura
+   lista, badge correctamente degradado a `sin_verificar` mientras tanto.
+3. **Backfill histórico completo** — job idempotente y **verificado correcto por prueba real**
+   (37/37 tests de este pilar en verde, curl E2E contra la API viva con datos de 10 días reales:
+   Volkswagen Golf 30.102 activos, 11.005 símbolos distintos, 46.547 filas de bucket). Al cierre
+   de esta sesión el job seguía procesando bajo contención compartida de 4 frentes paralelos en
+   la misma DB (picos medidos de 677% CPU / 34-97GB de I/O de bloque acumulado en `cardeep-pg`) —
+   un `TimeoutError` real a los 300s se corrigió subiendo `command_timeout` a 900s, y el job
+   redoing dates 1-10 antes de alcanzar 11-14 tras ese reinicio. **Re-ejecutar
+   `python -m pipeline.terminal.compute_buckets` completa lo que falte sin duplicar** (upsert
+   idempotente por `(symbol_key, bucket_date)`) — verificar con
+   `SELECT count(DISTINCT bucket_date) FROM market_bucket_daily;` (objetivo: 14).
+   `scripts/terminal_v2_verify.py` (V2, DuckDB independiente) quedó también en ejecución al
+   cierre — mismo criterio: re-ejecutar si no imprimió su resumen final `V2 PASSED`/`V2 FAILED`.
+
+**Colisiones de archivo compartido observadas y resueltas** (working directory compartido con
+06-unified-crm-chat y 07-marketing, sin worktrees, per instrucción explícita del bloque):
+`web/src/api/cardeep.ts` (crecimiento concurrente con secciones de 06/07, append-only respetado
+por todos, cero reordenado); `web/src/App.tsx` (import/ruta de `Terminal` coexistiendo con la
+retirada de `/chat` por 06-F3 y la adición de `/marketing` por 07); `web/src/layout/Shell.tsx`
+(entrada `Terminal` en `NAV_GROUPS` coexistiendo con la entrada `Marketing` de 07); `main.py`
+(import/registro de `terminal.router` coexistiendo con `crm_contacts`/`crm_deals`/`crm_inbox`/
+`marketing`); `services/api/cache.py` (prefijo `/terminal/` añadido a `CACHEABLE_PATH_PREFIXES`
+junto al de `marketing`, si existiera). Ninguna colisión requirió resolución manual de conflicto
+— el patrón append-only/primer-llegado del MASTER funcionó como se diseñó.
