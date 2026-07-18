@@ -89,6 +89,7 @@ from services.api.routers import (
     crm_notes,
     dealer_ops,
     entities,
+    forum,
     geo,
     market,
     marketing,
@@ -187,6 +188,7 @@ app.include_router(crm_calendar.router)
 app.include_router(marketing.router)
 app.include_router(terminal.router)
 app.include_router(wanted.router)
+app.include_router(forum.router)
 
 
 if __name__ == "__main__":
