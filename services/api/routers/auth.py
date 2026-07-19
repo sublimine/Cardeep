@@ -106,6 +106,7 @@ def _serialize_user(row: dict[str, Any]) -> dict[str, Any]:
         "name": row["name"] or "",
         "role": row["role"],
         "tenant_id": row.get("tenant_id") or "",
+        "plan": row.get("plan") or "starter",
     }
 
 
