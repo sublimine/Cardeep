@@ -1,12 +1,13 @@
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import React, { useEffect, useState } from 'react'
-import { ArrowUpRight, ArrowDownRight, Minus, MapPin } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, Cell, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip,
   ResponsiveContainer,
 } from 'recharts'
 import Card from '../components/Card'
+import CoverageMap from '../components/CoverageMap'
 import PremiumGate from '../components/PremiumGate'
 import { useIsDark } from '../hooks/useIsDark'
 import { useAuthContext } from '../auth/AuthContext'
@@ -44,15 +45,6 @@ const DELTA_DATA: DeltaItem[] = [
   { id: 'd5', type: 'GONE',  label: 'Seat León 2.0 TDI FR',          sub: 'vendido en 8 días',  color: BAD },
 ]
 const DELTA_FREE_COUNT = 3
-
-interface Region { name: string; pct: number; x: string; y: string; size: number }
-const REGIONS: Region[] = [
-  { name: 'Madrid',    pct: 28, x: '34%', y: '42%', size: 14 },
-  { name: 'Levante',   pct: 26, x: '62%', y: '54%', size: 13 },
-  { name: 'Cataluña',  pct: 18, x: '80%', y: '26%', size: 10 },
-  { name: 'Andalucía', pct: 16, x: '42%', y: '72%', size:  9 },
-  { name: 'Norte',     pct: 12, x: '18%', y: '22%', size:  7 },
-]
 
 // ── AnimNum ───────────────────────────────────────────────────────────────────
 
@@ -352,64 +344,6 @@ function DeltaLive({ plan }: { plan: Plan }) {
   )
 }
 
-// ── Regional demand — Capa 1: agregado nacional YA es el teaser, libre ────────
-
-function RegionalDemand({ dark }: { dark: boolean }) {
-  return (
-    <Card className="!p-0 h-full">
-      <div className="flex h-full flex-col p-[18px_20px]">
-        <div className="mb-0.5 flex items-center gap-1.5">
-          <MapPin style={{ width: 12, height: 12, color: ACCENT }} />
-          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Demanda por región</h2>
-        </div>
-        <p className="mb-3.5 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Madrid y Levante concentran el 54% de la demanda</p>
-
-        <div className="relative min-h-[100px] flex-1 overflow-hidden rounded-xl" style={{ background: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', border: '1px solid var(--border-subtle)' }}>
-          <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }} preserveAspectRatio="none">
-            <line x1="0" y1="33%" x2="100%" y2="33%" stroke={dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'} />
-            <line x1="0" y1="66%" x2="100%" y2="66%" stroke={dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'} />
-            <line x1="33%" y1="0" x2="33%" y2="100%" stroke={dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'} />
-            <line x1="66%" y1="0" x2="66%" y2="100%" stroke={dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'} />
-          </svg>
-
-          {REGIONS.map((r, i) => (
-            <motion.div
-              key={r.name}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.3 + i * 0.1, type: 'spring', stiffness: 300, damping: 20 }}
-              style={{ position: 'absolute', left: r.x, top: r.y, transform: 'translate(-50%, -50%)' }}
-            >
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {r.pct >= 20 && (
-                  <motion.div
-                    style={{ position: 'absolute', width: r.size * 2.4, height: r.size * 2.4, borderRadius: '50%', background: `${ACCENT}24` }}
-                    animate={{ scale: [1, 1.45, 1], opacity: [0.5, 0, 0.5] }}
-                    transition={{ duration: 2.6, repeat: Infinity, delay: i * 0.4 }}
-                  />
-                )}
-                <div style={{ width: r.size, height: r.size, borderRadius: '50%', background: ACCENT, opacity: 0.4 + (r.pct / 28) * 0.6, boxShadow: `0 0 ${r.size}px ${ACCENT}66` }} />
-              </div>
-              <div className="absolute top-full left-1/2 mt-[3px] -translate-x-1/2 whitespace-nowrap text-[8.5px] font-semibold" style={{ color: 'var(--text-muted)' }}>
-                {r.name}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {REGIONS.map(r => (
-            <div key={r.name} className="flex items-center gap-1">
-              <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, opacity: 0.4 + (r.pct / 28) * 0.6 }} />
-              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{r.name} {r.pct}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Inteligencia() {
@@ -485,12 +419,16 @@ export default function Inteligencia() {
           <DaysStockChart dark={dark} plan={plan} />
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '3', gridRow: '3' }}>
-          <DeltaLive plan={plan} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '3 / 5', gridRow: '3', minHeight: 420 }}>
+          <Card className="!p-0 h-full">
+            <div className="p-[18px_20px] h-full flex flex-col">
+              <CoverageMap />
+            </div>
+          </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '4', gridRow: '3' }}>
-          <RegionalDemand dark={dark} />
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '3', gridRow: '4' }}>
+          <DeltaLive plan={plan} />
         </motion.div>
 
       </div>

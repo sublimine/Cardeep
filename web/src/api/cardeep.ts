@@ -107,6 +107,16 @@ export interface ProvinceSeal {
   coverage_pct: number | null;
   verdict: SealVerdict;
 }
+export interface ProvinceMeta {
+  code: string;
+  name: string;
+}
+export interface ProvinceDemand {
+  province_code: string;
+  n_available: number;
+  absorption_rate: number | null;
+  detail: { n_gone: number; n_avail: number; window_days: number } | null;
+}
 export interface SealSegment {
   national: { numerator: number; denominator: number; coverage_pct: number };
   distribution: Record<string, number>;
@@ -642,6 +652,7 @@ export const cardeep = {
   geoSeal: (signal?: AbortSignal) => getData<GeoSeal>('/geo/seal', undefined, signal),
   provinceEntities: (prov: string, page = 1, size = 50) =>
     getPaged<EntitySummary>(`/geo/${prov}/entities`, { page, size }),
+  metaProvinces: (signal?: AbortSignal) => getData<ProvinceMeta[]>('/wanted/meta/provinces', undefined, signal),
   entity: (cdp: string) => getData<EntityDetail>(`/entities/${cdp}`),
   entityInventory: (cdp: string, page = 1, size = 50) =>
     getPaged<VehicleListItem>(`/entities/${cdp}/inventory`, { page, size }),
@@ -678,6 +689,8 @@ export const cardeep = {
       { year, fuel, province: province ?? undefined },
     ),
   marketPricePosition: (ulid: string) => getData<PricePosition>(`/market/price-position/${ulid}`),
+  marketProvincesDemand: (signal?: AbortSignal) =>
+    getData<ProvinceDemand[]>('/market/provinces/demand', undefined, signal),
   // 00-marketplace-engine F5/F6
   engineStatus: (signal?: AbortSignal) => getData<EngineStatus>('/engine/status', undefined, signal),
   sources: (signal?: AbortSignal) => getData<SourceHealthRow[]>('/sources', undefined, signal),

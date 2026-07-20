@@ -46,15 +46,19 @@ function RootRedirect() {
 }
 
 /**
- * Fixed flat backdrop behind every page (tokens.css `.cx-mesh` sets `background: var(--bg-base)`).
- * The colored-orb mesh this used to render is permanently disabled by a global
- * `!important` CSS rule (`.cx-mesh > div { display: none }`) — dead on every route,
- * including /terminal, whose own override rule is redundant for the same reason.
- * Kept as an unstyled div (no JS children) rather than deleted outright: several
- * glass surfaces (`--glass-*`, `backdrop-filter`) are authored assuming this layer exists.
+ * Fixed atmosphere behind every page (tokens.css `.cx-mesh` v3.1). Two real
+ * `.cx-orb` children (pseudo-element budget on `.cx-mesh` is 2, used by
+ * `::before`/`::after`) plus a static filmic-grain layer. `/terminal` strips
+ * color from all of this via `body.on-terminal` (tokens.css) but keeps grain.
  */
 function GlobalMesh() {
-  return <div className="cx-mesh" aria-hidden />
+  return (
+    <div className="cx-mesh" aria-hidden>
+      <div className="cx-orb" />
+      <div className="cx-orb" />
+      <div className="cx-grain" />
+    </div>
+  )
 }
 
 export default function App() {

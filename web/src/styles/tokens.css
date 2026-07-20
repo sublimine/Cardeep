@@ -1,11 +1,49 @@
 /*
- * CARDEEP — Premium Glass Design System v3.0
- * Real glassmorphism: vivid color mesh BEHIND translucent glass surfaces.
- * Formula: gradient mesh (40-60% orb opacity) + rgba(255,255,255,0.08-0.18)
- *          + backdrop-filter: blur(24px) saturate(180%) + 1px white border + inset highlight.
+ * CARDEEP — Premium Glass Design System v3.1
+ * Real glassmorphism: a restrained aurora mesh BEHIND translucent glass surfaces.
+ * Formula: gradient mesh (12-30% orb opacity, dark; 5-12%, light) + filmic grain
+ *          + rgba(255,255,255,0.08-0.18) + backdrop-filter: blur(24px) saturate(180%)
+ *          + 1px white border + inset highlight.
+ * One brand hue (--c-brand, the exact blue of the Cardeep wordmark) — no violet,
+ * no rainbow. teal/emerald/amber/rose/sky/fuchsia are DATA semantics only.
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400..800;1,400..800&display=swap');
+
+/* General Sans — self-hosted (verified live 2026-07-20: Fontshare's own CDN
+ * started returning "Access to the Fontshare API has been temporarily
+ * restricted" mid-session after a handful of requests — too fragile for a
+ * product's primary UI typeface. Vendored to /public/fonts/general-sans/,
+ * zero runtime dependency on a third party that can rate-limit us. */
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/general-sans/GeneralSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/general-sans/GeneralSans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/general-sans/GeneralSans-Semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('/fonts/general-sans/GeneralSans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
 
 :root {
   /* ── Background base ───────────────────────────────────────────────────── */
@@ -57,6 +95,15 @@
     inset 0 1px 0 rgba(255,255,255,0.2);
 
   /* ── Brand accent palette ──────────────────────────────────────────────── */
+  /* v3.1: `--c-violet` is not a violet hue — it always was blue-500 (#3b82f6),
+     one step lighter than the real brand blue-600 (#2563eb, the exact color of
+     the Cardeep wordmark icon). There is no purple anywhere in the true brand —
+     `--c-brand`/`--c-brand-soft` are the semantic names going forward; the old
+     `--c-violet`/`--color-purple`/`-glow-violet` names stay as aliases so nothing
+     already consuming them breaks. teal/emerald/amber/rose/sky/fuchsia below are
+     reserved for DATA semantics (status, chart series) — never brand UI. */
+  --c-brand:      #2563eb;
+  --c-brand-soft: #3b82f6;
   --c-violet:   #3b82f6;
   --c-indigo:   #4f46e5;
   --c-blue:     #2563eb;
@@ -272,16 +319,51 @@ body {
   background: var(--bg-base);
 }
 
-/* Mesh de orbes desactivado (estilo landing flat). Oculta orbes pseudo + los inline de App.tsx
-   (cx-orb y el grain overlay, que son hijos directos de .cx-mesh). Keyframes se conservan por compat. */
+/* v3.1 ATMOSPHERE — restrained aurora mesh. Real depth behind the glass without
+ * the 40-60%-opacity "party" the v3.0 header comment above originally promised
+ * (owner feedback: not that, and not fully flat either — an actual middle
+ * ground). Brand blue + a cool teal complement, heavy blur, drift so slow
+ * (70-110s loops) it registers as depth, not motion. `.cx-orb` × 2 are real
+ * child divs (pseudo-element budget is 2 for ::before/::after) rendered by
+ * <Atmosphere/> in App.tsx, alongside a static `.cx-grain` filmic-noise layer.
+ */
 .cx-mesh::before,
 .cx-mesh::after,
-.cx-orb,
-.cx-mesh > div {
-  display: none !important;
+.cx-orb {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  filter: blur(90px);
+  pointer-events: none;
+  will-change: transform;
+}
+.cx-mesh::before {
+  background: radial-gradient(circle at 28% 22%, rgba(37,99,235,0.30) 0%, transparent 58%);
+  animation: cxFloat1 70s ease-in-out infinite alternate;
+}
+.cx-mesh::after {
+  background: radial-gradient(circle at 76% 72%, rgba(8,145,178,0.22) 0%, transparent 58%);
+  animation: cxFloat2 85s ease-in-out infinite alternate;
+}
+.cx-orb:nth-of-type(1) {
+  background: radial-gradient(circle at 52% 92%, rgba(59,130,246,0.16) 0%, transparent 55%);
+  animation: cxFloat3 95s ease-in-out infinite alternate;
+}
+.cx-orb:nth-of-type(2) {
+  background: radial-gradient(circle at 90% 8%, rgba(79,70,229,0.12) 0%, transparent 55%);
+  animation: cxFloat4 110s ease-in-out infinite alternate;
 }
 
-/* Tertiary orbs — added via inline divs from App.tsx since pseudo-element budget is 2 */
+/* Filmic grain — inline SVG turbulence, static, mix-blend overlay. Zero network
+ * assets; keeps the atmosphere from reading flat/plastic on large glass panels. */
+.cx-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
 /* ──────────────────────────────────────────────────────────────────────────
  * TERMINAL ROUTE — neutral chrome override (scoped to /terminal only).
@@ -507,8 +589,22 @@ html.light body.on-terminal .cx-mesh {
 
 /* ── Light mode mesh ─────────────────────────────────────────────────────── */
 .light .cx-mesh {
-  /* flat — sigue el bg neutro del landing (#EAECEF) */
   background: var(--bg-base);
+}
+/* Same atmosphere, ~2.5x softer — light surfaces show color cast far more
+ * starkly than dark ones, so light mode gets its own calibration, not a
+ * lower-opacity clone. Both themes get real depth; neither gets flat. */
+.light .cx-mesh::before {
+  background: radial-gradient(circle at 28% 22%, rgba(37,99,235,0.12) 0%, transparent 58%);
+}
+.light .cx-mesh::after {
+  background: radial-gradient(circle at 76% 72%, rgba(8,145,178,0.09) 0%, transparent 58%);
+}
+.light .cx-orb:nth-of-type(1) {
+  background: radial-gradient(circle at 52% 92%, rgba(59,130,246,0.07) 0%, transparent 55%);
+}
+.light .cx-orb:nth-of-type(2) {
+  background: radial-gradient(circle at 90% 8%, rgba(79,70,229,0.05) 0%, transparent 55%);
 }
 
 /* Light mode glass utility overrides */
@@ -550,16 +646,17 @@ html.light body.on-terminal .cx-mesh {
   background: rgba(0,0,0,0.18);
 }
 
-/* Light mode body background */
+/* Light mode body background — neutral, matches --bg-base (v3.1: was a stray
+   lavender #f8f4ff leftover from the old fake-violet identity). */
 .light body {
-  background: #f8f4ff;
+  background: var(--bg-base);
   color: var(--t1);
 }
 
-/* Light mode selection */
+/* Light mode selection — brand blue, not violet. */
 .light ::selection {
-  background: rgba(59, 130, 246,0.20);
-  color: #3b0764;
+  background: rgba(37,99,235,0.20);
+  color: #0b2d6b;
 }
 
 /* ── Military / liquid-mirror utilities (landing operator modules) ──────── */
