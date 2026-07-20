@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin, Briefcase, Calendar, Mail, Phone,
   TrendingUp, Car, Clock, Star, Edit3, Check, X,
@@ -15,20 +15,21 @@ import { cn } from '../lib/cn'
 import type { TimelineItem } from '../components/Timeline'
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
+// Icon accent is uniform brand blue for all four tiles — one brand hue drives
+// structure everywhere; distinct hues are reserved for real status/trend
+// meaning (see lib/theme.ts), not decorative per-metric coloring.
 
 interface StatItem {
   label: string
   value: string
   icon: React.ElementType
-  iconBg: string
-  iconColor: string
 }
 
 const STATS: StatItem[] = [
-  { label: 'Operaciones cerradas',    value: '47',   icon: TrendingUp, iconBg: 'bg-blue-500/10',    iconColor: 'text-accent-blue'    },
-  { label: 'Vehículos gestionados',   value: '270',  icon: Car,        iconBg: 'bg-emerald-500/10', iconColor: 'text-accent-emerald' },
-  { label: 'Tiempo de respuesta avg', value: '2.4h', icon: Clock,      iconBg: 'bg-amber-500/10',   iconColor: 'text-accent-amber'   },
-  { label: 'Valoración compradores',  value: '4.8★', icon: Star,       iconBg: 'bg-blue-500/10',    iconColor: 'text-accent-blue'    },
+  { label: 'Operaciones cerradas',    value: '47',   icon: TrendingUp },
+  { label: 'Vehículos gestionados',   value: '270',  icon: Car        },
+  { label: 'Tiempo de respuesta avg', value: '2.4h', icon: Clock      },
+  { label: 'Valoración compradores',  value: '4.8★', icon: Star       },
 ]
 
 const ACTIVITY: TimelineItem[] = [
@@ -54,7 +55,7 @@ function ProfileHero({ editing, onEdit, onSave, onCancel }: HeroProps) {
   return (
     <Card padding={false} className="overflow-hidden">
       {/* Accent band */}
-      <div className="h-20 bg-gradient-to-r from-blue-500/15 via-blue-500/25 to-blue-400/10" />
+      <div className="h-20 bg-gradient-to-r from-accent-blue/15 via-accent-blue/25 to-accent-blue/10" />
 
       <div className="px-6 pb-6">
         {/* Avatar row */}
@@ -65,21 +66,38 @@ function ProfileHero({ editing, onEdit, onSave, onCancel }: HeroProps) {
             status="online"
             className="ring-4 ring-bg-surface shadow-elevation-2"
           />
-          <div className="flex items-center gap-2 mb-1">
-            {editing ? (
-              <>
-                <Button variant="ghost" size="sm" onClick={onCancel} icon={<X className="w-3.5 h-3.5" />}>
-                  Cancelar
-                </Button>
-                <Button size="sm" onClick={onSave} icon={<Check className="w-3.5 h-3.5" />}>
-                  Guardar
-                </Button>
-              </>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={onEdit} icon={<Edit3 className="w-3.5 h-3.5" />}>
-                Editar perfil
-              </Button>
-            )}
+          <div className="flex items-center gap-2 mb-1 min-h-[32px]">
+            <AnimatePresence mode="wait" initial={false}>
+              {editing ? (
+                <motion.div
+                  key="editing"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  className="flex items-center gap-2"
+                >
+                  <Button variant="ghost" size="sm" onClick={onCancel} icon={<X className="w-3.5 h-3.5" />}>
+                    Cancelar
+                  </Button>
+                  <Button size="sm" onClick={onSave} icon={<Check className="w-3.5 h-3.5" />}>
+                    Guardar
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="view"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                >
+                  <Button variant="secondary" size="sm" onClick={onEdit} icon={<Edit3 className="w-3.5 h-3.5" />}>
+                    Editar perfil
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -120,9 +138,9 @@ function StatsRow() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 + i * 0.06, duration: 0.32, ease: 'easeOut' }}
           >
-            <Card className="flex flex-col gap-3">
-              <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', stat.iconBg)}>
-                <Icon className={cn('w-4 h-4', stat.iconColor)} />
+            <Card hover className="flex flex-col gap-3">
+              <div className="w-8 h-8 rounded-lg bg-accent-blue/10 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-accent-blue" />
               </div>
               <div>
                 <p className="text-lg font-bold text-text-primary tabular-nums leading-none">{stat.value}</p>
@@ -225,34 +243,50 @@ export default function Profile() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="p-4 md:p-6 max-w-5xl mx-auto space-y-5"
-    >
-      <div>
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+      >
         <h1 className="text-xl font-bold text-text-primary">Mi perfil</h1>
         <p className="text-sm text-text-muted mt-0.5">Información pública de tu cuenta</p>
-      </div>
+      </motion.div>
 
-      <ProfileHero
-        editing={editing}
-        onEdit={() => setEditing(true)}
-        onSave={handleSave}
-        onCancel={() => setEditing(false)}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.06, duration: 0.35, ease: 'easeOut' }}
+      >
+        <ProfileHero
+          editing={editing}
+          onEdit={() => setEditing(true)}
+          onSave={handleSave}
+          onCancel={() => setEditing(false)}
+        />
+      </motion.div>
 
-      <StatsRow />
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12, duration: 0.35, ease: 'easeOut' }}
+      >
+        <StatsRow />
+      </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18, duration: 0.35, ease: 'easeOut' }}
+        className="grid grid-cols-1 lg:grid-cols-5 gap-5"
+      >
         <div className="lg:col-span-3">
           <EditForm editing={editing} />
         </div>
         <div className="lg:col-span-2">
           <ActivityPanel />
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   )
 }

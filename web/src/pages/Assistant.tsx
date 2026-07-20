@@ -22,6 +22,14 @@ function renderBold(text: string): React.ReactNode {
 // antialucinación doctrine forbids (plans/cardeep-omni/07-marketing.md S1.1/S6
 // "Demoliciones ligadas" (a)). No car-image generation exists anywhere in Cardeep;
 // pretending otherwise client-side is worse than having no feature at all.
+//
+// NOTE (2026-07-20 restyle pass): botReply() below still answers 'ask'/'vin' with
+// hand-written canned numbers (stock counts, margins, VIN valuation range) — those
+// are NOT live queries against any dealer or census API. src/api/cardeep.ts exposes
+// no per-dealer stock/margin/pipeline endpoint and no VIN-lookup/valuation endpoint
+// (verified: its only vehicle-scoped calls take an internal `ulid`, never a raw VIN).
+// This pass is scoped to visuals only, so the canned copy is left untouched — flagged
+// here for whoever wires this mode to a real backend next.
 type Mode = 'ask' | 'listing' | 'vin'
 
 interface ChatMsg { id: string; role: 'user' | 'bot'; text: string }
@@ -64,6 +72,10 @@ const EMPTY: Record<Mode, { heading: string; body: string }> = {
 }
 
 const NEW_TITLE: Record<Mode, string> = { ask: 'Nueva consulta', listing: 'Nuevo anuncio', vin: 'Nueva valoración' }
+
+// Shared focus-visible ring — mirrors Button.tsx's own classes so every custom
+// interactive element in this file gets the exact same keyboard-focus treatment.
+const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary'
 
 function botReply(mode: Mode, text: string): { text: string } {
   const q = text.toLowerCase()
@@ -112,6 +124,7 @@ function ModeIcon({ mode, size = 13 }: { mode: Mode; size?: number }) {
 // hechos verificados del censo, con cada cifra trazada a su fuente.
 function ListingRedirectPanel() {
   const navigate = useNavigate()
+  const [hovered, setHovered] = useState(false)
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3.5 p-[40px_24px]">
       <div className="flex h-[54px] w-[54px] items-center justify-center rounded-2xl" style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}2e`, color: ACCENT }}>
@@ -125,13 +138,17 @@ function ListingRedirectPanel() {
           en plataformas) — nunca una plantilla genérica rellenada con lo que escribas aquí.
         </div>
       </div>
-      <button
+      <motion.button
         onClick={() => navigate('/marketing')}
-        className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold transition-colors"
-        style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.95 }}
+        className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-semibold outline-none transition-colors ${FOCUS_RING}`}
+        style={{ background: hovered ? `${ACCENT}26` : `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
       >
         Ir a Marketing <ArrowRight style={{ width: 13, height: 13 }} />
-      </button>
+      </motion.button>
     </div>
   )
 }
@@ -169,6 +186,9 @@ export default function Assistant() {
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const [composerFocused, setComposerFocused] = useState(false)
+  // Single hover key drives every custom pill/button's hover state below — avoids
+  // one useState per interactive element for what is purely a background/border swap.
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null)
 
   const scrollRef   = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -247,24 +267,32 @@ export default function Assistant() {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07, duration: 0.32, ease: [0.32, 0.72, 0, 1] }} className="flex shrink-0 flex-wrap gap-2">
-        {MODES.map(m => {
+        {MODES.map((m, i) => {
           const active = mode === m.id
+          const key = `mode-${m.id}`
+          const hovered = hoveredKey === key
           return (
-            <button
+            <motion.button
               key={m.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + i * 0.05, duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
+              whileTap={{ scale: 0.96 }}
+              onMouseEnter={() => setHoveredKey(key)}
+              onMouseLeave={() => setHoveredKey(null)}
               onClick={() => handleModeChange(m.id)}
-              className="flex items-center gap-[7px] rounded-full px-4 py-2 text-[12.5px] transition-colors"
+              className={`flex items-center gap-[7px] rounded-full px-4 py-2 text-[12.5px] outline-none transition-colors ${FOCUS_RING}`}
               style={{
-                background: active ? `${ACCENT}21` : 'var(--bg-surface)',
-                border: `1px solid ${active ? `${ACCENT}5c` : 'var(--border-subtle)'}`,
-                color: active ? ACCENT : 'var(--text-secondary)',
+                background: active ? `${ACCENT}21` : hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                border: `1px solid ${active ? `${ACCENT}5c` : hovered ? 'var(--border-active)' : 'var(--border-subtle)'}`,
+                color: active ? ACCENT : hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontWeight: active ? 700 : 500,
               }}
             >
               <ModeIcon mode={m.id} size={12} />
               <span>{m.label}</span>
               <span className="text-[10px] font-normal" style={{ color: active ? `${ACCENT}a6` : 'var(--text-muted)' }}>{m.desc}</span>
-            </button>
+            </motion.button>
           )
         })}
       </motion.div>
@@ -289,14 +317,18 @@ export default function Assistant() {
                 <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{MODES.find(m => m.id === mode)?.desc}</div>
               </div>
             </div>
-            <button
+            <motion.button
               onClick={startNew}
-              className="flex items-center gap-[5px] rounded-lg px-3 py-1 text-[11px] font-semibold transition-colors"
-              style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
+              onMouseEnter={() => setHoveredKey('new-conv')}
+              onMouseLeave={() => setHoveredKey(null)}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.94 }}
+              className={`flex items-center gap-[5px] rounded-lg px-3 py-1 text-[11px] font-semibold outline-none transition-colors ${FOCUS_RING}`}
+              style={{ background: hoveredKey === 'new-conv' ? `${ACCENT}26` : `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
             >
               <Plus style={{ width: 11, height: 11 }} />
               Nueva
-            </button>
+            </motion.button>
           </div>
 
           {mode === 'listing' ? (
@@ -314,16 +346,30 @@ export default function Assistant() {
                   <div className="mx-auto max-w-[300px] text-xs leading-[1.65]" style={{ color: 'var(--text-muted)' }}>{EMPTY[mode].body}</div>
                 </div>
                 <div className="flex max-w-[400px] flex-wrap justify-center gap-1.5">
-                  {SUGGESTIONS[mode].slice(0, 3).map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => send(s)}
-                      className="rounded-full px-3 py-1.5 text-[11px] transition-colors"
-                      style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
-                    >
-                      {s.length > 36 ? s.slice(0, 34) + '…' : s}
-                    </button>
-                  ))}
+                  {SUGGESTIONS[mode].slice(0, 3).map((s, i) => {
+                    const key = `empty-sugg-${i}`
+                    const hovered = hoveredKey === key
+                    return (
+                      <motion.button
+                        key={i}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + i * 0.06, duration: 0.24 }}
+                        whileTap={{ scale: 0.96 }}
+                        onMouseEnter={() => setHoveredKey(key)}
+                        onMouseLeave={() => setHoveredKey(null)}
+                        onClick={() => send(s)}
+                        className={`rounded-full px-3 py-1.5 text-[11px] outline-none transition-colors ${FOCUS_RING}`}
+                        style={{
+                          background: hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                          border: `1px solid ${hovered ? 'var(--border-active)' : 'var(--border-subtle)'}`,
+                          color: hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {s.length > 36 ? s.slice(0, 34) + '…' : s}
+                      </motion.button>
+                    )
+                  })}
                 </div>
               </motion.div>
             )}
@@ -389,8 +435,9 @@ export default function Assistant() {
               <motion.button
                 onClick={() => send(input)}
                 disabled={!input.trim() || typing}
+                whileHover={input.trim() && !typing ? { scale: 1.06 } : undefined}
                 whileTap={{ scale: 0.89 }}
-                className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] border-0 transition-colors"
+                className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] border-0 outline-none transition-colors ${FOCUS_RING}`}
                 style={{
                   background: input.trim() && !typing ? `linear-gradient(135deg, ${ACCENT}, #2563eb)` : 'var(--bg-surface)',
                   cursor: input.trim() && !typing ? 'pointer' : 'default',
@@ -413,23 +460,38 @@ export default function Assistant() {
           <Card className="shrink-0">
             <div className="mb-[11px] text-[9.5px] font-bold uppercase tracking-[0.10em]" style={{ color: 'var(--text-muted)' }}>Sugerencias</div>
             <div className="flex flex-col gap-[5px]">
-              <AnimatePresence mode="wait">
-                {SUGGESTIONS[mode].map((s, i) => (
-                  <motion.button
-                    key={`${mode}-${i}`}
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -6 }}
-                    transition={{ delay: i * 0.04, duration: 0.20 }}
-                    onClick={() => send(s)}
-                    disabled={typing}
-                    className="flex w-full items-start gap-[7px] rounded-lg p-[7px_10px] text-left text-[11px] leading-[1.45] transition-colors"
-                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', cursor: typing ? 'default' : 'pointer' }}
-                  >
-                    <ChevronRight style={{ width: 10, height: 10, color: ACCENT, flexShrink: 0, marginTop: 2 }} />
-                    <span>{s}</span>
-                  </motion.button>
-                ))}
+              {/* Default ("sync") mode — not "wait": this list holds 5 concurrent
+                  children, and "wait" is only well-defined for a single child swap
+                  (it throws "attempting to animate multiple children" otherwise). */}
+              <AnimatePresence>
+                {SUGGESTIONS[mode].map((s, i) => {
+                  const key = `sidebar-sugg-${mode}-${i}`
+                  const hovered = hoveredKey === key
+                  return (
+                    <motion.button
+                      key={`${mode}-${i}`}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -6 }}
+                      transition={{ delay: i * 0.04, duration: 0.20 }}
+                      whileTap={{ scale: typing ? 1 : 0.97 }}
+                      onMouseEnter={() => setHoveredKey(key)}
+                      onMouseLeave={() => setHoveredKey(null)}
+                      onClick={() => send(s)}
+                      disabled={typing}
+                      className={`flex w-full items-start gap-[7px] rounded-lg p-[7px_10px] text-left text-[11px] leading-[1.45] outline-none transition-colors disabled:pointer-events-none disabled:opacity-50 ${FOCUS_RING}`}
+                      style={{
+                        background: hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                        border: `1px solid ${hovered ? 'var(--border-active)' : 'var(--border-subtle)'}`,
+                        color: hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        cursor: typing ? 'default' : 'pointer',
+                      }}
+                    >
+                      <ChevronRight style={{ width: 10, height: 10, color: ACCENT, flexShrink: 0, marginTop: 2 }} />
+                      <span>{s}</span>
+                    </motion.button>
+                  )
+                })}
               </AnimatePresence>
             </div>
           </Card>
@@ -438,21 +500,29 @@ export default function Assistant() {
             <div className="flex h-full min-h-0 flex-col">
               <div className="mb-[11px] flex shrink-0 items-center justify-between">
                 <div className="text-[9.5px] font-bold uppercase tracking-[0.10em]" style={{ color: 'var(--text-muted)' }}>Historial</div>
-                <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{conversations.length}</span>
+                <span className="text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{conversations.length}</span>
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col gap-[5px] overflow-y-auto">
                 {conversations.map((conv, i) => {
                   const isActive = conv.id === activeConvId
+                  const key = `hist-${conv.id}`
+                  const hovered = hoveredKey === key && !isActive
                   return (
                     <motion.button
                       key={conv.id}
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04 }}
+                      whileTap={{ scale: 0.98 }}
+                      onMouseEnter={() => setHoveredKey(key)}
+                      onMouseLeave={() => setHoveredKey(null)}
                       onClick={() => { setActiveConvId(conv.id); setMode(conv.mode) }}
-                      className="flex w-full flex-col gap-[3px] rounded-lg p-[8px_10px] text-left transition-colors"
-                      style={{ background: isActive ? `${ACCENT}17` : 'var(--bg-surface)', border: `1px solid ${isActive ? `${ACCENT}38` : 'var(--border-subtle)'}` }}
+                      className={`flex w-full flex-col gap-[3px] rounded-lg p-[8px_10px] text-left outline-none transition-colors ${FOCUS_RING}`}
+                      style={{
+                        background: isActive ? `${ACCENT}17` : hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                        border: `1px solid ${isActive ? `${ACCENT}38` : hovered ? 'var(--border-active)' : 'var(--border-subtle)'}`,
+                      }}
                     >
                       <div className="flex items-center justify-between gap-1.5">
                         <div className="flex min-w-0 items-center gap-1.5">
@@ -461,7 +531,7 @@ export default function Assistant() {
                         </div>
                         <span className="shrink-0 text-[9.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{timeAgo(conv.updatedAt)}</span>
                       </div>
-                      <div className="pl-[15px] text-[10px]" style={{ color: 'var(--text-muted)' }}>{conv.messages.length} {conv.messages.length === 1 ? 'mensaje' : 'mensajes'}</div>
+                      <div className="pl-[15px] text-[10px]" style={{ color: 'var(--text-muted)' }}><span className="tabular-nums">{conv.messages.length}</span> {conv.messages.length === 1 ? 'mensaje' : 'mensajes'}</div>
                     </motion.button>
                   )
                 })}

@@ -1,9 +1,9 @@
 // Invoices — dealer's own billing data, no gating per 05-MONETIZATION-MAP.md.
 
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Plus, FileText, Clock, AlertCircle, CheckCircle, Search } from 'lucide-react'
-import { Badge, Button, Input, Modal } from '../components'
+import React, { useEffect, useState } from 'react'
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { Plus, FileText, Clock, AlertCircle, CheckCircle, Search, X } from 'lucide-react'
+import { Badge, Button, EmptyState, Input, Modal } from '../components'
 import Card from '../components/Card'
 import { ACCENT, BAD, WARN } from '../lib/theme'
 
@@ -36,6 +36,19 @@ const STATUS_CFG: Record<InvoiceStatus, { label: string; color: 'green' | 'yello
 const facturadoMes = INVOICES.filter(inv => inv.date >= '2026-04-01').reduce((s, inv) => s + inv.amount, 0)
 const pendienteCobro = INVOICES.filter(inv => inv.status === 'pending').reduce((s, inv) => s + inv.amount, 0)
 const totalVencido = INVOICES.filter(inv => inv.status === 'overdue').reduce((s, inv) => s + inv.amount, 0)
+const cobradasMes = INVOICES.filter(inv => inv.status === 'paid' && inv.date >= '2026-04-01').length
+
+// ── Animated euro figure ───────────────────────────────────────────────────────
+// Counts up from 0 on mount instead of rendering the final figure statically —
+// same spring-driven pattern as Inteligencia.tsx's AnimNum.
+
+function AnimEuro({ value }: { value: number }) {
+  const mv = useMotionValue(0)
+  const spring = useSpring(mv, { stiffness: 60, damping: 16 })
+  const display = useTransform(spring, v => `€${Math.round(v).toLocaleString()}`)
+  useEffect(() => { mv.set(value) }, [value, mv])
+  return <motion.span>{display}</motion.span>
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -44,7 +57,6 @@ export default function Invoices() {
   const [search, setSearch]           = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | InvoiceStatus>('all')
   const [form, setForm]               = useState<InvoiceForm>(EMPTY_FORM)
-  const [hoveredId, setHoveredId]     = useState<string | null>(null)
 
   const filtered = INVOICES.filter(inv => {
     const q = search.toLowerCase()
@@ -66,7 +78,7 @@ export default function Invoices() {
   }
 
   const kpis = [
-    { label: 'Facturado mes', value: facturadoMes, accent: ACCENT, Icon: FileText, meta: '+22% vs Mar' },
+    { label: 'Facturado mes', value: facturadoMes, accent: ACCENT, Icon: FileText, meta: `${cobradasMes} cobradas` },
     { label: 'Pendiente cobro', value: pendienteCobro, accent: WARN, Icon: Clock, meta: `${INVOICES.filter(i => i.status === 'pending').length} facturas` },
     { label: 'Vencido', value: totalVencido, accent: BAD, Icon: AlertCircle, meta: `${INVOICES.filter(i => i.status === 'overdue').length} sin cobrar` },
   ]
@@ -85,7 +97,7 @@ export default function Invoices() {
 
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="flex items-end justify-between">
         <div>
-          <h1 className="text-[22px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>Invoices</h1>
+          <h1 className="text-[22px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>Facturas</h1>
           <p className="mt-1 text-xs" style={{ color: 'var(--text-secondary)' }}>Gestión de facturas · Abril 2026</p>
         </div>
         <Button variant="primary" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => setModalOpen(true)}>Nueva factura</Button>
@@ -101,7 +113,7 @@ export default function Invoices() {
                 </div>
                 <span className="text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>{meta}</span>
               </div>
-              <div className="mb-[5px] text-[32px] font-extrabold leading-none tracking-[-0.03em] tabular-nums" style={{ color: 'var(--text-primary)' }}>€{value.toLocaleString()}</div>
+              <div className="mb-[5px] text-[32px] font-extrabold leading-none tracking-[-0.03em] tabular-nums" style={{ color: 'var(--text-primary)' }}><AnimEuro value={value} /></div>
               <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{label}</p>
             </Card>
           </motion.div>
@@ -113,32 +125,43 @@ export default function Invoices() {
           {filterTabs.map(tab => {
             const active = statusFilter === tab.id
             return (
-              <button
+              <motion.button
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id)}
+                whileTap={{ scale: 0.96 }}
                 className="flex items-center gap-[5px] rounded-[7px] border-0 px-[11px] py-[5px] text-[11px] font-semibold transition-colors"
                 style={{ background: active ? 'var(--bg-elevated)' : 'transparent', color: active ? 'var(--text-primary)' : 'var(--text-muted)', boxShadow: active ? '0 1px 4px rgba(0,0,0,0.12)' : 'none' }}
               >
                 {tab.label}
                 <span
-                  className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9.5px] font-bold"
+                  className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9.5px] font-bold tabular-nums"
                   style={{ background: active ? `${ACCENT}26` : 'var(--bg-surface)', color: active ? ACCENT : 'var(--text-muted)' }}
                 >
                   {tab.count}
                 </span>
-              </button>
+              </motion.button>
             )
           })}
         </div>
 
-        <div className="relative max-w-[280px] flex-1">
-          <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'var(--text-muted)', pointerEvents: 'none' }} />
-          <input
+        <div className="max-w-[280px] flex-1">
+          <Input
+            icon={<Search className="h-3.5 w-3.5" />}
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar factura, cliente…"
-            className="w-full rounded-[9px] py-[7px] pl-[30px] pr-3 text-xs outline-none transition-colors"
-            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
+            iconRight={
+              search ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="text-text-muted transition-colors hover:text-text-primary"
+                  aria-label="Limpiar búsqueda"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : undefined
+            }
           />
         </div>
       </div>
@@ -148,36 +171,42 @@ export default function Invoices() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs" style={{ minWidth: 680 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <tr className="border-b border-border-subtle">
                   {['Número', 'Cliente', 'Vehículo', 'Importe', 'Fecha', 'Vencimiento', 'Estado'].map(h => (
                     <th key={h} className="p-[10px_16px] text-left text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-muted)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border-subtle">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-[36px_16px] text-center text-xs" style={{ color: 'var(--text-muted)' }}>No hay facturas que coincidan con los filtros seleccionados.</td>
+                    <td colSpan={7} className="p-0">
+                      <EmptyState
+                        icon={<FileText className="h-6 w-6" />}
+                        title="Sin resultados"
+                        message="No hay facturas que coincidan con los filtros seleccionados."
+                      />
+                    </td>
                   </tr>
                 ) : (
                   filtered.map((inv, i) => {
                     const cfg = STATUS_CFG[inv.status]
-                    const hovered = hoveredId === inv.id
                     return (
-                      <tr
+                      <motion.tr
                         key={inv.id}
-                        onMouseEnter={() => setHoveredId(inv.id)}
-                        onMouseLeave={() => setHoveredId(null)}
-                        style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none', background: hovered ? 'var(--bg-surface)' : 'transparent', transition: 'background 120ms' }}
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.025, duration: 0.2 }}
+                        className="transition-colors hover:bg-bg-surface"
                       >
                         <td className="p-[11px_16px] font-semibold tabular-nums" style={{ color: ACCENT }}>{inv.number}</td>
                         <td className="p-[11px_16px] font-medium" style={{ color: 'var(--text-primary)' }}>{inv.client}</td>
                         <td className="p-[11px_16px]" style={{ color: 'var(--text-secondary)' }}>{inv.vehicle}</td>
                         <td className="p-[11px_16px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>€{inv.amount.toLocaleString()}</td>
-                        <td className="p-[11px_16px] text-[11px]" style={{ color: 'var(--text-muted)' }}>{inv.date}</td>
-                        <td className="p-[11px_16px] text-[11px]" style={{ color: inv.status === 'overdue' ? BAD : 'var(--text-muted)' }}>{inv.dueDate}</td>
+                        <td className="p-[11px_16px] text-[11px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{inv.date}</td>
+                        <td className="p-[11px_16px] text-[11px] tabular-nums" style={{ color: inv.status === 'overdue' ? BAD : 'var(--text-muted)' }}>{inv.dueDate}</td>
                         <td className="p-[11px_16px]"><Badge color={cfg.color} dot>{cfg.label}</Badge></td>
-                      </tr>
+                      </motion.tr>
                     )
                   })
                 )}

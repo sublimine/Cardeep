@@ -3,9 +3,9 @@
 // services/api/routers/wanted.py — zero mocks (grep-verifiable: no MOCK_*/SEED constant
 // in this file).
 import { useCallback, useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Search, MapPin, Clock, TrendingUp, ExternalLink, CheckCircle2, X, Star, Users,
+  Search, MapPin, Clock, TrendingUp, ExternalLink, CheckCircle2, X, Star, Users, ChevronDown,
 } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -15,9 +15,11 @@ import Modal from '../components/Modal'
 import EmptyState from '../components/EmptyState'
 import { Badge } from '../components/Badge'
 import { PageSkeleton } from '../components/LoadingSpinner'
+import { Skeleton } from '../components/Skeleton'
 import { Tabs } from '../components/Tabs'
 import { useToast } from '../components/Toast'
 import { ApiError } from '../api/client'
+import CountUp from '../components/landing/CountUp'
 import {
   wantedApi,
   type WantedListing, type WantedMatch, type ProvinceOption, type Pulse, type DemandRow, type Liveness,
@@ -44,6 +46,8 @@ const CLOSE_REASON_OPTIONS = [
   { value: 'no_longer_interested', label: 'Ya no me interesa' },
 ]
 
+const ENTRANCE = { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const }
+
 function errorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     // wanted.py's validation/authorization errors raise plain FastAPI HTTPException
@@ -65,31 +69,41 @@ function errorMessage(err: unknown): string {
 // Hero pulse (carta §4.9) — three numbers, never fabricated.
 // ---------------------------------------------------------------------------
 
+interface PulseCard { label: string; value: number | null; suffix?: string; hint?: string }
+
 function PulseHero({ pulse, liveness }: { pulse: Pulse | null; liveness: Liveness | null }) {
+  const liveRate = liveness?.match_liveness_rate != null ? Math.round(liveness.match_liveness_rate * 100) : null
+  const cards: PulseCard[] = [
+    { label: 'Peticiones abiertas', value: pulse?.wanted_open ?? null },
+    { label: 'Coincidencias servidas (7d)', value: pulse?.matches_served_7d ?? null },
+    { label: 'Hilos activos (24h)', value: pulse?.threads_active_24h ?? null, hint: 'Foro: próxima fase' },
+    {
+      label: 'Tasa de coincidencia viva (30d)',
+      value: liveRate,
+      suffix: '%',
+      hint: liveness ? `${liveness.live_at_click}/${liveness.total_clicks} clics con coche aún disponible` : 'Sin clics todavía',
+    },
+  ]
+
   return (
     <div className="mb-6 grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
-      <Card className="!p-4">
-        <div className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Peticiones abiertas</div>
-        <div className="mt-1 text-[26px] font-extrabold" style={{ color: 'var(--text-primary)' }}>{pulse?.wanted_open ?? '—'}</div>
-      </Card>
-      <Card className="!p-4">
-        <div className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Coincidencias servidas (7d)</div>
-        <div className="mt-1 text-[26px] font-extrabold" style={{ color: 'var(--text-primary)' }}>{pulse?.matches_served_7d ?? '—'}</div>
-      </Card>
-      <Card className="!p-4">
-        <div className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Hilos activos (24h)</div>
-        <div className="mt-1 text-[26px] font-extrabold" style={{ color: 'var(--text-primary)' }}>{pulse?.threads_active_24h ?? '—'}</div>
-        <div className="mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>Foro: próxima fase</div>
-      </Card>
-      <Card className="!p-4">
-        <div className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Tasa de coincidencia viva (30d)</div>
-        <div className="mt-1 text-[26px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
-          {liveness?.match_liveness_rate != null ? `${Math.round(liveness.match_liveness_rate * 100)}%` : '—'}
-        </div>
-        <div className="mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
-          {liveness ? `${liveness.live_at_click}/${liveness.total_clicks} clics con coche aún disponible` : 'Sin clics todavía'}
-        </div>
-      </Card>
+      {cards.map((c, i) => (
+        <motion.div
+          key={c.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...ENTRANCE, delay: i * 0.06 }}
+        >
+          <Card className="!p-4">
+            <div className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{c.label}</div>
+            <div className="mt-1 flex items-baseline gap-0.5 font-mono text-[26px] font-extrabold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+              {c.value != null ? <CountUp value={c.value} /> : '—'}
+              {c.value != null && c.suffix}
+            </div>
+            {c.hint && <div className="mt-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>{c.hint}</div>}
+          </Card>
+        </motion.div>
+      ))}
     </div>
   )
 }
@@ -147,34 +161,36 @@ function PublishForm({ provinces, onPublished }: PublishFormProps) {
   }, [make, model, yearMin, yearMax, kmMax, priceMax, fuel, province, ttlDays, onPublished, success, toastErr])
 
   return (
-    <Card className="mb-6">
-      <div className="mb-4 flex items-center gap-2">
-        <Search className="h-4 w-4" style={{ color: 'var(--accent-blue, #3b82f6)' }} />
-        <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Publicar búsqueda</h2>
-      </div>
-      <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
-        <Input label="Marca" placeholder="Volkswagen" value={make} onChange={(e) => setMake(e.target.value)} />
-        <Input label="Modelo (opcional)" placeholder="Golf" value={model} onChange={(e) => setModel(e.target.value)} />
-        <Input label="Año desde" type="number" value={yearMin} onChange={(e) => setYearMin(e.target.value)} />
-        <Input label="Año hasta" type="number" value={yearMax} onChange={(e) => setYearMax(e.target.value)} />
-        <Input label="Km máx." type="number" value={kmMax} onChange={(e) => setKmMax(e.target.value)} />
-        <Input label="Precio máx. (€)" type="number" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
-        <Select label="Combustible" placeholder="Cualquiera" options={FUEL_OPTIONS} value={fuel} onChange={(e) => setFuel(e.target.value)} />
-        <Select
-          label="Provincia"
-          placeholder="Selecciona"
-          options={provinces.map((p) => ({ value: p.code, label: p.name }))}
-          value={province}
-          onChange={(e) => setProvince(e.target.value)}
-        />
-        <Select label="Vigencia" options={TTL_OPTIONS} value={ttlDays} onChange={(e) => setTtlDays(e.target.value)} />
-      </div>
-      <div className="mt-4 flex justify-end">
-        <Button onClick={submit} loading={submitting} icon={<Search className="h-4 w-4" />}>
-          Publicar búsqueda
-        </Button>
-      </div>
-    </Card>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={ENTRANCE} className="mb-6">
+      <Card>
+        <div className="mb-4 flex items-center gap-2">
+          <Search className="h-4 w-4" style={{ color: 'var(--c-brand)' }} />
+          <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Publicar búsqueda</h2>
+        </div>
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+          <Input label="Marca" placeholder="Volkswagen" value={make} onChange={(e) => setMake(e.target.value)} />
+          <Input label="Modelo (opcional)" placeholder="Golf" value={model} onChange={(e) => setModel(e.target.value)} />
+          <Input label="Año desde" type="number" value={yearMin} onChange={(e) => setYearMin(e.target.value)} />
+          <Input label="Año hasta" type="number" value={yearMax} onChange={(e) => setYearMax(e.target.value)} />
+          <Input label="Km máx." type="number" value={kmMax} onChange={(e) => setKmMax(e.target.value)} />
+          <Input label="Precio máx. (€)" type="number" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} />
+          <Select label="Combustible" placeholder="Cualquiera" options={FUEL_OPTIONS} value={fuel} onChange={(e) => setFuel(e.target.value)} />
+          <Select
+            label="Provincia"
+            placeholder="Selecciona"
+            options={provinces.map((p) => ({ value: p.code, label: p.name }))}
+            value={province}
+            onChange={(e) => setProvince(e.target.value)}
+          />
+          <Select label="Vigencia" options={TTL_OPTIONS} value={ttlDays} onChange={(e) => setTtlDays(e.target.value)} />
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button onClick={submit} loading={submitting} icon={<Search className="h-4 w-4" />}>
+            Publicar búsqueda
+          </Button>
+        </div>
+      </Card>
+    </motion.div>
   )
 }
 
@@ -182,13 +198,20 @@ function PublishForm({ provinces, onPublished }: PublishFormProps) {
 // Match row
 // ---------------------------------------------------------------------------
 
-function MatchRow({ match, onClickThrough, onReview }: {
+function MatchRow({ match, onClickThrough, onReview, index = 0 }: {
   match: WantedMatch
   onClickThrough: (m: WantedMatch) => void
   onReview: (m: WantedMatch) => void
+  index?: number
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg p-3" style={{ border: '1px solid var(--border-subtle)' }}>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: Math.min(index, 8) * 0.04 }}
+      className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-[var(--bg-hover)]"
+      style={{ border: '1px solid var(--border-subtle)' }}
+    >
       {match.photo_url
         ? <img src={match.photo_url} alt="" className="h-14 w-20 shrink-0 rounded object-cover" style={{ background: 'var(--bg-surface)' }} />
         : <div className="h-14 w-20 shrink-0 rounded" style={{ background: 'var(--bg-surface)' }} />}
@@ -198,38 +221,36 @@ function MatchRow({ match, onClickThrough, onReview }: {
             {match.make} {match.model}
           </span>
           <Badge color={match.match_score >= 70 ? 'green' : match.match_score >= 50 ? 'yellow' : 'gray'}>
-            {Math.round(match.match_score)} pts
+            <span className="tabular-nums">{Math.round(match.match_score)} pts</span>
           </Badge>
         </div>
-        <div className="mt-0.5 text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
+        <div className="mt-0.5 text-[11.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
           {match.year ?? '—'} · {match.km != null ? `${match.km.toLocaleString('es-ES')} km` : '—'} ·{' '}
           {match.price != null ? `${match.price.toLocaleString('es-ES')} €` : 'sin precio'}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {match.deep_link && (
-          <a
+          <motion.a
             href={match.deep_link}
             target="_blank"
             rel="noreferrer"
             onClick={() => onClickThrough(match)}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium"
-            style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            className="glass inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium text-text-primary transition-colors hover:bg-glass-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
           >
             Ver anuncio <ExternalLink className="h-3 w-3" />
-          </a>
+          </motion.a>
         )}
         {match.clicked_at && (
-          <button
-            onClick={() => onReview(match)}
-            className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11.5px] font-medium"
-            style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
-          >
-            <Star className="h-3 w-3" /> Valorar
-          </button>
+          <Button size="sm" variant="secondary" onClick={() => onReview(match)} icon={<Star className="h-3 w-3" />}>
+            Valorar
+          </Button>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -241,13 +262,21 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} type="button" onClick={() => onChange(n)}>
+        <motion.button
+          key={n}
+          type="button"
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+          onClick={() => onChange(n)}
+          className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+        >
           <Star
             className="h-5 w-5"
             fill={n <= value ? 'currentColor' : 'none'}
-            style={{ color: n <= value ? '#f59e0b' : 'var(--text-muted)' }}
+            style={{ color: n <= value ? 'var(--c-amber)' : 'var(--text-muted)' }}
           />
-        </button>
+        </motion.button>
       ))}
     </div>
   )
@@ -297,18 +326,24 @@ function ReviewModal({ match, onClose, onSubmitted }: {
           { label: 'Anuncio veraz', value: veraz, set: setVeraz },
           { label: 'Disponibilidad real', value: disponibilidad, set: setDisponibilidad },
           { label: 'Agilidad', value: agilidad, set: setAgilidad },
-        ].map((axis) => (
-          <div key={axis.label} className="flex items-center justify-between">
+        ].map((axis, i) => (
+          <motion.div
+            key={axis.label}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.2, delay: i * 0.04 }}
+            className="flex items-center justify-between"
+          >
             <span className="text-[13px]" style={{ color: 'var(--text-primary)' }}>{axis.label}</span>
             <StarPicker value={axis.value} onChange={axis.set} />
-          </div>
+          </motion.div>
         ))}
         <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border-subtle)' }}>
           <span className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Veredicto global</span>
           <StarPicker value={overall} onChange={setOverall} />
         </div>
         <textarea
-          className="w-full rounded-md p-3 text-sm"
+          className="w-full rounded-md p-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent-blue/30"
           style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
           rows={3}
           placeholder="Comentario (opcional)"
@@ -332,7 +367,7 @@ function ReviewModal({ match, onClose, onSubmitted }: {
 // Listing card (with expandable matches)
 // ---------------------------------------------------------------------------
 
-function ListingCard({ listing, onChanged }: { listing: WantedListing; onChanged: () => void }) {
+function ListingCard({ listing, onChanged, index = 0 }: { listing: WantedListing; onChanged: () => void; index?: number }) {
   const { error: toastErr, success } = useToast()
   const [expanded, setExpanded] = useState(false)
   const [matches, setMatches] = useState<WantedMatch[] | null>(null)
@@ -378,52 +413,79 @@ function ListingCard({ listing, onChanged }: { listing: WantedListing; onChanged
   const daysLeft = Math.max(0, Math.ceil((new Date(listing.expires_at).getTime() - Date.now()) / 86_400_000))
 
   return (
-    <Card className="mb-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 cursor-pointer" onClick={() => setExpanded((e) => !e)}>
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{listing.make} {listing.model}</span>
-            <Badge color={listing.status === 'open' ? 'green' : listing.status === 'closed' ? 'gray' : 'yellow'}>
-              {listing.status}
-            </Badge>
-          </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
-            {(listing.year_min || listing.year_max) && <span>{listing.year_min ?? '—'}–{listing.year_max ?? '—'}</span>}
-            {listing.km_max && <span>≤{listing.km_max.toLocaleString('es-ES')} km</span>}
-            {listing.price_max && <span>≤{listing.price_max.toLocaleString('es-ES')} €</span>}
-            <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {listing.province_code}</span>
-            {listing.status === 'open' && (
-              <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> caduca en {daysLeft}d</span>
-            )}
-          </div>
-        </div>
-        {listing.status === 'open' && (
-          <div className="flex shrink-0 items-center gap-2">
-            <Select
-              options={CLOSE_REASON_OPTIONS}
-              value={closeReason}
-              onChange={(e) => setCloseReason(e.target.value)}
-              className="!w-auto !py-1.5 text-[11.5px]"
-            />
-            <Button size="sm" variant="secondary" onClick={handleClose} loading={closing}>Cerrar</Button>
-          </div>
-        )}
-      </div>
-
-      {expanded && (
-        <div className="mt-4 space-y-2 border-t pt-4" style={{ borderColor: 'var(--border-subtle)' }}>
-          {loadingMatches && <div className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Cargando coincidencias…</div>}
-          {!loadingMatches && matches?.length === 0 && (
-            <div className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Sin coincidencias vivas ahora mismo.</div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: Math.min(index, 6) * 0.05 }}>
+      <Card className="mb-3">
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+            aria-expanded={expanded}
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>{listing.make} {listing.model}</span>
+                <Badge color={listing.status === 'open' ? 'green' : listing.status === 'closed' ? 'gray' : 'yellow'}>
+                  {listing.status}
+                </Badge>
+              </div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                {(listing.year_min || listing.year_max) && <span>{listing.year_min ?? '—'}–{listing.year_max ?? '—'}</span>}
+                {listing.km_max && <span>≤{listing.km_max.toLocaleString('es-ES')} km</span>}
+                {listing.price_max && <span>≤{listing.price_max.toLocaleString('es-ES')} €</span>}
+                <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" /> {listing.province_code}</span>
+                {listing.status === 'open' && (
+                  <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> caduca en {daysLeft}d</span>
+                )}
+              </div>
+            </div>
+            <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0">
+              <ChevronDown className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+            </motion.span>
+          </button>
+          {listing.status === 'open' && (
+            <div className="flex shrink-0 items-center gap-2">
+              <Select
+                options={CLOSE_REASON_OPTIONS}
+                value={closeReason}
+                onChange={(e) => setCloseReason(e.target.value)}
+                className="!w-auto !py-1.5 text-[11.5px]"
+              />
+              <Button size="sm" variant="secondary" onClick={handleClose} loading={closing}>Cerrar</Button>
+            </div>
           )}
-          {matches?.map((m) => (
-            <MatchRow key={m.wanted_match_ulid} match={m} onClickThrough={handleClickThrough} onReview={setReviewTarget} />
-          ))}
         </div>
-      )}
 
-      <ReviewModal match={reviewTarget} onClose={() => setReviewTarget(null)} onSubmitted={onChanged} />
-    </Card>
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 space-y-2 border-t pt-4" style={{ borderColor: 'var(--border-subtle)' }}>
+                {loadingMatches && (
+                  <div className="space-y-2">
+                    <Skeleton className="h-[68px] w-full" rounded="lg" />
+                    <Skeleton className="h-[68px] w-full" rounded="lg" />
+                  </div>
+                )}
+                {!loadingMatches && matches?.length === 0 && (
+                  <div className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Sin coincidencias vivas ahora mismo.</div>
+                )}
+                {matches?.map((m, i) => (
+                  <MatchRow key={m.wanted_match_ulid} match={m} onClickThrough={handleClickThrough} onReview={setReviewTarget} index={i} />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <ReviewModal match={reviewTarget} onClose={() => setReviewTarget(null)} onSubmitted={onChanged} />
+      </Card>
+    </motion.div>
   )
 }
 
@@ -444,11 +506,18 @@ function DemandPanel({ demand }: { demand: DemandRow[] }) {
   return (
     <div className="space-y-1.5">
       {demand.slice(0, 15).map((row, i) => (
-        <div key={`${row.province_code}-${row.make}-${row.fuel ?? ''}`} className="flex items-center justify-between rounded-md px-3 py-2" style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-surface)' }}>
+        <motion.div
+          key={`${row.province_code}-${row.make}-${row.fuel ?? ''}`}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: Math.min(i, 10) * 0.03 }}
+          className="flex items-center justify-between rounded-md px-3 py-2 transition-colors hover:bg-[var(--bg-hover)]"
+          style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-surface)' }}
+        >
           <span className="text-[12.5px]" style={{ color: 'var(--text-primary)' }}>
-            <strong>{row.buyers}</strong> {row.buyers === 1 ? 'comprador busca' : 'compradores buscan'} {row.make}{row.fuel ? ` (${row.fuel})` : ''} en {row.province_name}
+            <strong className="tabular-nums">{row.buyers}</strong> {row.buyers === 1 ? 'comprador busca' : 'compradores buscan'} {row.make}{row.fuel ? ` (${row.fuel})` : ''} en {row.province_name}
           </span>
-        </div>
+        </motion.div>
       ))}
     </div>
   )
@@ -496,35 +565,55 @@ export default function Wanted() {
 
   return (
     <div className="mx-auto p-[20px_24px_48px]" style={{ maxWidth: 1200 }}>
-      <div className="mb-5">
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-5">
         <h1 className="mb-1 text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>Se busca</h1>
         <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
           Publica lo que buscas y te avisamos en cuanto aparece en cualquier plataforma del mercado — no solo en una.
         </p>
-      </div>
+      </motion.div>
 
       <PulseHero pulse={pulse} liveness={liveness} />
 
       <PublishForm provinces={provinces} onPublished={handlePublished} />
 
-      {justPublished && (
-        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <Card style={{ borderColor: 'var(--accent-blue, #3b82f6)' }}>
-            <div className="mb-2 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" style={{ color: '#3b82f6' }} />
-              <span className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                Ahora mismo hay {justPublished.matchesNow.toLocaleString('es-ES')} que encajan
-              </span>
-              <button onClick={() => setJustPublished(null)} className="ml-auto"><X className="h-4 w-4" style={{ color: 'var(--text-muted)' }} /></button>
-            </div>
-            <div className="space-y-2">
-              {justPublished.top.slice(0, 5).map((m) => (
-                <MatchRow key={m.wanted_match_ulid} match={m} onClickThrough={() => wantedApi.clickMatch(m.wanted_match_ulid).catch(() => {})} onReview={() => {}} />
-              ))}
-            </div>
-          </Card>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {justPublished && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-6 overflow-hidden"
+          >
+            <Card style={{ borderColor: 'var(--c-brand)' }} glow>
+              <div className="mb-2 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" style={{ color: 'var(--c-brand)' }} />
+                <span className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                  Ahora mismo hay {justPublished.matchesNow.toLocaleString('es-ES')} que encajan
+                </span>
+                <button
+                  onClick={() => setJustPublished(null)}
+                  className="ml-auto rounded p-0.5 transition-colors hover:bg-[var(--bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+                  aria-label="Cerrar aviso"
+                >
+                  <X className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {justPublished.top.slice(0, 5).map((m, i) => (
+                  <MatchRow
+                    key={m.wanted_match_ulid}
+                    match={m}
+                    index={i}
+                    onClickThrough={() => wantedApi.clickMatch(m.wanted_match_ulid).catch(() => {})}
+                    onReview={() => {}}
+                  />
+                ))}
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Tabs
         value={tab}
@@ -535,24 +624,24 @@ export default function Wanted() {
             label: `Abiertas (${openListings.length})`,
             content: openListings.length === 0
               ? <EmptyState icon={<CheckCircle2 className="h-6 w-6" />} title="Sin búsquedas abiertas" message="Publica tu primera búsqueda arriba." />
-              : <>{openListings.map((w) => <ListingCard key={w.wanted_ulid} listing={w} onChanged={loadAll} />)}</>,
+              : <>{openListings.map((w, i) => <ListingCard key={w.wanted_ulid} listing={w} onChanged={loadAll} index={i} />)}</>,
           },
           {
             value: 'closed',
             label: `Cerradas (${closedListings.length})`,
             content: closedListings.length === 0
               ? <EmptyState icon={<CheckCircle2 className="h-6 w-6" />} title="Sin búsquedas cerradas" />
-              : <>{closedListings.map((w) => <ListingCard key={w.wanted_ulid} listing={w} onChanged={loadAll} />)}</>,
+              : <>{closedListings.map((w, i) => <ListingCard key={w.wanted_ulid} listing={w} onChanged={loadAll} index={i} />)}</>,
           },
         ]}
       />
 
-      <div className="mt-8">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={ENTRANCE} className="mt-8">
         <h2 className="mb-3 text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Qué busca el mercado ahora</h2>
         <Card>
           <DemandPanel demand={demand} />
         </Card>
-      </div>
+      </motion.div>
     </div>
   )
 }

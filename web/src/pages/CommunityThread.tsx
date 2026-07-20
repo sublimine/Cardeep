@@ -3,6 +3,7 @@
 // paste a URL) + optimistic vote with rollback on server rejection.
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { ArrowBigUp, ArrowBigDown, X, Flag, User as UserIcon } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -48,34 +49,42 @@ function Composer({ threadUlid, onPosted }: { threadUlid: string; onPosted: () =
   }, [body, anchors, threadUlid, success, toastErr, onPosted])
 
   return (
-    <Card className="mb-4">
-      <textarea
-        className="w-full rounded-md p-3 text-sm"
-        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
-        rows={3}
-        placeholder="Escribe una respuesta…"
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-      />
-      {anchors.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {anchors.map((a, i) => (
-            <span key={`${a.anchor_type}-${a.anchor_ref}`} className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px]" style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
-              {a.anchor_ref}
-              <button onClick={() => setAnchors((prev) => prev.filter((_, idx) => idx !== i))}><X className="h-3 w-3" /></button>
-            </span>
-          ))}
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <Card className="mb-4">
+        <textarea
+          className="w-full rounded-md p-3 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-accent-blue/30"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
+          rows={3}
+          placeholder="Escribe una respuesta…"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+        />
+        {anchors.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {anchors.map((a, i) => (
+              <span key={`${a.anchor_type}-${a.anchor_ref}`} className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px]" style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}>
+                {a.anchor_ref}
+                <button
+                  onClick={() => setAnchors((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="rounded-full transition-colors hover:text-[var(--c-rose)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+                  aria-label="Quitar dato vinculado"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="mt-2.5 flex items-center justify-between">
+          <DataLinker onSelect={(a) => setAnchors((prev) => [...prev, a])} />
+          <Button size="sm" onClick={submit} loading={submitting}>Responder</Button>
         </div>
-      )}
-      <div className="mt-2.5 flex items-center justify-between">
-        <DataLinker onSelect={(a) => setAnchors((prev) => [...prev, a])} />
-        <Button size="sm" onClick={submit} loading={submitting}>Responder</Button>
-      </div>
-    </Card>
+      </Card>
+    </motion.div>
   )
 }
 
-function PostCard({ post, onChanged }: { post: ForumPost; onChanged: () => void }) {
+function PostCard({ post, onChanged, index = 0 }: { post: ForumPost; onChanged: () => void; index?: number }) {
   const { error: toastErr } = useToast()
   const [localVote, setLocalVote] = useState(0)
   const [localNet, setLocalNet] = useState(post.net_votes)
@@ -108,37 +117,72 @@ function PostCard({ post, onChanged }: { post: ForumPost; onChanged: () => void 
   }, [post.post_ulid, onChanged, toastErr])
 
   return (
-    <Card className="mb-3">
-      <div className="flex gap-3">
-        <div className="flex shrink-0 flex-col items-center gap-0.5">
-          <button onClick={() => vote(1)}><ArrowBigUp className="h-5 w-5" fill={localVote === 1 ? '#3b82f6' : 'none'} style={{ color: localVote === 1 ? '#3b82f6' : 'var(--text-muted)' }} /></button>
-          <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>{localNet}</span>
-          <button onClick={() => vote(-1)}><ArrowBigDown className="h-5 w-5" fill={localVote === -1 ? '#ef4444' : 'none'} style={{ color: localVote === -1 ? '#ef4444' : 'var(--text-muted)' }} /></button>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="mb-1.5 flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-            <UserIcon className="h-3 w-3" />
-            <Link to={`/community/user/${post.author_user_ulid}`} className="hover:underline">{post.author_user_ulid.slice(0, 10)}</Link>
-            {/* carta §4.7 (PistonHeads-exact): el rol se muestra SIEMPRE, dealer vs particular */}
-            {post.author_role && (
-              <Badge color={post.author_role === 'dealer' ? 'blue' : post.author_role === 'staff' ? 'purple' : 'gray'}>
-                {post.author_role}
-              </Badge>
-            )}
-            · {new Date(post.created_at).toLocaleString('es-ES')}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, delay: Math.min(index, 10) * 0.04 }}
+    >
+      <Card className="mb-3">
+        <div className="flex gap-3">
+          <div className="flex shrink-0 flex-col items-center gap-0.5">
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+              onClick={() => vote(1)}
+              className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+              aria-label="Voto a favor"
+              aria-pressed={localVote === 1}
+            >
+              <ArrowBigUp className="h-5 w-5" fill={localVote === 1 ? 'currentColor' : 'none'} style={{ color: localVote === 1 ? 'var(--c-brand)' : 'var(--text-muted)' }} />
+            </motion.button>
+            <span className="font-mono text-[12px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{localNet}</span>
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 22 }}
+              onClick={() => vote(-1)}
+              className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+              aria-label="Voto en contra"
+              aria-pressed={localVote === -1}
+            >
+              <ArrowBigDown className="h-5 w-5" fill={localVote === -1 ? 'currentColor' : 'none'} style={{ color: localVote === -1 ? 'var(--c-rose)' : 'var(--text-muted)' }} />
+            </motion.button>
           </div>
-          <p className="whitespace-pre-wrap text-[13px]" style={{ color: 'var(--text-primary)' }}>{post.body}</p>
-          {post.anchors.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {post.anchors.map((a) => <AnchorCard key={a.anchor_ulid} anchor={a} />)}
+          <div className="min-w-0 flex-1">
+            <div className="mb-1.5 flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <UserIcon className="h-3 w-3" />
+              <Link
+                to={`/community/user/${post.author_user_ulid}`}
+                className="rounded transition-colors hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+              >
+                {post.author_user_ulid.slice(0, 10)}
+              </Link>
+              {/* carta §4.7 (PistonHeads-exact): el rol se muestra SIEMPRE, dealer vs particular */}
+              {post.author_role && (
+                <Badge color={post.author_role === 'dealer' ? 'blue' : post.author_role === 'staff' ? 'purple' : 'gray'}>
+                  {post.author_role}
+                </Badge>
+              )}
+              · <span className="tabular-nums">{new Date(post.created_at).toLocaleString('es-ES')}</span>
             </div>
-          )}
-          <button onClick={flag} className="mt-2 inline-flex items-center gap-1 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
-            <Flag className="h-3 w-3" /> Reportar
-          </button>
+            <p className="whitespace-pre-wrap text-[13px]" style={{ color: 'var(--text-primary)' }}>{post.body}</p>
+            {post.anchors.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {post.anchors.map((a) => <AnchorCard key={a.anchor_ulid} anchor={a} />)}
+              </div>
+            )}
+            <button
+              onClick={flag}
+              className="mt-2 inline-flex items-center gap-1 rounded text-[10.5px] transition-colors hover:text-[var(--c-rose)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <Flag className="h-3 w-3" /> Reportar
+            </button>
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </motion.div>
   )
 }
 
@@ -174,17 +218,17 @@ export default function CommunityThread() {
 
   return (
     <div className="mx-auto p-[20px_24px_48px]" style={{ maxWidth: 900 }}>
-      <div className="mb-4">
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-4">
         <div className="flex items-center gap-2">
           <h1 className="text-[19px] font-bold" style={{ color: 'var(--text-primary)' }}>{thread.title}</h1>
           {thread.thread_type === 'price_check' && <Badge color="blue">¿Buen precio?</Badge>}
         </div>
-        <div className="mt-1 text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
+        <div className="mt-1 text-[11.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
           {thread.reply_count} respuestas · {thread.province_code ?? 'sin provincia'}
         </div>
-      </div>
+      </motion.div>
 
-      {thread.posts.map((p) => <PostCard key={p.post_ulid} post={p} onChanged={load} />)}
+      {thread.posts.map((p, i) => <PostCard key={p.post_ulid} post={p} onChanged={load} index={i} />)}
 
       <Composer threadUlid={thread.thread_ulid} onPosted={load} />
     </div>

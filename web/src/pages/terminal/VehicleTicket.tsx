@@ -2,11 +2,18 @@
 // (/vehicles/{ulid}/history) + its deal-rating (C7, /terminal/{symbol}/rating/{ulid}) — the
 // Bloomberg GIP pattern (carta §2.1): the life of THIS car against its market, on click.
 import { useEffect, useState } from 'react'
-import { X, ExternalLink } from 'lucide-react'
+import { AlertTriangle, ExternalLink, History } from 'lucide-react'
 import { cardeep, CardeepApiError, type VehicleHistoryEvent, type TerminalRating } from '../../api/cardeep'
+import Modal from '../../components/Modal'
+import Timeline, { type TimelineItem } from '../../components/Timeline'
+import EmptyState from '../../components/EmptyState'
+import { Skeleton } from '../../components/Skeleton'
 import { GOOD, BAD, WARN } from '../../lib/theme'
 
 interface VehicleTicketProps {
+  /** Mount is always live (parent never unmounts this) so Modal's own enter/exit
+   * spring animation can actually play — see Terminal.tsx. */
+  open: boolean
   symbolKey: string
   vehicleUlid: string
   deepLink: string
@@ -20,67 +27,80 @@ const BAND_LABEL: Record<string, string> = {
 }
 const BAND_COLOR: Record<string, string> = { below_market: GOOD, at_market: WARN, above_market: BAD }
 
-export default function VehicleTicket({ symbolKey, vehicleUlid, deepLink, onClose }: VehicleTicketProps) {
+export default function VehicleTicket({ open, symbolKey, vehicleUlid, deepLink, onClose }: VehicleTicketProps) {
   const [history, setHistory] = useState<VehicleHistoryEvent[] | null>(null)
   const [rating, setRating] = useState<TerminalRating | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!open || !vehicleUlid) return
     let cancelled = false
     setHistory(null); setRating(null); setError(null)
     cardeep.vehicleHistory(vehicleUlid, 1, 100)
       .then(page => { if (!cancelled) setHistory(page.items) })
-      .catch((err: unknown) => { if (!cancelled) setError(err instanceof CardeepApiError ? err.message : 'Error') })
+      .catch((err: unknown) => { if (!cancelled) setError(err instanceof CardeepApiError ? err.message : 'Error al cargar el historial') })
     cardeep.terminalRating(symbolKey, vehicleUlid)
       .then(r => { if (!cancelled) setRating(r) })
       .catch(() => { /* rating is best-effort — history is the primary content */ })
     return () => { cancelled = true }
-  }, [symbolKey, vehicleUlid])
+  }, [open, symbolKey, vehicleUlid])
+
+  const timelineItems: TimelineItem[] = (history ?? []).map((ev, i) => ({
+    id: `${ev.event_type}-${ev.observed_at}-${i}`,
+    date: new Date(ev.observed_at).toLocaleDateString('es-ES'),
+    title: eventLabel(ev.event_type),
+    subtitle: formatDelta(ev) ?? undefined,
+    accent: eventAccent(ev.event_type),
+  }))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="w-full max-w-lg max-h-[80vh] overflow-auto rounded-lg bg-glass-heavy border border-border-subtle shadow-card-hover"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-          <h3 className="text-sm font-semibold">Historial del anuncio</h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-glass-medium"><X className="w-4 h-4" /></button>
-        </div>
-
+    <Modal open={open} onClose={onClose} title="Historial del anuncio" size="lg">
+      <div className="space-y-4">
         {rating?.position && (
-          <div className="px-4 py-3 border-b border-border-subtle flex items-center justify-between">
+          <div
+            className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-lg"
+            style={{ background: `${BAND_COLOR[rating.position.band]}14`, border: `1px solid ${BAND_COLOR[rating.position.band]}30` }}
+          >
             <span className="text-xs text-text-muted">Posición de precio (C7)</span>
-            <span className="text-sm font-semibold" style={{ color: BAND_COLOR[rating.position.band] }}>
+            <span className="text-sm font-semibold tabular-nums" style={{ color: BAND_COLOR[rating.position.band] }}>
               {BAND_LABEL[rating.position.band]} ({((rating.position.ratio - 1) * 100).toFixed(1)}%)
             </span>
           </div>
         )}
 
-        {error && <div className="px-4 py-6 text-sm text-text-muted">{error}</div>}
-        {!error && history === null && <div className="px-4 py-6 text-sm text-text-muted">Cargando…</div>}
-        {!error && history && history.length === 0 && (
-          <div className="px-4 py-6 text-sm text-text-muted">Sin eventos registrados.</div>
-        )}
-        {!error && history && history.length > 0 && (
-          <ul className="divide-y divide-border-subtle/50">
-            {history.map((ev, i) => (
-              <li key={i} className="px-4 py-2 text-xs flex items-center justify-between">
-                <span className="font-medium">{eventLabel(ev.event_type)}</span>
-                <span className="text-text-muted">{new Date(ev.observed_at).toLocaleDateString('es-ES')}</span>
-              </li>
-            ))}
-          </ul>
+        <a
+          href={deepLink}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-md text-xs font-medium text-accent-blue glass hover:bg-glass-strong transition-colors duration-150 focus-visible:bg-glass-strong"
+        >
+          Ver anuncio original <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+
+        {error && (
+          <EmptyState icon={<AlertTriangle className="w-6 h-6" />} title="No se pudo cargar el historial" message={error} />
         )}
 
-        <a
-          href={deepLink} target="_blank" rel="noreferrer"
-          className="flex items-center gap-1 px-4 py-3 text-xs text-accent border-t border-border-subtle hover:underline"
-        >
-          Ver anuncio original <ExternalLink className="w-3 h-3" />
-        </a>
+        {!error && history === null && (
+          <div className="space-y-3 py-1">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <Skeleton className="w-3.5 h-3.5 shrink-0 mt-1.5" rounded="full" />
+                <Skeleton className="h-14 flex-1" rounded="md" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!error && history && history.length === 0 && (
+          <EmptyState icon={<History className="w-6 h-6" />} title="Sin eventos" message="Este anuncio no tiene eventos registrados todavía." />
+        )}
+
+        {!error && history && history.length > 0 && (
+          <Timeline items={timelineItems} flat />
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -93,4 +113,31 @@ function eventLabel(t: string): string {
     case 'KM_CHANGE': return 'Cambio de kilometraje'
     default: return t
   }
+}
+
+function eventAccent(t: string): NonNullable<TimelineItem['accent']> {
+  switch (t) {
+    case 'NEW': return 'green'
+    case 'GONE': return 'red'
+    case 'PRICE_CHANGE': return 'yellow'
+    default: return 'gray'
+  }
+}
+
+/** Renders "old → new" only for the two event types that carry a numeric delta AND
+ * only when both values actually parse as finite numbers — never guesses at a shape
+ * the API didn't send. */
+function formatDelta(ev: VehicleHistoryEvent): string | null {
+  if (ev.event_type !== 'PRICE_CHANGE' && ev.event_type !== 'KM_CHANGE') return null
+  const a = toFiniteNumber(ev.old_value)
+  const b = toFiniteNumber(ev.new_value)
+  if (a == null || b == null) return null
+  const fmt = (n: number) => Math.round(n).toLocaleString('es-ES')
+  return ev.event_type === 'PRICE_CHANGE' ? `€${fmt(a)} → €${fmt(b)}` : `${fmt(a)} km → ${fmt(b)} km`
+}
+
+function toFiniteNumber(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) return Number(v)
+  return null
 }

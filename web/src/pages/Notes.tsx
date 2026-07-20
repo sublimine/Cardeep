@@ -1,13 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import React, { useState } from 'react'
 import {
-  Pin, PinOff, Plus, Search, Trash2, X, StickyNote, Pencil,
+  Pin, PinOff, Plus, Search, Trash2, X, StickyNote, Pencil, CloudUpload,
 } from 'lucide-react'
 import Input from '../components/Input'
 import Button from '../components/Button'
 import Modal from '../components/Modal'
 import EmptyState from '../components/EmptyState'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { CardSkeleton } from '../components/Skeleton'
 import { cn } from '../lib/cn'
 import { useNotes, useNoteMutations } from '../hooks/useNotes'
 import { useToast } from '../components/Toast'
@@ -30,35 +30,35 @@ const COLOR_CONFIG: Record<NoteColor, {
     bg:         'bg-glass-subtle',
     border:     'border-border-subtle',
     titleColor: 'text-text-primary',
-    label:      'Default',
+    label:      'Neutro',
     chip:       'bg-glass-medium border-border-subtle',
   },
   amber: {
     bg:         'bg-amber-500/10',
     border:     'border-amber-500/25',
     titleColor: 'text-amber-600 dark:text-amber-300',
-    label:      'Amber',
+    label:      'Ámbar',
     chip:       'bg-amber-400',
   },
   sky: {
     bg:         'bg-sky-500/10',
     border:     'border-sky-500/25',
     titleColor: 'text-sky-600 dark:text-sky-300',
-    label:      'Sky',
+    label:      'Cielo',
     chip:       'bg-sky-400',
   },
   emerald: {
     bg:         'bg-emerald-500/10',
     border:     'border-emerald-500/25',
     titleColor: 'text-emerald-600 dark:text-emerald-300',
-    label:      'Emerald',
+    label:      'Esmeralda',
     chip:       'bg-emerald-400',
   },
   rose: {
     bg:         'bg-rose-500/10',
     border:     'border-rose-500/25',
     titleColor: 'text-rose-600 dark:text-rose-300',
-    label:      'Rose',
+    label:      'Rosa',
     chip:       'bg-rose-400',
   },
 }
@@ -92,11 +92,11 @@ function readLegacyNotes(): LegacyNote[] {
 
 function timeAgo(iso: string): string {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
-  if (m < 1)  return 'Just now'
-  if (m < 60) return `${m}m ago`
+  if (m < 1)  return 'Ahora'
+  if (m < 60) return `Hace ${m}m`
   const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  return `${Math.floor(h / 24)}d ago`
+  if (h < 24) return `Hace ${h}h`
+  return `Hace ${Math.floor(h / 24)}d`
 }
 
 // ── Color picker ──────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ function NoteEditorModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEditing ? 'Edit note' : 'New note'}
+      title={isEditing ? 'Editar nota' : 'Nueva nota'}
       size="sm"
     >
       <div className="space-y-4">
@@ -181,7 +181,7 @@ function NoteEditorModal({
             type="text"
             value={form.title}
             onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-            placeholder="Note title…"
+            placeholder="Título de la nota…"
             className={cn(
               'w-full bg-transparent text-base font-bold placeholder:text-text-muted/60 outline-none',
               cfg.titleColor,
@@ -190,7 +190,7 @@ function NoteEditorModal({
           <textarea
             value={form.body}
             onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-            placeholder="Write your note…"
+            placeholder="Escribe tu nota…"
             rows={5}
             className="w-full mt-2 bg-transparent text-sm text-text-secondary placeholder:text-text-muted/50 outline-none resize-none leading-relaxed"
           />
@@ -209,11 +209,11 @@ function NoteEditorModal({
               onClick={onDelete}
               className="shrink-0"
             >
-              Delete
+              Eliminar
             </Button>
           )}
           <Button variant="secondary" size="sm" className="flex-1" onClick={onClose}>
-            Cancel
+            Cancelar
           </Button>
           <Button
             variant="primary"
@@ -222,7 +222,7 @@ function NoteEditorModal({
             onClick={handleSave}
             disabled={!form.title.trim() && !form.body.trim()}
           >
-            {isEditing ? 'Save changes' : 'Add note'}
+            {isEditing ? 'Guardar cambios' : 'Añadir nota'}
           </Button>
         </div>
       </div>
@@ -234,9 +234,12 @@ function NoteEditorModal({
 
 // forwardRef: AnimatePresence mode="popLayout" attaches a ref to each direct
 // child to measure it during exit animations (same fix as Deals' DealRow).
-const NoteCard = React.forwardRef<HTMLDivElement, { note: Note; onEdit: () => void; onPin: () => void }>(
-  function NoteCard({ note, onEdit, onPin }, ref) {
+const NoteCard = React.forwardRef<HTMLDivElement, { note: Note; index?: number; onEdit: () => void; onPin: () => void }>(
+  function NoteCard({ note, index = 0, onEdit, onPin }, ref) {
   const cfg = COLOR_CONFIG[note.color]
+  // Staggered entrance on first mount, capped so a long list doesn't leave the
+  // last cards waiting seconds to appear.
+  const enterDelay = Math.min(index * 0.04, 0.3)
 
   return (
     <motion.div
@@ -246,7 +249,12 @@ const NoteCard = React.forwardRef<HTMLDivElement, { note: Note; onEdit: () => vo
       animate={{ opacity: 1, scale: 1,    y: 0 }}
       exit={{ opacity: 0, scale: 0.95, y: 8 }}
       whileHover={{ y: -2 }}
-      transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+      transition={{
+        type: 'spring', stiffness: 380, damping: 26, delay: enterDelay,
+        // Layout moves (e.g. reordering into "Fijadas" on toggle) skip the mount
+        // delay above — only the initial appear/exit should ever wait.
+        layout: { type: 'spring', stiffness: 380, damping: 30 },
+      }}
       onClick={onEdit}
       className={cn(
         'rounded-xl border p-4 cursor-pointer group flex flex-col gap-3',
@@ -257,7 +265,7 @@ const NoteCard = React.forwardRef<HTMLDivElement, { note: Note; onEdit: () => vo
       {/* Note header */}
       <div className="flex items-start justify-between gap-2">
         <p className={cn('text-sm font-bold leading-snug flex-1 min-w-0 break-words', cfg.titleColor)}>
-          {note.title || <span className="text-text-muted italic font-normal">Untitled</span>}
+          {note.title || <span className="text-text-muted italic font-normal">Sin título</span>}
         </p>
         <button
           type="button"
@@ -268,7 +276,7 @@ const NoteCard = React.forwardRef<HTMLDivElement, { note: Note; onEdit: () => vo
               ? 'text-accent-blue opacity-100'
               : 'text-text-muted opacity-0 group-hover:opacity-100 hover:text-text-primary',
           )}
-          aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
+          aria-label={note.pinned ? 'Desfijar nota' : 'Fijar nota'}
         >
           {note.pinned ? (
             <Pin className="w-3.5 h-3.5" />
@@ -291,7 +299,7 @@ const NoteCard = React.forwardRef<HTMLDivElement, { note: Note; onEdit: () => vo
           {timeAgo(note.updatedAt)}
         </span>
         <span className="flex items-center gap-1 text-[10px] text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">
-          <Pencil className="w-2.5 h-2.5" /> Edit
+          <Pencil className="w-2.5 h-2.5" /> Editar
         </span>
       </div>
     </motion.div>
@@ -405,10 +413,10 @@ export default function Notes() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Notes</h1>
-          <p className="text-sm text-text-muted mt-0.5">
-            {notes.length} {notes.length === 1 ? 'note' : 'notes'} ·&nbsp;
-            {notes.filter(n => n.pinned).length} pinned
+          <h1 className="text-xl font-bold text-text-primary">Notas</h1>
+          <p className="text-sm text-text-muted mt-0.5 tabular-nums">
+            {notes.length} {notes.length === 1 ? 'nota' : 'notas'} ·&nbsp;
+            {notes.filter(n => n.pinned).length} fijada(s)
           </p>
         </div>
         <Button
@@ -417,18 +425,24 @@ export default function Notes() {
           onClick={openNew}
           loading={mutating}
         >
-          New note
+          Nueva nota
         </Button>
       </div>
 
       {/* One-shot localStorage migration banner (carta §6) */}
       {showMigrationBanner && (
-        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-accent-blue/25 bg-accent-blue/5">
-          <p className="text-xs text-text-secondary">
-            Encontramos {legacyNotes.length} nota(s) guardadas solo en este dispositivo. Migrarlas para verlas en cualquier equipo.
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative flex items-center gap-3 overflow-hidden rounded-xl glass py-3 pl-4 pr-4"
+        >
+          <span className="absolute inset-y-0 left-0 w-1 bg-accent-blue" />
+          <CloudUpload className="h-4 w-4 shrink-0 text-accent-blue" />
+          <p className="flex-1 text-xs text-text-secondary">
+            Encontramos <span className="font-semibold text-text-primary tabular-nums">{legacyNotes.length}</span> nota(s) guardadas solo en este dispositivo. Migrarlas para verlas en cualquier equipo.
           </p>
           <Button size="sm" onClick={handleMigrate} loading={migrating}>Migrar ahora</Button>
-        </div>
+        </motion.div>
       )}
 
       {/* Error state — honest failure, never a silently-swapped fallback */}
@@ -442,14 +456,16 @@ export default function Notes() {
       )}
 
       {loading && (
-        <div className="flex justify-center py-8"><LoadingSpinner /></div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, i) => <CardSkeleton key={i} />)}
+        </div>
       )}
 
       {/* Search */}
       {!loading && !error && (
       <Input
         icon={<Search className="w-4 h-4" />}
-        placeholder="Search notes…"
+        placeholder="Buscar notas…"
         value={search}
         onChange={e => setSearch(e.target.value)}
         iconRight={
@@ -470,16 +486,16 @@ export default function Notes() {
       {!loading && !error && filtered.length === 0 && (
         <EmptyState
           icon={<StickyNote className="w-6 h-6" />}
-          title={search ? 'No notes match' : 'No notes yet'}
+          title={search ? 'Sin coincidencias' : 'Sin notas todavía'}
           message={
             search
-              ? 'Try a different search term.'
-              : 'Create your first note to keep track of follow-ups, reminders and ideas.'
+              ? 'Prueba con otro término de búsqueda.'
+              : 'Crea tu primera nota para llevar seguimiento de tareas, recordatorios e ideas.'
           }
           action={
             !search ? (
               <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={openNew}>
-                New note
+                Nueva nota
               </Button>
             ) : undefined
           }
@@ -497,7 +513,7 @@ export default function Notes() {
             <div className="flex items-center gap-2 mb-3">
               <Pin className="w-3.5 h-3.5 text-accent-blue" />
               <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold">
-                Pinned
+                Fijadas
               </p>
             </div>
             <motion.div
@@ -505,10 +521,11 @@ export default function Notes() {
               layout
             >
               <AnimatePresence mode="popLayout">
-                {pinned.map(note => (
+                {pinned.map((note, idx) => (
                   <NoteCard
                     key={note.id}
                     note={note}
+                    index={idx}
                     onEdit={() => openEdit(note)}
                     onPin={() => handleTogglePin(note)}
                   />
@@ -529,7 +546,7 @@ export default function Notes() {
           >
             {pinned.length > 0 && (
               <p className="text-[11px] text-text-muted uppercase tracking-wider font-semibold mb-3">
-                Notes
+                Notas
               </p>
             )}
             <motion.div
@@ -537,10 +554,11 @@ export default function Notes() {
               layout
             >
               <AnimatePresence mode="popLayout">
-                {unpinned.map(note => (
+                {unpinned.map((note, idx) => (
                   <NoteCard
                     key={note.id}
                     note={note}
+                    index={idx}
                     onEdit={() => openEdit(note)}
                     onPin={() => handleTogglePin(note)}
                   />

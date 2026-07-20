@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, ChevronDown, Mail, Phone, MessageCircle } from 'lucide-react'
+import { Plus, X, ChevronDown, Mail, Phone, MessageCircle } from 'lucide-react'
 import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Select from '../components/Select'
+import Modal from '../components/Modal'
 import { Badge } from '../components/Badge'
 import { useToast } from '../components/Toast'
 import { cn } from '../lib/cn'
@@ -75,16 +76,24 @@ const TICKET_PRIORITY: Record<Ticket['priority'], { color: 'red' | 'yellow' | 'g
 }
 
 // ── Ticket row ────────────────────────────────────────────────────────────────
+// A real <button> with a real onOpen handler — the old markup had cursor-pointer
+// + hover feedback wired to nothing, a fake affordance. Clicking now opens the
+// detail modal below, using only fields already present on the ticket.
 
-function TicketRow({ ticket, border }: { ticket: Ticket; border: boolean }) {
+function TicketRow({ ticket, border, onOpen, delay }: { ticket: Ticket; border: boolean; onOpen: () => void; delay: number }) {
   const status   = TICKET_STATUS[ticket.status]
   const priority = TICKET_PRIORITY[ticket.priority]
 
   return (
-    <div
+    <motion.button
+      type="button"
+      onClick={onOpen}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.25, ease: 'easeOut' }}
       className={cn(
-        'flex items-center gap-4 px-5 py-4 cursor-pointer',
-        'hover:bg-bg-elevated transition-colors duration-150',
+        'w-full flex items-center gap-4 px-5 py-4 text-left',
+        'hover:bg-glass-subtle focus-visible:bg-glass-subtle transition-colors duration-150',
         border && 'border-b border-border-subtle',
       )}
     >
@@ -101,7 +110,32 @@ function TicketRow({ ticket, border }: { ticket: Ticket; border: boolean }) {
         <Badge color={priority.color}>{priority.label}</Badge>
         <Badge color={status.color} dot>{status.label}</Badge>
       </div>
-    </div>
+    </motion.button>
+  )
+}
+
+// ── Ticket detail modal ───────────────────────────────────────────────────────
+
+function TicketDetailModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
+  const status   = ticket ? TICKET_STATUS[ticket.status]   : null
+  const priority = ticket ? TICKET_PRIORITY[ticket.priority] : null
+
+  return (
+    <Modal open={!!ticket} onClose={onClose} title={ticket ? `Ticket ${ticket.number}` : undefined} size="sm">
+      {ticket && status && priority && (
+        <div className="space-y-4">
+          <p className="text-sm font-medium text-text-primary leading-relaxed">{ticket.subject}</p>
+          <div className="flex items-center gap-2">
+            <Badge color={priority.color}>{priority.label}</Badge>
+            <Badge color={status.color} dot>{status.label}</Badge>
+          </div>
+          <p className="text-xs text-text-muted">
+            Creado: {ticket.createdAt} · Actualizado: {ticket.updatedAt}
+          </p>
+          <Button variant="ghost" size="sm" onClick={onClose}>Cerrar</Button>
+        </div>
+      )}
+    </Modal>
   )
 }
 
@@ -221,41 +255,47 @@ interface ContactItem {
   label: string
   value: string
   note: string
+  /** mailto:/tel: — a real action for channels that support one; omitted for
+   * Chat, which has no live channel wired up (no fake click affordance). */
+  href?: string
+  live?: boolean
 }
 
 const CONTACT_ITEMS: ContactItem[] = [
-  { icon: Mail,          label: 'Email',       value: 'soporte@cardeep.ai',  note: 'Respuesta en menos de 24h'     },
-  { icon: Phone,         label: 'Teléfono',    value: '+34 900 123 456',     note: 'Lun–Vie · 9:00–18:00 (CET)'   },
-  { icon: MessageCircle, label: 'Chat en vivo', value: 'Disponible ahora',   note: 'Tiempo medio de respuesta: 5 min' },
+  { icon: Mail,          label: 'Email',        value: 'soporte@cardeep.ai', note: 'Respuesta en menos de 24h',        href: 'mailto:soporte@cardeep.ai' },
+  { icon: Phone,         label: 'Teléfono',     value: '+34 900 123 456',    note: 'Lun–Vie · 9:00–18:00 (CET)',       href: 'tel:+34900123456' },
+  { icon: MessageCircle, label: 'Chat en vivo', value: 'Disponible ahora',   note: 'Tiempo medio de respuesta: 5 min', live: true },
 ]
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Support() {
   const [showNew, setShowNew] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
 
   const openCount = TICKETS.filter(t => t.status !== 'resolved').length
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="p-4 md:p-6 max-w-3xl mx-auto space-y-5"
-    >
+    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="flex items-start justify-between gap-4"
+      >
         <div>
           <h1 className="text-xl font-bold text-text-primary">Soporte</h1>
           <p className="text-sm text-text-muted mt-0.5">Consulta tus tickets o abre uno nuevo</p>
         </div>
         <Button
-          icon={<Plus className="w-4 h-4" />}
+          variant={showNew ? 'secondary' : 'primary'}
+          icon={showNew ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           onClick={() => setShowNew(v => !v)}
         >
-          Nuevo ticket
+          {showNew ? 'Cerrar formulario' : 'Nuevo ticket'}
         </Button>
-      </div>
+      </motion.div>
 
       {/* New ticket form */}
       <AnimatePresence>
@@ -263,46 +303,81 @@ export default function Support() {
       </AnimatePresence>
 
       {/* Ticket list */}
-      <Card padding={false} className="overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-          <h2 className="text-sm font-semibold text-text-primary">Mis tickets</h2>
-          {openCount > 0 && (
-            <Badge color="blue" dot pulse>{openCount} abierto{openCount > 1 ? 's' : ''}</Badge>
-          )}
-        </div>
-        <div>
-          {TICKETS.map((t, i) => (
-            <TicketRow key={t.id} ticket={t} border={i < TICKETS.length - 1} />
-          ))}
-        </div>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.06, duration: 0.35, ease: 'easeOut' }}
+      >
+        <Card padding={false} className="overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
+            <h2 className="text-sm font-semibold text-text-primary">Mis tickets</h2>
+            {openCount > 0 && (
+              <Badge color="blue" dot pulse>{openCount} abierto{openCount > 1 ? 's' : ''}</Badge>
+            )}
+          </div>
+          <div>
+            {TICKETS.map((t, i) => (
+              <TicketRow
+                key={t.id}
+                ticket={t}
+                border={i < TICKETS.length - 1}
+                delay={i * 0.05}
+                onOpen={() => setSelectedTicket(t)}
+              />
+            ))}
+          </div>
+        </Card>
+      </motion.div>
 
       {/* FAQ */}
-      <Card>
-        <h2 className="text-sm font-semibold text-text-primary">Preguntas frecuentes</h2>
-        <p className="text-xs text-text-muted mt-0.5 mb-5">Respuestas a las dudas más comunes</p>
-        <div>
-          {FAQ_ITEMS.map(item => (
-            <FaqAccordionItem key={item.id} item={item} />
-          ))}
-        </div>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12, duration: 0.35, ease: 'easeOut' }}
+      >
+        <Card>
+          <h2 className="text-sm font-semibold text-text-primary">Preguntas frecuentes</h2>
+          <p className="text-xs text-text-muted mt-0.5 mb-5">Respuestas a las dudas más comunes</p>
+          <div>
+            {FAQ_ITEMS.map(item => (
+              <FaqAccordionItem key={item.id} item={item} />
+            ))}
+          </div>
+        </Card>
+      </motion.div>
 
       {/* Contact cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {CONTACT_ITEMS.map(({ icon: Icon, label, value, note }) => (
-          <Card key={label} className="flex flex-col gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-              <Icon className="w-4 h-4 text-accent-blue" />
-            </div>
-            <div>
-              <p className="text-2xs font-semibold text-text-muted uppercase tracking-wider">{label}</p>
-              <p className="text-sm font-semibold text-text-primary mt-0.5">{value}</p>
-              <p className="text-xs text-text-muted mt-0.5">{note}</p>
-            </div>
-          </Card>
+        {CONTACT_ITEMS.map(({ icon: Icon, label, value, note, href, live }, i) => (
+          <motion.div
+            key={label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18 + i * 0.06, duration: 0.3, ease: 'easeOut' }}
+          >
+            <Card
+              hover={!!href}
+              onClick={href ? () => { window.location.href = href } : undefined}
+              className="flex flex-col gap-3"
+            >
+              <div className="w-8 h-8 rounded-lg bg-accent-blue/10 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-accent-blue" />
+              </div>
+              <div>
+                <p className="text-2xs font-semibold text-text-muted uppercase tracking-wider">{label}</p>
+                {live ? (
+                  <Badge color="green" dot pulse className="mt-1">{value}</Badge>
+                ) : (
+                  <p className="text-sm font-semibold text-text-primary mt-0.5">{value}</p>
+                )}
+                <p className="text-xs text-text-muted mt-0.5">{note}</p>
+              </div>
+            </Card>
+          </motion.div>
         ))}
       </div>
-    </motion.div>
+
+      <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} />
+    </div>
   )
 }

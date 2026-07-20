@@ -11,6 +11,7 @@ import EmptyState from '../components/EmptyState'
 import Timeline from '../components/Timeline'
 import Modal from '../components/Modal'
 import Button from '../components/Button'
+import { Skeleton, CardSkeleton, TableSkeleton } from '../components/Skeleton'
 import { cn } from '../lib/cn'
 import { useApi } from '../hooks/useApi'
 import { useContactMutations } from '../hooks/useContacts'
@@ -65,12 +66,31 @@ function StatsBar({ contacts }: { contacts: Contact[] }) {
 
   return (
     <div className="grid grid-cols-4 rounded-xl overflow-hidden border border-border-subtle divide-x divide-border-subtle">
-      {stats.map(s => (
-        <div key={s.label} className="flex flex-col items-center py-3.5 px-2 bg-glass-subtle">
+      {stats.map((s, i) => (
+        <motion.div
+          key={s.label}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05, duration: 0.25 }}
+          className="flex flex-col items-center py-3.5 px-2 bg-glass-subtle"
+        >
           <span className={cn('text-2xl font-bold tabular-nums leading-none mb-1', s.accent)}>
             {s.value}
           </span>
           <span className="text-[10px] text-text-muted uppercase tracking-wider">{s.label}</span>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+function StatsBarSkeleton() {
+  return (
+    <div className="grid grid-cols-4 rounded-xl overflow-hidden border border-border-subtle divide-x divide-border-subtle">
+      {[0, 1, 2, 3].map(i => (
+        <div key={i} className="flex flex-col items-center gap-2 py-4 px-2 bg-glass-subtle">
+          <Skeleton className="h-6 w-9" />
+          <Skeleton className="h-2 w-12" />
         </div>
       ))}
     </div>
@@ -100,7 +120,7 @@ function ContactRow({
       </div>
 
       <div className="hidden md:flex flex-col items-end gap-0.5 shrink-0">
-        <p className="text-xs text-text-secondary font-mono">{contact.phone}</p>
+        <p className="text-xs text-text-secondary font-mono tabular-nums">{contact.phone}</p>
         <p className="text-[10px] text-text-muted">{timeAgo(contact.updatedAt)}</p>
       </div>
 
@@ -121,11 +141,15 @@ function ContactCard({
   const tag = contactTag(contact)
   return (
     <motion.div
+      role="button"
+      tabIndex={0}
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 400, damping: 25 }}
       onClick={onClick}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       className="glass rounded-xl p-4 cursor-pointer flex flex-col gap-3 group"
     >
       <div className="flex items-start justify-between gap-2">
@@ -140,7 +164,7 @@ function ContactCard({
           {contact.name}
         </p>
         <p className="text-xs text-text-muted truncate mt-0.5">{contact.email}</p>
-        <p className="text-xs text-text-muted/70 truncate mt-0.5 font-mono">{contact.phone}</p>
+        <p className="text-xs text-text-muted/70 truncate mt-0.5 font-mono tabular-nums">{contact.phone}</p>
       </div>
 
       <div className="flex items-center justify-between pt-2.5 border-t border-border-subtle">
@@ -240,7 +264,7 @@ function ContactDrawer({
                 </a>
                 <a
                   href={`tel:${contact.phone}`}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg glass text-sm text-text-secondary hover:text-accent-blue transition-colors group font-mono"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg glass text-sm text-text-secondary hover:text-accent-blue transition-colors group font-mono tabular-nums"
                 >
                   <Phone className="w-3.5 h-3.5 shrink-0 text-text-muted group-hover:text-accent-blue transition-colors font-sans" />
                   <span>{contact.phone}</span>
@@ -270,14 +294,20 @@ function ContactDrawer({
                     label: 'Status',
                     value: tag === 'client' ? 'Client' : 'Lead',
                   },
-                ].map(item => (
-                  <div key={item.label} className="glass rounded-lg p-3">
+                ].map((item, i) => (
+                  <motion.div
+                    key={item.label}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.22 }}
+                    className="glass rounded-lg p-3"
+                  >
                     <div className="flex items-center gap-1.5 mb-1.5">
                       {item.icon}
                       <p className="text-[10px] text-text-muted uppercase tracking-wider">{item.label}</p>
                     </div>
-                    <p className="text-sm font-semibold text-text-primary">{item.value}</p>
-                  </div>
+                    <p className="text-sm font-semibold text-text-primary tabular-nums">{item.value}</p>
+                  </motion.div>
                 ))}
               </div>
 
@@ -286,11 +316,7 @@ function ContactDrawer({
                 <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold px-1 mb-3">
                   Activity
                 </p>
-                {timelineItems.length > 0 ? (
-                  <Timeline items={timelineItems} />
-                ) : (
-                  <p className="text-sm text-text-muted italic px-1">No activities yet.</p>
-                )}
+                <Timeline items={timelineItems} emptyMessage="No activities yet." />
               </div>
             </div>
 
@@ -426,10 +452,14 @@ export default function Contacts() {
   const [viewMode,   setViewMode]   = useState<'list' | 'grid'>('list')
   const [newOpen,    setNewOpen]    = useState(false)
 
-  const { data, error, reload } = useApi<ContactList>('/contacts')
+  const { data, error, loading, reload } = useApi<ContactList>('/contacts')
   // Honest empty array on failure — never a fabricated roster (carta §4 "Regla
   // transversal de honestidad de producto": ningun fallback simulado en ninguna pagina CRM).
   const contacts        = data?.contacts ?? []
+  // Distinguishes "still waiting on the first response" from "server answered
+  // with zero rows" — without this, the empty state would flash on every cold
+  // load before real data (or a real empty roster) arrives.
+  const initialLoading  = loading && !data
 
   const { data: detail } = useApi<ContactDetail>(
     selectedId ? `/contacts/${selectedId}` : '',
@@ -459,9 +489,13 @@ export default function Contacts() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Contacts</h1>
-          <p className="text-sm text-text-muted mt-0.5">
-            {contacts.length} contacts in CRM
-          </p>
+          {initialLoading ? (
+            <Skeleton className="h-4 w-32 mt-1.5" />
+          ) : (
+            <p className="text-sm text-text-muted mt-0.5">
+              {contacts.length} contacts in CRM
+            </p>
+          )}
         </div>
         <Button
           size="sm"
@@ -473,7 +507,7 @@ export default function Contacts() {
       </div>
 
       {/* Stats */}
-      <StatsBar contacts={contacts} />
+      {initialLoading ? <StatsBarSkeleton /> : <StatsBar contacts={contacts} />}
 
       {/* Search + view toggle */}
       <div className="flex gap-3 items-center">
@@ -485,7 +519,10 @@ export default function Contacts() {
           className="flex-1"
         />
         <div className="flex gap-0.5 glass rounded-lg p-1 shrink-0">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             onClick={() => setViewMode('list')}
             className={cn(
               'p-1.5 rounded-md transition-colors',
@@ -494,10 +531,14 @@ export default function Contacts() {
                 : 'text-text-muted hover:text-text-secondary',
             )}
             aria-label="List view"
+            aria-pressed={viewMode === 'list'}
           >
             <List className="w-4 h-4" />
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             onClick={() => setViewMode('grid')}
             className={cn(
               'p-1.5 rounded-md transition-colors',
@@ -506,15 +547,38 @@ export default function Contacts() {
                 : 'text-text-muted hover:text-text-secondary',
             )}
             aria-label="Grid view"
+            aria-pressed={viewMode === 'grid'}
           >
             <LayoutGrid className="w-4 h-4" />
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {filtered.length === 0 ? (
+        {initialLoading ? (
+          viewMode === 'grid' ? (
+            <motion.div
+              key="loading-grid"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
+            >
+              {[...Array(8)].map((_, i) => <CardSkeleton key={i} />)}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="loading-list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="glass rounded-xl p-4"
+            >
+              <TableSkeleton rows={6} />
+            </motion.div>
+          )
+        ) : filtered.length === 0 ? (
           <EmptyState
             key="empty"
             icon={<Users className="w-6 h-6" />}

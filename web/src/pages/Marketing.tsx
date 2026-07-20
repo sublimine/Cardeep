@@ -11,27 +11,36 @@
 // texto libre); cada afirmación numérica del copy trae su fuente. 503 honesto cuando el
 // proveedor LLM no está configurado (frontera de GASTO, plans/cardeep-omni/07-marketing.md
 // F5) — nunca una plantilla disfrazada de generación real.
-import { useCallback, useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import {
-  AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Gauge,
+  AlertTriangle, CheckCircle2, ChevronDown, Download, ExternalLink, FileText, Gauge,
   Radio, RefreshCw, ShieldCheck, Sparkles, Lock,
 } from 'lucide-react'
 import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
 import Button from '../components/Button'
+import Select from '../components/Select'
+import Table from '../components/Table'
+import { Badge } from '../components/Badge'
+import { Skeleton } from '../components/Skeleton'
+import { Tooltip } from '../components/Tooltip'
 import { PageSkeleton } from '../components/LoadingSpinner'
 import PremiumGate from '../components/PremiumGate'
 import { useAuthContext } from '../auth/AuthContext'
 import {
   cardeep, CardeepApiError,
-  type ListingAuditItem, type ListingAuditMeta, type ChannelRadar,
+  type ListingAuditItem, type ListingAuditMeta, type ChannelRadar, type ChannelRadarPlatform,
   type ChannelCoverageBand, type MarketingFeedTarget, type FeedReport,
 } from '../api/cardeep'
 import { marketingOps, AdCopyNotConfiguredError, type AdCopyResult } from '../api/marketingOps'
 import type { Plan } from '../types'
 import { ACCENT, GOOD, BAD, WARN } from '../lib/theme'
 import { cn } from '../lib/cn'
+
+// Shared focus-visible ring — mirrors Button.tsx's own focus treatment so every
+// ad-hoc interactive element on this page (links, icon toggles) matches house style.
+const FOCUS_RING = 'outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary'
 
 function errorMessage(err: unknown): string {
   if (err instanceof CardeepApiError) return err.message
@@ -43,6 +52,20 @@ function scoreColor(score: number): string {
   if (score >= 80) return GOOD
   if (score >= 50) return WARN
   return BAD
+}
+
+// ---------------------------------------------------------------------------
+// AnimNum — spring count-up for hero-style figures (same pattern as
+// Inteligencia's/Api's AnimNum; kept local since it isn't extracted into a
+// shared component yet).
+// ---------------------------------------------------------------------------
+
+function AnimNum({ to, decimals = 0, prefix = '', suffix = '' }: { to: number; decimals?: number; prefix?: string; suffix?: string }) {
+  const mv = useMotionValue(0)
+  const sp = useSpring(mv, { stiffness: 90, damping: 18 })
+  const d = useTransform(sp, v => `${prefix}${decimals ? v.toFixed(decimals) : Math.round(v)}${suffix}`)
+  useEffect(() => { mv.set(to) }, [to, mv])
+  return <motion.span>{d}</motion.span>
 }
 
 // ---------------------------------------------------------------------------
@@ -86,27 +109,33 @@ function HeaderKpis({ meta }: { meta: ListingAuditMeta }) {
   const cards = [
     {
       icon: Gauge, label: 'Nota media de anuncio',
-      value: meta.avg_score != null ? `${meta.avg_score.toFixed(0)}/100` : 'Sin datos',
-      sub: `${meta.audited_count.toLocaleString()} de ${meta.total_available.toLocaleString()} coches auditados`,
+      node: meta.avg_score != null ? <AnimNum to={meta.avg_score} suffix="/100" /> : 'Sin datos',
+      sub: `${meta.audited_count.toLocaleString('es-ES')} de ${meta.total_available.toLocaleString('es-ES')} coches auditados`,
       color: meta.avg_score != null ? scoreColor(meta.avg_score) : 'var(--text-muted)',
     },
     {
       icon: AlertTriangle, label: 'Precio incoherente entre plataformas',
-      value: meta.incoherent_price_count.toLocaleString(),
-      sub: 'Google rechaza el feed por esto', color: meta.incoherent_price_count > 0 ? BAD : GOOD,
+      node: <AnimNum to={meta.incoherent_price_count} />,
+      sub: 'Google rechaza el feed por esto',
+      color: meta.incoherent_price_count > 0 ? BAD : GOOD,
     },
   ]
   return (
     <div className="mb-5 grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
       {cards.map((c, i) => (
-        <motion.div key={c.label} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-          <Card className="!p-4">
+        <motion.div
+          key={c.label}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.06, duration: 0.34, ease: [0.32, 0.72, 0, 1] }}
+        >
+          <Card hover className="!p-4">
             <div className="mb-2 flex items-center gap-1.5">
               <c.icon className="h-3.5 w-3.5" style={{ color: c.color }} />
               <span className="text-[9.5px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--text-muted)' }}>{c.label}</span>
             </div>
-            <div className="mb-1 text-[26px] font-extrabold leading-none" style={{ color: c.color }}>{c.value}</div>
-            <div className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{c.sub}</div>
+            <div className="mb-1 text-[26px] font-extrabold leading-none tabular-nums" style={{ color: c.color }}>{c.node}</div>
+            <div className="text-[10.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{c.sub}</div>
           </Card>
         </motion.div>
       ))}
@@ -118,17 +147,30 @@ function HeaderKpis({ meta }: { meta: ListingAuditMeta }) {
 // Bloque 1 — "Arregla estos primero"
 // ---------------------------------------------------------------------------
 
-function AuditRow({ item }: { item: ListingAuditItem }) {
+function AuditRow({ item, index }: { item: ListingAuditItem; index: number }) {
   const [expanded, setExpanded] = useState(false)
   const failed = item.checks.filter(c => !c.passed)
   const color = scoreColor(item.score)
+  // Worst-first list (docstring above): the first row is the single highest-priority
+  // fix, so it earns the glow treatment — emphasis, not sentiment (matches how Api.tsx
+  // reserves `glow` for "the featured item", never for "this number is good news").
+  const isTopPriority = index === 0
 
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className="!p-3.5">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.03, 0.4), duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+    >
+      <Card hover glow={isTopPriority} className="!p-3.5">
         <div className="flex items-start gap-3">
           {item.photo_url
-            ? <img src={item.photo_url} alt="" className="h-14 w-20 shrink-0 rounded-lg object-cover" style={{ background: 'var(--bg-surface)' }} />
+            ? <img
+                src={item.photo_url}
+                alt={item.title ?? `${item.make ?? ''} ${item.model ?? ''}`.trim()}
+                className="h-14 w-20 shrink-0 rounded-lg object-cover"
+                style={{ background: 'var(--bg-surface)' }}
+              />
             : <div className="h-14 w-20 shrink-0 rounded-lg" style={{ background: 'var(--bg-surface)' }} />}
 
           <div className="min-w-0 flex-1">
@@ -137,42 +179,67 @@ function AuditRow({ item }: { item: ListingAuditItem }) {
                 <div className="truncate text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>
                   {item.title ?? (`${item.make ?? ''} ${item.model ?? ''}`.trim() || 'Sin título')}
                 </div>
-                <div className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
+                <div className="text-[10.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
                   {item.year ?? '—'} · {item.price != null ? `${item.price.toLocaleString('es-ES')} ${item.currency ?? '€'}` : 'sin precio'}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <div className="text-right">
-                  <div className="text-[20px] font-extrabold leading-none" style={{ color }}>{item.score}</div>
+                  <div className="text-[20px] font-extrabold leading-none tabular-nums" style={{ color }}>{item.score}</div>
                   <div className="text-[9px]" style={{ color: 'var(--text-muted)' }}>/100</div>
                 </div>
-                <a href={item.deep_link} target="_blank" rel="noreferrer"
-                   className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium"
-                   style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}>
+                <motion.a
+                  href={item.deep_link} target="_blank" rel="noreferrer"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={cn('flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium', FOCUS_RING)}
+                  style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
+                >
                   Ver anuncio <ExternalLink className="h-3 w-3" />
-                </a>
+                </motion.a>
               </div>
             </div>
 
             {failed.length > 0 ? (
-              <button onClick={() => setExpanded(e => !e)} className="mt-2 text-left text-[11px] font-medium" style={{ color: BAD }}>
-                {failed.length} {failed.length === 1 ? 'problema' : 'problemas'} detectado{failed.length === 1 ? '' : 's'} {expanded ? '▲' : '▼'}
+              <button
+                onClick={() => setExpanded(e => !e)}
+                aria-expanded={expanded}
+                className={cn('mt-2 flex items-center gap-1.5 rounded-md', FOCUS_RING)}
+              >
+                <Badge color="red">
+                  <AlertTriangle className="h-3 w-3" />
+                  {failed.length} {failed.length === 1 ? 'problema' : 'problemas'} detectado{failed.length === 1 ? '' : 's'}
+                </Badge>
+                <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.2 }} className="flex">
+                  <ChevronDown className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+                </motion.span>
               </button>
             ) : (
-              <div className="mt-2 flex items-center gap-1.5 text-[11px]" style={{ color: GOOD }}>
+              <Badge color="green" className="mt-2">
                 <CheckCircle2 className="h-3 w-3" /> Anuncio impecable
-              </div>
+              </Badge>
             )}
 
-            {expanded && (
-              <ul className="mt-2 flex flex-col gap-1 border-t pt-2" style={{ borderColor: 'var(--border-subtle)' }}>
-                {failed.map(c => (
-                  <li key={c.check_id} className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
-                    <span style={{ color: BAD }}>·</span> {c.message}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <AnimatePresence initial={false}>
+              {expanded && failed.length > 0 && (
+                <motion.div
+                  key="checks"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+                  className="overflow-hidden"
+                >
+                  <ul className="mt-2 flex flex-col gap-1 border-t pt-2" style={{ borderColor: 'var(--border-subtle)' }}>
+                    {failed.map(c => (
+                      <li key={c.check_id} className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+                        <span style={{ color: BAD }}>·</span> {c.message}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </Card>
@@ -181,17 +248,21 @@ function AuditRow({ item }: { item: ListingAuditItem }) {
 }
 
 function FixThisFirstBlock({ items }: { items: ListingAuditItem[] }) {
+  const shown = items.slice(0, 20)
   return (
     <div className="mb-6">
-      <div className="mb-3">
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-3">
         <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Arregla estos primero</h2>
-        <p className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>Tus coches con peor nota de anuncio, ordenados de peor a mejor.</p>
-      </div>
+        <p className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
+          Tus coches con peor nota de anuncio, ordenados de peor a mejor.
+          {items.length > 20 && ` Mostrando los 20 con peor nota de ${items.length.toLocaleString('es-ES')} cargados.`}
+        </p>
+      </motion.div>
       {items.length === 0 ? (
         <EmptyState icon={<ShieldCheck className="h-6 w-6" />} title="Aún sin auditoría" message="El motor de auditoría todavía no ha procesado tu inventario." />
       ) : (
         <div className="flex flex-col gap-2.5">
-          {items.slice(0, 20).map(item => <AuditRow key={item.vehicle_ulid} item={item} />)}
+          {shown.map((item, i) => <AuditRow key={item.vehicle_ulid} item={item} index={i} />)}
         </div>
       )}
     </div>
@@ -204,50 +275,54 @@ function FixThisFirstBlock({ items }: { items: ListingAuditItem[] }) {
 
 const BAND_COLOR: Record<ChannelCoverageBand, string> = { verde: GOOD, ambar: WARN, rojo: BAD }
 
+// Column defs for the shared Table — moved out of bespoke <table> markup so this
+// block gets Table's built-in staggered row entrance for free (dataviz/foundation
+// ambition), same as every other list on this page.
+const RADAR_COLUMNS: { key: string; header: string; render: (p: ChannelRadarPlatform) => ReactNode }[] = [
+  {
+    key: 'platform', header: 'Plataforma',
+    render: p => <span className="text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{p.trade_name ?? p.cdp_code}</span>,
+  },
+  {
+    key: 'coverage', header: 'Cobertura',
+    render: p => (
+      <div className="flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: BAND_COLOR[p.band] }} />
+        <span className="text-[12px] font-bold tabular-nums" style={{ color: BAND_COLOR[p.band] }}>{Math.round(p.coverage_pct * 100)}%</span>
+        <span className="text-[10.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>({p.n_listed.toLocaleString('es-ES')})</span>
+      </div>
+    ),
+  },
+  {
+    key: 'divergent', header: 'Divergencias',
+    render: p => <span className="text-[12px] tabular-nums" style={{ color: p.n_divergent > 0 ? BAD : 'var(--text-secondary)' }}>{p.n_divergent.toLocaleString('es-ES')}</span>,
+  },
+  {
+    key: 'days', header: 'Días hasta baja (mediana)',
+    render: p => p.median_days_to_gone != null
+      ? (
+        <span className="text-[12px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>
+          {p.median_days_to_gone.toFixed(0)} d <span style={{ color: 'var(--text-muted)' }}>(N={p.median_days_to_gone_n})</span>
+        </span>
+      )
+      : <span className="text-[12px]" style={{ color: 'var(--text-muted)' }}>{p.median_days_to_gone_reason}</span>,
+  },
+]
+
 function ChannelRadarBlock({ radar, plan }: { radar: ChannelRadar | null; plan: Plan }) {
   return (
     <div className="mb-6">
-      <div className="mb-3">
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-3">
         <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Radar de canales</h2>
         <p className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>Dónde estás publicado, con qué divergencia de precio, y cuánto tardan en venderse coches como los tuyos en cada plataforma.</p>
-      </div>
+      </motion.div>
 
       <PremiumGate feature="channel-radar" userPlan={plan} what="Desglose completo por plataforma: divergencia de precio y días-hasta-baja con su N">
         {!radar || radar.platforms.length === 0 ? (
           <EmptyState icon={<Radio className="h-6 w-6" />} title="Sin presencia en plataformas todavía" message="Ninguno de tus coches aparece cross-listado en otro portal ahora mismo." />
         ) : (
-          <Card className="!p-0 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    {['Plataforma', 'Cobertura', 'Divergencias', 'Días hasta baja (mediana)'].map(h => (
-                      <th key={h} className="whitespace-nowrap p-3 text-[10.5px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {radar.platforms.map(p => (
-                    <tr key={p.cdp_code} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td className="p-3 text-[12px] font-semibold" style={{ color: 'var(--text-primary)' }}>{p.trade_name ?? p.cdp_code}</td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full" style={{ background: BAND_COLOR[p.band] }} />
-                          <span className="text-[12px] font-bold" style={{ color: BAND_COLOR[p.band] }}>{Math.round(p.coverage_pct * 100)}%</span>
-                          <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>({p.n_listed})</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-[12px]" style={{ color: p.n_divergent > 0 ? BAD : 'var(--text-secondary)' }}>{p.n_divergent}</td>
-                      <td className="p-3 text-[12px]" style={{ color: 'var(--text-secondary)' }}>
-                        {p.median_days_to_gone != null
-                          ? <>{p.median_days_to_gone.toFixed(0)} d <span style={{ color: 'var(--text-muted)' }}>(N={p.median_days_to_gone_n})</span></>
-                          : <span style={{ color: 'var(--text-muted)' }}>{p.median_days_to_gone_reason}</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <Card>
+            <Table columns={RADAR_COLUMNS} data={radar.platforms} keyExtractor={p => p.cdp_code} />
           </Card>
         )}
       </PremiumGate>
@@ -265,7 +340,7 @@ const FEED_TARGETS: { id: MarketingFeedTarget; label: string; desc: string }[] =
   { id: 'schema_org_jsonld', label: 'Datos estructurados', desc: 'JSON-LD schema.org para tu web' },
 ]
 
-function FeedCard({ cdp, target, label, desc }: { cdp: string; target: MarketingFeedTarget; label: string; desc: string }) {
+function FeedCard({ cdp, target, label, desc, index }: { cdp: string; target: MarketingFeedTarget; label: string; desc: string; index: number }) {
   const [report, setReport] = useState<FeedReport | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -281,47 +356,57 @@ function FeedCard({ cdp, target, label, desc }: { cdp: string; target: Marketing
   const color = validPct == null ? 'var(--text-muted)' : validPct >= 80 ? GOOD : validPct >= 40 ? WARN : BAD
 
   return (
-    <Card className="!p-4">
-      <div className="mb-2 flex items-center gap-1.5">
-        <FileText className="h-3.5 w-3.5" style={{ color: ACCENT }} />
-        <span className="text-[12.5px] font-bold" style={{ color: 'var(--text-primary)' }}>{label}</span>
-      </div>
-      <p className="mb-3 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{desc}</p>
-
-      {loading ? (
-        <div className="mb-3 h-6 w-16 animate-pulse rounded" style={{ background: 'var(--bg-surface)' }} />
-      ) : (
-        <div className="mb-3 text-[22px] font-extrabold leading-none" style={{ color }}>
-          {validPct != null ? `${validPct.toFixed(0)}%` : '—'}
-          <span className="ml-1.5 text-[10.5px] font-normal" style={{ color: 'var(--text-muted)' }}>válido</span>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+    >
+      <Card hover className="!p-4">
+        <div className="mb-2 flex items-center gap-1.5">
+          <FileText className="h-3.5 w-3.5" style={{ color: ACCENT }} />
+          <span className="text-[12.5px] font-bold" style={{ color: 'var(--text-primary)' }}>{label}</span>
         </div>
-      )}
-      {report && report.item_count > report.valid_count && (
-        <p className="mb-3 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
-          {report.item_count - report.valid_count} de {report.item_count} coches excluidos (ver informe al descargar)
-        </p>
-      )}
+        <p className="mb-3 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{desc}</p>
 
-      <a href={cardeep.feedDownloadUrl(cdp, target)} download
-         className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[11.5px] font-semibold"
-         style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}>
-        <Download className="h-3.5 w-3.5" /> Descargar
-      </a>
-    </Card>
+        {loading ? (
+          <Skeleton className="mb-3 h-6 w-16" />
+        ) : (
+          <div className="mb-3 text-[22px] font-extrabold leading-none tabular-nums" style={{ color }}>
+            {validPct != null ? <AnimNum to={validPct} suffix="%" /> : '—'}
+            <span className="ml-1.5 text-[10.5px] font-normal" style={{ color: 'var(--text-muted)' }}>válido</span>
+          </div>
+        )}
+        {report && report.item_count > report.valid_count && (
+          <p className="mb-3 text-[10.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
+            {(report.item_count - report.valid_count).toLocaleString('es-ES')} de {report.item_count.toLocaleString('es-ES')} coches excluidos (ver informe al descargar)
+          </p>
+        )}
+
+        <motion.a
+          href={cardeep.feedDownloadUrl(cdp, target)} download
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className={cn('flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[11.5px] font-semibold', FOCUS_RING)}
+          style={{ background: `${ACCENT}17`, border: `1px solid ${ACCENT}38`, color: ACCENT }}
+        >
+          <Download className="h-3.5 w-3.5" /> Descargar
+        </motion.a>
+      </Card>
+    </motion.div>
   )
 }
 
 function FeedBlock({ cdp }: { cdp: string }) {
   return (
     <div className="mb-6">
-      <div className="mb-3">
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-3">
         <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Feed listo para anunciarte</h2>
         <p className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
           Cardeep genera el fichero; la campaña la creas y pagas tú en tu cuenta de Google/Meta.
         </p>
-      </div>
+      </motion.div>
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-        {FEED_TARGETS.map(t => <FeedCard key={t.id} cdp={cdp} target={t.id} label={t.label} desc={t.desc} />)}
+        {FEED_TARGETS.map((t, i) => <FeedCard key={t.id} cdp={cdp} target={t.id} label={t.label} desc={t.desc} index={i} />)}
       </div>
     </div>
   )
@@ -334,10 +419,21 @@ function FeedBlock({ cdp }: { cdp: string }) {
 function AdCopyClaimsList({ claims }: { claims: AdCopyResult['claims'] }) {
   return (
     <ul className="mt-2 flex flex-col gap-1">
-      {claims.map(c => (
-        <li key={c.claim_id} className="text-[10.5px]" style={{ color: 'var(--text-muted)' }} title={c.provenance}>
-          <span style={{ color: ACCENT }}>●</span> {c.text}
-        </li>
+      {claims.map((c, i) => (
+        <motion.li
+          key={c.claim_id}
+          initial={{ opacity: 0, x: -4 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.08 + i * 0.05, duration: 0.22 }}
+          className="text-[10.5px]"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <Tooltip content={c.provenance}>
+            <span className="cursor-help">
+              <span style={{ color: ACCENT }}>●</span> {c.text}
+            </span>
+          </Tooltip>
+        </motion.li>
       ))}
     </ul>
   )
@@ -365,65 +461,91 @@ function AdCopyBlock({ items }: { items: ListingAuditItem[] }) {
       .finally(() => setLoading(false))
   }, [selected])
 
+  const vehicleOptions = items.map(i => ({
+    value: i.vehicle_ulid,
+    label: `${i.title ?? `${i.make ?? ''} ${i.model ?? ''}`.trim()}${i.year ? ` (${i.year})` : ''}`,
+  }))
+
   return (
     <div className="mb-6">
-      <div className="mb-3">
+      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mb-3">
         <h2 className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>Descripción con pruebas</h2>
         <p className="text-[11.5px]" style={{ color: 'var(--text-muted)' }}>
           Elige un coche de tu inventario. Cada afirmación del texto trae su fuente — nunca un dato inventado.
         </p>
-      </div>
+      </motion.div>
 
       <Card className="!p-4">
         <div className="flex flex-wrap items-center gap-2.5">
-          <select
-            value={selected}
-            onChange={e => { setSelected(e.target.value); setResult(null); setNotConfigured(null); setError(null) }}
-            className="min-w-[240px] flex-1 rounded-lg px-3 py-2 text-[12px]"
-            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
-          >
-            <option value="">Selecciona un coche de tu inventario…</option>
-            {items.map(i => (
-              <option key={i.vehicle_ulid} value={i.vehicle_ulid}>
-                {i.title ?? `${i.make ?? ''} ${i.model ?? ''}`.trim()} {i.year ? `(${i.year})` : ''}
-              </option>
-            ))}
-          </select>
-          <Button onClick={generate} disabled={!selected || loading} icon={<Sparkles className="h-3.5 w-3.5" />}>
+          <div className="min-w-[240px] flex-1">
+            <Select
+              value={selected}
+              onChange={e => { setSelected(e.target.value); setResult(null); setNotConfigured(null); setError(null) }}
+              options={vehicleOptions}
+              placeholder="Selecciona un coche de tu inventario…"
+            />
+          </div>
+          <Button onClick={generate} disabled={!selected} loading={loading} icon={<Sparkles className="h-3.5 w-3.5" />}>
             {loading ? 'Generando…' : 'Generar descripción'}
           </Button>
         </div>
 
-        {notConfigured && (
-          <div className="mt-3.5 flex items-start gap-2 rounded-lg p-3" style={{ background: `${WARN}14`, border: `1px solid ${WARN}38` }}>
-            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: WARN }} />
-            <p className="text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>
-              Generación no disponible todavía: requiere que el propietario active un proveedor de IA y apruebe
-              el presupuesto por generación. El motor está listo — solo falta esa activación.
-            </p>
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {notConfigured && (
+            <motion.div
+              key="not-configured"
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22 }}
+              className="mt-3.5 flex items-start gap-2 rounded-lg p-3"
+              style={{ background: `${WARN}14`, border: `1px solid ${WARN}38` }}
+            >
+              <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: WARN }} />
+              <p className="text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>
+                Generación no disponible todavía: requiere que el propietario active un proveedor de IA y apruebe
+                el presupuesto por generación. El motor está listo — solo falta esa activación.
+              </p>
+            </motion.div>
+          )}
 
-        {error && (
-          <div className="mt-3.5 rounded-lg p-3" style={{ background: `${BAD}14`, border: `1px solid ${BAD}38` }}>
-            <p className="text-[11.5px]" style={{ color: BAD }}>{error}</p>
-          </div>
-        )}
+          {error && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22 }}
+              className="mt-3.5 rounded-lg p-3"
+              style={{ background: `${BAD}14`, border: `1px solid ${BAD}38` }}
+            >
+              <p className="text-[11.5px]" style={{ color: BAD }}>{error}</p>
+            </motion.div>
+          )}
 
-        {result && result.status === 'rejected' && (
-          <div className="mt-3.5 rounded-lg p-3" style={{ background: `${BAD}14`, border: `1px solid ${BAD}38` }}>
-            <p className="text-[11.5px] font-semibold" style={{ color: BAD }}>
-              Generación rechazada: contenía cifras sin respaldo verificado ({result.unbacked_numerals.join(', ')}).
-            </p>
-          </div>
-        )}
+          {result && result.status === 'rejected' && (
+            <motion.div
+              key="rejected"
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22 }}
+              className="mt-3.5 rounded-lg p-3"
+              style={{ background: `${BAD}14`, border: `1px solid ${BAD}38` }}
+            >
+              <p className="text-[11.5px] font-semibold" style={{ color: BAD }}>
+                Generación rechazada: contenía cifras sin respaldo verificado ({result.unbacked_numerals.join(', ')}).
+              </p>
+            </motion.div>
+          )}
 
-        {result && result.status === 'grounded' && result.output_text && (
-          <div className="mt-3.5 rounded-lg p-3.5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-            <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{result.output_text}</p>
-            <AdCopyClaimsList claims={result.claims} />
-          </div>
-        )}
+          {result && result.status === 'grounded' && result.output_text && (
+            <motion.div
+              key="grounded"
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22 }}
+              className="mt-3.5 rounded-lg p-3.5"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+            >
+              <p className="text-[12.5px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{result.output_text}</p>
+              <AdCopyClaimsList claims={result.claims} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
     </div>
   )
@@ -448,15 +570,27 @@ function MarketingForDealer({ cdp, plan }: { cdp: string; plan: Plan }) {
 
   return (
     <div className="mx-auto p-[20px_24px_48px]" style={{ maxWidth: 1400 }}>
-      <div className="mb-5 flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+        className="mb-5 flex items-center justify-between"
+      >
         <div>
           <h1 className="mb-1 text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>Tus anuncios, auditados contra el mercado real</h1>
           <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>Cada afirmación anclada en el censo cross-plataforma verificado — nunca un texto genérico.</p>
         </div>
-        <button onClick={reload} className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]" style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+        <motion.button
+          onClick={reload}
+          disabled={loading}
+          whileHover={loading ? undefined : { scale: 1.03, background: 'var(--bg-hover)' }}
+          whileTap={loading ? undefined : { scale: 0.96 }}
+          className={cn('flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] disabled:opacity-50 disabled:pointer-events-none', FOCUS_RING)}
+          style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}
+        >
           <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} /> Actualizar
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {meta && <HeaderKpis meta={meta} />}
       <FixThisFirstBlock items={items} />

@@ -105,11 +105,18 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   )
 }
 
-function SectionCard({ children }: { children: React.ReactNode }) {
+/** Staggered entrance wrapper for repeated list rows (sessions/members/invoices) —
+ * mirrors the KPI-tile convention used elsewhere (Invoices.tsx, Inteligencia.tsx):
+ * an outer motion.div for mount animation, an inner Card for hover/shadow. */
+function RowReveal({ children, delay }: { children: React.ReactNode; delay: number }) {
   return (
-    <div className="p-4 rounded-lg border border-border-subtle bg-bg-surface space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.28, ease: 'easeOut' }}
+    >
       {children}
-    </div>
+    </motion.div>
   )
 }
 
@@ -131,16 +138,16 @@ function GeneralTab() {
     <div className="space-y-8 max-w-lg">
       <div>
         <SectionTitle>Información personal</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <Input label="Nombre completo" value={name}  onChange={e => setName(e.target.value)}  />
           <Input label="Email"           value={email} onChange={e => setEmail(e.target.value)} type="email" />
           <Input label="Teléfono"        value={phone} onChange={e => setPhone(e.target.value)} type="tel" />
-        </SectionCard>
+        </Card>
       </div>
 
       <div>
         <SectionTitle>Empresa</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <Input label="Nombre empresa" value={company} onChange={e => setCompany(e.target.value)} />
           <Input label="NIF / VAT"       value={vat}    onChange={e => setVat(e.target.value)} />
           <Select
@@ -156,12 +163,12 @@ function GeneralTab() {
               { value: 'PT', label: 'Portugal'     },
             ]}
           />
-        </SectionCard>
+        </Card>
       </div>
 
       <div>
         <SectionTitle>Preferencias</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <Select
             label="Idioma"
             value={language}
@@ -184,7 +191,7 @@ function GeneralTab() {
               { value: 'Europe/London', label: 'Europa/Londres (UTC+1)' },
             ]}
           />
-        </SectionCard>
+        </Card>
       </div>
 
       <Button onClick={() => success('Configuración guardada')}>Guardar cambios</Button>
@@ -216,29 +223,29 @@ function NotificacionesTab() {
     <div className="space-y-8 max-w-lg">
       <div>
         <SectionTitle>Email</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <Switch checked={n.emailInquiries} onCheckedChange={() => toggle('emailInquiries')} label="Nuevas consultas"        description="Email al recibir una nueva consulta de un comprador" />
           <Switch checked={n.emailOffers}    onCheckedChange={() => toggle('emailOffers')}    label="Actualizaciones de oferta" description="Cambios de estado en ofertas enviadas" />
           <Switch checked={n.emailStale}     onCheckedChange={() => toggle('emailStale')}     label="Alertas de stock parado"  description="Vehículos con más de 60 días en stock" />
           <Switch checked={n.emailWeekly}    onCheckedChange={() => toggle('emailWeekly')}    label="Resumen semanal"          description="KPIs y métricas clave cada lunes por la mañana" />
-        </SectionCard>
+        </Card>
       </div>
 
       <div>
         <SectionTitle>In-app</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <Switch checked={n.appRealtime}  onCheckedChange={() => toggle('appRealtime')}  label="Tiempo real"          description="Notificaciones instantáneas en el panel lateral" />
           <Switch checked={n.appTeam}      onCheckedChange={() => toggle('appTeam')}      label="Actividad del equipo" description="Cuando un compañero actualiza un trato o vehículo" />
           <Switch checked={n.appReminders} onCheckedChange={() => toggle('appReminders')} label="Recordatorios"        description="Seguimientos y citas próximas" />
-        </SectionCard>
+        </Card>
       </div>
 
       <div>
         <SectionTitle>Móvil (Push)</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <Switch checked={n.pushEnabled} onCheckedChange={() => toggle('pushEnabled')} label="Push notifications" description="Activa las notificaciones push en tu dispositivo" />
           <Switch checked={n.pushUrgent}  onCheckedChange={() => toggle('pushUrgent')}  label="Solo urgencias"      description="Solo alertas críticas (requiere push activo)" disabled={!n.pushEnabled} />
-        </SectionCard>
+        </Card>
       </div>
 
       <Button onClick={() => success('Preferencias de notificación guardadas')}>Guardar preferencias</Button>
@@ -270,17 +277,17 @@ function SeguridadTab() {
     <div className="space-y-8 max-w-lg">
       <div>
         <SectionTitle>Cambiar contraseña</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <Input label="Contraseña actual"   type="password" placeholder="••••••••" value={pwd.current}  onChange={e => setPwd(p => ({ ...p, current:  e.target.value }))} />
           <Input label="Nueva contraseña"    type="password" placeholder="••••••••" value={pwd.next}     onChange={e => setPwd(p => ({ ...p, next:     e.target.value }))} hint="Mínimo 8 caracteres" />
           <Input label="Confirmar contraseña" type="password" placeholder="••••••••" value={pwd.confirm}  onChange={e => setPwd(p => ({ ...p, confirm:  e.target.value }))} error={pwd.confirm && pwd.next !== pwd.confirm ? 'Las contraseñas no coinciden' : undefined} />
           <Button onClick={changePassword} disabled={!pwdValid}>Actualizar contraseña</Button>
-        </SectionCard>
+        </Card>
       </div>
 
       <div>
         <SectionTitle>Autenticación en dos pasos</SectionTitle>
-        <div className="p-4 rounded-lg border border-border-subtle bg-bg-surface">
+        <Card>
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-text-primary">Autenticador TOTP</p>
@@ -288,38 +295,50 @@ function SeguridadTab() {
             </div>
             <Switch checked={twoFa} onCheckedChange={setTwoFa} />
           </div>
-          {twoFa && (
-            <p className="mt-3 text-xs text-text-secondary border-t border-border-subtle pt-3">
-              2FA activado. Necesitarás tu código de verificación en cada inicio de sesión.
-            </p>
-          )}
-        </div>
+          <AnimatePresence initial={false}>
+            {twoFa && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+                className="overflow-hidden"
+              >
+                <p className="mt-3 pt-3 text-xs text-text-secondary border-t border-border-subtle">
+                  2FA activado. Necesitarás tu código de verificación en cada inicio de sesión.
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Card>
       </div>
 
       <div>
         <SectionTitle>Sesiones activas</SectionTitle>
         <div className="space-y-2">
-          {sessions.map(sess => (
-            <div key={sess.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle bg-bg-surface">
-              <div className="w-8 h-8 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                {sess.os.includes('iPhone') ? (
-                  <Smartphone className="w-4 h-4 text-accent-blue" />
+          {sessions.map((sess, i) => (
+            <RowReveal key={sess.id} delay={i * 0.05}>
+              <Card hover className="!p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center shrink-0">
+                  {sess.os.includes('iPhone') ? (
+                    <Smartphone className="w-4 h-4 text-accent-blue" />
+                  ) : (
+                    <Monitor className="w-4 h-4 text-accent-blue" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-text-primary">{sess.browser} · {sess.os}</p>
+                  <p className="text-xs text-text-muted mt-0.5">{sess.location} · {sess.lastActive}</p>
+                </div>
+                {sess.current ? (
+                  <Badge color="green" dot>Actual</Badge>
                 ) : (
-                  <Monitor className="w-4 h-4 text-accent-blue" />
+                  <Button variant="ghost" size="sm" onClick={() => revokeSession(sess.id)} className="text-accent-rose hover:text-accent-rose shrink-0">
+                    Revocar
+                  </Button>
                 )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary">{sess.browser} · {sess.os}</p>
-                <p className="text-xs text-text-muted mt-0.5">{sess.location} · {sess.lastActive}</p>
-              </div>
-              {sess.current ? (
-                <Badge color="green" dot>Actual</Badge>
-              ) : (
-                <Button variant="ghost" size="sm" onClick={() => revokeSession(sess.id)} className="text-accent-rose hover:text-accent-rose shrink-0">
-                  Revocar
-                </Button>
-              )}
-            </div>
+              </Card>
+            </RowReveal>
           ))}
         </div>
       </div>
@@ -379,25 +398,27 @@ function EquipoTab() {
       <div>
         <SectionTitle>Miembros ({members.length})</SectionTitle>
         <div className="space-y-2">
-          {members.map(m => (
-            <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-subtle bg-bg-surface">
-              <Avatar name={m.name} size="sm" status={m.status === 'active' ? 'online' : undefined} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-text-primary">{m.name}</p>
-                <p className="text-xs text-text-muted truncate">{m.email}</p>
-              </div>
-              <Badge color={m.status === 'pending' ? 'yellow' : 'blue'}>{m.role}</Badge>
-              {m.status === 'pending' && <Badge color="yellow" dot>Pendiente</Badge>}
-              {m.role !== 'Admin' && (
-                <button
-                  onClick={() => removeMember(m.id)}
-                  className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-accent-rose hover:bg-rose-500/10 transition-colors duration-150 shrink-0 text-base leading-none"
-                  aria-label="Eliminar miembro"
-                >
-                  ×
-                </button>
-              )}
-            </div>
+          {members.map((m, i) => (
+            <RowReveal key={m.id} delay={i * 0.05}>
+              <Card hover className="!p-3 flex items-center gap-3">
+                <Avatar name={m.name} size="sm" status={m.status === 'active' ? 'online' : undefined} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-text-primary">{m.name}</p>
+                  <p className="text-xs text-text-muted truncate">{m.email}</p>
+                </div>
+                <Badge color={m.status === 'pending' ? 'yellow' : 'blue'}>{m.role}</Badge>
+                {m.status === 'pending' && <Badge color="yellow" dot>Pendiente</Badge>}
+                {m.role !== 'Admin' && (
+                  <button
+                    onClick={() => removeMember(m.id)}
+                    className="w-6 h-6 flex items-center justify-center rounded text-text-muted hover:text-accent-rose hover:bg-accent-rose/10 transition-colors duration-150 shrink-0 text-base leading-none"
+                    aria-label="Eliminar miembro"
+                  >
+                    ×
+                  </button>
+                )}
+              </Card>
+            </RowReveal>
           ))}
         </div>
       </div>
@@ -435,71 +456,72 @@ function BillingTab() {
       {/* Plan */}
       <div>
         <SectionTitle>Plan actual</SectionTitle>
-        <div className="p-4 rounded-lg border border-blue-500/30 bg-blue-500/5">
+        <Card style={{ borderColor: 'var(--border-blue)', background: 'rgba(37,99,235,0.05)' }}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="font-semibold text-text-primary">Scale</p>
               <p className="text-xs text-text-muted mt-0.5">Facturado anualmente · Renovación: 1 Jul 2026</p>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-2xl font-bold text-text-primary">€199</span>
+              <span className="text-2xl font-bold text-text-primary tabular-nums">€199</span>
               <span className="text-xs text-text-muted">/mes</span>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-blue-500/20 flex gap-3">
+          <div className="mt-4 pt-4 border-t border-accent-blue/20 flex gap-3">
             <Button variant="ghost" size="sm" onClick={() => success('Contacta con ventas para cambiar de plan')}>Cambiar plan</Button>
             <Button variant="ghost" size="sm" className="text-accent-rose hover:text-accent-rose" onClick={() => success('Contacta con soporte para gestionar la cancelación')}>Cancelar</Button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Usage */}
       <div>
         <SectionTitle>Uso del plan</SectionTitle>
-        <SectionCard>
+        <Card className="space-y-4">
           <UsageBar label="Vehículos en stock"     used={270} max={500} />
           <UsageBar label="Miembros del equipo"    used={4}   max={10}  />
           <UsageBar label="Integraciones activas"  used={1}   max={5}   />
-        </SectionCard>
+        </Card>
       </div>
 
       {/* Invoices */}
       <div>
         <SectionTitle>Facturas</SectionTitle>
-        <div className="rounded-lg border border-border-subtle overflow-hidden">
+        <Card padding={false} className="overflow-hidden">
           {INVOICES.map((inv, i) => {
             const { color, label } = INVOICE_STATUS[inv.status]
             return (
-              <div
-                key={inv.id}
-                className={cn(
-                  'flex items-center gap-3 px-4 py-3 bg-bg-surface hover:bg-bg-elevated transition-colors duration-150',
-                  i < INVOICES.length - 1 && 'border-b border-border-subtle',
-                )}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-text-primary">{inv.description}</p>
-                  <p className="text-xs text-text-muted mt-0.5">{inv.date}</p>
-                </div>
-                <span className="text-sm font-semibold text-text-primary tabular-nums shrink-0">€{inv.amount}</span>
-                <Badge color={color}>{label}</Badge>
-                <button
-                  className="text-text-muted hover:text-accent-blue transition-colors duration-150 p-1 rounded shrink-0"
-                  aria-label="Descargar factura"
+              <RowReveal key={inv.id} delay={i * 0.05}>
+                <div
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3 hover:bg-glass-subtle transition-colors duration-150',
+                    i < INVOICES.length - 1 && 'border-b border-border-subtle',
+                  )}
                 >
-                  <Download className="w-4 h-4" />
-                </button>
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text-primary">{inv.description}</p>
+                    <p className="text-xs text-text-muted mt-0.5">{inv.date}</p>
+                  </div>
+                  <span className="text-sm font-semibold text-text-primary tabular-nums shrink-0">€{inv.amount}</span>
+                  <Badge color={color}>{label}</Badge>
+                  <button
+                    className="text-text-muted hover:text-accent-blue hover:bg-glass-subtle transition-colors duration-150 p-1.5 rounded-md shrink-0"
+                    aria-label="Descargar factura"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
+              </RowReveal>
             )
           })}
-        </div>
+        </Card>
       </div>
 
       {/* Payment method */}
       <div>
         <SectionTitle>Método de pago</SectionTitle>
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-border-subtle bg-bg-surface">
-          <div className="w-10 h-7 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+        <Card className="flex items-center gap-3">
+          <div className="w-10 h-7 rounded bg-accent-blue/10 border border-accent-blue/20 flex items-center justify-center shrink-0">
             <CreditCard className="w-4 h-4 text-accent-blue" />
           </div>
           <div className="flex-1 min-w-0">
@@ -507,7 +529,7 @@ function BillingTab() {
             <p className="text-xs text-text-muted">Vence 12/2027</p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => success('Redirigiendo al portal de facturación…')}>Actualizar</Button>
-        </div>
+        </Card>
       </div>
     </div>
   )
@@ -520,58 +542,68 @@ export default function Settings() {
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
-      <div>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+      >
         <h1 className="text-xl font-bold text-text-primary">Ajustes</h1>
         <p className="text-sm text-text-muted mt-0.5">Gestiona tu cuenta y espacio de trabajo</p>
-      </div>
+      </motion.div>
 
-      <Card padding={false} className="overflow-hidden">
-        {/* Tab bar */}
-        <div className="flex border-b border-border-subtle overflow-x-auto scrollbar-none">
-          {TABS.map(({ id, label, icon: Icon }) => {
-            const active = tab === id
-            return (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                className={cn(
-                  'relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-colors duration-150',
-                  active ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary',
-                )}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.35, ease: 'easeOut' }}
+      >
+        <Card padding={false} className="overflow-hidden">
+          {/* Tab bar */}
+          <div className="flex border-b border-border-subtle overflow-x-auto scrollbar-none">
+            {TABS.map(({ id, label, icon: Icon }) => {
+              const active = tab === id
+              return (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  className={cn(
+                    'relative flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-colors duration-150',
+                    active ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary',
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                  {active && (
+                    <motion.div
+                      layoutId="settings-tab-indicator"
+                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent-blue"
+                      transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Content */}
+          <div className="p-6">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={tab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
               >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-                {active && (
-                  <motion.div
-                    layoutId="settings-tab-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent-blue"
-                    transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-                  />
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-            >
-              {tab === 'general'        && <GeneralTab />}
-              {tab === 'notificaciones' && <NotificacionesTab />}
-              {tab === 'seguridad'      && <SeguridadTab />}
-              {tab === 'equipo'         && <EquipoTab />}
-              {tab === 'facturacion'    && <BillingTab />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </Card>
+                {tab === 'general'        && <GeneralTab />}
+                {tab === 'notificaciones' && <NotificacionesTab />}
+                {tab === 'seguridad'      && <SeguridadTab />}
+                {tab === 'equipo'         && <EquipoTab />}
+                {tab === 'facturacion'    && <BillingTab />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </Card>
+      </motion.div>
     </div>
   )
 }

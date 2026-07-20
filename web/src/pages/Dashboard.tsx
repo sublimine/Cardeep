@@ -1,17 +1,19 @@
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts'
 import { PageSkeleton } from '../components/LoadingSpinner'
 import Card from '../components/Card'
 import PremiumGate from '../components/PremiumGate'
 import EngineFreshnessStamp from '../components/EngineFreshnessStamp'
+import EmptyState from '../components/EmptyState'
 import { useApi } from '../hooks/useApi'
 import { useIsDark } from '../hooks/useIsDark'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../auth/AuthContext'
 import type { KpiData } from '../types'
 import { ACCENT, GOOD, BAD, WARN } from '../lib/theme'
+import { cn } from '../lib/cn'
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 
@@ -130,6 +132,39 @@ function scoreColor(score: number): string {
   return '#94a3b8'
 }
 
+// ── Panel nav link (chevron-only or text+chevron "see more" affordance) ───────
+// Inline color is set via style (matches this file's convention), so hover feedback
+// is driven by framer-motion — its imperative style write on hover overrides the
+// static inline value, same mechanism Card.tsx already relies on for its own hover.
+
+interface PanelLinkProps {
+  onClick: () => void
+  ariaLabel?: string
+  children: React.ReactNode
+  className?: string
+  /** Brand-tinted link (e.g. "ver todo") keeps its accent color on hover; the
+   * default muted link brightens to primary text on hover. */
+  accent?: boolean
+}
+
+function PanelLink({ onClick, ariaLabel, children, className, accent }: PanelLinkProps) {
+  const base = accent ? ACCENT : 'var(--text-muted)'
+  const hover = accent ? ACCENT : 'var(--text-primary)'
+  return (
+    <motion.button
+      onClick={onClick}
+      aria-label={ariaLabel}
+      whileHover={{ color: hover, backgroundColor: 'var(--glass-medium)' }}
+      whileTap={{ scale: 0.94 }}
+      transition={{ type: 'spring', stiffness: 460, damping: 30 }}
+      className={cn('rounded-[7px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50', className)}
+      style={{ color: base }}
+    >
+      {children}
+    </motion.button>
+  )
+}
+
 // ── Metric card (KPI row) ──────────────────────────────────────────────────────
 
 interface MetricCardProps {
@@ -160,7 +195,7 @@ function MetricCard({ label, value, prefix, suffix, decimals, sub, trend, trendL
           <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
           <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
         </div>
-        <div className="text-[44px] font-extrabold leading-none tracking-[-0.03em] mb-1" style={{ color: 'var(--text-primary)' }}>
+        <div className="text-[44px] font-extrabold leading-none tracking-[-0.03em] tabular-nums mb-1" style={{ color: 'var(--text-primary)' }}>
           <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />
         </div>
         <div className="text-[11px] mb-3.5" style={{ color: 'var(--text-muted)' }}>{sub}</div>
@@ -191,41 +226,60 @@ function MarginChart({ data, dark }: { data: KpiData['marginHistory']; dark: boo
             <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Gross Margin</h2>
             <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>6-month trend</p>
           </div>
-          <div className="flex gap-[3px]">
+          <div className="flex gap-[3px]" role="tablist" aria-label="Tipo de gráfico">
             {(['area', 'bar'] as const).map(t => (
-              <button
+              <motion.button
                 key={t}
                 onClick={() => setTab(t)}
-                className="rounded-[7px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.04em] transition-colors"
+                role="tab"
+                aria-selected={tab === t}
+                whileHover={{ backgroundColor: tab === t ? `${ACCENT}22` : 'var(--glass-medium)' }}
+                whileTap={{ scale: 0.94 }}
+                transition={{ type: 'spring', stiffness: 460, damping: 30 }}
+                className="rounded-[7px] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.04em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50"
                 style={{
                   background: tab === t ? `${ACCENT}22` : 'transparent',
                   border: `1px solid ${tab === t ? `${ACCENT}48` : 'transparent'}`,
                   color: tab === t ? ACCENT : 'var(--text-muted)',
                 }}
-              >{t}</button>
+              >{t}</motion.button>
             ))}
           </div>
         </div>
 
         <div className="min-h-0 flex-1">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gm" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={ACCENT} stopOpacity={0.28} />
-                  <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
-              <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v/1000).toFixed(0)}k`} />
-              <ChartTooltip
-                contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
-                formatter={(v: number) => [`€${v.toLocaleString()}`, 'Margin']}
-                cursor={{ stroke: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}
-              />
-              <Area type="monotone" dataKey="margin" stroke={ACCENT} strokeWidth={2} fill="url(#gm)" dot={false} activeDot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} />
-            </AreaChart>
+            {tab === 'area' ? (
+              <AreaChart data={data} margin={{ top: 4, right: 0, left: -24, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gm" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor={ACCENT} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="1 8" stroke={gridColor} />
+                <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v/1000).toFixed(0)}k`} />
+                <ChartTooltip
+                  contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+                  formatter={(v: number) => [`€${v.toLocaleString()}`, 'Margin']}
+                  cursor={{ stroke: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }}
+                />
+                <Area type="monotone" dataKey="margin" stroke={ACCENT} strokeWidth={2} fill="url(#gm)" dot={false} activeDot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} />
+              </AreaChart>
+            ) : (
+              <BarChart data={data} margin={{ top: 4, right: 0, left: -24, bottom: 0 }} barSize={26}>
+                <CartesianGrid strokeDasharray="1 8" stroke={gridColor} vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v/1000).toFixed(0)}k`} />
+                <ChartTooltip
+                  contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
+                  formatter={(v: number) => [`€${v.toLocaleString()}`, 'Margin']}
+                  cursor={{ fill: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
+                />
+                <Bar dataKey="margin" fill={ACCENT} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            )}
           </ResponsiveContainer>
         </div>
       </div>
@@ -297,9 +351,9 @@ function StalePanel({ onNavigate }: { onNavigate: () => void }) {
             </div>
             <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Vehicles over 60 days</p>
           </div>
-          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
+          <PanelLink onClick={onNavigate} ariaLabel="View all stock" className="p-1">
             <ChevronRight style={{ width: 14, height: 14 }} />
-          </button>
+          </PanelLink>
         </div>
 
         <div className="flex flex-1 flex-col gap-2">
@@ -314,7 +368,7 @@ function StalePanel({ onNavigate }: { onNavigate: () => void }) {
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[11.5px] font-semibold" style={{ color: 'var(--text-primary)' }}>{v.make} {v.model}</div>
-                <div className="mt-px text-[10px]" style={{ color: 'var(--text-muted)' }}>{v.year} · €{v.price.toLocaleString()}</div>
+                <div className="mt-px text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{v.year} · €{v.price.toLocaleString()}</div>
               </div>
               <div className="flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5" style={{ background: `${staleColor(v.days)}14`, border: `1px solid ${staleColor(v.days)}30` }}>
                 <Clock style={{ width: 9, height: 9, color: staleColor(v.days) }} />
@@ -344,9 +398,9 @@ function FollowUpsPanel({ onNavigate }: { onNavigate: () => void }) {
             <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Today's Follow-ups</h2>
             <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{DEALER.followUps.length} scheduled</p>
           </div>
-          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
+          <PanelLink onClick={onNavigate} ariaLabel="View all follow-ups" className="p-1">
             <ChevronRight style={{ width: 14, height: 14 }} />
-          </button>
+          </PanelLink>
         </div>
 
         <div className="flex flex-1 flex-col gap-2">
@@ -386,23 +440,31 @@ function ActivityFeed({ activities }: { activities: KpiData['recentActivities'] 
           <span className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{activities.length} events</span>
         </div>
 
-        <div className="flex flex-1 flex-col gap-px overflow-y-auto">
-          {activities.map((a, i) => (
-            <motion.div
-              key={a.id}
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.25 + i * 0.06, duration: 0.32 }}
-              className="flex items-center gap-2.5 py-2"
-              style={{ borderBottom: i < activities.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
-            >
-              <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: TYPE_COLOR[a.type] ?? ACCENT }} />
-              <span className="w-14 shrink-0 text-[9.5px] font-bold uppercase tracking-[0.07em]" style={{ color: TYPE_COLOR[a.type] ?? ACCENT }}>{a.type}</span>
-              <span className="flex-1 truncate text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>{a.body}</span>
-              <span className="shrink-0 text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{timeAgo(a.createdAt)}</span>
-            </motion.div>
-          ))}
-        </div>
+        {activities.length === 0 ? (
+          <EmptyState
+            className="flex-1 py-8"
+            title="No recent activity"
+            message="Events from your deals will show up here as they happen."
+          />
+        ) : (
+          <div className="flex flex-1 flex-col gap-px overflow-y-auto">
+            {activities.map((a, i) => (
+              <motion.div
+                key={a.id}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.25 + i * 0.06, duration: 0.32 }}
+                className="flex items-center gap-2.5 py-2"
+                style={{ borderBottom: i < activities.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}
+              >
+                <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: TYPE_COLOR[a.type] ?? ACCENT }} />
+                <span className="w-14 shrink-0 text-[9.5px] font-bold uppercase tracking-[0.07em]" style={{ color: TYPE_COLOR[a.type] ?? ACCENT }}>{a.type}</span>
+                <span className="flex-1 truncate text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>{a.body}</span>
+                <span className="shrink-0 text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>{timeAgo(a.createdAt)}</span>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </Card>
   )
@@ -513,14 +575,17 @@ function ChatCompact({ kpi, username }: { kpi: KpiData; username: string }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
             placeholder="Ask about stock, deals…"
-            className="flex-1 rounded-[9px] p-[6px_10px] text-[11.5px] outline-none"
+            className="flex-1 rounded-[9px] p-[6px_10px] text-[11.5px] outline-none transition-shadow focus:ring-2 focus:ring-accent-blue/40"
             style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
           />
           <motion.button
             onClick={() => send(input)}
             disabled={!input.trim() || typing}
-            whileTap={{ scale: 0.92 }}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border-0"
+            aria-label="Send message"
+            whileHover={{ scale: !input.trim() || typing ? 1 : 1.06 }}
+            whileTap={{ scale: !input.trim() || typing ? 1 : 0.92 }}
+            transition={{ type: 'spring', stiffness: 460, damping: 30 }}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50 focus-visible:ring-offset-1"
             style={{ background: `linear-gradient(135deg, ${ACCENT}, #2563eb)`, opacity: !input.trim() || typing ? 0.35 : 1 }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -544,9 +609,9 @@ function OportunidadesPanel({ onNavigate, plan }: { onNavigate: () => void; plan
             <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Oportunidades</h2>
             <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{TOP_DEALS.length} chollos detectados hoy · deal-score en vivo</p>
           </div>
-          <button onClick={onNavigate} className="flex items-center gap-1 rounded-[7px] px-2 py-1 text-[10.5px] font-semibold" style={{ color: ACCENT }}>
+          <PanelLink onClick={onNavigate} accent className="flex items-center gap-1 px-2 py-1 text-[10.5px] font-semibold">
             ver todo <ChevronRight style={{ width: 11, height: 11 }} />
-          </button>
+          </PanelLink>
         </div>
 
         <PremiumGate feature="sourcing-ranking" userPlan={plan} what="Ranking completo de chollos, filtros por margen/zona/segmento">
@@ -594,9 +659,9 @@ function MarketPositionMini({ onNavigate }: { onNavigate: () => void }) {
       <div className="flex h-full flex-col p-[18px_16px_14px]">
         <div className="mb-3.5 flex shrink-0 items-center justify-between">
           <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Posición mercado</h2>
-          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
+          <PanelLink onClick={onNavigate} ariaLabel="Ver inteligencia de mercado completa" className="p-1">
             <ChevronRight style={{ width: 13, height: 13 }} />
-          </button>
+          </PanelLink>
         </div>
 
         <div className="flex flex-1 flex-col gap-2.5">
@@ -608,7 +673,7 @@ function MarketPositionMini({ onNavigate }: { onNavigate: () => void }) {
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           >
             <div className="mb-[7px] text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-muted)' }}>Precio vs mercado</div>
-            <div className="mb-[3px] text-[28px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: GOOD }}>{MARKET_POS.priceVsMkt.toFixed(1)}%</div>
+            <div className="mb-[3px] text-[28px] font-extrabold leading-none tracking-[-0.03em] tabular-nums" style={{ color: GOOD }}>{MARKET_POS.priceVsMkt.toFixed(1)}%</div>
             <div className="mb-[7px] text-[10px]" style={{ color: 'var(--text-muted)' }}>bajo la mediana UE</div>
             <div className="flex items-center gap-[3px]">
               <ArrowUpRight style={{ width: 10, height: 10, color: GOOD }} />
@@ -625,10 +690,10 @@ function MarketPositionMini({ onNavigate }: { onNavigate: () => void }) {
           >
             <div className="mb-[7px] text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-muted)' }}>Días stock vs mkt</div>
             <div className="mb-2 flex items-baseline gap-[5px]">
-              <span className="text-2xl font-extrabold leading-none tracking-[-0.02em]" style={{ color: BAD }}>{MARKET_POS.myDays}d</span>
+              <span className="text-2xl font-extrabold leading-none tracking-[-0.02em] tabular-nums" style={{ color: BAD }}>{MARKET_POS.myDays}d</span>
               <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>tu dealer</span>
             </div>
-            <div className="mb-1 flex justify-between text-[9.5px]" style={{ color: 'var(--text-muted)' }}>
+            <div className="mb-1 flex justify-between text-[9.5px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
               <span>Tu dealer</span><span>Mediana {MARKET_POS.mktDays}d</span>
             </div>
             <div className="relative h-1.5 overflow-visible rounded-full" style={{ background: 'var(--border-subtle)' }}>
@@ -643,7 +708,7 @@ function MarketPositionMini({ onNavigate }: { onNavigate: () => void }) {
             </div>
             <div className="mt-1.5 flex items-center gap-[3px]">
               <ArrowDownRight style={{ width: 10, height: 10, color: BAD }} />
-              <span className="text-[10px] font-semibold" style={{ color: BAD }}>+{MARKET_POS.myDays - MARKET_POS.mktDays}d sobre mediana</span>
+              <span className="text-[10px] font-semibold tabular-nums" style={{ color: BAD }}>+{MARKET_POS.myDays - MARKET_POS.mktDays}d sobre mediana</span>
             </div>
           </motion.div>
         </div>
@@ -671,9 +736,9 @@ function RevenueChart({ data, dark, onNavigate }: { data: KpiData['marginHistory
               <span className="flex items-center gap-1"><span className="inline-block h-0.5 w-3 rounded-sm" style={{ background: ACCENT }} />Revenue</span>
               <span className="flex items-center gap-1"><span className="inline-block w-3 border-t-2 border-dashed" style={{ borderColor: `${BAD}a6` }} />Coste</span>
             </div>
-            <button onClick={onNavigate} className="flex items-center gap-0.5 p-0 text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
+            <PanelLink onClick={onNavigate} className="flex items-center gap-0.5 px-1.5 py-1 text-[10.5px]">
               Finance <ChevronRight style={{ width: 11, height: 11 }} />
-            </button>
+            </PanelLink>
           </div>
         </div>
 
@@ -721,9 +786,9 @@ function TopModelsPanel({ onNavigate }: { onNavigate: () => void }) {
             <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Top modelos vendidos</h2>
             <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>este mes · {totalSold} unidades</p>
           </div>
-          <button onClick={onNavigate} className="p-0" style={{ color: 'var(--text-muted)' }}>
+          <PanelLink onClick={onNavigate} ariaLabel="Ver todos los modelos vendidos" className="p-1">
             <ChevronRight style={{ width: 13, height: 13 }} />
-          </button>
+          </PanelLink>
         </div>
 
         <div className="flex flex-1 flex-col gap-2.5">
@@ -770,10 +835,20 @@ export default function Dashboard() {
   const username = user?.name ?? 'User'
   const plan = user?.plan ?? 'starter'
 
+  // Real month-over-month delta from the SAME marginHistory array the chart below
+  // renders — the previous hardcoded "+8% vs last month" claimed an increase while
+  // the mock series actually shows a decrease, contradicting the chart right under it.
+  const marginSeries = kpi.marginHistory
+  const lastMargin = marginSeries.at(-1)?.margin ?? kpi.monthMargin
+  const prevMargin = marginSeries.at(-2)?.margin ?? lastMargin
+  const marginDeltaPct = prevMargin !== 0 ? ((lastMargin - prevMargin) / prevMargin) * 100 : 0
+  const marginTrend: 'up' | 'down' | 'flat' = marginDeltaPct > 0.5 ? 'up' : marginDeltaPct < -0.5 ? 'down' : 'flat'
+  const marginTrendLabel = `${marginDeltaPct >= 0 ? '+' : ''}${marginDeltaPct.toFixed(0)}% vs last month`
+
   const kpiCards = [
     { label: 'In Stock',          value: kpi.stockCount,               sub: `€${(DEALER.stockValue / 1_000_000).toFixed(2)}M capital`, trend: 'up' as const,   trendLabel: '+12 this month',      spark: [220, 232, 245, 258, 264, kpi.stockCount], delay: 0 },
     { label: 'Active Deals',      value: kpi.activeDeals,               sub: '8 closing this week',                                       trend: 'flat' as const, trendLabel: 'stable',              spark: [42, 48, 51, 53, 54, kpi.activeDeals],     delay: 0.06 },
-    { label: 'Month Margin',      value: kpi.monthMargin / 1000, prefix: '€', suffix: 'k', decimals: 1, sub: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), trend: 'up' as const, trendLabel: '+8% vs last month', spark: kpi.marginHistory.map(m => m.margin / 1000), delay: 0.12 },
+    { label: 'Month Margin',      value: kpi.monthMargin / 1000, prefix: '€', suffix: 'k', decimals: 1, sub: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), trend: marginTrend, trendLabel: marginTrendLabel, spark: kpi.marginHistory.map(m => m.margin / 1000), delay: 0.12 },
     { label: 'Avg Days In Stock', value: DEALER.avgDaysInStock, suffix: 'd', sub: 'target < 45d', trend: 'good' as const, trendLabel: 'healthy', spark: [52, 48, 44, 41, 39, DEALER.avgDaysInStock], delay: 0.18 },
   ]
 
@@ -802,7 +877,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-2.5">
           <div className="text-right">
             <div className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--text-muted)' }}>Units Sold</div>
-            <div className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>{DEALER.soldThisMonth} / {DEALER.targetSoldMonth}</div>
+            <div className="text-xs font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{DEALER.soldThisMonth} / {DEALER.targetSoldMonth}</div>
           </div>
           <div className="h-1.5 w-20 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
             <motion.div

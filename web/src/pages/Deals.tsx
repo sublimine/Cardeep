@@ -11,7 +11,8 @@ import Modal from '../components/Modal'
 import Input from '../components/Input'
 import Select from '../components/Select'
 import EmptyState from '../components/EmptyState'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { Skeleton, TableSkeleton } from '../components/Skeleton'
+import { Tooltip } from '../components/Tooltip'
 import { cn } from '../lib/cn'
 import { useDeals, useDealMutations, useDealsSummary, type DealsSummary } from '../hooks/useDeals'
 import { useApi } from '../hooks/useApi'
@@ -136,6 +137,23 @@ function KpiRow({ deals, summary }: { deals: Deal[]; summary: DealsSummary | nul
   )
 }
 
+function KpiRowSkeleton() {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {[0, 1, 2, 3].map(i => (
+        <div key={i} className="glass rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-2.5 w-16" />
+            <Skeleton className="h-4 w-4" rounded="full" />
+          </div>
+          <Skeleton className="h-7 w-16" />
+          <Skeleton className="h-2.5 w-24" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Pipeline funnel ───────────────────────────────────────────────────────────
 
 function PipelineFunnel({ deals }: { deals: Deal[] }) {
@@ -155,30 +173,56 @@ function PipelineFunnel({ deals }: { deals: Deal[] }) {
         {STAGES.map((s, i) => {
           const count = grouped[s].length
           const pct   = maxCount > 0 ? (count / maxCount) * 100 : 0
+          const share = deals.length > 0 ? Math.round((count / deals.length) * 100) : 0
           return (
-            <motion.div
+            <Tooltip
               key={s}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 + i * 0.06 }}
-              className="flex-1 flex flex-col items-center gap-1"
+              content={`${STAGE_LABELS[s]} · ${count} ${count === 1 ? 'deal' : 'deals'} (${share}%)`}
             >
-              <span className="text-[10px] font-bold text-text-muted tabular-nums">{count}</span>
-              <div className="w-full rounded-sm overflow-hidden" style={{ height: 52, background: 'var(--border-subtle)' }}>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${pct}%` }}
-                  transition={{ delay: 0.25 + i * 0.06, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-                  className={cn('w-full rounded-sm mt-auto', stageBar[s])}
-                  style={{ marginTop: `${100 - pct}%` }}
-                />
-              </div>
-              <span className={cn('text-[9px] font-bold uppercase tracking-wider truncate w-full text-center', stageColor[s])}>
-                {STAGE_LABELS[s]}
-              </span>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 + i * 0.06 }}
+                className="flex-1 flex flex-col items-center gap-1 cursor-default"
+              >
+                <span className="text-[10px] font-bold text-text-muted tabular-nums">{count}</span>
+                <div className="w-full rounded-sm overflow-hidden" style={{ height: 52, background: 'var(--border-subtle)' }}>
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: `${pct}%` }}
+                    transition={{ delay: 0.25 + i * 0.06, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                    className={cn('w-full rounded-sm mt-auto', stageBar[s])}
+                    style={{ marginTop: `${100 - pct}%` }}
+                  />
+                </div>
+                <span className={cn('text-[9px] font-bold uppercase tracking-wider truncate w-full text-center', stageColor[s])}>
+                  {STAGE_LABELS[s]}
+                </span>
+              </motion.div>
+            </Tooltip>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function PipelineFunnelSkeleton() {
+  return (
+    <div className="glass rounded-xl p-4">
+      <div className="flex items-center justify-between mb-4">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-3.5 w-16" />
+      </div>
+      <div className="flex items-end gap-2 h-20">
+        {['h-[52px]', 'h-[38px]', 'h-[64px]', 'h-[28px]', 'h-[46px]', 'h-[20px]'].map((h, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+            <div className="w-full flex items-end" style={{ height: 52 }}>
+              <Skeleton className={cn('w-full', h)} />
+            </div>
+            <Skeleton className="h-2 w-10 mt-1" />
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -232,7 +276,7 @@ function DealDetailModal({
           </div>
           <div className="flex items-center justify-between">
             <p className="text-xs text-text-muted">Win probability</p>
-            <span className={cn('text-xs font-bold', stageColor[stage])}>{prob}%</span>
+            <span className={cn('text-xs font-bold tabular-nums', stageColor[stage])}>{prob}%</span>
           </div>
         </div>
 
@@ -243,11 +287,17 @@ function DealDetailModal({
             ['Age',      dealAge(deal.createdAt)],
             ['Created',  formatDate(deal.createdAt)],
             ['Updated',  formatDate(deal.updatedAt)],
-          ].map(([k, v]) => (
-            <div key={k} className="glass rounded-lg p-3">
+          ].map(([k, v], i) => (
+            <motion.div
+              key={k}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.22 }}
+              className="glass rounded-lg p-3"
+            >
               <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">{k}</p>
-              <p className="text-sm font-semibold text-text-primary">{v}</p>
-            </div>
+              <p className="text-sm font-semibold text-text-primary tabular-nums">{v}</p>
+            </motion.div>
           ))}
         </div>
 
@@ -305,12 +355,16 @@ const DealRow = React.forwardRef<HTMLDivElement, DealRowProps>(function DealRow(
   return (
     <motion.div
       ref={ref}
+      role="button"
+      tabIndex={0}
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
+      whileHover={{ x: 2 }}
       transition={{ delay: idx * 0.035, duration: 0.22 }}
       onClick={onSelect}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}
       className="flex items-center gap-3 py-3.5 px-1 border-b border-border-subtle/50 last:border-0 cursor-pointer hover:bg-glass-subtle rounded-md -mx-1 transition-colors group"
     >
       <Avatar name={deal.contactName ?? '?'} size="sm" />
@@ -325,7 +379,7 @@ const DealRow = React.forwardRef<HTMLDivElement, DealRowProps>(function DealRow(
 
       {/* Probability bar */}
       <div className="hidden sm:flex flex-col items-end gap-1 w-20 shrink-0">
-        <span className={cn('text-[10px] font-bold', stageColor[stage])}>{prob}%</span>
+        <span className={cn('text-[10px] font-bold tabular-nums', stageColor[stage])}>{prob}%</span>
         <div className="w-full h-1 rounded-full bg-border-subtle overflow-hidden">
           <div
             className={cn('h-full rounded-full transition-all', stageBar[stage])}
@@ -549,6 +603,10 @@ export default function Deals() {
 
   // Honest empty array on failure — never a fabricated pipeline.
   const deals = data?.deals ?? []
+  // Distinguishes "still waiting on the first response" from "server answered
+  // with zero deals" — without this, the KPI row/funnel/pills flash at 0 on
+  // every cold load before real numbers (or a real empty pipeline) land.
+  const initialLoading = loading && !data
 
   const grouped: Record<KanbanStage, Deal[]> = Object.fromEntries(
     STAGES.map(s => [s, deals.filter(d => d.stage === s)]),
@@ -578,11 +636,15 @@ export default function Deals() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Deals</h1>
-          <p className="text-sm text-text-muted mt-0.5">
-            {deals.filter(d => d.stage !== 'won' && d.stage !== 'lost').length} active ·&nbsp;
-            {deals.filter(d => d.stage === 'won').length} won ·&nbsp;
-            €{(deals.filter(d => d.stage !== 'lost').reduce((s, d) => s + (d.price ?? 0), 0) / 1000).toFixed(0)}k pipeline
-          </p>
+          {initialLoading ? (
+            <Skeleton className="h-4 w-56 mt-1.5" />
+          ) : (
+            <p className="text-sm text-text-muted mt-0.5">
+              {deals.filter(d => d.stage !== 'won' && d.stage !== 'lost').length} active ·&nbsp;
+              {deals.filter(d => d.stage === 'won').length} won ·&nbsp;
+              €{(deals.filter(d => d.stage !== 'lost').reduce((s, d) => s + (d.price ?? 0), 0) / 1000).toFixed(0)}k pipeline
+            </p>
+          )}
         </div>
         <Button icon={<Plus className="w-4 h-4" />} size="sm" loading={mutating} onClick={() => setNewDealOpen(true)}>
           New deal
@@ -590,48 +652,56 @@ export default function Deals() {
       </div>
 
       {/* KPI row */}
-      <KpiRow deals={deals} summary={summary ?? null} />
+      {initialLoading ? <KpiRowSkeleton /> : <KpiRow deals={deals} summary={summary ?? null} />}
 
       {/* Pipeline funnel */}
-      <PipelineFunnel deals={deals} />
+      {initialLoading ? <PipelineFunnelSkeleton /> : <PipelineFunnel deals={deals} />}
 
       {/* Stage filter pills */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={() => setSelectedStage('all')}
-          className={cn(
-            'px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap',
-            selectedStage === 'all'
-              ? 'bg-accent-blue border-accent-blue/30 text-white'
-              : 'glass border-border-subtle text-text-secondary hover:text-text-primary',
-          )}
-        >
-          All · {deals.length}
-        </motion.button>
-        {STAGES.map(s => (
+      {initialLoading ? (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          {['w-16', 'w-24', 'w-28', 'w-24', 'w-28', 'w-16', 'w-16'].map((w, i) => (
+            <Skeleton key={i} rounded="full" className={cn('h-[26px]', w)} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           <motion.button
-            key={s}
+            whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.96 }}
-            onClick={() => setSelectedStage(s)}
+            onClick={() => setSelectedStage('all')}
             className={cn(
               'px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap',
-              selectedStage === s
-                ? stagePill[s]
+              selectedStage === 'all'
+                ? 'bg-accent-blue border-accent-blue/30 text-white'
                 : 'glass border-border-subtle text-text-secondary hover:text-text-primary',
             )}
           >
-            {STAGE_LABELS[s]} · {grouped[s]?.length ?? 0}
+            All · {deals.length}
           </motion.button>
-        ))}
-      </div>
+          {STAGES.map(s => (
+            <motion.button
+              key={s}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => setSelectedStage(s)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors whitespace-nowrap',
+                selectedStage === s
+                  ? stagePill[s]
+                  : 'glass border-border-subtle text-text-secondary hover:text-text-primary',
+              )}
+            >
+              {STAGE_LABELS[s]} · {grouped[s]?.length ?? 0}
+            </motion.button>
+          ))}
+        </div>
+      )}
 
       {/* Deal list */}
       <Card padding>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <LoadingSpinner />
-          </div>
+        {initialLoading ? (
+          <TableSkeleton rows={6} />
         ) : error ? (
           <EmptyState
             icon={<Activity className="w-6 h-6" />}
@@ -640,7 +710,22 @@ export default function Deals() {
             action={<Button size="sm" onClick={reload}>Reintentar</Button>}
           />
         ) : filteredDeals.length === 0 ? (
-          <p className="text-sm text-text-muted text-center py-8">No deals in this stage.</p>
+          <EmptyState
+            icon={<Target className="w-6 h-6" />}
+            title="No deals in this stage"
+            message="Try another stage filter or create a new deal."
+            action={
+              selectedStage !== 'all' ? (
+                <Button size="sm" variant="secondary" onClick={() => setSelectedStage('all')}>
+                  Show all stages
+                </Button>
+              ) : (
+                <Button size="sm" icon={<Plus className="w-4 h-4" />} onClick={() => setNewDealOpen(true)}>
+                  New deal
+                </Button>
+              )
+            }
+          />
         ) : (
           <>
             {/* List header */}

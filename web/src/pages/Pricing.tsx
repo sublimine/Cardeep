@@ -6,6 +6,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Zap, BarChart2, Building, ArrowRight } from 'lucide-react'
 import Card from '../components/Card'
+import Button from '../components/Button'
 import { ACCENT, GOOD } from '../lib/theme'
 
 interface PricingPlan {
@@ -129,8 +130,9 @@ export default function Pricing() {
       >
         <span className="text-xs font-semibold" style={{ color: !annual ? 'var(--text-primary)' : 'var(--text-muted)' }}>Mensual</span>
 
-        <button
+        <motion.button
           onClick={() => setAnnual(a => !a)}
+          whileTap={{ scale: 0.94 }}
           aria-label="Cambiar periodo de facturación"
           className="relative h-6 w-11 shrink-0 cursor-pointer rounded-full border-0 p-0 transition-colors"
           style={{ background: annual ? ACCENT : 'var(--border-active)' }}
@@ -141,7 +143,7 @@ export default function Pricing() {
             className="absolute block h-[18px] w-[18px] rounded-full bg-white"
             style={{ top: 3, boxShadow: '0 1px 4px rgba(0,0,0,0.22)' }}
           />
-        </button>
+        </motion.button>
 
         <div className="flex items-center gap-[7px]">
           <span className="text-xs font-semibold" style={{ color: annual ? 'var(--text-primary)' : 'var(--text-muted)' }}>Anual</span>
@@ -173,7 +175,6 @@ export default function Pricing() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.16 + i * 0.08, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-              whileHover={{ y: -3, transition: { duration: 0.2 } }}
               className="relative"
             >
               {plan.badge && (
@@ -191,6 +192,8 @@ export default function Pricing() {
               )}
 
               <Card
+                hover
+                glow={hl}
                 className="flex flex-col gap-5"
                 style={hl ? { borderColor: `${ACCENT}73`, borderWidth: 1.5, boxShadow: `0 8px 32px ${ACCENT}2e` } as React.CSSProperties : undefined}
               >
@@ -222,7 +225,7 @@ export default function Pricing() {
                         <span className="ml-[3px] text-xs" style={{ color: 'var(--text-muted)' }}>/mes</span>
                       </div>
                       {annual && price > 0 && (
-                        <p className="mt-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>Facturado €{(price * 12).toLocaleString()} / año</p>
+                        <p className="mt-1 text-[10px] tabular-nums" style={{ color: 'var(--text-muted)' }}>Facturado €{(price * 12).toLocaleString()} / año</p>
                       )}
                       {price === 0 && <p className="mt-1 text-[10px]" style={{ color: 'var(--text-muted)' }}>Gratis, sin tarjeta</p>}
                     </>
@@ -240,7 +243,10 @@ export default function Pricing() {
                   ))}
                 </div>
 
-                <PlanButton highlighted={hl} label={plan.cta} />
+                <Button variant={hl ? 'primary' : 'secondary'} className="w-full">
+                  {plan.cta}
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
               </Card>
             </motion.div>
           )
@@ -258,30 +264,5 @@ export default function Pricing() {
         <a href="mailto:sales@cardeep.io" style={{ color: ACCENT, textDecoration: 'none' }}>sales@cardeep.io</a>
       </motion.p>
     </div>
-  )
-}
-
-// ── Sub-component: plan CTA button ────────────────────────────────────────────
-
-function PlanButton({ highlighted, label }: { highlighted: boolean; label: string }) {
-  const [hovered, setHovered] = useState(false)
-
-  const bg = highlighted ? (hovered ? '#2563eb' : ACCENT) : (hovered ? 'var(--bg-surface)' : 'transparent')
-
-  return (
-    <button
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="flex w-full items-center justify-center gap-1.5 rounded-[9px] p-[9px_16px] text-xs font-bold transition-colors"
-      style={{
-        background: bg,
-        border: highlighted ? 'none' : '1.5px solid var(--border-active)',
-        color: highlighted ? '#fff' : hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
-        boxShadow: highlighted ? `0 4px 14px ${ACCENT}52` : 'none',
-      }}
-    >
-      {label}
-      <ArrowRight style={{ width: 12, height: 12 }} />
-    </button>
   )
 }
