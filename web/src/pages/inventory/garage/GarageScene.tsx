@@ -205,7 +205,7 @@ export default function GarageScene({ vehicles, allVehicles, onOpenDetail, openU
   }
 
   return (
-    <div style={{ position: 'relative', height: 620, borderRadius: 18, overflow: 'hidden', background: BG_COLOR }}>
+    <div style={{ position: 'relative', height: 620, borderRadius: 18, overflow: 'hidden', background: BG_COLOR, border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-card)' }}>
       <Canvas
         dpr={[1, 1.5]}
         frameloop="demand"

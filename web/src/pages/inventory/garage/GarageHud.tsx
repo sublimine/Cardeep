@@ -31,7 +31,7 @@ export default function GarageHud({
           onClick={onToggleAutoRotate}
           aria-pressed={autoRotate}
           title="Rotación automática"
-          className="glass-md"
+          className="glass-md hud-btn"
           style={{ width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', color: autoRotate ? 'var(--c-blue)' : 'var(--t3)' }}
         >
           <RotateCw style={{ width: 14, height: 14 }} />
@@ -39,7 +39,7 @@ export default function GarageHud({
         <button
           onClick={onResetCamera}
           title="Reset cámara"
-          className="glass-md"
+          className="glass-md hud-btn"
           style={{ width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', color: 'var(--t3)' }}
         >
           <Maximize2 style={{ width: 14, height: 14 }} />
@@ -72,7 +72,7 @@ export default function GarageHud({
               pointerEvents: 'auto', maxWidth: 'min(560px, 92vw)',
             }}
           >
-            <button onClick={onPrev} title="Anterior" style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button onClick={onPrev} title="Anterior" className="hud-btn" style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <ChevronLeft style={{ width: 15, height: 15 }} />
             </button>
 
@@ -84,31 +84,40 @@ export default function GarageHud({
               <p style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {selected.title ?? `${selected.make} ${selected.model}`}
               </p>
-              <p style={{ fontSize: 11, color: 'var(--t3)' }}>
+              <p className="tabular-nums" style={{ fontSize: 11, color: 'var(--t3)' }}>
                 {formatPrice(selected.price, selected.currency)} · {formatKm(selected.km)} · {daysInStock(selected.first_seen, now)}d en stock
               </p>
             </div>
 
-            <span style={{ fontSize: 10.5, color: 'var(--t4)', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
+            <span className="tabular-nums" style={{ fontSize: 10.5, color: 'var(--t4)', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
               n.º {selectedIndex + 1} de {total}
             </span>
 
-            <button onClick={onOpenDetail} title="Abrir ficha" style={{ padding: '7px 12px', borderRadius: 9, background: 'var(--c-blue)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+            <button onClick={onOpenDetail} title="Abrir ficha" className="hud-btn-primary" style={{ padding: '7px 12px', borderRadius: 9, background: 'var(--c-blue)', color: '#fff', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
               Abrir ficha
             </button>
-            <a href={selected.deep_link} target="_blank" rel="noopener noreferrer" title="Anuncio original" style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <a href={selected.deep_link} target="_blank" rel="noopener noreferrer" title="Anuncio original" className="hud-btn" style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <ExternalLink style={{ width: 13, height: 13 }} />
             </a>
 
-            <button onClick={onNext} title="Siguiente" style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button onClick={onNext} title="Siguiente" className="hud-btn" style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <ChevronRight style={{ width: 15, height: 15 }} />
             </button>
-            <button onClick={onDeselect} title="Deseleccionar" style={{ width: 30, height: 30, borderRadius: 9, background: 'transparent', border: 'none', color: 'var(--t4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button onClick={onDeselect} title="Deseleccionar" className="hud-btn" style={{ width: 30, height: 30, borderRadius: 9, background: 'transparent', border: 'none', color: 'var(--t4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <X style={{ width: 14, height: 14 }} />
             </button>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <style>{`
+        .hud-btn { transition: background 0.15s, color 0.15s, transform 0.1s; }
+        .hud-btn:hover { background: var(--glass-lg); color: var(--t1); }
+        .hud-btn:active { transform: scale(0.94); }
+        .hud-btn-primary { transition: filter 0.15s, transform 0.1s; }
+        .hud-btn-primary:hover { filter: brightness(1.1); }
+        .hud-btn-primary:active { transform: scale(0.96); }
+      `}</style>
     </div>
   )
 }

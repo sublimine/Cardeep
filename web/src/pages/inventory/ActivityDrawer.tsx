@@ -86,16 +86,30 @@ export default function ActivityDrawer({ cdp, open, onClose, now, onCountLoaded 
                 <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--t1)' }}>Actividad</h2>
                 <p style={{ fontSize: 11.5, color: 'var(--t4)', marginTop: 2 }}>Flujo de eventos a nivel de inventario</p>
               </div>
-              <button onClick={onClose} aria-label="Cerrar actividad" style={{ padding: 6, borderRadius: 8, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t3)', cursor: 'pointer' }}>
+              <button
+                onClick={onClose}
+                aria-label="Cerrar actividad"
+                className="activity-close-btn"
+                style={{ padding: 6, borderRadius: 8, background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', color: 'var(--t3)', cursor: 'pointer', transition: 'background 0.12s, color 0.12s' }}
+              >
                 <X style={{ width: 14, height: 14 }} />
               </button>
             </div>
 
             {loaded && (
-              <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--t3)', margin: '10px 0 16px', paddingBottom: 12, borderBottom: '1px solid var(--border-subtle)' }}>
-                <span>{counts.NEW ?? 0} altas</span>
-                <span>{counts.GONE ?? 0} bajas</span>
-                <span>{counts.PRICE_CHANGE ?? 0} cambios de precio</span>
+              <div style={{ display: 'flex', gap: 14, fontSize: 11, color: 'var(--t3)', margin: '10px 0 16px', paddingBottom: 12, borderBottom: '1px solid var(--border-subtle)' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--c-emerald)', flexShrink: 0 }} />
+                  <span className="tabular-nums">{counts.NEW ?? 0}</span> altas
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--c-rose)', flexShrink: 0 }} />
+                  <span className="tabular-nums">{counts.GONE ?? 0}</span> bajas
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--c-amber)', flexShrink: 0 }} />
+                  <span className="tabular-nums">{counts.PRICE_CHANGE ?? 0}</span> cambios de precio
+                </span>
               </div>
             )}
 
@@ -113,6 +127,10 @@ export default function ActivityDrawer({ cdp, open, onClose, now, onCountLoaded 
                 )}
               </>
             )}
+
+            <style>{`
+              .activity-close-btn:hover { background: var(--glass-sm); color: var(--t1); }
+            `}</style>
           </motion.aside>
         </>
       )}

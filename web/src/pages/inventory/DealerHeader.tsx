@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import { MapPin, Phone, Globe, Copy, Check, Activity, ShieldCheck, AlertTriangle } from 'lucide-react'
 import type { EntityDetail, EntityKind } from '../../api/cardeep'
 import { useToast } from '../../components/Toast'
@@ -24,6 +24,10 @@ interface StatTileProps {
   value: string
   pending?: boolean
   tone?: 'default' | 'emerald' | 'amber' | 'rose'
+  /** When set (and not pending), the tile counts up to this real number on mount/change instead of rendering `value` statically. */
+  numericValue?: number | null
+  /** Formats the animated numeric value into the final label — must be pure and cheap, it runs every animation frame. */
+  format?: (n: number) => string
 }
 
 const TONE_COLOR: Record<NonNullable<StatTileProps['tone']>, string> = {
@@ -33,7 +37,17 @@ const TONE_COLOR: Record<NonNullable<StatTileProps['tone']>, string> = {
   rose: 'var(--c-rose)',
 }
 
-function StatTile({ label, value, pending, tone = 'default' }: StatTileProps) {
+/** Counts from its current displayed value to `value` — ports the AnimNum pattern (see Inteligencia.tsx)
+ * used elsewhere for hero KPIs, adapted to accept an arbitrary formatter (currency, unit suffixes). */
+function AnimatedStat({ value, format }: { value: number; format: (n: number) => string }) {
+  const mv = useMotionValue(0)
+  const spring = useSpring(mv, { stiffness: 90, damping: 20 })
+  const display = useTransform(spring, v => format(Math.round(v)))
+  useEffect(() => { mv.set(value) }, [value, mv])
+  return <motion.span>{display}</motion.span>
+}
+
+function StatTile({ label, value, pending, tone = 'default', numericValue, format }: StatTileProps) {
   return (
     <div style={{
       padding: '10px 16px',
@@ -48,7 +62,9 @@ function StatTile({ label, value, pending, tone = 'default' }: StatTileProps) {
       {pending ? (
         <div className="skeleton" style={{ height: 20, width: '70%', borderRadius: 6 }} />
       ) : (
-        <p style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.01em', color: TONE_COLOR[tone] }}>{value}</p>
+        <p className="tabular-nums" style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.01em', color: TONE_COLOR[tone] }}>
+          {numericValue != null && format ? <AnimatedStat value={numericValue} format={format} /> : value}
+        </p>
       )}
     </div>
   )
@@ -137,7 +153,9 @@ export default function DealerHeader({
             <button
               onClick={copyCdp}
               title="Copiar código CDP"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5, color: 'var(--t4)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5, color: 'var(--t4)', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--c-blue)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--t4)')}
             >
               {copied ? <Check style={{ width: 11, height: 11, color: 'var(--c-emerald)' }} /> : <Copy style={{ width: 11, height: 11 }} />}
               {entity.cdp_code}
@@ -151,6 +169,8 @@ export default function DealerHeader({
           <StatTile
             label="Anuncios"
             value={entity ? String(countDiverges ? Math.min(entity.available_inventory, loadedCount) : entity.available_inventory) : '—'}
+            numericValue={entity ? (countDiverges ? Math.min(entity.available_inventory, loadedCount) : entity.available_inventory) : null}
+            format={String}
             pending={loading && !entity}
             tone={countDiverges ? 'amber' : 'default'}
           />
@@ -166,22 +186,29 @@ export default function DealerHeader({
         <StatTile
           label="Valor del stock"
           value={stats.pricedCount > 0 ? `${formatPrice(stats.totalValue, 'EUR')}${stats.pricedCount < stats.count ? ` (${stats.pricedCount})` : ''}` : '—'}
+          numericValue={stats.pricedCount > 0 ? stats.totalValue : null}
+          format={n => `${formatPrice(n, 'EUR')}${stats.pricedCount < stats.count ? ` (${stats.pricedCount})` : ''}`}
           pending={!isComplete && stats.count === 0}
         />
         <StatTile
           label="Precio mediano"
           value={formatPrice(stats.medianPrice, 'EUR')}
+          numericValue={stats.medianPrice}
+          format={n => formatPrice(n, 'EUR')}
           pending={!isComplete && stats.count === 0}
         />
         <StatTile
           label="Antigüedad media"
           value={avgAge === null ? '—' : `${Math.round(avgAge)} días`}
+          numericValue={avgAge}
+          format={n => `${n} días`}
           tone={ageTone}
           pending={!isComplete && stats.count === 0}
         />
 
         <motion.button
           whileTap={{ scale: 0.96 }}
+          whileHover={{ y: -1, background: 'var(--glass-sm)' }}
           onClick={onOpenActivity}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 12,
@@ -204,10 +231,24 @@ export default function DealerHeader({
       </div>
 
       {!isComplete && (
-        <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--t4)' }}>
-          <span className="skeleton" style={{ width: 12, height: 12, borderRadius: '50%' }} />
-          Cargando inventario… {loadedCount}
-          {entity ? ` / ${entity.available_inventory}` : ''}
+        <div style={{ width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--t4)' }}>
+            <span className="skeleton" style={{ width: 12, height: 12, borderRadius: '50%' }} />
+            <span className="tabular-nums">
+              Cargando inventario… {loadedCount}
+              {entity ? ` / ${entity.available_inventory}` : ''}
+            </span>
+          </div>
+          {/* Real progress — width tracks the actual pagination ratio, never a decorative indeterminate shimmer. */}
+          {entity && entity.available_inventory > 0 && (
+            <div style={{ marginTop: 6, height: 3, borderRadius: 999, background: 'var(--border-subtle)', overflow: 'hidden' }}>
+              <motion.div
+                style={{ height: '100%', background: 'var(--c-blue)', borderRadius: 999 }}
+                animate={{ width: `${Math.min(100, (loadedCount / entity.available_inventory) * 100)}%` }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+              />
+            </div>
+          )}
         </div>
       )}
     </motion.div>

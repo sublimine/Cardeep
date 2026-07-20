@@ -1,5 +1,6 @@
 import { Suspense, lazy, useMemo, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
+import { AlertTriangle, Orbit } from 'lucide-react'
 import { PageSkeleton } from '../../components/LoadingSpinner'
 import EmptyState from '../../components/EmptyState'
 import Button from '../../components/Button'
@@ -78,6 +79,7 @@ function InventoryForDealer({ cdp }: { cdp: string }) {
     return (
       <div style={{ padding: '24px 28px' }}>
         <EmptyState
+          icon={<AlertTriangle style={{ width: 24, height: 24 }} />}
           title="No se pudo cargar el inventario"
           message={error}
           action={<Button onClick={reload}>Reintentar</Button>}
@@ -119,7 +121,12 @@ function InventoryForDealer({ cdp }: { cdp: string }) {
         onClearFilters={state.clearFilters}
       />
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+        style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}
+      >
         <div className="inventory-filter-rail" style={{ display: filterRailOpen ? 'block' : undefined }}>
           <FilterRail
             vehicles={vehicles}
@@ -131,12 +138,17 @@ function InventoryForDealer({ cdp }: { cdp: string }) {
             onPriceRange={state.setPriceRange}
             onKmRange={state.setKmRange}
             now={now}
+            onClose={() => setFilterRailOpen(false)}
           />
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           {filtered.length === 0 ? (
-            <EmptyState title="Sin coincidencias" message="Ajusta la búsqueda o los filtros." />
+            <EmptyState
+              title="Sin coincidencias"
+              message="Ajusta la búsqueda o los filtros."
+              action={hasActiveFilters ? <Button variant="secondary" size="sm" onClick={state.clearFilters}>Limpiar filtros</Button> : undefined}
+            />
           ) : state.view === 'tabla' ? (
             <VehicleTable vehicles={filtered} sort={state.sort} onSortChange={state.setSort} onSelect={state.selectVehicle} now={now} />
           ) : state.view === 'tarjetas' ? (
@@ -144,12 +156,25 @@ function InventoryForDealer({ cdp }: { cdp: string }) {
           ) : state.view === 'tablero' ? (
             <FleetBoard cdp={cdp} vehicles={filtered} now={now} />
           ) : (
-            <Suspense fallback={<div style={{ height: 560, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--t4)', fontSize: 13 }}>Preparando garaje…</div>}>
+            <Suspense
+              fallback={
+                <div className="glass-md" style={{ height: 620, borderRadius: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+                    style={{ color: 'var(--c-blue)' }}
+                  >
+                    <Orbit style={{ width: 26, height: 26 }} />
+                  </motion.div>
+                  <span style={{ fontSize: 13, color: 'var(--t4)' }}>Preparando garaje 3D…</span>
+                </div>
+              }
+            >
               <GarageScene vehicles={filtered} allVehicles={vehicles} onOpenDetail={state.selectVehicle} openUlid={state.selectedUlid} />
             </Suspense>
           )}
         </div>
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {selectedVehicle && (
@@ -161,13 +186,16 @@ function InventoryForDealer({ cdp }: { cdp: string }) {
 
       <style>{`
         .filter-rail-toggle { display: none; }
+        .filter-rail-close { display: none; }
         @media (max-width: 1100px) {
           .filter-rail-toggle { display: flex !important; }
           .inventory-filter-rail { display: none; }
           .inventory-filter-rail[style*="display: block"] {
             position: fixed; inset: 0; z-index: 150; padding: 16px; overflow-y: auto;
             background: var(--bg-base);
+            animation: cxFadeIn 0.28s var(--ease-out-expo);
           }
+          .filter-rail-close { display: flex !important; }
         }
         @media (max-width: 720px) {
           .view-label { display: none; }

@@ -5,11 +5,26 @@ import * as THREE from 'three'
 import { MAKE_GRAD, DEFAULT_GRAD } from '../VehiclePhoto'
 import { CARD_W, CARD_H, type CardPlacement } from './layout'
 import { STALE_DAYS } from '../config'
+import { agingBand, type AgingBand } from '../derive'
+
+// three.js material `color` props need a literal hex/rgb — they cannot resolve a
+// CSS custom property like `var(--c-emerald)` (no DOM/CSSOM involved in the WebGL
+// pipeline). This table is the one necessary exception to "always reference the
+// token" — its values are kept byte-identical to derive.ts's own agingColor()
+// (fresco/normal/envejecido map 1:1 to tokens.css's --c-emerald/--c-amber/--c-rose;
+// critico has no token either, same literal zinc-700 derive.ts itself uses) so the
+// 3D garage never disagrees with VehicleTable/VehicleDetailModal about a vehicle's
+// freshness. Classification itself is NOT duplicated here — `agingBand` from
+// derive.ts (the one documented canonical source, K3) is what decides the band.
+const AGE_BAND_COLOR: Record<AgingBand, string> = {
+  fresco: '#059669',
+  normal: '#d97706',
+  envejecido: '#e11d48',
+  critico: '#3f3f46',
+}
 
 function ageColor(days: number): string {
-  if (days < 30) return '#059669'
-  if (days < STALE_DAYS) return '#d97706'
-  return '#e11d48'
+  return AGE_BAND_COLOR[agingBand(days, STALE_DAYS)]
 }
 
 interface GarageCardProps {
@@ -55,23 +70,25 @@ export default function GarageCard({ placement, days, isDimmed, isSelected, show
 
       {/* Base placeholder plane — always present (cheap; the photo, if any, sits in front).
           Emissive so it reads as a distinct glowing object against the near-black void
-          instead of disappearing into it (there's no card border here like in 2D). */}
+          instead of disappearing into it (there's no card border here like in 2D).
+          Emissive intensity ticks up on hover/selection — the 3D equivalent of the
+          2D Card component's hover glow, real feedback rather than just the scale bump. */}
       <mesh>
         <planeGeometry args={[CARD_W, CARD_H]} />
         <meshStandardMaterial
           color={baseColor}
           emissive={baseColor}
-          emissiveIntensity={0.7}
+          emissiveIntensity={hovered || isSelected ? 0.95 : 0.7}
           roughness={0.7}
           transparent
           opacity={opacity}
         />
       </mesh>
 
-      {/* Frame edge — thin light border so the card silhouette is legible in the void */}
+      {/* Frame edge — thin light border so the card silhouette is legible in the void; brightens on hover/selection */}
       <mesh position={[0, 0, -0.005]}>
         <planeGeometry args={[CARD_W + 0.04, CARD_H + 0.04]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.12 * opacity} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={(hovered || isSelected ? 0.3 : 0.12) * opacity} />
       </mesh>
 
       {/* Bottom edge — days-in-stock semantic bar */}

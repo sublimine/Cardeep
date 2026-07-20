@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ExternalLink, Copy, ShieldCheck } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ExternalLink, Copy, ShieldCheck, Info } from 'lucide-react'
 import Modal from '../../components/Modal'
 import { Tabs } from '../../components/Tabs'
 import Timeline, { type TimelineItem } from '../../components/Timeline'
@@ -102,8 +103,8 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
         )}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: 14, left: 16, display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <span style={{ fontSize: 28, fontWeight: 900, color: '#fff', textShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>{formatPrice(vehicle.price, vehicle.currency)}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: agingColor(agingBand(days, STALE_DAYS)), padding: '3px 10px', borderRadius: 999 }}>
+          <span className="tabular-nums" style={{ fontSize: 28, fontWeight: 900, color: '#fff', textShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>{formatPrice(vehicle.price, vehicle.currency)}</span>
+          <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: agingColor(agingBand(days, STALE_DAYS)), padding: '3px 10px', borderRadius: 999 }}>
             {days} días en stock
           </span>
         </div>
@@ -112,15 +113,16 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
       <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
         <a
           href={vehicle.deep_link} target="_blank" rel="noopener noreferrer"
+          className="vdm-cta"
           style={{ display: 'flex', flexDirection: 'column', gap: 1, padding: '10px 18px', borderRadius: 10, background: 'var(--c-blue)', color: '#fff', textDecoration: 'none' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700 }}><ExternalLink style={{ width: 13, height: 13 }} /> Ver anuncio original</span>
           <span style={{ fontSize: 10.5, opacity: 0.85 }}>{hostnameOf(vehicle.deep_link)}</span>
         </a>
-        <button onClick={() => copy(vehicle.deep_link, 'Enlace copiado')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => copy(vehicle.deep_link, 'Enlace copiado')} className="vdm-secondary-btn" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Copy style={{ width: 13, height: 13 }} /> Copiar enlace
         </button>
-        <button onClick={() => copy(vehicle.vehicle_ulid, 'ULID copiado')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => copy(vehicle.vehicle_ulid, 'ULID copiado')} className="vdm-secondary-btn" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 10, background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', color: 'var(--t2)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           <Copy style={{ width: 13, height: 13 }} /> Copiar ULID
         </button>
       </div>
@@ -145,11 +147,21 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
                   { k: 'En stock (detectado)', v: `${days} días`, tip: 'Días desde que CARDEEP detectó este anuncio por primera vez' },
                   { k: 'Primera detección', v: new Date(vehicle.first_seen).toLocaleDateString('es-ES') },
                   { k: 'Última vez visto', v: new Date(vehicle.last_seen).toLocaleDateString('es-ES') },
-                ] satisfies { k: string; v: ReactNode; tip?: string }[]).map(({ k, v, tip }) => (
-                  <div key={k} title={tip} style={{ padding: '12px 14px', background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', borderRadius: 10 }}>
-                    <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--t3)', marginBottom: 5 }}>{k}</p>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>{v}</p>
-                  </div>
+                ] satisfies { k: string; v: ReactNode; tip?: string }[]).map(({ k, v, tip }, idx) => (
+                  <motion.div
+                    key={k}
+                    title={tip}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03, duration: 0.2 }}
+                    style={{ padding: '12px 14px', background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', borderRadius: 10, cursor: tip ? 'help' : 'default' }}
+                  >
+                    <p style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--t3)', marginBottom: 5 }}>
+                      {k}
+                      {tip && <Info style={{ width: 10, height: 10, opacity: 0.7 }} />}
+                    </p>
+                    <p className="tabular-nums" style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>{v}</p>
+                  </motion.div>
                 ))}
               </div>
             ),
@@ -181,14 +193,20 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
                         {platforms.platforms.map((p, i) => {
                           const diff = p.platform_price !== null && vehicle.price !== null ? p.platform_price - vehicle.price : null
                           return (
-                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', borderRadius: 10 }}>
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, y: 4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.04, duration: 0.2 }}
+                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--glass-xs)', border: '1px solid var(--border-subtle)', borderRadius: 10 }}
+                            >
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)' }}>{p.trade_name ?? p.cdp_code}</span>
                                 {p.is_tier1 && <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: 'var(--c-blue)' }}><ShieldCheck style={{ width: 10, height: 10 }} /> Tier 1</span>}
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 {p.platform_price !== null && (
-                                  <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--t1)' }}>
+                                  <span className="tabular-nums" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--t1)' }}>
                                     {formatPrice(p.platform_price, 'EUR')}
                                     {diff !== null && diff !== 0 && (
                                       <span style={{ marginLeft: 5, fontSize: 11, color: diff > 0 ? 'var(--c-amber)' : 'var(--c-emerald)' }}>
@@ -198,12 +216,12 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
                                   </span>
                                 )}
                                 {p.listing_url && (
-                                  <a href={p.listing_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--t3)', display: 'flex' }}>
+                                  <a href={p.listing_url} target="_blank" rel="noopener noreferrer" className="vdm-platform-link" style={{ color: 'var(--t3)', display: 'flex' }}>
                                     <ExternalLink style={{ width: 13, height: 13 }} />
                                   </a>
                                 )}
                               </div>
-                            </div>
+                            </motion.div>
                           )
                         })}
                       </div>
@@ -212,6 +230,16 @@ export default function VehicleDetailModal({ vehicle, onClose, initialTab = 'fic
           },
         ]}
       />
+
+      <style>{`
+        .vdm-cta { transition: filter 0.12s, transform 0.12s; }
+        .vdm-cta:hover { filter: brightness(1.1); }
+        .vdm-cta:active { transform: scale(0.98); }
+        .vdm-secondary-btn { transition: background 0.12s, border-color 0.12s; }
+        .vdm-secondary-btn:hover { background: var(--bg-hover); border-color: var(--border-active); }
+        .vdm-platform-link { transition: color 0.12s; }
+        .vdm-platform-link:hover { color: var(--c-blue); }
+      `}</style>
     </Modal>
   )
 }
