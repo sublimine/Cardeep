@@ -1,12 +1,12 @@
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
-import React, { useEffect, useState } from 'react'
-import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { useState, type ComponentProps } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, Cell, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip,
   ResponsiveContainer,
 } from 'recharts'
 import Card from '../components/Card'
+import ProgressMetricCard, { type SeriesPoint } from '../components/progress-metric-card'
 import CoverageMap from '../components/CoverageMap'
 import PremiumGate from '../components/PremiumGate'
 import { useIsDark } from '../hooks/useIsDark'
@@ -46,83 +46,18 @@ const DELTA_DATA: DeltaItem[] = [
 ]
 const DELTA_FREE_COUNT = 3
 
-// ── AnimNum ───────────────────────────────────────────────────────────────────
+// ── Metric card (KPI row) ─────────────────────────────────────────────────────
+// KpiCard+Spark replaced by the shared ProgressMetricCard — same numbers, a real
+// interactive background chart (scrub/hover) instead of a static 64x28 sparkline.
+// `spark: number[]` values have no per-point real dates (arbitrary 6-step mock
+// progressions, per kpiCards below), so period labels stay relative ("P-5" ...
+// "Now") rather than inventing specific calendar dates.
 
-function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; prefix?: string; suffix?: string; decimals?: number }) {
-  const mv = useMotionValue(0)
-  const sp = useSpring(mv, { stiffness: 55, damping: 14 })
-  const d  = useTransform(sp, v => `${prefix}${decimals ? v.toFixed(decimals) : Math.round(v)}${suffix}`)
-  useEffect(() => { mv.set(to) }, [to, mv])
-  return <motion.span>{d}</motion.span>
-}
-
-// ── Spark ─────────────────────────────────────────────────────────────────────
-
-function Spark({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
-  if (values.length < 2) return null
-  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1
-  const W = 64, H = height
-  const pts = values.map((v, i): [number, number] => [
-    (i / (values.length - 1)) * W,
-    H - ((v - min) / range) * (H - 4) + 2,
-  ])
-  const line = pts.map(([x, y]) => `${x},${y}`).join(' ')
-  const area = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${pts.at(-1)![0]},${H} Z`
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-      <path d={area} fill={color} fillOpacity={0.12} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-// ── KPI card ──────────────────────────────────────────────────────────────────
-
-interface KpiCardProps {
-  label: string
-  value: number
-  prefix?: string
-  suffix?: string
-  decimals?: number
-  textValue?: string
-  sub: string
-  trend: 'up' | 'down' | 'flat' | 'good'
-  trendLabel: string
-  spark: number[]
-  delay?: number
-}
-
-function KpiCard({ label, value, prefix, suffix, decimals, textValue, sub, trend, trendLabel, spark, delay = 0 }: KpiCardProps) {
-  const trendColor = trend === 'up' || trend === 'good' ? GOOD : trend === 'down' ? BAD : 'var(--text-muted)'
-  const TrendIcon  = trend === 'up' || trend === 'good' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
-    >
-      <Card hover className="!p-5">
-        <div className="mb-3.5 flex items-center justify-between">
-          <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-          <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
-        </div>
-
-        <div className="mb-1 text-[44px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: textValue ? ACCENT : 'var(--text-primary)' }}>
-          {textValue ? <span>{textValue}</span> : <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />}
-        </div>
-        <div className="mb-3.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>
-
-        <div className="flex items-center justify-between border-t pt-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex items-center gap-1">
-            <TrendIcon style={{ width: 11, height: 11, color: trendColor }} />
-            <span className="text-[10.5px] font-semibold" style={{ color: trendColor }}>{trendLabel}</span>
-          </div>
-          <Spark values={spark} color={ACCENT} height={22} />
-        </div>
-      </Card>
-    </motion.div>
-  )
+function sparkToSeries(values: number[]): SeriesPoint[] {
+  return values.map((value, i) => ({
+    value,
+    date: i === values.length - 1 ? 'Now' : `P-${values.length - 1 - i}`,
+  }))
 }
 
 // ── Residual value chart — Capa 1: España siempre libre, vs-UE gateado ────────
@@ -353,11 +288,51 @@ export default function Inteligencia() {
   const [selectedModel, setSelectedModel] = useState(MODELS[0])
   const [selectedMarket, setSelectedMarket] = useState(MARKETS[0])
 
-  const kpiCards: KpiCardProps[] = [
-    { label: 'Precio óptimo', value: 18450, prefix: '€', sub: 'sweet-spot de venta', trend: 'good', trendLabel: 'margen máximo', spark: [18800, 18650, 18500, 18450, 18450, 18450], delay: 0 },
-    { label: 'vs media UE', value: -4.2, suffix: '%', decimals: 1, sub: 'posición competitiva', trend: 'good', trendLabel: '4,2% bajo mercado UE', spark: [-2.1, -2.8, -3.5, -3.9, -4.1, -4.2], delay: 0.06 },
-    { label: 'Días en stock', value: 39, suffix: ' d', sub: 'mediana del mercado', trend: 'flat', trendLabel: 'estable', spark: [42, 41, 40, 39, 39, 39], delay: 0.12 },
-    { label: 'Demanda', value: 0, textValue: 'Alta', sub: `${selectedModel} · España`, trend: 'up', trendLabel: '+12% vs mes anterior', spark: [60, 65, 72, 78, 84, 90], delay: 0.18 },
+  const kpiCards: (ComponentProps<typeof ProgressMetricCard> & { key: string })[] = [
+    {
+      key: 'Precio óptimo',
+      title: 'Precio óptimo',
+      total: '€18450',
+      sub: 'sweet-spot de venta',
+      trend: 'up',
+      delta: 'margen máximo',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([18800, 18650, 18500, 18450, 18450, 18450]),
+    },
+    {
+      key: 'vs media UE',
+      title: 'vs media UE',
+      total: '-4.2%',
+      sub: 'posición competitiva',
+      trend: 'up',
+      delta: '4,2% bajo mercado UE',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([-2.1, -2.8, -3.5, -3.9, -4.1, -4.2]),
+    },
+    {
+      key: 'Días en stock',
+      title: 'Días en stock',
+      total: '39 d',
+      sub: 'mediana del mercado',
+      trend: 'flat',
+      delta: 'estable',
+      deltaLabel: '',
+      accent: 'neutral',
+      data: sparkToSeries([42, 41, 40, 39, 39, 39]),
+    },
+    {
+      key: 'Demanda',
+      title: 'Demanda',
+      total: 'Alta',
+      sub: `${selectedModel} · España`,
+      trend: 'up',
+      delta: '+12% vs mes anterior',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([60, 65, 72, 78, 84, 90]),
+    },
   ]
 
   return (
@@ -399,8 +374,15 @@ export default function Inteligencia() {
       {/* Bento grid */}
       <div className="grid grid-cols-4 gap-3.5">
 
-        {kpiCards.map(card => (
-          <KpiCard key={card.label} {...card} />
+        {kpiCards.map(({ key, ...card }, i) => (
+          <motion.div
+            key={key}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
+          >
+            <ProgressMetricCard size="sm" showStats={false} {...card} />
+          </motion.div>
         ))}
 
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1 / 3', gridRow: '2', minHeight: 260 }}>

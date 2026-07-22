@@ -9,6 +9,7 @@ import {
   Tooltip as ChartTooltip, ResponsiveContainer,
 } from 'recharts'
 import Card from '../components/Card'
+import ProgressMetricCard, { type SeriesPoint } from '../components/progress-metric-card'
 import { useIsDark } from '../hooks/useIsDark'
 import { ACCENT, GOOD, BAD } from '../lib/theme'
 
@@ -152,7 +153,13 @@ function Spark({ values, color, height = 28 }: { values: number[]; color: string
   )
 }
 
-// ── KPI card ──────────────────────────────────────────────────────────────────
+// ── KPI card (legacy — "Current Plan" only) ────────────────────────────────────
+// Token Balance / Consumed This Month / API Calls Today moved to the shared
+// ProgressMetricCard (see sparkToSeries below) — same pattern as Dashboard.tsx
+// and Analitica.tsx. "Current Plan" stays on this local KpiCard/Spark: its value
+// is textual ("Scale", not a magnitude) and its spark is a constant filler array
+// ([1,1,1,1,1,1], only present so Spark doesn't return null) rather than a real
+// historical progression, so it has no honest chart to hand to ProgressMetricCard.
 
 interface KpiCardProps { label: string; value: number; prefix?: string; suffix?: string; decimals?: number; textValue?: string; sub: string; trend: 'up' | 'down' | 'flat' | 'good'; trendLabel: string; spark: number[]; delay?: number }
 
@@ -181,6 +188,18 @@ function KpiCard({ label, value, prefix, suffix, decimals, textValue, sub, trend
       </Card>
     </motion.div>
   )
+}
+
+// ── Progress metric row (Token Balance / Consumed / API Calls Today) ──────────
+// `spark: number[]` values below have no per-point real dates (arbitrary 6-step
+// mock progressions), so period labels stay relative ("P-5" ... "Now") rather
+// than inventing specific calendar dates.
+
+function sparkToSeries(values: number[]): SeriesPoint[] {
+  return values.map((value, i) => ({
+    value,
+    date: i === values.length - 1 ? 'Now' : `P-${values.length - 1 - i}`,
+  }))
 }
 
 // ── Endpoint catalog ──────────────────────────────────────────────────────────
@@ -506,12 +525,44 @@ function CodeExample() {
 export default function Api() {
   const dark = useIsDark()
 
-  const kpiCards: KpiCardProps[] = [
-    { label: 'Token Balance', value: TOKEN_BALANCE, sub: `${MONTH_LIMIT.toLocaleString()} token monthly limit`, trend: 'flat', trendLabel: `${Math.round((TOKEN_BALANCE / MONTH_LIMIT) * 100)}% remaining`, spark: [96400, 92100, 89300, 87800, 86100, TOKEN_BALANCE], delay: 0 },
-    { label: 'Consumed This Month', value: MONTH_CONSUMED, sub: `${Math.round((MONTH_CONSUMED / MONTH_LIMIT) * 100)}% of ${(MONTH_LIMIT / 1000).toFixed(0)}k limit used`, trend: 'up', trendLabel: '+23% vs last month', spark: [78400, 88200, 96500, 102800, 110100, MONTH_CONSUMED], delay: 0.06 },
-    { label: 'Current Plan', value: 0, textValue: 'Scale', sub: '€199 / month · 200k tokens', trend: 'good', trendLabel: 'active subscription', spark: [1, 1, 1, 1, 1, 1], delay: 0.12 },
-    { label: 'API Calls Today', value: CALLS_TODAY, sub: 'across all endpoints', trend: 'up', trendLabel: '+18% vs yesterday', spark: [1240, 1390, 1510, 1680, 1760, CALLS_TODAY], delay: 0.18 },
-  ]
+  // Token Balance / Consumed This Month / API Calls Today: shared ProgressMetricCard.
+  // Grid stagger delays (0 / 0.06 / 0.12 / 0.18, hardcoded on each motion.div below,
+  // same as every other panel in this file) are kept from the original 4-card row —
+  // "Current Plan" (legacy KpiCard, unchanged below) still sits between them at its
+  // original position, so these three no longer occupy contiguous grid slots.
+  const tokenBalanceCard: React.ComponentProps<typeof ProgressMetricCard> = {
+    title: 'Token Balance',
+    total: TOKEN_BALANCE,
+    sub: `${MONTH_LIMIT.toLocaleString()} token monthly limit`,
+    trend: 'flat',
+    delta: `${Math.round((TOKEN_BALANCE / MONTH_LIMIT) * 100)}%`,
+    deltaLabel: 'remaining',
+    accent: 'neutral',
+    data: sparkToSeries([96400, 92100, 89300, 87800, 86100, TOKEN_BALANCE]),
+  }
+  const consumedCard: React.ComponentProps<typeof ProgressMetricCard> = {
+    title: 'Consumed This Month',
+    total: MONTH_CONSUMED,
+    sub: `${Math.round((MONTH_CONSUMED / MONTH_LIMIT) * 100)}% of ${(MONTH_LIMIT / 1000).toFixed(0)}k limit used`,
+    trend: 'up',
+    delta: '+23%',
+    deltaLabel: 'vs last month',
+    accent: 'emerald',
+    data: sparkToSeries([78400, 88200, 96500, 102800, 110100, MONTH_CONSUMED]),
+  }
+  const callsTodayCard: React.ComponentProps<typeof ProgressMetricCard> = {
+    title: 'API Calls Today',
+    total: CALLS_TODAY,
+    sub: 'across all endpoints',
+    trend: 'up',
+    delta: '+18%',
+    deltaLabel: 'vs yesterday',
+    accent: 'emerald',
+    data: sparkToSeries([1240, 1390, 1510, 1680, 1760, CALLS_TODAY]),
+  }
+
+  // "Current Plan" stays on the legacy KpiCard — see comment above its definition.
+  const currentPlanCard: KpiCardProps = { label: 'Current Plan', value: 0, textValue: 'Scale', sub: '€199 / month · 200k tokens', trend: 'good', trendLabel: 'active subscription', spark: [1, 1, 1, 1, 1, 1], delay: 0.12 }
 
   return (
     <div className="mx-auto p-[24px_24px_40px]" style={{ maxWidth: 1360 }}>
@@ -524,7 +575,19 @@ export default function Api() {
 
       <div className="grid grid-cols-4 gap-3.5">
 
-        {kpiCards.map(card => <KpiCard key={card.label} {...card} />)}
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
+          <ProgressMetricCard size="sm" showStats={false} {...tokenBalanceCard} />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
+          <ProgressMetricCard size="sm" showStats={false} {...consumedCard} />
+        </motion.div>
+
+        <KpiCard {...currentPlanCard} />
+
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
+          <ProgressMetricCard size="sm" showStats={false} {...callsTodayCard} />
+        </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1 / 3', gridRow: '2', minHeight: 320 }}>
           <EndpointCatalog />

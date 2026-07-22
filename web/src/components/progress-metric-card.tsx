@@ -163,6 +163,10 @@ export default function ProgressMetricCard({
 
   const lastIndex = (primary?.data.length ?? 1) - 1
   const fallback = Math.min(defaultIndex ?? lastIndex, lastIndex)
+  // At `sm` size the default tooltip collides with the period-select trigger
+  // in the same top-right corner (most visible in dense KPI rows, 4-up).
+  // Tooltip becomes hover-only there instead of auto-shown.
+  const chartDefaultIndex = size === 'sm' ? undefined : fallback
 
   const handlePeriodChange = (option: PeriodOption) => {
     setSelectedLabel(option.label)
@@ -229,7 +233,7 @@ export default function ProgressMetricCard({
         <MetricChart
           series={chartSeries}
           view={view}
-          defaultIndex={fallback}
+          defaultIndex={chartDefaultIndex}
           valueFormatter={fmtFull}
           dateFormatter={fmtDate}
         />

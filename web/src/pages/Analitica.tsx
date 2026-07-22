@@ -1,7 +1,7 @@
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { motion } from 'framer-motion'
 import React, { useCallback, useEffect, useState } from 'react'
 import {
-  ArrowUpRight, ArrowDownRight, Minus, TrendingUp, Target, Globe, MapPin,
+  TrendingUp, Target, Globe, MapPin,
   AlertTriangle, Building2, RotateCw,
 } from 'lucide-react'
 import {
@@ -12,6 +12,7 @@ import {
 import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
 import { Skeleton } from '../components/Skeleton'
+import ProgressMetricCard, { type SeriesPoint } from '../components/progress-metric-card'
 import { useIsDark } from '../hooks/useIsDark'
 import { useAuthContext } from '../auth/AuthContext'
 import { cardeep, CardeepApiError, type ChannelRadar } from '../api/cardeep'
@@ -122,65 +123,18 @@ const REGION_SALES = [
   { region: 'Otras',     sales: 3, pct: 13 },
 ]
 
-// ── AnimNum ───────────────────────────────────────────────────────────────────
+// ── Metric card (KPI row) ──────────────────────────────────────────────────────
+// Sparkline+footer KpiCard replaced by the shared ProgressMetricCard — same
+// numbers, a real interactive background chart (scrub/hover) instead of a static
+// 64x28 sparkline. `spark: number[]` values have no per-point real dates
+// (arbitrary 6-step mock progressions, per kpiCards below), so period labels stay
+// relative ("P-5" ... "Now") rather than inventing specific calendar dates.
 
-function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; prefix?: string; suffix?: string; decimals?: number }) {
-  const mv = useMotionValue(0)
-  const sp = useSpring(mv, { stiffness: 55, damping: 14 })
-  const d  = useTransform(sp, v => `${prefix}${decimals ? v.toFixed(decimals) : Math.round(v)}${suffix}`)
-  useEffect(() => { mv.set(to) }, [to, mv])
-  return <motion.span className="tabular-nums">{d}</motion.span>
-}
-
-// ── Spark ─────────────────────────────────────────────────────────────────────
-
-function Spark({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
-  if (values.length < 2) return null
-  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1
-  const W = 64, H = height
-  const pts = values.map((v, i): [number, number] => [
-    (i / (values.length - 1)) * W,
-    H - ((v - min) / range) * (H - 4) + 2,
-  ])
-  const line = pts.map(([x, y]) => `${x},${y}`).join(' ')
-  const area = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${pts.at(-1)![0]},${H} Z`
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-      <path d={area} fill={color} fillOpacity={0.12} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-// ── KpiCard ───────────────────────────────────────────────────────────────────
-
-interface KpiCardProps { label: string; value: number; prefix?: string; suffix?: string; decimals?: number; sub: string; trend: 'up' | 'down' | 'flat' | 'good'; trendLabel: string; spark: number[]; delay?: number }
-
-function KpiCard({ label, value, prefix, suffix, decimals, sub, trend, trendLabel, spark, delay = 0 }: KpiCardProps) {
-  const trendColor = trend === 'up' || trend === 'good' ? GOOD : trend === 'down' ? BAD : 'var(--text-muted)'
-  const TrendIcon  = trend === 'up' || trend === 'good' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus
-
-  return (
-    <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
-      <Card hover className="!p-5">
-        <div className="mb-3.5 flex items-center justify-between">
-          <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-          <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
-        </div>
-        <div className="mb-1 text-[44px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
-          <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />
-        </div>
-        <div className="mb-3.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>
-        <div className="flex items-center justify-between border-t pt-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex items-center gap-1">
-            <TrendIcon style={{ width: 11, height: 11, color: trendColor }} />
-            <span className="text-[10.5px] font-semibold" style={{ color: trendColor }}>{trendLabel}</span>
-          </div>
-          <Spark values={spark} color={ACCENT} height={22} />
-        </div>
-      </Card>
-    </motion.div>
-  )
+function sparkToSeries(values: number[]): SeriesPoint[] {
+  return values.map((value, i) => ({
+    value,
+    date: i === values.length - 1 ? 'Now' : `P-${values.length - 1 - i}`,
+  }))
 }
 
 // ── Sales trend chart ─────────────────────────────────────────────────────────
@@ -564,11 +518,51 @@ export default function Analitica() {
   const kpi = KPI_VALUES[range]
   const salesData = SALES_DATA[range]
 
-  const kpiCards: KpiCardProps[] = [
-    { label: 'Visitas totales', value: kpi.visits, sub: 'páginas de producto', trend: 'up', trendLabel: '+18% vs período anterior', spark: [9800, 11200, 12400, 13100, 14000, kpi.visits], delay: 0 },
-    { label: 'Leads captados', value: kpi.leads, sub: 'todos los canales', trend: 'up', trendLabel: '+11% vs período anterior', spark: [280, 295, 310, 325, 336, kpi.leads], delay: 0.06 },
-    { label: 'Coste por lead', value: kpi.cpl, prefix: '€', decimals: 2, sub: 'media ponderada canales', trend: 'good', trendLabel: '-5% vs período anterior', spark: [10.2, 9.8, 9.4, 9.1, 8.9, kpi.cpl], delay: 0.12 },
-    { label: 'Conversión', value: kpi.conversion, suffix: '%', decimals: 1, sub: 'lead a venta cerrada', trend: 'up', trendLabel: '+0.4 pp vs período anterior', spark: [5.8, 6.0, 6.2, 6.4, 6.6, kpi.conversion], delay: 0.18 },
+  const kpiCards: (React.ComponentProps<typeof ProgressMetricCard> & { key: string })[] = [
+    {
+      key: 'Visitas totales',
+      title: 'Visitas totales',
+      total: `${kpi.visits}`,
+      sub: 'páginas de producto',
+      trend: 'up',
+      delta: '+18% vs período anterior',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([9800, 11200, 12400, 13100, 14000, kpi.visits]),
+    },
+    {
+      key: 'Leads captados',
+      title: 'Leads captados',
+      total: `${kpi.leads}`,
+      sub: 'todos los canales',
+      trend: 'up',
+      delta: '+11% vs período anterior',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([280, 295, 310, 325, 336, kpi.leads]),
+    },
+    {
+      key: 'Coste por lead',
+      title: 'Coste por lead',
+      total: `€${kpi.cpl.toFixed(2)}`,
+      sub: 'media ponderada canales',
+      trend: 'down',
+      delta: '-5% vs período anterior',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([10.2, 9.8, 9.4, 9.1, 8.9, kpi.cpl]),
+    },
+    {
+      key: 'Conversión',
+      title: 'Conversión',
+      total: `${kpi.conversion.toFixed(1)}%`,
+      sub: 'lead a venta cerrada',
+      trend: 'up',
+      delta: '+0.4 pp vs período anterior',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([5.8, 6.0, 6.2, 6.4, 6.6, kpi.conversion]),
+    },
   ]
 
   return (
@@ -609,7 +603,16 @@ export default function Analitica() {
 
       <div className="grid grid-cols-4 gap-3.5">
 
-        {kpiCards.map(card => <KpiCard key={card.label} {...card} />)}
+        {kpiCards.map(({ key, ...card }, i) => (
+          <motion.div
+            key={key}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
+          >
+            <ProgressMetricCard size="sm" showStats={false} {...card} />
+          </motion.div>
+        ))}
 
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1 / 3', gridRow: '2', minHeight: 280 }}>
           <SalesTrendChart data={salesData} dark={dark} />
