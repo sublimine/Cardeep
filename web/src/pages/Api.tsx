@@ -575,6 +575,7 @@ export default function Api() {
 
       <div className="grid grid-cols-4 gap-3.5">
 
+        {/* Back to 4-across — `sm` is now a genuinely compact/landscape card. */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
           <ProgressMetricCard size="sm" showStats={false} {...tokenBalanceCard} />
         </motion.div>

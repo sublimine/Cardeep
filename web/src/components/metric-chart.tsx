@@ -205,7 +205,11 @@ export function MetricChart({ series, view, defaultIndex, valueFormatter, dateFo
 
       {showTooltip && primary?.data[activeIndex!] && (
         <div
-          className="pointer-events-none absolute top-1 z-20 min-w-max rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2.5 py-1.5 shadow-[var(--shadow-card)]"
+          // top-14 (not top-1): the chart region spans the card's FULL height,
+          // starting behind the header row (title/view-toggle/period-select) —
+          // anchoring near the very top put the tooltip directly behind that
+          // header text. This clears it at every card size.
+          className="pointer-events-none absolute top-14 z-20 min-w-max rounded-[10px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2.5 py-1.5 shadow-[var(--shadow-card)]"
           style={{
             left: `${tipX}%`,
             transform:

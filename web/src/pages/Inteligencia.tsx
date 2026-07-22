@@ -374,6 +374,7 @@ export default function Inteligencia() {
       {/* Bento grid */}
       <div className="grid grid-cols-4 gap-3.5">
 
+        {/* Back to 4-across — `sm` is now a genuinely compact/landscape card. */}
         {kpiCards.map(({ key, ...card }, i) => (
           <motion.div
             key={key}

@@ -59,10 +59,24 @@ const REGION_W = 62 // %
 // Variation below this threshold reads as "flat" -> neutral accent.
 const NEUTRAL_PCT = 0.5
 
-const SIZES: Record<CardSize, { minH: string; pad: string; footer: string; title: string; headline: string }> = {
-  sm: { minH: 'min-h-[260px]', pad: 'px-6 pt-5', footer: 'px-6 py-3', title: 'text-[15px]', headline: 'text-[46px]' },
-  md: { minH: 'min-h-[380px]', pad: 'px-8 pt-7', footer: 'px-8 py-4', title: 'text-[17px]', headline: 'text-[72px]' },
-  lg: { minH: 'min-h-[460px]', pad: 'px-10 pt-9', footer: 'px-10 py-5', title: 'text-[19px]', headline: 'text-[88px]' },
+interface SizeSpec {
+  minH: string
+  pad: string
+  footer: string
+  title: string
+  headline: string
+  /** Gap between title row and headline number — scales with the card, unlike
+   * the other sizes' shared `mt-5` which only fit the two bigger sizes. */
+  headGap: string
+}
+
+// `sm` is a genuinely landscape/compact card (~300x160, ~1.9:1 — close to the
+// original reference's 762x380, ~2:1), not a shrunk-down `md`. A 4-up KPI row
+// needs this; `md`/`lg` stay hero-sized for a 1-2-up "featured metric" layout.
+const SIZES: Record<CardSize, SizeSpec> = {
+  sm: { minH: 'min-h-[160px]', pad: 'px-5 pt-4', footer: 'px-5 py-2.5', title: 'text-[12.5px]', headline: 'text-[32px]', headGap: 'mt-2' },
+  md: { minH: 'min-h-[380px]', pad: 'px-8 pt-7', footer: 'px-8 py-4', title: 'text-[17px]', headline: 'text-[72px]', headGap: 'mt-5' },
+  lg: { minH: 'min-h-[460px]', pad: 'px-10 pt-9', footer: 'px-10 py-5', title: 'text-[19px]', headline: 'text-[88px]', headGap: 'mt-5' },
 }
 
 const sliceWindow = (points: SeriesPoint[], n?: number) => (n && n < points.length ? points.slice(-n) : points)
@@ -174,6 +188,8 @@ export default function ProgressMetricCard({
   }
 
   if (loading) {
+    const skeletonHeadline = size === 'sm' ? 'h-8 w-28' : 'h-14 w-48'
+    const skeletonChart = size === 'sm' ? 'h-12 w-full' : 'h-24 w-full'
     return (
       <div className={shell} aria-busy="true">
         <div className={`flex flex-1 flex-col ${sz.pad}`}>
@@ -181,8 +197,8 @@ export default function ProgressMetricCard({
             <Skeleton className="h-5 w-32" />
             <Skeleton className="h-5 w-24" />
           </div>
-          <Skeleton className="mt-6 h-14 w-48" rounded="lg" />
-          <Skeleton className="mt-auto h-24 w-full" rounded="lg" />
+          <Skeleton className={`${sz.headGap} ${skeletonHeadline}`} rounded="lg" />
+          <Skeleton className={`mt-auto ${skeletonChart}`} rounded="lg" />
         </div>
         <div className={`border-t border-[var(--border-subtle)] ${sz.footer}`}>
           <Skeleton className="h-4 w-40" />
@@ -267,10 +283,10 @@ export default function ProgressMetricCard({
           </div>
         )}
 
-        <div className={`mt-5 ${sz.headline} font-medium leading-none tracking-tight text-[var(--text-primary)]`}>
+        <div className={`${sz.headGap} ${sz.headline} font-medium leading-none tracking-tight text-[var(--text-primary)]`}>
           {displayTotal}
         </div>
-        {sub && <div className="mt-1.5 text-[11px] text-[var(--text-muted)]">{sub}</div>}
+        {sub && <div className="mt-1 text-[10.5px] text-[var(--text-muted)]">{sub}</div>}
       </div>
 
       {/* Opaque footer: delta on the left, secondary stats on the right */}

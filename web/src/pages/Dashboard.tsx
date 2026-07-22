@@ -885,6 +885,8 @@ export default function Dashboard() {
       {/* Bento grid — dealer-first order (PLAN.md B4): KPIs → oportunidades/mercado → margen/pipeline/AI → revenue/modelos → stale/actividad */}
       <div className="grid grid-cols-4 gap-3.5">
 
+        {/* KPI row: back to 4-across — `sm` is a genuinely compact/landscape card
+            now (~300x160, ~1.9:1), not the old near-square tile. */}
         {kpiCards.map(({ key, ...card }, i) => (
           <motion.div
             key={key}
