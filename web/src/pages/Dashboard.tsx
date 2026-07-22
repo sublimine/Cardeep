@@ -1,12 +1,13 @@
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion'
 import React, { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
+import { ArrowUpRight, ArrowDownRight, AlertTriangle, Clock, ChevronRight } from 'lucide-react'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts'
 import { PageSkeleton } from '../components/LoadingSpinner'
 import Card from '../components/Card'
 import PremiumGate from '../components/PremiumGate'
 import EngineFreshnessStamp from '../components/EngineFreshnessStamp'
 import EmptyState from '../components/EmptyState'
+import ProgressMetricCard, { type SeriesPoint } from '../components/progress-metric-card'
 import { useApi } from '../hooks/useApi'
 import { useIsDark } from '../hooks/useIsDark'
 import { useNavigate } from 'react-router-dom'
@@ -102,24 +103,6 @@ function timeAgo(iso: string) {
   return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`
 }
 
-function Spark({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
-  if (values.length < 2) return null
-  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1
-  const W = 64, H = height
-  const pts = values.map((v, i): [number, number] => [
-    (i / (values.length - 1)) * W,
-    H - ((v - min) / range) * (H - 4) + 2,
-  ])
-  const line = pts.map(([x, y]) => `${x},${y}`).join(' ')
-  const area = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${pts.at(-1)![0]},${H} Z`
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-      <path d={area} fill={color} fillOpacity={0.12} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 function renderBold(text: string): React.ReactNode {
   return text.split(/\*\*(.*?)\*\*/g).map((p, i) =>
     i % 2 === 1 ? <strong key={i} className="font-bold" style={{ color: 'var(--text-primary)' }}>{p}</strong> : <span key={i}>{p}</span>
@@ -166,49 +149,17 @@ function PanelLink({ onClick, ariaLabel, children, className, accent }: PanelLin
 }
 
 // ── Metric card (KPI row) ──────────────────────────────────────────────────────
+// v3.1: sparkline+footer MetricCard replaced by the shared ProgressMetricCard —
+// same numbers, a real interactive background chart (scrub/hover) instead of a
+// static 64x28 sparkline. `spark: number[]` values have no per-point real dates
+// (arbitrary 6-step mock progressions, per kpiCards below), so period labels
+// stay relative ("P-5" ... "Now") rather than inventing specific calendar dates.
 
-interface MetricCardProps {
-  label: string
-  value: number
-  prefix?: string
-  suffix?: string
-  decimals?: number
-  sub: string
-  trend: 'up' | 'down' | 'flat' | 'good'
-  trendLabel: string
-  spark: number[]
-  delay?: number
-}
-
-function MetricCard({ label, value, prefix, suffix, decimals, sub, trend, trendLabel, spark, delay = 0 }: MetricCardProps) {
-  const trendColor = trend === 'up' || trend === 'good' ? GOOD : trend === 'down' ? BAD : 'var(--text-muted)'
-  const TrendIcon  = trend === 'up' || trend === 'good' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
-    >
-      <Card hover className="!p-5">
-        <div className="flex items-center justify-between mb-3.5">
-          <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-          <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
-        </div>
-        <div className="text-[44px] font-extrabold leading-none tracking-[-0.03em] tabular-nums mb-1" style={{ color: 'var(--text-primary)' }}>
-          <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />
-        </div>
-        <div className="text-[11px] mb-3.5" style={{ color: 'var(--text-muted)' }}>{sub}</div>
-        <div className="flex items-center justify-between pt-2.5 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex items-center gap-1">
-            <TrendIcon style={{ width: 11, height: 11, color: trendColor }} />
-            <span className="text-[10.5px] font-semibold" style={{ color: trendColor }}>{trendLabel}</span>
-          </div>
-          <Spark values={spark} color={ACCENT} height={22} />
-        </div>
-      </Card>
-    </motion.div>
-  )
+function sparkToSeries(values: number[]): SeriesPoint[] {
+  return values.map((value, i) => ({
+    value,
+    date: i === values.length - 1 ? 'Now' : `P-${values.length - 1 - i}`,
+  }))
 }
 
 // ── Margin chart ──────────────────────────────────────────────────────────────
@@ -845,11 +796,51 @@ export default function Dashboard() {
   const marginTrend: 'up' | 'down' | 'flat' = marginDeltaPct > 0.5 ? 'up' : marginDeltaPct < -0.5 ? 'down' : 'flat'
   const marginTrendLabel = `${marginDeltaPct >= 0 ? '+' : ''}${marginDeltaPct.toFixed(0)}% vs last month`
 
-  const kpiCards = [
-    { label: 'In Stock',          value: kpi.stockCount,               sub: `€${(DEALER.stockValue / 1_000_000).toFixed(2)}M capital`, trend: 'up' as const,   trendLabel: '+12 this month',      spark: [220, 232, 245, 258, 264, kpi.stockCount], delay: 0 },
-    { label: 'Active Deals',      value: kpi.activeDeals,               sub: '8 closing this week',                                       trend: 'flat' as const, trendLabel: 'stable',              spark: [42, 48, 51, 53, 54, kpi.activeDeals],     delay: 0.06 },
-    { label: 'Month Margin',      value: kpi.monthMargin / 1000, prefix: '€', suffix: 'k', decimals: 1, sub: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), trend: marginTrend, trendLabel: marginTrendLabel, spark: kpi.marginHistory.map(m => m.margin / 1000), delay: 0.12 },
-    { label: 'Avg Days In Stock', value: DEALER.avgDaysInStock, suffix: 'd', sub: 'target < 45d', trend: 'good' as const, trendLabel: 'healthy', spark: [52, 48, 44, 41, 39, DEALER.avgDaysInStock], delay: 0.18 },
+  const kpiCards: (React.ComponentProps<typeof ProgressMetricCard> & { key: string })[] = [
+    {
+      key: 'In Stock',
+      title: 'In Stock',
+      total: `${kpi.stockCount}`,
+      sub: `€${(DEALER.stockValue / 1_000_000).toFixed(2)}M capital`,
+      trend: 'up',
+      delta: '+12',
+      deltaLabel: 'this month',
+      accent: 'emerald',
+      data: sparkToSeries([220, 232, 245, 258, 264, kpi.stockCount]),
+    },
+    {
+      key: 'Active Deals',
+      title: 'Active Deals',
+      total: `${kpi.activeDeals}`,
+      sub: '8 closing this week',
+      trend: 'flat',
+      delta: 'Stable',
+      deltaLabel: '',
+      accent: 'neutral',
+      data: sparkToSeries([42, 48, 51, 53, 54, kpi.activeDeals]),
+    },
+    {
+      key: 'Month Margin',
+      title: 'Month Margin',
+      total: `€${(kpi.monthMargin / 1000).toFixed(1)}k`,
+      sub: new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+      trend: marginTrend,
+      delta: marginTrendLabel,
+      deltaLabel: '',
+      accent: marginTrend === 'up' ? 'emerald' : marginTrend === 'down' ? 'rose' : 'neutral',
+      data: sparkToSeries(kpi.marginHistory.map(m => m.margin / 1000)),
+    },
+    {
+      key: 'Avg Days In Stock',
+      title: 'Avg Days In Stock',
+      total: `${DEALER.avgDaysInStock}d`,
+      sub: 'target < 45d',
+      trend: 'down',
+      delta: 'Healthy',
+      deltaLabel: '',
+      accent: 'emerald',
+      data: sparkToSeries([52, 48, 44, 41, 39, DEALER.avgDaysInStock]),
+    },
   ]
 
   return (
@@ -894,8 +885,15 @@ export default function Dashboard() {
       {/* Bento grid — dealer-first order (PLAN.md B4): KPIs → oportunidades/mercado → margen/pipeline/AI → revenue/modelos → stale/actividad */}
       <div className="grid grid-cols-4 gap-3.5">
 
-        {kpiCards.map(card => (
-          <MetricCard key={card.label} {...card} />
+        {kpiCards.map(({ key, ...card }, i) => (
+          <motion.div
+            key={key}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.06, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}
+          >
+            <ProgressMetricCard size="sm" showStats={false} {...card} />
+          </motion.div>
         ))}
 
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.44, ease: [0.32, 0.72, 0, 1] }} style={{ gridColumn: '1 / 4', gridRow: '2', minHeight: 200 }}>
