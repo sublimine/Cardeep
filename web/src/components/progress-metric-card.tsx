@@ -60,7 +60,9 @@ const REGION_W = 62 // %
 const NEUTRAL_PCT = 0.5
 
 interface SizeSpec {
-  minH: string
+  /** Fixed, not min — every card at this size must be pixel-identical so a
+   * row of them stays symmetric regardless of title length or content. */
+  h: string
   pad: string
   footer: string
   title: string
@@ -74,9 +76,9 @@ interface SizeSpec {
 // original reference's 762x380, ~2:1), not a shrunk-down `md`. A 4-up KPI row
 // needs this; `md`/`lg` stay hero-sized for a 1-2-up "featured metric" layout.
 const SIZES: Record<CardSize, SizeSpec> = {
-  sm: { minH: 'min-h-[160px]', pad: 'px-5 pt-4', footer: 'px-5 py-2.5', title: 'text-[12.5px]', headline: 'text-[32px]', headGap: 'mt-2' },
-  md: { minH: 'min-h-[380px]', pad: 'px-8 pt-7', footer: 'px-8 py-4', title: 'text-[17px]', headline: 'text-[72px]', headGap: 'mt-5' },
-  lg: { minH: 'min-h-[460px]', pad: 'px-10 pt-9', footer: 'px-10 py-5', title: 'text-[19px]', headline: 'text-[88px]', headGap: 'mt-5' },
+  sm: { h: 'h-[168px]', pad: 'px-5 pt-4', footer: 'px-5 py-2.5', title: 'text-[12.5px]', headline: 'text-[32px]', headGap: 'mt-1.5' },
+  md: { h: 'h-[380px]', pad: 'px-8 pt-7', footer: 'px-8 py-4', title: 'text-[17px]', headline: 'text-[72px]', headGap: 'mt-5' },
+  lg: { h: 'h-[460px]', pad: 'px-10 pt-9', footer: 'px-10 py-5', title: 'text-[19px]', headline: 'text-[88px]', headGap: 'mt-5' },
 }
 
 const sliceWindow = (points: SeriesPoint[], n?: number) => (n && n < points.length ? points.slice(-n) : points)
@@ -107,7 +109,7 @@ export default function ProgressMetricCard({
 }: ProgressMetricCardProps) {
   const gridId = `grid-${useId().replace(/:/g, '')}`
   const sz = SIZES[size]
-  const shell = `relative flex ${sz.minH} w-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)] ${className}`
+  const shell = `relative flex ${sz.h} w-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)] ${className}`
 
   const periods = periodOptions ?? DEFAULT_PERIODS
   const [selectedLabel, setSelectedLabel] = useState(period)
@@ -257,18 +259,21 @@ export default function ProgressMetricCard({
 
       {/* Main content */}
       <div className={`pointer-events-none relative z-10 flex flex-1 flex-col ${sz.pad}`}>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h3 className={`${sz.title} font-semibold tracking-tight text-[var(--text-primary)]`}>{title}</h3>
-            <ViewToggle value={view} onChange={setView} />
-          </div>
-          <div className="flex items-center gap-3.5 text-[14px]">
-            <span className="flex items-center gap-1 font-medium" style={{ color: color.text }}>
-              <TrendIcon size={16} strokeWidth={2.5} />
-              {displayPercent}
-            </span>
-            <PeriodSelect value={selectedLabel} options={periods} onChange={handlePeriodChange} accentText={color.text} />
-          </div>
+        {/* Title+percent and the view/period controls each get their OWN row —
+         * cramming all four into one row is what wrapped titles and "Past 30
+         * days" onto a second line and broke row symmetry (a wrapped title
+         * grows the card past its siblings). `truncate`+`shrink-0` below are
+         * the hard guarantee: neither side can ever force a wrap. */}
+        <div className="flex items-center justify-between gap-3">
+          <h3 className={`${sz.title} truncate font-semibold tracking-tight text-[var(--text-primary)]`}>{title}</h3>
+          <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-medium" style={{ color: color.text }}>
+            <TrendIcon size={14} strokeWidth={2.5} />
+            {displayPercent}
+          </span>
+        </div>
+        <div className="mt-1.5 flex items-center justify-between gap-3">
+          <ViewToggle value={view} onChange={setView} />
+          <PeriodSelect value={selectedLabel} options={periods} onChange={handlePeriodChange} accentText={color.text} />
         </div>
 
         {/* Legend (multi-series only) */}

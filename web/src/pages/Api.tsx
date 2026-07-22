@@ -138,54 +138,49 @@ function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; p
   return <motion.span className="tabular-nums">{d}</motion.span>
 }
 
-function Spark({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
-  if (values.length < 2) return null
-  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1
-  const W = 64, H = height
-  const pts = values.map((v, i): [number, number] => [(i / (values.length - 1)) * W, H - ((v - min) / range) * (H - 4) + 2])
-  const line = pts.map(([x, y]) => `${x},${y}`).join(' ')
-  const area = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(' ') + ` L${pts.at(-1)![0]},${H} Z`
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
-      <path d={area} fill={color} fillOpacity={0.12} />
-      <polyline points={line} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 // ── KPI card (legacy — "Current Plan" only) ────────────────────────────────────
 // Token Balance / Consumed This Month / API Calls Today moved to the shared
 // ProgressMetricCard (see sparkToSeries below) — same pattern as Dashboard.tsx
-// and Analitica.tsx. "Current Plan" stays on this local KpiCard/Spark: its value
-// is textual ("Scale", not a magnitude) and its spark is a constant filler array
-// ([1,1,1,1,1,1], only present so Spark doesn't return null) rather than a real
-// historical progression, so it has no honest chart to hand to ProgressMetricCard.
+// and Analitica.tsx. "Current Plan" stays on this local KpiCard: its value is
+// textual ("Scale", not a magnitude) and its old spark was a constant filler
+// array ([1,1,1,1,1,1], never a real historical progression), so it has no
+// honest chart to hand to ProgressMetricCard — the filler spark/Spark SVG were
+// both removed rather than kept as decoration with no real data behind them.
 
-interface KpiCardProps { label: string; value: number; prefix?: string; suffix?: string; decimals?: number; textValue?: string; sub: string; trend: 'up' | 'down' | 'flat' | 'good'; trendLabel: string; spark: number[]; delay?: number }
+interface KpiCardProps { label: string; value: number; prefix?: string; suffix?: string; decimals?: number; textValue?: string; sub: string; trend: 'up' | 'down' | 'flat' | 'good'; trendLabel: string; delay?: number }
 
-function KpiCard({ label, value, prefix, suffix, decimals, textValue, sub, trend, trendLabel, spark, delay = 0 }: KpiCardProps) {
+// Shell copied verbatim from ProgressMetricCard's `sm` size (h-[168px], same
+// radius/border/shadow/padding) — "Current Plan" has no real historical
+// series (its old spark was a constant [1,1,1,1,1,1] filler, not data), so it
+// can't become a real chart card, but it still has to sit pixel-identical
+// next to its three siblings in the same row, not one visibly different card.
+function KpiCard({ label, value, prefix, suffix, decimals, textValue, sub, trend, trendLabel, delay = 0 }: KpiCardProps) {
   const trendColor = trend === 'up' || trend === 'good' ? GOOD : trend === 'down' ? BAD : 'var(--text-muted)'
   const TrendIcon  = trend === 'up' || trend === 'good' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus
 
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
-      <Card hover className="!p-5">
-        <div className="mb-3.5 flex items-center justify-between">
-          <span className="text-[9.5px] font-bold uppercase tracking-[0.11em]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-          <div className="h-1.5 w-1.5 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
-        </div>
-        <div className="mb-1 text-[44px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: textValue ? ACCENT : 'var(--text-primary)' }}>
-          {textValue ? <span>{textValue}</span> : <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />}
-        </div>
-        <div className="mb-3.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>
-        <div className="flex items-center justify-between border-t pt-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
-          <div className="flex items-center gap-1">
-            <TrendIcon style={{ width: 11, height: 11, color: trendColor }} />
-            <span className="text-[10.5px] font-semibold" style={{ color: trendColor }}>{trendLabel}</span>
+      <div className="relative flex h-[168px] w-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
+        <div className="flex flex-1 flex-col px-5 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="truncate text-[12.5px] font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>{label}</h3>
+            <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
           </div>
-          <Spark values={spark} color={ACCENT} height={22} />
+          {/* Invisible spacer, same height as siblings' ViewToggle+PeriodSelect
+           * row — this card has neither (no chart to control), but its
+           * headline still has to land on the same baseline as its 3
+           * ProgressMetricCard siblings in the row, not float higher. */}
+          <div className="mt-1.5 h-6" aria-hidden />
+          <div className="text-[32px] font-medium leading-none tracking-tight" style={{ color: textValue ? ACCENT : 'var(--text-primary)' }}>
+            {textValue ? <span>{textValue}</span> : <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />}
+          </div>
+          {sub && <div className="mt-1 truncate text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>}
         </div>
-      </Card>
+        <div className="flex items-center gap-1 border-t px-5 py-2.5" style={{ borderColor: 'var(--border-subtle)' }}>
+          <TrendIcon style={{ width: 11, height: 11, color: trendColor }} />
+          <span className="text-[10.5px] font-semibold" style={{ color: trendColor }}>{trendLabel}</span>
+        </div>
+      </div>
     </motion.div>
   )
 }
@@ -562,7 +557,7 @@ export default function Api() {
   }
 
   // "Current Plan" stays on the legacy KpiCard — see comment above its definition.
-  const currentPlanCard: KpiCardProps = { label: 'Current Plan', value: 0, textValue: 'Scale', sub: '€199 / month · 200k tokens', trend: 'good', trendLabel: 'active subscription', spark: [1, 1, 1, 1, 1, 1], delay: 0.12 }
+  const currentPlanCard: KpiCardProps = { label: 'Current Plan', value: 0, textValue: 'Scale', sub: '€199 / month · 200k tokens', trend: 'good', trendLabel: 'active subscription', delay: 0.12 }
 
   return (
     <div className="mx-auto p-[24px_24px_40px]" style={{ maxWidth: 1360 }}>

@@ -22,7 +22,7 @@ export function PeriodSelect({ value, options, onChange, accentText }: PeriodSel
       trigger={
         <button
           type="button"
-          className="pointer-events-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[13px] font-medium text-[var(--text-muted)] outline-none transition-colors hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]"
+          className="pointer-events-auto flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[13px] font-medium text-[var(--text-muted)] outline-none transition-colors hover:text-[var(--text-primary)] focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]"
         >
           {value}
           <ChevronDown className="h-3.5 w-3.5 opacity-70" />
