@@ -162,16 +162,19 @@ function KpiCard({ label, value, prefix, suffix, decimals, textValue, sub, trend
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.42, ease: [0.32, 0.72, 0, 1] }}>
       <div className="relative flex h-[168px] w-full flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
         <div className="flex flex-1 flex-col px-5 pt-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
             <h3 className="truncate text-[12.5px] font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>{label}</h3>
-            <div className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
+            {/* Invisible, but structurally identical to siblings' period+percent
+             * stack (same text size/line-height/gap) — this card has neither
+             * (no chart, no period to filter), but its headline still has to
+             * land on the same baseline as its 3 ProgressMetricCard siblings,
+             * not float higher just because it renders less on the right. */}
+            <div className="flex shrink-0 flex-col items-end gap-1 opacity-0" aria-hidden>
+              <span className="text-[13px] leading-none">—</span>
+              <span className="text-[13px] leading-none">—</span>
+            </div>
           </div>
-          {/* Invisible spacer, same height as siblings' ViewToggle+PeriodSelect
-           * row — this card has neither (no chart to control), but its
-           * headline still has to land on the same baseline as its 3
-           * ProgressMetricCard siblings in the row, not float higher. */}
-          <div className="mt-1.5 h-6" aria-hidden />
-          <div className="text-[32px] font-medium leading-none tracking-tight" style={{ color: textValue ? ACCENT : 'var(--text-primary)' }}>
+          <div className="mt-1.5 text-[32px] font-medium leading-none tracking-tight" style={{ color: textValue ? ACCENT : 'var(--text-primary)' }}>
             {textValue ? <span>{textValue}</span> : <AnimNum to={value} prefix={prefix} suffix={suffix} decimals={decimals} />}
           </div>
           {sub && <div className="mt-1 truncate text-[10.5px]" style={{ color: 'var(--text-muted)' }}>{sub}</div>}

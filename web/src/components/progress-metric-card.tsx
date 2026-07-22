@@ -12,7 +12,7 @@ import {
   type MetricSeries,
   type SeriesPoint,
 } from './metric-chart'
-import { PeriodSelect, ViewToggle, type PeriodOption } from './metric-controls'
+import { PeriodSelect, type PeriodOption } from './metric-controls'
 
 // Re-exported so consumers only need to import this one file.
 export type { SeriesPoint, MetricSeries, MetricAccent, ChartView, PeriodOption }
@@ -55,7 +55,7 @@ const DEFAULT_PERIODS: PeriodOption[] = [
 ]
 
 // Share of the card (from the right edge) occupied by the background chart.
-const REGION_W = 62 // %
+const REGION_W = 66 // %
 // Variation below this threshold reads as "flat" -> neutral accent.
 const NEUTRAL_PCT = 0.5
 
@@ -113,7 +113,9 @@ export default function ProgressMetricCard({
 
   const periods = periodOptions ?? DEFAULT_PERIODS
   const [selectedLabel, setSelectedLabel] = useState(period)
-  const [view, setView] = useState<ChartView>(defaultView)
+  // No in-card view toggle (moved out per owner direction — it ate space a
+  // dense KPI row can't spare); `defaultView` alone still picks curve vs bar.
+  const view: ChartView = defaultView
 
   // Normalizes the input into a list of series (a plain `data` array becomes one series).
   const baseSeries: MetricSeries[] = useMemo(
@@ -225,55 +227,59 @@ export default function ProgressMetricCard({
 
   return (
     <div className={shell}>
-      {/* Chart region (right side, behind the content) */}
+      {/* Chart region (right side, behind the content). Wash + dot-grid + the
+       * actual line/area fade in together as ONE unit from the number-zone
+       * boundary — previously only the decorative wash/grid faded there while
+       * the chart line/area started at full strength with zero transition,
+       * which is what read as an abrupt "parón seco" between value and chart. */}
       <div className="absolute inset-y-0 right-0 z-0" style={{ width: `${REGION_W}%` }}>
         <div
           className="absolute inset-0"
-          style={{ background: `linear-gradient(to left, ${color.stroke}1f, transparent 75%)` }}
-        />
-        <div
-          className="absolute inset-0 text-[var(--text-primary)] opacity-[0.13]"
           style={{
-            WebkitMaskImage: 'linear-gradient(to right, transparent, black 55%)',
-            maskImage: 'linear-gradient(to right, transparent, black 55%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 36%)',
+            maskImage: 'linear-gradient(to right, transparent 0%, black 36%)',
           }}
         >
-          <svg className="h-full w-full" aria-hidden>
-            <defs>
-              <pattern id={gridId} width="14" height="14" patternUnits="userSpaceOnUse">
-                <circle cx="1" cy="1" r="1" fill="currentColor" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill={`url(#${gridId})`} />
-          </svg>
-        </div>
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(to left, ${color.stroke}1f, transparent 75%)` }}
+          />
+          <div className="absolute inset-0 text-[var(--text-primary)] opacity-[0.13]">
+            <svg className="h-full w-full" aria-hidden>
+              <defs>
+                <pattern id={gridId} width="14" height="14" patternUnits="userSpaceOnUse">
+                  <circle cx="1" cy="1" r="1" fill="currentColor" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill={`url(#${gridId})`} />
+            </svg>
+          </div>
 
-        <MetricChart
-          series={chartSeries}
-          view={view}
-          defaultIndex={chartDefaultIndex}
-          valueFormatter={fmtFull}
-          dateFormatter={fmtDate}
-        />
+          <MetricChart
+            series={chartSeries}
+            view={view}
+            defaultIndex={chartDefaultIndex}
+            valueFormatter={fmtFull}
+            dateFormatter={fmtDate}
+          />
+        </div>
       </div>
 
       {/* Main content */}
       <div className={`pointer-events-none relative z-10 flex flex-1 flex-col ${sz.pad}`}>
-        {/* Title+percent and the view/period controls each get their OWN row —
-         * cramming all four into one row is what wrapped titles and "Past 30
-         * days" onto a second line and broke row symmetry (a wrapped title
-         * grows the card past its siblings). `truncate`+`shrink-0` below are
-         * the hard guarantee: neither side can ever force a wrap. */}
-        <div className="flex items-center justify-between gap-3">
+        {/* Title alone on the left; period filter + percent stacked top-right —
+         * per owner direction, not spread across the row (which is what wrapped
+         * long titles and "Past 30 days" onto a second line and broke row
+         * symmetry, since a wrapped title grows past its siblings' height). */}
+        <div className="flex items-start justify-between gap-3">
           <h3 className={`${sz.title} truncate font-semibold tracking-tight text-[var(--text-primary)]`}>{title}</h3>
-          <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-medium" style={{ color: color.text }}>
-            <TrendIcon size={14} strokeWidth={2.5} />
-            {displayPercent}
-          </span>
-        </div>
-        <div className="mt-1.5 flex items-center justify-between gap-3">
-          <ViewToggle value={view} onChange={setView} />
-          <PeriodSelect value={selectedLabel} options={periods} onChange={handlePeriodChange} accentText={color.text} />
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <PeriodSelect value={selectedLabel} options={periods} onChange={handlePeriodChange} accentText={color.text} />
+            <span className="flex items-center gap-1 whitespace-nowrap text-[13px] font-medium" style={{ color: color.text }}>
+              <TrendIcon size={14} strokeWidth={2.5} />
+              {displayPercent}
+            </span>
+          </div>
         </div>
 
         {/* Legend (multi-series only) */}
