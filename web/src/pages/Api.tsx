@@ -10,7 +10,12 @@ import {
 } from 'recharts'
 import Card from '../components/Card'
 import { useIsDark } from '../hooks/useIsDark'
-import { ACCENT, GOOD, BAD, WARN } from '../lib/theme'
+import { ACCENT, GOOD, BAD } from '../lib/theme'
+
+// Shared focus-visible ring — mirrors Button.tsx's own focus treatment so every
+// ad-hoc interactive element on this page (key actions, plan CTAs, copy buttons)
+// matches house style.
+const FOCUS_RING = 'outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -41,6 +46,14 @@ const ENDPOINTS: Endpoint[] = [
   { id: 'inv', path: 'GET /entities/{cdp_code}/inventory',        type: 'INVENTORY', description: 'Live, canonically-deduped stock feed for one dealer or platform', tokens: '1 / 100 results' },
   { id: 'delta', path: 'GET /entities/{cdp_code}/delta',          type: 'INVENTORY', description: 'Append-only delta feed: new listings, removals, price/photo/km changes', tokens: '1 token' },
 ]
+
+// One categorical pair for the two endpoint types — reused identically by the
+// catalog type badge below and by the consumption chart's series/legend so both
+// surfaces speak the same colour language. Indigo/teal are DATA-semantic hues
+// (tokens.css --c-indigo/--c-teal), deliberately not GOOD/BAD/WARN — those are
+// reserved for status (success/error/warning) and must never double as
+// arbitrary chart-series colours.
+const TYPE_COLORS: Record<Endpoint['type'], string> = { INFO: '#4f46e5', INVENTORY: '#0891b2' }
 
 const INITIAL_KEYS: ApiKey[] = [
   { id: 'k1', name: 'Production',    masked: 'cdp_live_••••3f9a', created: '15 Mar 2026', lastUsed: 'just now',    status: 'active'  },
@@ -77,7 +90,12 @@ const C_RAW: [number, number, number, number, number][] = [
   [1830,1120, 880, 570, 224],[1690, 950, 750, 500, 200],[1760,1040, 830, 536, 212],
   [2040,1250, 980, 660, 260],[1496, 820, 650, 416, 156],[1720, 940, 750, 496, 196],
 ]
-const CONSUMPTION_DATA = C_RAW.map((d, i) => ({ day: String(i + 1), market: d[0], valuation: d[1], history: d[2], dealScore: d[3], inventory: d[4] }))
+// Grouped into the two real endpoint types (see TYPE_COLORS) rather than
+// individually-named endpoints — the prior version broke down consumption by
+// "Market" / "Valuation" / "History" / "Deal Score" / "Inventory", but
+// "Valuation" and "Deal Score" have no backing endpoint (see ENDPOINTS above).
+// Illustrative magnitudes only; no live consumption-analytics endpoint exists yet.
+const CONSUMPTION_DATA = C_RAW.map((d, i) => ({ day: String(i + 1), INFO: d[0] + d[1] + d[2] + d[3], INVENTORY: d[4] }))
 
 // Real endpoint, real segment, real numbers — captured from the live published
 // market_stat run (01-market-intelligence F2, run_id 01KXS6Q4TJKCWM19KKQN2SJ2J1,
@@ -109,9 +127,6 @@ const RESPONSE_EXAMPLE = `{
   "meta": { "run_id": "01KXS6Q4TJKCWM19KKQN2SJ2J1", "window_description": "..." }
 }`
 
-const ENDPOINT_COLORS: Record<string, string> = { market: ACCENT, valuation: WARN, history: '#60a5fa', dealScore: GOOD, inventory: '#0891b2' }
-const ENDPOINT_LABELS: Record<string, string> = { market: 'Market', valuation: 'Valuation', history: 'History', dealScore: 'Deal Score', inventory: 'Inventory' }
-
 // ── AnimNum / Spark ────────────────────────────────────────────────────────────
 
 function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; prefix?: string; suffix?: string; decimals?: number }) {
@@ -119,7 +134,7 @@ function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; p
   const sp = useSpring(mv, { stiffness: 55, damping: 14 })
   const d  = useTransform(sp, v => `${prefix}${decimals ? v.toFixed(decimals) : Math.round(v)}${suffix}`)
   useEffect(() => { mv.set(to) }, [to, mv])
-  return <motion.span>{d}</motion.span>
+  return <motion.span className="tabular-nums">{d}</motion.span>
 }
 
 function Spark({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
@@ -186,14 +201,14 @@ function EndpointCatalog() {
               initial={{ opacity: 0, x: -6 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.14 + i * 0.07, duration: 0.3 }}
-              className="grid items-start gap-x-3 gap-y-1.5 rounded-[10px] p-[9px_11px]"
-              style={{ gridTemplateColumns: '1fr auto', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+              className="grid items-start gap-x-3 gap-y-1.5 rounded-[10px] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-[9px_11px] transition-colors hover:bg-[var(--bg-hover)]"
+              style={{ gridTemplateColumns: '1fr auto', borderLeft: `2px solid ${TYPE_COLORS[ep.type]}` }}
             >
               <div className="min-w-0">
                 <div className="mb-[3px] flex items-center gap-1.5">
                   <span
                     className="shrink-0 rounded px-1.5 py-px text-[8.5px] font-bold tracking-[0.06em]"
-                    style={{ background: `${ACCENT}1f`, border: `1px solid ${ACCENT}40`, color: ACCENT }}
+                    style={{ background: `${TYPE_COLORS[ep.type]}1f`, border: `1px solid ${TYPE_COLORS[ep.type]}40`, color: TYPE_COLORS[ep.type] }}
                   >
                     {ep.type}
                   </span>
@@ -227,14 +242,14 @@ function ConsumptionChart({ dark }: { dark: boolean }) {
       <div className="flex h-full flex-col p-[18px_20px_14px]">
         <div className="mb-3 shrink-0">
           <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Token Consumption</h2>
-          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Last 30 days — stacked by endpoint</p>
+          <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Last 30 days — INFO vs INVENTORY token spend</p>
         </div>
 
         <div className="mb-3 flex shrink-0 flex-wrap gap-x-3.5 gap-y-1">
-          {Object.entries(ENDPOINT_COLORS).map(([key, color]) => (
+          {Object.entries(TYPE_COLORS).map(([key, color]) => (
             <div key={key} className="flex items-center gap-[5px]">
               <span className="inline-block h-[7px] w-[7px] rounded-sm" style={{ background: color }} />
-              <span className="text-[9.5px]" style={{ color: 'var(--text-muted)' }}>{ENDPOINT_LABELS[key]}</span>
+              <span className="text-[9.5px] font-semibold tracking-[0.04em]" style={{ color: 'var(--text-muted)' }}>{key}</span>
             </div>
           ))}
         </div>
@@ -247,11 +262,11 @@ function ConsumptionChart({ dark }: { dark: boolean }) {
               <YAxis tick={{ fontSize: 8.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
               <ChartTooltip
                 contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
-                formatter={(v: number, name: string) => [`${v.toLocaleString()} tokens`, ENDPOINT_LABELS[name] ?? name]}
+                formatter={(v: number, name: string) => [`${v.toLocaleString()} tokens`, name]}
                 cursor={{ fill: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}
                 labelFormatter={(label: string) => `Day ${label}`}
               />
-              {Object.entries(ENDPOINT_COLORS).map(([key, color]) => (
+              {Object.entries(TYPE_COLORS).map(([key, color]) => (
                 <Bar key={key} dataKey={key} stackId="a" fill={color} fillOpacity={0.88} />
               ))}
             </BarChart>
@@ -271,9 +286,14 @@ function ApiKeysPanel() {
   function handleRevoke(id: string) {
     setKeys(prev => prev.map(k => k.id === id ? { ...k, status: 'revoked' as const } : k))
   }
-  function handleCopy(id: string) {
+  function handleCopy(id: string, masked: string) {
+    navigator.clipboard.writeText(masked).catch(() => {})
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+  function handleRotate(id: string) {
+    const ts = Date.now().toString().slice(-4)
+    setKeys(prev => prev.map(k => k.id === id ? { ...k, masked: `${k.masked.slice(0, -4)}${ts}`, lastUsed: 'just now' } : k))
   }
   function handleCreate() {
     const ts = Date.now().toString().slice(-6)
@@ -292,7 +312,7 @@ function ApiKeysPanel() {
             onClick={handleCreate}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-[5px] rounded-[9px] px-3 py-1.5 text-[11px] font-bold text-white"
+            className={`flex items-center gap-[5px] rounded-[9px] px-3 py-1.5 text-[11px] font-bold text-white transition-[filter] hover:brightness-110 ${FOCUS_RING}`}
             style={{ background: ACCENT }}
           >
             <Plus style={{ width: 11, height: 11 }} />
@@ -307,8 +327,8 @@ function ApiKeysPanel() {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 + i * 0.05 }}
-              className="flex items-center gap-2.5 rounded-[10px] p-[10px_12px]"
-              style={{ background: 'var(--bg-surface)', border: `1px solid ${k.status === 'revoked' ? `${BAD}26` : 'var(--border-subtle)'}`, opacity: k.status === 'revoked' ? 0.62 : 1 }}
+              className={`flex items-center gap-2.5 rounded-[10px] border bg-[var(--bg-surface)] p-[10px_12px] transition-colors ${k.status === 'revoked' ? 'hover:bg-accent-rose/10' : 'hover:bg-[var(--bg-hover)]'}`}
+              style={{ borderColor: k.status === 'revoked' ? `${BAD}26` : 'var(--border-subtle)', opacity: k.status === 'revoked' ? 0.62 : 1 }}
             >
               <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px]" style={{ background: k.status === 'revoked' ? `${BAD}1a` : `${ACCENT}1a`, border: `1px solid ${k.status === 'revoked' ? `${BAD}33` : `${ACCENT}2e`}` }}>
                 <Key style={{ width: 13, height: 13, color: k.status === 'revoked' ? BAD : ACCENT }} />
@@ -333,15 +353,36 @@ function ApiKeysPanel() {
 
               {k.status === 'active' && (
                 <div className="flex shrink-0 items-center gap-1">
-                  <button onClick={() => handleCopy(k.id)} title="Copy key" className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border bg-transparent" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <motion.button
+                    onClick={() => handleCopy(k.id, k.masked)}
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.92 }}
+                    title="Copy key" aria-label="Copy key"
+                    className={`flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border bg-transparent transition-colors hover:bg-[var(--bg-hover)] ${FOCUS_RING}`}
+                    style={{ borderColor: 'var(--border-subtle)' }}
+                  >
                     {copiedId === k.id ? <Check style={{ width: 11, height: 11, color: GOOD }} /> : <Copy style={{ width: 11, height: 11, color: 'var(--text-secondary)' }} />}
-                  </button>
-                  <button title="Rotate key" className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border bg-transparent" style={{ borderColor: 'var(--border-subtle)' }}>
+                  </motion.button>
+                  <motion.button
+                    onClick={() => handleRotate(k.id)}
+                    whileHover={{ scale: 1.06, rotate: 90 }}
+                    whileTap={{ scale: 0.92 }}
+                    title="Rotate key" aria-label="Rotate key"
+                    className={`flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border bg-transparent transition-colors hover:bg-[var(--bg-hover)] ${FOCUS_RING}`}
+                    style={{ borderColor: 'var(--border-subtle)' }}
+                  >
                     <RotateCw style={{ width: 11, height: 11, color: 'var(--text-secondary)' }} />
-                  </button>
-                  <button onClick={() => handleRevoke(k.id)} title="Revoke key" className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border bg-transparent" style={{ borderColor: `${BAD}38` }}>
+                  </motion.button>
+                  <motion.button
+                    onClick={() => handleRevoke(k.id)}
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.92 }}
+                    title="Revoke key" aria-label="Revoke key"
+                    className={`flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border bg-transparent transition-colors hover:bg-accent-rose/10 ${FOCUS_RING}`}
+                    style={{ borderColor: `${BAD}38` }}
+                  >
                     <Trash2 style={{ width: 11, height: 11, color: BAD }} />
-                  </button>
+                  </motion.button>
                 </div>
               )}
             </motion.div>
@@ -381,10 +422,10 @@ function PlansPanel() {
                       <span className="rounded-full px-[5px] py-px text-[7.5px] font-bold tracking-[0.05em]" style={{ background: `${plan.accent}2e`, border: `1px solid ${plan.accent}48`, color: plan.accent }}>NOW</span>
                     )}
                   </div>
-                  {plan.tokens > 0 && <span className="text-[9.5px]" style={{ color: 'var(--text-muted)' }}>{plan.tokens.toLocaleString()} tokens / mo</span>}
+                  {plan.tokens > 0 && <span className="tabular-nums text-[9.5px]" style={{ color: 'var(--text-muted)' }}>{plan.tokens.toLocaleString()} tokens / mo</span>}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-xl font-extrabold leading-none tracking-[-0.02em]" style={{ color: plan.current ? plan.accent : 'var(--text-primary)' }}>{plan.price}</div>
+                  <div className="tabular-nums text-xl font-extrabold leading-none tracking-[-0.02em]" style={{ color: plan.current ? plan.accent : 'var(--text-primary)' }}>{plan.price}</div>
                   {plan.period && <div className="text-[9.5px]" style={{ color: 'var(--text-muted)' }}>{plan.period}</div>}
                 </div>
               </div>
@@ -398,12 +439,14 @@ function PlansPanel() {
                 ))}
               </div>
 
-              <button
-                className="mt-3 w-full rounded-lg py-[7px] text-[10.5px] font-bold transition-colors"
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className={`mt-3 w-full rounded-lg py-[7px] text-[10.5px] font-bold transition-[filter,background-color,border-color] ${plan.current ? 'hover:brightness-110' : 'hover:border-[var(--border-active)] hover:bg-[var(--bg-hover)]'} ${FOCUS_RING}`}
                 style={{ background: plan.current ? plan.accent : 'transparent', border: `1px solid ${plan.current ? plan.accent : 'var(--border-subtle)'}`, color: plan.current ? '#fff' : 'var(--text-secondary)' }}
               >
                 {plan.current ? 'Active' : plan.id === 'enterprise' ? 'Contact Sales' : 'Upgrade'}
-              </button>
+              </motion.button>
             </motion.div>
           ))}
         </div>
@@ -417,6 +460,12 @@ function PlansPanel() {
 function CodeExample() {
   const [copied, setCopied] = useState(false)
 
+  function handleCopyCurl() {
+    navigator.clipboard.writeText(CURL_EXAMPLE).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2200)
+  }
+
   return (
     <Card>
       <div className="mb-3.5 flex items-center justify-between">
@@ -424,16 +473,18 @@ function CodeExample() {
           <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Quick Start</h2>
           <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>Call the market segment endpoint in under 60 seconds</p>
         </div>
-        <button
-          onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 2200) }}
-          className="flex items-center gap-[5px] rounded-[9px] px-3 py-1.5 text-[11px] font-semibold"
+        <motion.button
+          onClick={handleCopyCurl}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          className={`flex items-center gap-[5px] rounded-[9px] px-3 py-1.5 text-[11px] font-semibold transition-colors hover:bg-[var(--bg-hover)] ${FOCUS_RING}`}
           style={{ border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}
         >
           {copied
             ? <><Check style={{ width: 10, height: 10, color: GOOD }} /><span style={{ color: GOOD }}>Copied</span></>
             : <><Copy style={{ width: 10, height: 10 }} /><span>Copy</span></>
           }
-        </button>
+        </motion.button>
       </div>
 
       <div className="grid grid-cols-2 gap-3">

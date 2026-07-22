@@ -16,7 +16,7 @@ import {
 import Card from '../components/Card'
 import PremiumGate from '../components/PremiumGate'
 import EmptyState from '../components/EmptyState'
-import { TableSkeleton } from '../components/Skeleton'
+import { Skeleton, TableSkeleton } from '../components/Skeleton'
 import { useIsDark } from '../hooks/useIsDark'
 import { useAuthContext } from '../auth/AuthContext'
 import { ACCENT, GOOD, BAD, WARN } from '../lib/theme'
@@ -27,6 +27,10 @@ import {
   type TimeCurves, type GeoArbitrageResponse, type DealBand,
 } from '../api/cardeep'
 
+// Shared focus-visible ring — mirrors Button.tsx's own focus treatment so every
+// ad-hoc interactive element on this page (filters, deal/desync links) matches house style.
+const FOCUS_RING = 'outline-none focus-visible:ring-2 focus-visible:ring-accent-blue/50 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-primary'
+
 // ── Animated number ────────────────────────────────────────────────────────────
 
 function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; prefix?: string; suffix?: string; decimals?: number }) {
@@ -34,7 +38,7 @@ function AnimNum({ to, prefix = '', suffix = '', decimals = 0 }: { to: number; p
   const sp = useSpring(mv, { stiffness: 55, damping: 14 })
   const d  = useTransform(sp, v => `${prefix}${decimals ? v.toFixed(decimals) : Math.round(v)}${suffix}`)
   useEffect(() => { mv.set(to) }, [to, mv])
-  return <motion.span>{d}</motion.span>
+  return <motion.span className="tabular-nums">{d}</motion.span>
 }
 
 function fmtEur(n: number): string {
@@ -58,7 +62,7 @@ function MetricCard({ label, value, prefix, suffix, decimals, sub, loading, empt
         </div>
         <div className="mb-1 text-[40px] font-extrabold leading-none tracking-[-0.03em]" style={{ color: 'var(--text-primary)' }}>
           {loading ? (
-            <span className="inline-block h-9 w-20 animate-pulse rounded-md" style={{ background: 'var(--glass-medium)' }} />
+            <Skeleton className="h-9 w-24" />
           ) : value === null ? (
             <span className="text-[16px] font-semibold" style={{ color: 'var(--text-muted)' }}>—</span>
           ) : (
@@ -115,9 +119,11 @@ function ChollosPanel({ deals, loading, error }: { deals: DealScoreItem[] | null
                   rel="noopener noreferrer"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ x: 3, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+                  whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
                   transition={{ delay: 0.05 + i * 0.04, duration: 0.3 }}
-                  className="flex items-center gap-[11px] rounded-xl p-[9px_11px] no-underline"
-                  style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderLeft: `2px solid ${sc}` }}
+                  className={`group flex items-center gap-[11px] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-[9px_11px] no-underline transition-colors hover:bg-[var(--bg-hover)] ${FOCUS_RING}`}
+                  style={{ borderLeft: `2px solid ${sc}` }}
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]" style={{ background: `${sc}16`, border: `1px solid ${sc}28` }}>
                     <span className="text-[12px] font-extrabold tabular-nums tracking-[-0.02em]" style={{ color: sc }}>{gauge}</span>
@@ -140,7 +146,7 @@ function ChollosPanel({ deals, loading, error }: { deals: DealScoreItem[] | null
                       −{fmtEur(deal.savings_eur)} margen
                     </div>
                   </div>
-                  <ExternalLink className="h-3 w-3 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                  <ExternalLink className="h-3 w-3 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-[var(--c-brand-soft)]" />
                 </motion.a>
               )
             })}
@@ -181,13 +187,13 @@ function DesyncPanel({ items, loading, error }: { items: DesyncItem[] | null; lo
                   {it.make} {it.model} {it.year ? `(${it.year})` : ''}
                 </div>
                 <a href={it.dealer.url} target="_blank" rel="noopener noreferrer"
-                   className="mb-1 flex items-center justify-between rounded-lg p-[6px_10px] no-underline"
+                   className={`mb-1 flex items-center justify-between rounded-lg p-[6px_10px] no-underline transition-[filter,transform] hover:translate-x-0.5 hover:brightness-110 ${FOCUS_RING}`}
                    style={{ background: `${ACCENT}14`, border: `1px solid ${ACCENT}30` }}>
                   <span className="text-[11px] font-semibold" style={{ color: ACCENT }}>{it.dealer.trade_name ?? it.dealer.cdp_code}</span>
                   <span className="text-[12.5px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{fmtEur(it.dealer.price)}</span>
                 </a>
                 <a href={it.platform.url} target="_blank" rel="noopener noreferrer"
-                   className="mb-2 flex items-center justify-between rounded-lg p-[6px_10px] no-underline"
+                   className={`mb-2 flex items-center justify-between rounded-lg p-[6px_10px] no-underline transition-[filter,transform] hover:translate-x-0.5 hover:brightness-110 ${FOCUS_RING}`}
                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                   <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>{it.platform.trade_name ?? it.platform.cdp_code}</span>
                   <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>{fmtEur(it.platform.price)}</span>
@@ -228,9 +234,10 @@ function SpreadPanel() {
             cardeep ya tiene la pata retail — el spread se activa en cuanto exista ese feed.
           </p>
           <span
-            className="mx-auto rounded-full px-3 py-1 text-[10.5px] font-semibold"
+            className="mx-auto flex items-center gap-1.5 rounded-full px-3 py-1 text-[10.5px] font-semibold"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}
           >
+            <Info className="h-3 w-3 shrink-0" />
             Pendiente de partnership — no es un dato inventado
           </span>
         </div>
@@ -244,25 +251,26 @@ function SpreadPanel() {
 interface CohortInputProps { make: string; model: string; year: number; onChange: (m: string, mo: string, y: number) => void }
 
 function CohortSelector({ make, model, year, onChange }: CohortInputProps) {
+  const fieldClass = `rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-[5px_8px] text-[11px] font-medium transition-colors hover:border-[var(--border-active)] ${FOCUS_RING}`
   return (
     <div className="flex shrink-0 flex-wrap gap-1.5">
       <input
         value={make} onChange={e => onChange(e.target.value, model, year)}
         placeholder="Marca" aria-label="Marca"
-        className="w-[84px] rounded-lg p-[5px_8px] text-[11px] font-medium outline-none"
-        style={{ color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+        className={`w-[84px] ${fieldClass}`}
+        style={{ color: 'var(--text-secondary)' }}
       />
       <input
         value={model} onChange={e => onChange(make, e.target.value, year)}
         placeholder="Modelo" aria-label="Modelo"
-        className="w-[84px] rounded-lg p-[5px_8px] text-[11px] font-medium outline-none"
-        style={{ color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+        className={`w-[84px] ${fieldClass}`}
+        style={{ color: 'var(--text-secondary)' }}
       />
       <input
         value={year} type="number" onChange={e => onChange(make, model, Number(e.target.value))}
         aria-label="Año ancla"
-        className="w-[64px] rounded-lg p-[5px_8px] text-[11px] font-medium outline-none"
-        style={{ color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+        className={`w-[64px] tabular-nums ${fieldClass}`}
+        style={{ color: 'var(--text-secondary)' }}
       />
     </div>
   )
@@ -312,6 +320,7 @@ function TimeArbitragePanel({ dark, curves, loading, error }: { dark: boolean; c
                     <XAxis dataKey="bucket" tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 9.5, fill: tickColor }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={['dataMin - 5', 'dataMax + 5']} />
                     <ChartTooltip
+                      cursor={{ stroke: ACCENT, strokeWidth: 16, strokeOpacity: 0.1 }}
                       contentStyle={{ background: dark ? '#0e0e1a' : '#fff', border: '1px solid var(--border-default)', borderRadius: 10, fontSize: 11.5, color: dark ? '#f1f5f9' : '#0f172a', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
                       formatter={(v: number) => [`${v}% del precio inicial`, '']}
                     />
@@ -335,6 +344,8 @@ function TimeArbitragePanel({ dark, curves, loading, error }: { dark: boolean; c
 // ── GeoPanel — "Mapa de precio por provincia" (F5, real cell/gap data) ──────────
 
 function GeoPanel({ geo, loading, error }: { geo: GeoArbitrageResponse | null; loading: boolean; error: string | null }) {
+  const maxPrice = geo && geo.cells.length > 0 ? Math.max(...geo.cells.map(c => c.median_price)) : 0
+
   return (
     <Card className="!p-0 h-full">
       <div className="flex h-full flex-col p-[18px_20px_14px]">
@@ -352,18 +363,29 @@ function GeoPanel({ geo, loading, error }: { geo: GeoArbitrageResponse | null; l
               <EmptyState className="!py-6" title="Sin celdas suficientes" message={geo.cells_reason ?? undefined} />
             ) : (
               <div className="space-y-[3px]">
-                {geo.cells.map(c => {
-                  const maxPrice = Math.max(...geo.cells.map(x => x.median_price))
+                {geo.cells.map((c, i) => {
                   const pct = (c.median_price / maxPrice) * 100
                   return (
-                    <div key={c.province_code} className="flex items-center gap-2 text-[10.5px]">
+                    <motion.div
+                      key={c.province_code}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.03 * i, duration: 0.3 }}
+                      className="-mx-1 flex items-center gap-2 rounded-md px-1 py-[1px] text-[10.5px] transition-colors hover:bg-[var(--bg-hover)]"
+                    >
                       <span className="w-7 shrink-0 font-mono font-semibold" style={{ color: 'var(--text-secondary)' }}>{c.province_code}</span>
                       <div className="h-[14px] flex-1 overflow-hidden rounded-full" style={{ background: 'var(--bg-surface)' }}>
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: ACCENT }} />
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ background: ACCENT }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ delay: 0.05 + 0.03 * i, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                        />
                       </div>
                       <span className="w-16 shrink-0 text-right font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>{fmtEur(c.median_price)}</span>
-                      <span className="w-10 shrink-0 text-right" style={{ color: 'var(--text-muted)' }}>n={c.n}</span>
-                    </div>
+                      <span className="w-10 shrink-0 text-right tabular-nums" style={{ color: 'var(--text-muted)' }}>n={c.n}</span>
+                    </motion.div>
                   )
                 })}
               </div>
@@ -486,8 +508,10 @@ export default function Arbitrage() {
     return () => { live = false }
   }, [cohortMake, cohortModel, cohortYear])
 
-  const selectClass = "cursor-pointer rounded-[10px] p-[8px_12px] text-[12.5px] font-semibold outline-none"
-  const selectStyle: React.CSSProperties = { color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }
+  const fieldClass = `rounded-[10px] border border-[var(--border-default)] p-[8px_12px] text-[12.5px] font-semibold transition-colors hover:border-[var(--border-active)] ${FOCUS_RING}`
+  const inputClass = fieldClass
+  const selectClass = `cursor-pointer ${fieldClass}`
+  const selectStyle: React.CSSProperties = { color: 'var(--text-secondary)', background: 'var(--bg-elevated)' }
 
   return (
     <div className="mx-auto p-[24px_24px_40px]" style={{ maxWidth: 1360 }}>
@@ -506,20 +530,24 @@ export default function Arbitrage() {
         <div className="flex flex-wrap gap-2">
           <input
             value={make} onChange={e => setMake(e.target.value)} placeholder="Marca" aria-label="Filtrar por marca"
-            className={selectClass} style={{ ...selectStyle, width: 100 }}
+            className={inputClass} style={{ ...selectStyle, width: 100 }}
           />
           <input
             value={province} onChange={e => setProvince(e.target.value)} placeholder="Provincia (28)" aria-label="Filtrar por provincia"
             maxLength={2}
-            className={selectClass} style={{ ...selectStyle, width: 110 }}
+            className={inputClass} style={{ ...selectStyle, width: 110 }}
           />
-          <select value={band} onChange={e => setBand(e.target.value as DealBand | '')} className={selectClass} style={selectStyle}>
+          <select
+            value={band} onChange={e => setBand(e.target.value as DealBand | '')} aria-label="Filtrar por badge de chollo"
+            className={selectClass} style={selectStyle}
+          >
             <option value="">Todos los badges</option>
             <option value="chollo_fuerte">Chollo fuerte</option>
             <option value="bajo_mercado">Bajo mercado</option>
           </select>
           <select
             value={minSavings} onChange={e => setMinSavings(e.target.value ? Number(e.target.value) : '')}
+            aria-label="Filtrar por margen mínimo"
             className={selectClass} style={selectStyle}
           >
             <option value="">Cualquier margen</option>

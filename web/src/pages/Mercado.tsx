@@ -10,11 +10,14 @@
 // independiente"). K12 (capital parado) is a genuinely NEW, dealer-scoped local
 // aggregate (not a segment/cohort metric — it is this dealer's own aged stock).
 import { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { AlertTriangle, Info, PackageX } from 'lucide-react'
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { AlertTriangle, HelpCircle, Info, Minus, PackageX, TrendingDown, TrendingUp } from 'lucide-react'
 import Card from '../components/Card'
+import Table from '../components/Table'
+import Button from '../components/Button'
 import { Badge } from '../components/Badge'
 import EmptyState from '../components/EmptyState'
+import { Skeleton } from '../components/Skeleton'
 import { PageSkeleton } from '../components/LoadingSpinner'
 import { useAuthContext } from '../auth/AuthContext'
 import { useDealerInventory } from './inventory/useDealerInventory'
@@ -22,6 +25,7 @@ import ClaimDealerPrompt from './inventory/ClaimDealerPrompt'
 import { daysInStock, formatPrice } from './inventory/derive'
 import { fetchPricePosition, getCachedPricePosition } from './inventory/pricePositionCache'
 import { cardeep, type MarketSegmentStats, type PricePosition, type PricePositionBand, type VehicleListItem } from '../api/cardeep'
+import { ACCENT, GOOD, WARN } from '../lib/theme'
 
 // K12 — "aged" frontier [RESEARCH §2.2-2], same threshold already used for the
 // STALE_DAYS chip elsewhere — recalibration against the real ES census is a
@@ -32,9 +36,8 @@ const CAPITAL_PARADO_THRESHOLD_DAYS = 45
 // never substituted for the real per-segment number.
 const REFERENCE_TURN_DAYS = [43, 48] as const
 
-const BELOW_MARKET_COLOR = '#059669'
-
 interface SegmentKey { make: string; model: string; year: number; fuel: string }
+type SegmentRow = { key: SegmentKey; count: number }
 
 function segmentKeyOf(v: VehicleListItem): SegmentKey | null {
   if (!v.make || !v.model || !v.year || !v.fuel) return null
@@ -45,6 +48,46 @@ function segmentCacheKey(k: SegmentKey): string {
   return `${k.make}::${k.model}::${k.year}::${k.fuel}`
 }
 
+// ── Animated total — mirrors the house AnimNum pattern (Inteligencia/Api/
+// Analitica/Arbitrage/Motor) but formats through `formatPrice` instead of a raw
+// prefix/suffix, so grouping + currency placement (es-ES: "12.345 €") stays
+// correct for capital-parado totals that can run into six figures. Counts up
+// from 0 on first real mount, then smoothly re-interpolates as more inventory
+// pages stream in and the total grows — never mounted while `nPriced === 0`
+// (caller shows the honest "—" instead, per the CountUp doctrine).
+function AnimatedEuro({ value }: { value: number }) {
+  const mv = useMotionValue(0)
+  const sp = useSpring(mv, { stiffness: 55, damping: 16 })
+  const display = useTransform(sp, v => formatPrice(Math.round(v), 'EUR'))
+  useEffect(() => { mv.set(value) }, [value, mv])
+  return <motion.span className="tabular-nums">{display}</motion.span>
+}
+
+// K9 bands — status is reserved and ships with an icon + label, never color
+// alone (dataviz rule). below/above market reuse the house GOOD/WARN status
+// tokens (exact hex match to the old local BELOW_MARKET_COLOR/#d97706
+// literals); at-market/sin-datos stay in neutral text tokens — they are not a
+// status, just "nothing to flag".
+const K9_BANDS: { key: PricePositionBand | 'sin_datos'; label: string; color: string; Icon: typeof TrendingDown }[] = [
+  { key: 'below_market', label: 'Bajo mercado', color: GOOD, Icon: TrendingDown },
+  { key: 'at_market', label: 'En mercado', color: 'var(--text-secondary)', Icon: Minus },
+  { key: 'above_market', label: 'Sobre mercado', color: WARN, Icon: TrendingUp },
+  { key: 'sin_datos', label: 'Muestra insuficiente / sin dato', color: 'var(--text-muted)', Icon: HelpCircle },
+]
+
+// Per-segment row state for the K10/K11 table — one place for the "loading vs
+// insufficient sample vs real" branch so all three data columns (K10/K11/
+// Muestra) agree on it instead of re-deriving the condition three times.
+type SegmentRowState = 'loading' | 'insufficient' | MarketSegmentStats
+
+function segmentRowState(ck: string, stats: Map<string, MarketSegmentStats | 'error'>): SegmentRowState {
+  const stat = stats.get(ck)
+  if (stat === undefined) return 'loading'
+  if (stat === 'error') return 'insufficient'
+  if (!stat.metrics.M4 && !stat.metrics.M3) return 'insufficient'
+  return stat
+}
+
 export default function Mercado() {
   const { user } = useAuthContext()
   const cdp = user?.tenantId || null
@@ -53,7 +96,7 @@ export default function Mercado() {
 }
 
 function MercadoForDealer({ cdp }: { cdp: string }) {
-  const { entity, vehicles, isComplete, loading, error } = useDealerInventory(cdp)
+  const { entity, vehicles, isComplete, loading, error, reload } = useDealerInventory(cdp)
   const [now] = useState(() => new Date())
 
   const available = useMemo(() => vehicles.filter(v => v.status === 'available'), [vehicles])
@@ -118,7 +161,7 @@ function MercadoForDealer({ cdp }: { cdp: string }) {
   // distinct make+model+year+fuel combos the dealer actually stocks, not by
   // fleet size — the "sin N+1" requirement of carta §9 F4).
   const distinctSegments = useMemo(() => {
-    const map = new Map<string, { key: SegmentKey; count: number }>()
+    const map = new Map<string, SegmentRow>()
     for (const v of available) {
       const key = segmentKeyOf(v)
       if (!key) continue
@@ -159,11 +202,21 @@ function MercadoForDealer({ cdp }: { cdp: string }) {
 
   if (loading && vehicles.length === 0 && !error) return <PageSkeleton />
   if (error && vehicles.length === 0) {
-    return <div className="p-6"><EmptyState title="No se pudo cargar el mercado" message={error} /></div>
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={<AlertTriangle className="h-6 w-6" />}
+          title="No se pudo cargar el mercado"
+          message={error}
+          action={<Button onClick={reload}>Reintentar</Button>}
+        />
+      </div>
+    )
   }
 
   const k9Total = available.length
   const k9Pct = (n: number) => (k9Total > 0 ? Math.round((n / k9Total) * 100) : 0)
+  const scanning = available.length > 0 && positionsScanned < available.length
 
   return (
     <div className="mx-auto flex flex-col gap-5" style={{ padding: 'clamp(16px, 3vw, 24px)', maxWidth: 1200 }}>
@@ -175,147 +228,205 @@ function MercadoForDealer({ cdp }: { cdp: string }) {
       </motion.div>
 
       {/* K12 — Capital parado */}
-      <Card className="!p-[18px_20px]">
-        <div className="flex items-center gap-2 mb-1">
-          <PackageX style={{ width: 15, height: 15, color: 'var(--text-secondary)' }} />
-          <span className="text-[11px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-secondary)' }}>
-            Capital parado (+{CAPITAL_PARADO_THRESHOLD_DAYS}d en stock)
-          </span>
-        </div>
-        <p className="text-3xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
-          {capitalParado.nPriced > 0 ? formatPrice(capitalParado.total, 'EUR') : '—'}
-        </p>
-        <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
-          {capitalParado.nAged} coche(s) con más de {CAPITAL_PARADO_THRESHOLD_DAYS} días en stock
-          {capitalParado.nExcluded > 0 && ` · ${capitalParado.nExcluded} sin precio (excluidos de la suma)`}
-        </p>
-      </Card>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}>
+        <Card hover className="!p-[18px_20px]">
+          <div className="flex items-center gap-2 mb-1">
+            <PackageX style={{ width: 15, height: 15, color: 'var(--text-secondary)' }} />
+            <span className="text-[11px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-secondary)' }}>
+              Capital parado (+{CAPITAL_PARADO_THRESHOLD_DAYS}d en stock)
+            </span>
+          </div>
+          <p className="text-3xl font-extrabold" style={{ color: 'var(--text-primary)' }}>
+            {capitalParado.nPriced > 0 ? <AnimatedEuro value={capitalParado.total} /> : '—'}
+          </p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--text-muted)' }}>
+            <span className="tabular-nums">{capitalParado.nAged}</span> coche(s) con más de {CAPITAL_PARADO_THRESHOLD_DAYS} días en stock
+            {capitalParado.nExcluded > 0 && <> · <span className="tabular-nums">{capitalParado.nExcluded}</span> sin precio (excluidos de la suma)</>}
+          </p>
+        </Card>
+      </motion.div>
 
       {/* K9 — Distribución de posición de precio */}
-      <Card className="!p-[18px_20px]">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Posición de precio de tu flota (K9)</h2>
-            <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
-              vs la mediana de comparables del censo (make+modelo+año±1+combustible+provincia) — {positionsScanned}/{available.length} analizados
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2.5">
-          {([
-            ['below_market', 'Bajo mercado', BELOW_MARKET_COLOR],
-            ['at_market', 'En mercado', 'var(--text-secondary)'],
-            ['above_market', 'Sobre mercado', '#d97706'],
-            ['sin_datos', 'Muestra insuficiente / sin dato', 'var(--text-muted)'],
-          ] as [keyof typeof k9Distribution, string, string][]).map(([key, label, color]) => (
-            <div key={key}>
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>{label}</span>
-                <span className="text-[11.5px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                  {k9Distribution[key]} ({k9Pct(k9Distribution[key])}%)
-                </span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
-                <div className="h-full rounded-full" style={{ width: `${k9Pct(k9Distribution[key])}%`, background: color }} />
-              </div>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}>
+        <Card className="!p-[18px_20px]">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Posición de precio de tu flota (K9)</h2>
+              <p className="text-[10.5px]" style={{ color: 'var(--text-muted)' }}>
+                vs la mediana de comparables del censo (make+modelo+año±1+combustible+provincia) — <span className="tabular-nums">{positionsScanned}</span>/<span className="tabular-nums">{available.length}</span> analizados
+              </p>
             </div>
-          ))}
-        </div>
-      </Card>
+            {scanning && (
+              <motion.div
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ background: ACCENT }}
+                animate={{ boxShadow: [`0 0 0 3px ${ACCENT}33`, `0 0 0 7px ${ACCENT}00`, `0 0 0 3px ${ACCENT}33`] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                title="Analizando posición de precio…"
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {K9_BANDS.map(({ key, label, color, Icon }, i) => {
+              const count = k9Distribution[key]
+              const pct = k9Pct(count)
+              return (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.08 + i * 0.06, duration: 0.3 }}
+                  className="-mx-1.5 rounded-lg px-1.5 py-1 transition-colors hover:bg-[var(--bg-hover)]"
+                >
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-[11.5px]" style={{ color: 'var(--text-secondary)' }}>
+                      <Icon style={{ width: 11, height: 11, color }} />
+                      {label}
+                    </span>
+                    <span className="text-[11.5px] font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
+                      {count} ({pct}%)
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: color }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ delay: 0.14 + i * 0.06, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+                    />
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </Card>
+      </motion.div>
 
       {/* K10/K11 — Oferta provincial + rotación por segmento */}
-      <Card className="!p-0">
-        <div className="p-[14px_18px]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-          <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Oferta y rotación por segmento (K10/K11)</h2>
-          <p className="text-[10.5px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            Market Days Supply (ventana 45d) y días medianos hasta retirada (ventana 90d) — censo total,
-            algo que ningún rival mono-plataforma puede calcular. Turn de referencia del sector: {REFERENCE_TURN_DAYS[0]}-{REFERENCE_TURN_DAYS[1]}d.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs" style={{ minWidth: 640 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                {['Segmento', 'En tu flota', 'Oferta provincial (K10)', 'Rotación (K11)', 'Muestra'].map(h => (
-                  <th key={h} className="p-[9px_16px] text-left text-[9.5px] font-bold uppercase tracking-[0.09em]" style={{ color: 'var(--text-muted)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {distinctSegments.map(({ key, count }) => {
-                const ck = segmentCacheKey(key)
-                const stat = segmentStats.get(ck)
-                const label = `${key.make} ${key.model} (${key.year - 1}-${key.year + 1}) · ${key.fuel}`
-                if (stat === undefined) {
-                  return (
-                    <tr key={ck} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td className="p-[10px_16px]" style={{ color: 'var(--text-primary)' }}>{label}</td>
-                      <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>{count}</td>
-                      <td className="p-[10px_16px]" colSpan={3} style={{ color: 'var(--text-muted)' }}>cargando…</td>
-                    </tr>
-                  )
-                }
-                if (stat === 'error' || !stat.metrics.M4 && !stat.metrics.M3) {
-                  return (
-                    <tr key={ck} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td className="p-[10px_16px]" style={{ color: 'var(--text-primary)' }}>{label}</td>
-                      <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>{count}</td>
-                      <td className="p-[10px_16px]" colSpan={3} style={{ color: 'var(--text-muted)' }}>muestra insuficiente (n&lt;8)</td>
-                    </tr>
-                  )
-                }
-                const m4 = stat.metrics.M4
-                const m3 = stat.metrics.M3
-                return (
-                  <tr key={ck} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td className="p-[10px_16px]" style={{ color: 'var(--text-primary)' }}>{label}</td>
-                    <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>{count}</td>
-                    <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                      {m4?.value !== undefined ? `${m4.value.toFixed(0)} días de stock` : 'sin rotación observada'}
-                      {m4?.fallback_to_national && <Badge color="gray" className="ml-1.5">nacional</Badge>}
-                    </td>
-                    <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-primary)' }}>
-                      {m3?.value !== undefined ? `${m3.value.toFixed(0)}d mediana` : '—'}
-                    </td>
-                    <td className="p-[10px_16px] tabular-nums" style={{ color: 'var(--text-muted)' }}>
-                      n={m4?.n ?? m3?.n ?? '—'}
-                    </td>
-                  </tr>
-                )
-              })}
-              {distinctSegments.length === 0 && (
-                <tr><td colSpan={5} className="p-[16px]"><EmptyState title="Sin segmentos suficientes" message="Necesitas make/modelo/año/combustible completos en tu inventario." /></td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {/* T1 — transparencia (parcial, hueco declarado) */}
-      <Card className="!p-[16px_18px]">
-        <div className="flex items-start gap-2.5">
-          <Info style={{ width: 14, height: 14, color: 'var(--text-muted)', marginTop: 1, flexShrink: 0 }} />
-          <div>
-            <p className="text-[11.5px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Cómo se calcula (T1)</p>
-            <p className="text-[10.5px] mt-1 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-              Comparable = mismo make+modelo, año±1, mismo combustible, misma provincia (o nacional si la
-              provincia no tiene muestra suficiente). n≥8 obligatorio o el dato no se muestra. K9 = tu precio ÷
-              mediana del comparable (01-market-intelligence, M2). K10 = coches disponibles ÷ (bajas/90d) del
-              segmento en 45 días (M4). K11 = mediana de días hasta retirada del segmento en 90 días (M3).
-              <br />
-              <strong>Hueco declarado:</strong> la muestra enlazable de coches reales de comparación (deep_links)
-              aún no la sirve el motor de mercado (services/api/routers/market.py, propiedad de
-              01-market-intelligence) — pendiente de una fase futura de ese pilar, no de este.
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}>
+        <Card className="!p-0">
+          <div className="p-[14px_18px]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+            <h2 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>Oferta y rotación por segmento (K10/K11)</h2>
+            <p className="text-[10.5px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+              Market Days Supply (ventana 45d) y días medianos hasta retirada (ventana 90d) — censo total,
+              algo que ningún rival mono-plataforma puede calcular. Turn de referencia del sector: {REFERENCE_TURN_DAYS[0]}-{REFERENCE_TURN_DAYS[1]}d.
             </p>
           </div>
-        </div>
-      </Card>
+          <div className="px-5 py-3.5">
+            {distinctSegments.length === 0 ? (
+              <EmptyState title="Sin segmentos suficientes" message="Necesitas make/modelo/año/combustible completos en tu inventario." />
+            ) : (
+              <Table
+                columns={[
+                  {
+                    key: 'segment',
+                    header: 'Segmento',
+                    render: (row: SegmentRow) => (
+                      <span style={{ color: 'var(--text-primary)', fontSize: 11.5 }}>
+                        {`${row.key.make} ${row.key.model} (${row.key.year - 1}-${row.key.year + 1}) · ${row.key.fuel}`}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: 'fleet_count',
+                    header: 'En tu flota',
+                    className: 'tabular-nums whitespace-nowrap',
+                    render: (row: SegmentRow) => (
+                      <span style={{ color: 'var(--text-secondary)', fontSize: 11.5 }}>{row.count}</span>
+                    ),
+                  },
+                  {
+                    key: 'k10',
+                    header: 'Oferta provincial (K10)',
+                    render: (row: SegmentRow) => {
+                      const state = segmentRowState(segmentCacheKey(row.key), segmentStats)
+                      if (state === 'loading') return <Skeleton className="h-3 w-28" />
+                      if (state === 'insufficient') return <span style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>muestra insuficiente (n&lt;8)</span>
+                      const m4 = state.metrics.M4
+                      return (
+                        <span className="tabular-nums" style={{ color: 'var(--text-primary)', fontSize: 11.5 }}>
+                          {m4?.value !== undefined ? `${m4.value.toFixed(0)} días de stock` : 'sin rotación observada'}
+                          {m4?.fallback_to_national && <Badge color="gray" className="ml-1.5">nacional</Badge>}
+                        </span>
+                      )
+                    },
+                  },
+                  {
+                    key: 'k11',
+                    header: 'Rotación (K11)',
+                    className: 'tabular-nums whitespace-nowrap',
+                    render: (row: SegmentRow) => {
+                      const state = segmentRowState(segmentCacheKey(row.key), segmentStats)
+                      if (state === 'loading') return <Skeleton className="h-3 w-16" />
+                      if (state === 'insufficient') return <span style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>—</span>
+                      const m3 = state.metrics.M3
+                      return (
+                        <span style={{ color: 'var(--text-primary)', fontSize: 11.5 }}>
+                          {m3?.value !== undefined ? `${m3.value.toFixed(0)}d mediana` : '—'}
+                        </span>
+                      )
+                    },
+                  },
+                  {
+                    key: 'sample',
+                    header: 'Muestra',
+                    className: 'tabular-nums whitespace-nowrap',
+                    render: (row: SegmentRow) => {
+                      const state = segmentRowState(segmentCacheKey(row.key), segmentStats)
+                      if (state === 'loading') return <Skeleton className="h-3 w-10" />
+                      if (state === 'insufficient') return <span style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>—</span>
+                      const m4 = state.metrics.M4
+                      const m3 = state.metrics.M3
+                      return <span style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>n={m4?.n ?? m3?.n ?? '—'}</span>
+                    },
+                  },
+                ]}
+                data={distinctSegments}
+                keyExtractor={row => segmentCacheKey(row.key)}
+              />
+            )}
+          </div>
+        </Card>
+      </motion.div>
 
-      {!isComplete && (
-        <p className="text-[10.5px] flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-          <AlertTriangle style={{ width: 11, height: 11 }} /> Cargando inventario completo — los números de arriba crecerán a medida que se cargue el resto de la flota.
-        </p>
-      )}
+      {/* T1 — transparencia (parcial, hueco declarado) */}
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26, duration: 0.4, ease: [0.32, 0.72, 0, 1] }}>
+        <Card className="!p-[16px_18px]">
+          <div className="flex items-start gap-2.5">
+            <Info style={{ width: 14, height: 14, color: 'var(--text-muted)', marginTop: 1, flexShrink: 0 }} />
+            <div>
+              <p className="text-[11.5px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Cómo se calcula (T1)</p>
+              <p className="text-[10.5px] mt-1 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                Comparable = mismo make+modelo, año±1, mismo combustible, misma provincia (o nacional si la
+                provincia no tiene muestra suficiente). n≥8 obligatorio o el dato no se muestra. K9 = tu precio ÷
+                mediana del comparable (01-market-intelligence, M2). K10 = coches disponibles ÷ (bajas/90d) del
+                segmento en 45 días (M4). K11 = mediana de días hasta retirada del segmento en 90 días (M3).
+                <br />
+                <strong>Hueco declarado:</strong> la muestra enlazable de coches reales de comparación (deep_links)
+                aún no la sirve el motor de mercado (services/api/routers/market.py, propiedad de
+                01-market-intelligence) — pendiente de una fase futura de ese pilar, no de este.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      <AnimatePresence>
+        {!isComplete && (
+          <motion.p
+            key="loading-banner"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.25 }}
+            className="text-[10.5px] flex items-center gap-1.5"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            <AlertTriangle style={{ width: 11, height: 11 }} /> Cargando inventario completo — los números de arriba crecerán a medida que se cargue el resto de la flota.
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
