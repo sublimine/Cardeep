@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronRight, Plus, Clock, User2, Download, Trash2 } from 'lucide-react'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
+import { ChevronLeft, ChevronRight, Plus, Clock, User2, MapPin, Download, Trash2 } from 'lucide-react'
 import Card from '../components/Card'
 import { Badge } from '../components/Badge'
 import Button from '../components/Button'
@@ -9,6 +9,7 @@ import Select from '../components/Select'
 import Modal from '../components/Modal'
 import EmptyState from '../components/EmptyState'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { Skeleton } from '../components/Skeleton'
 import { cn } from '../lib/cn'
 import { useCalendarEvents, useCalendarEventMutations, icsDownloadUrl } from '../hooks/useCalendarEvents'
 import { useApi } from '../hooks/useApi'
@@ -27,6 +28,15 @@ const TYPE_COLOR: Record<CalEvent['type'], NonNullable<Parameters<typeof Badge>[
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+// Month-grid slide direction: `custom` on AnimatePresence forwards the *latest*
+// direction to the outgoing variant, so prev/next always exits the way it came
+// from — not the direction of the transition that mounted it.
+const gridVariants: Variants = {
+  enter:  (dir: number) => ({ opacity: 0, x: dir * 14 }),
+  center: { opacity: 1, x: 0 },
+  exit:   (dir: number) => ({ opacity: 0, x: dir * -14 }),
+}
 
 function isoDate(d: Date) {
   return d.toISOString().split('T')[0]
@@ -47,7 +57,7 @@ async function downloadIcs(eventId: string, title: string) {
   const res = await fetch(icsDownloadUrl(eventId), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
-  if (!res.ok) return
+  if (!res.ok) throw new Error('Failed to download .ics file')
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -153,22 +163,103 @@ function NewEventModal({
   )
 }
 
+// ── Day-panel event card ──────────────────────────────────────────────────────
+
+function EventCard({
+  event, deleting, downloading, onDelete, onDownload,
+}: {
+  event: CalEvent
+  deleting: boolean
+  downloading: boolean
+  onDelete: () => void
+  onDownload: () => void
+}) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -8 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className={cn(
+        'p-3 rounded-xl border border-border-subtle bg-glass-subtle space-y-2',
+        'transition-colors duration-150 hover:border-border-active hover:bg-glass-medium',
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium text-text-primary leading-snug">{event.title}</p>
+        <Badge color={TYPE_COLOR[event.type]} className="shrink-0 !text-[10px]">
+          {event.type}
+        </Badge>
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="flex items-center gap-1 text-[10px] text-text-muted">
+          <Clock className="w-3 h-3" />
+          <span className="tabular-nums">
+            {new Date(event.startsAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </span>
+        {event.contactName && (
+          <span className="flex items-center gap-1 text-[10px] text-text-muted">
+            <User2 className="w-3 h-3" /> {event.contactName}
+          </span>
+        )}
+        {event.location && (
+          <span className="flex items-center gap-1 text-[10px] text-text-muted">
+            <MapPin className="w-3 h-3" /> {event.location}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-3 pt-1">
+        <motion.button
+          whileTap={{ scale: 0.94 }}
+          onClick={onDownload}
+          disabled={downloading}
+          className="flex items-center gap-1 text-[10px] text-accent-blue hover:underline transition-opacity disabled:opacity-50"
+        >
+          {downloading
+            ? <span className="w-3 h-3 border-[1.5px] border-current/30 border-t-current rounded-full animate-spin" />
+            : <Download className="w-3 h-3" />}
+          .ics
+        </motion.button>
+        <motion.button
+          whileTap={{ scale: 0.94 }}
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label="Delete event"
+          className="flex items-center gap-1 text-[10px] text-text-muted hover:text-accent-rose transition-colors disabled:opacity-50"
+        >
+          {deleting
+            ? <span className="w-3 h-3 border-[1.5px] border-current/30 border-t-current rounded-full animate-spin" />
+            : <Trash2 className="w-3 h-3" />}
+          Delete
+        </motion.button>
+      </div>
+    </motion.div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Calendar() {
   const now = new Date()
   const [year, setYear]             = useState(now.getFullYear())
   const [month, setMonth]           = useState(now.getMonth())
+  const [direction, setDirection]   = useState(0)
   const [selectedDate, setSelected] = useState(isoDate(now))
   const [newEventOpen, setNewEventOpen] = useState(false)
+  const [deletingId, setDeletingId]     = useState<string | null>(null)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const { deleteEvent } = useCalendarEventMutations()
   const { success, error: toastErr } = useToast()
 
   function prev() {
+    setDirection(-1)
     if (month === 0) { setYear((y) => y - 1); setMonth(11) }
     else setMonth((m) => m - 1)
   }
   function next() {
+    setDirection(1)
     if (month === 11) { setYear((y) => y + 1); setMonth(0) }
     else setMonth((m) => m + 1)
   }
@@ -187,6 +278,11 @@ export default function Calendar() {
   const { data, loading, error, reload } = useCalendarEvents(monthStartIso, monthEndIso)
   // Honest empty array on failure — never a fabricated agenda (carta §4).
   const events = data?.events ?? []
+  // Distinguishes "still waiting on the first response" from "server answered
+  // with zero rows" — without this, the day panel's empty state would flash on
+  // every cold load before real data (or a real empty day) arrives.
+  const initialLoading = loading && !data
+  const isRefreshing   = loading && !!data
 
   const eventsByDate: Record<string, CalEvent[]> = {}
   for (const e of events) {
@@ -201,181 +297,227 @@ export default function Calendar() {
   })
 
   async function handleDeleteEvent(id: string) {
+    setDeletingId(id)
     try {
       await deleteEvent(id)
       success('Event deleted')
       reload()
     } catch {
       toastErr('Failed to delete event')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  async function handleDownloadIcs(id: string, title: string) {
+    setDownloadingId(id)
+    try {
+      await downloadIcs(id, title)
+    } catch {
+      toastErr('Failed to download .ics file')
+    } finally {
+      setDownloadingId(null)
     }
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-5">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="p-4 md:p-6 max-w-4xl mx-auto space-y-5"
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-text-primary">Calendar</h1>
-          <p className="text-sm text-text-muted mt-0.5">{monthLabel}</p>
-        </div>
-        <button
-          onClick={() => setNewEventOpen(true)}
-          className={cn(
-            'flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium',
-            'bg-accent-blue text-white shadow-glow-blue hover:brightness-110',
-            'transition-[filter] duration-150 min-h-[36px]',
+          {initialLoading ? (
+            <Skeleton className="h-4 w-36 mt-1.5" />
+          ) : (
+            <p className="text-sm text-text-muted mt-0.5">
+              {monthLabel} · <span className="tabular-nums font-medium text-text-secondary">{events.length}</span>{' '}
+              {events.length === 1 ? 'event' : 'events'}
+            </p>
           )}
+        </div>
+        <Button
+          variant="primary"
+          size="sm"
+          icon={<Plus className="w-3.5 h-3.5" />}
+          onClick={() => setNewEventOpen(true)}
         >
-          <Plus className="w-3.5 h-3.5" /> New event
-        </button>
+          New event
+        </Button>
       </div>
 
-      {error && (
-        <EmptyState
-          icon={<Clock className="w-6 h-6" />}
-          title="No se pudo cargar el calendario"
-          message="Hubo un error contactando al servidor."
-          action={<Button size="sm" onClick={reload}>Reintentar</Button>}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {error ? (
+          <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+            <EmptyState
+              icon={<Clock className="w-6 h-6" />}
+              title="No se pudo cargar el calendario"
+              message="Hubo un error contactando al servidor."
+              action={<Button size="sm" onClick={reload}>Reintentar</Button>}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex flex-col lg:flex-row gap-4"
+          >
+            {/* Month grid */}
+            <Card className="flex-1">
+              {/* Month navigation */}
+              <div className="flex items-center justify-between mb-5">
+                <motion.button
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  onClick={prev}
+                  aria-label="Previous month"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-glass-medium transition-colors duration-150"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </motion.button>
+                <h2 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                  {monthLabel}
+                  {isRefreshing && <LoadingSpinner size="sm" />}
+                </h2>
+                <motion.button
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  onClick={next}
+                  aria-label="Next month"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-glass-medium transition-colors duration-150"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </motion.button>
+              </div>
 
-      {!error && (
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Month grid */}
-          <Card className="flex-1">
-            {/* Month navigation */}
-            <div className="flex items-center justify-between mb-5">
-              <button
-                onClick={prev}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-glass-medium transition-colors duration-150"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <h2 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-                {monthLabel}
-                {loading && <LoadingSpinner size="sm" />}
-              </h2>
-              <button
-                onClick={next}
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-glass-medium transition-colors duration-150"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Day-of-week headers */}
-            <div className="grid grid-cols-7 mb-2">
-              {DAYS.map((d) => (
-                <div key={d} className="text-center text-[10px] font-semibold text-text-muted uppercase py-1 tracking-wider">
-                  {d}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar cells */}
-            <div className="grid grid-cols-7 gap-1">
-              {cells.map((day, idx) => {
-                if (!day) return <div key={`pad-${idx}`} />
-
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                const dayEvents = eventsByDate[dateStr] ?? []
-                const isToday = dateStr === isoDate(now)
-                const isSel   = dateStr === selectedDate
-
-                return (
-                  <button
-                    key={dateStr}
-                    onClick={() => setSelected(dateStr)}
-                    className={cn(
-                      'relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs',
-                      'transition-all duration-150 cursor-pointer',
-                      isSel
-                        ? 'bg-accent-blue text-white shadow-glow-blue'
-                        : isToday
-                        ? 'ring-1 ring-accent-blue/50 text-accent-blue font-semibold bg-accent-blue/10'
-                        : 'text-text-secondary hover:bg-glass-medium hover:text-text-primary',
-                    )}
-                  >
-                    <span className="font-medium">{day}</span>
-                    {dayEvents.length > 0 && (
-                      <span
-                        className={cn(
-                          'w-1 h-1 rounded-full mt-0.5',
-                          isSel ? 'bg-white/70' : 'bg-accent-blue',
-                        )}
-                      />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          </Card>
-
-          {/* Day panel */}
-          <Card className="lg:w-64 shrink-0">
-            <h3 className="text-sm font-semibold text-text-primary mb-4">
-              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-GB', {
-                weekday: 'long', day: 'numeric', month: 'short',
-              })}
-            </h3>
-
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={selectedDate}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-              >
-                {selectedEvents.length === 0 ? (
-                  <p className="text-xs text-text-muted py-6 text-center">No events scheduled</p>
-                ) : (
-                  <div className="space-y-3">
-                    {selectedEvents.map((e) => (
-                      <div
-                        key={e.id}
-                        className="p-3 rounded-xl border border-border-subtle bg-glass-subtle space-y-2"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-xs font-medium text-text-primary leading-snug">{e.title}</p>
-                          <Badge color={TYPE_COLOR[e.type]} className="shrink-0 !text-[10px]">
-                            {e.type}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <span className="flex items-center gap-1 text-[10px] text-text-muted">
-                            <Clock className="w-3 h-3" />
-                            {new Date(e.startsAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          {e.contactName && (
-                            <span className="flex items-center gap-1 text-[10px] text-text-muted">
-                              <User2 className="w-3 h-3" /> {e.contactName}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 pt-1">
-                          <button
-                            onClick={() => downloadIcs(e.id, e.title)}
-                            className="flex items-center gap-1 text-[10px] text-accent-blue hover:underline"
-                          >
-                            <Download className="w-3 h-3" /> .ics
-                          </button>
-                          <button
-                            onClick={() => handleDeleteEvent(e.id)}
-                            className="flex items-center gap-1 text-[10px] text-text-muted hover:text-rose-400 transition-colors"
-                          >
-                            <Trash2 className="w-3 h-3" /> Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+              {/* Day-of-week headers */}
+              <div className="grid grid-cols-7 mb-2">
+                {DAYS.map((d) => (
+                  <div key={d} className="text-center text-[10px] font-semibold text-text-muted uppercase py-1 tracking-wider">
+                    {d}
                   </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </Card>
-        </div>
-      )}
+                ))}
+              </div>
+
+              {/* Calendar cells */}
+              {/* -m-1/p-1 buffer: without it, a hover-scaled edge-column cell clips
+                  against this flush overflow-hidden mask (needed for the slide). */}
+              <div className="overflow-hidden -m-1 p-1">
+                <AnimatePresence mode="wait" custom={direction} initial={false}>
+                  <motion.div
+                    key={`${year}-${month}`}
+                    custom={direction}
+                    variants={gridVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    className="grid grid-cols-7 gap-1"
+                  >
+                    {cells.map((day, idx) => {
+                      if (!day) return <div key={`pad-${idx}`} />
+
+                      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                      const dayEvents = eventsByDate[dateStr] ?? []
+                      const isToday = dateStr === isoDate(now)
+                      const isSel   = dateStr === selectedDate
+
+                      return (
+                        <motion.button
+                          key={dateStr}
+                          whileHover={{ scale: 1.04 }}
+                          whileTap={{ scale: 0.92 }}
+                          transition={{ type: 'spring', stiffness: 450, damping: 24 }}
+                          onClick={() => setSelected(dateStr)}
+                          className={cn(
+                            'relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs',
+                            'transition-colors duration-150 cursor-pointer',
+                            isSel
+                              ? 'bg-accent-blue text-white shadow-glow-blue'
+                              : isToday
+                              ? 'ring-1 ring-accent-blue/50 text-accent-blue font-semibold bg-accent-blue/10'
+                              : 'text-text-secondary hover:bg-glass-medium hover:text-text-primary',
+                          )}
+                        >
+                          <span className="font-medium tabular-nums">{day}</span>
+                          {dayEvents.length > 0 && (
+                            <span
+                              className={cn(
+                                'w-1 h-1 rounded-full mt-0.5',
+                                isSel ? 'bg-white/70' : 'bg-accent-blue',
+                              )}
+                            />
+                          )}
+                        </motion.button>
+                      )
+                    })}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </Card>
+
+            {/* Day panel */}
+            <Card className="lg:w-64 shrink-0">
+              <h3 className="text-sm font-semibold text-text-primary mb-4">
+                {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-GB', {
+                  weekday: 'long', day: 'numeric', month: 'short',
+                })}
+              </h3>
+
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={selectedDate}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                >
+                  {initialLoading ? (
+                    <div className="space-y-3">
+                      {[0, 1].map((i) => (
+                        <div key={i} className="p-3 rounded-xl border border-border-subtle bg-glass-subtle space-y-2">
+                          <Skeleton className="h-3 w-3/4" />
+                          <Skeleton className="h-2.5 w-1/2" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : selectedEvents.length === 0 ? (
+                    <EmptyState
+                      icon={<Clock className="w-5 h-5" />}
+                      title="No events scheduled"
+                      className="py-10"
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {selectedEvents.map((e) => (
+                          <EventCard
+                            key={e.id}
+                            event={e}
+                            deleting={deletingId === e.id}
+                            downloading={downloadingId === e.id}
+                            onDelete={() => handleDeleteEvent(e.id)}
+                            onDownload={() => handleDownloadIcs(e.id, e.title)}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <NewEventModal
         open={newEventOpen}
@@ -383,6 +525,6 @@ export default function Calendar() {
         onCreated={reload}
         defaultDate={selectedDate}
       />
-    </div>
+    </motion.div>
   )
 }
