@@ -228,40 +228,49 @@ export default function ProgressMetricCard({
   return (
     <div className={shell}>
       {/* Chart region (right side, behind the content). Wash + dot-grid + the
-       * actual line/area fade in together as ONE unit from the number-zone
-       * boundary — previously only the decorative wash/grid faded there while
-       * the chart line/area started at full strength with zero transition,
-       * which is what read as an abrupt "parón seco" between value and chart. */}
+       * actual line/area fade in/out together as ONE unit — from the
+       * number-zone boundary on the left, AND out again before the opaque
+       * footer on the bottom. Without the second fade, the chart got cut off
+       * clean by the footer's solid background + border, same "parón seco"
+       * as the left edge had before, just rotated 90°. */}
       <div className="absolute inset-y-0 right-0 z-0" style={{ width: `${REGION_W}%` }}>
         <div
           className="absolute inset-0"
           style={{
-            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 36%)',
-            maskImage: 'linear-gradient(to right, transparent 0%, black 36%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 68%, transparent 96%)',
+            maskImage: 'linear-gradient(to bottom, black 68%, transparent 96%)',
           }}
         >
           <div
             className="absolute inset-0"
-            style={{ background: `linear-gradient(to left, ${color.stroke}1f, transparent 75%)` }}
-          />
-          <div className="absolute inset-0 text-[var(--text-primary)] opacity-[0.13]">
-            <svg className="h-full w-full" aria-hidden>
-              <defs>
-                <pattern id={gridId} width="14" height="14" patternUnits="userSpaceOnUse">
-                  <circle cx="1" cy="1" r="1" fill="currentColor" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill={`url(#${gridId})`} />
-            </svg>
-          </div>
+            style={{
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 36%)',
+              maskImage: 'linear-gradient(to right, transparent 0%, black 36%)',
+            }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{ background: `linear-gradient(to left, ${color.stroke}1f, transparent 75%)` }}
+            />
+            <div className="absolute inset-0 text-[var(--text-primary)] opacity-[0.13]">
+              <svg className="h-full w-full" aria-hidden>
+                <defs>
+                  <pattern id={gridId} width="14" height="14" patternUnits="userSpaceOnUse">
+                    <circle cx="1" cy="1" r="1" fill="currentColor" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill={`url(#${gridId})`} />
+              </svg>
+            </div>
 
-          <MetricChart
-            series={chartSeries}
-            view={view}
-            defaultIndex={chartDefaultIndex}
-            valueFormatter={fmtFull}
-            dateFormatter={fmtDate}
-          />
+            <MetricChart
+              series={chartSeries}
+              view={view}
+              defaultIndex={chartDefaultIndex}
+              valueFormatter={fmtFull}
+              dateFormatter={fmtDate}
+            />
+          </div>
         </div>
       </div>
 
