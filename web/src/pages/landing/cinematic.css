@@ -51,10 +51,6 @@
   overflow-x: clip;
 }
 
-.cx-landing .cx-mono {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-}
-
 .cx-landing ::selection {
   background: var(--cx-badge);
   color: var(--cx-ink);

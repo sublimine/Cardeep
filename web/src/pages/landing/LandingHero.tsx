@@ -46,15 +46,16 @@ export default function LandingHero() {
       />
 
       {/* NAV */}
-      <nav className="relative z-10 flex items-center justify-between px-7 md:px-12 py-7">
+      <nav className="relative z-10 flex items-center justify-between px-8 py-7">
         <div className="flex items-center gap-2.5">
           <img src="/uploads/cd-icon.png" alt="" className="h-6 w-auto block" />
           <span className="font-bold text-xl tracking-[-0.03em] text-white">cardeep</span>
         </div>
-        <ul className="hidden md:flex items-center gap-9 list-none cx-mono text-[13px] uppercase tracking-[.08em] text-white/55">
+        <ul className="hidden md:flex items-center gap-9 list-none text-[14px] font-medium text-white/80">
           <li><a href="/marketplace" className="hover:text-white transition-colors">Marketplace</a></li>
           <li><a href="/inteligencia" className="hover:text-white transition-colors">Inteligencia</a></li>
           <li><a href="/arbitrage" className="hover:text-white transition-colors">Arbitrage</a></li>
+          <li><a href="/pricing" className="hover:text-white transition-colors">Precios</a></li>
         </ul>
         <a href="/login" className="flex items-center gap-2.5 rounded-lg bg-black pl-[3px] pr-4 py-[3px] text-sm font-medium text-white border border-white/10">
           <span className="cx-badge-chip flex h-8 w-8 items-center justify-center text-[color:var(--cx-ink)]">
@@ -65,9 +66,9 @@ export default function LandingHero() {
       </nav>
 
       {/* HEADLINE BLOCK */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center px-7 md:px-12 pb-16">
+      <div className="relative z-10 flex-1 flex flex-col justify-center px-8 pb-16">
         <CinematicReveal>
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 cx-mono text-[11px] uppercase tracking-[.14em] text-white/65">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 text-[13px] font-medium text-white/65">
             cardeep · el índice vivo de España
           </span>
         </CinematicReveal>
@@ -75,7 +76,7 @@ export default function LandingHero() {
         <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <KineticHeadline
             as="h1"
-            className="font-black text-[clamp(2.6rem,6.4vw,5.6rem)] leading-[0.98] tracking-[-0.03em] text-white max-w-[16ch]"
+            className="font-semibold text-[clamp(2.6rem,6.4vw,5.6rem)] leading-[0.98] tracking-[-0.03em] text-white max-w-[16ch]"
           >
             El mercado entero, en un índice vivo.
           </KineticHeadline>
@@ -87,7 +88,7 @@ export default function LandingHero() {
             </p>
             <a
               href="/marketplace"
-              className="mt-5 inline-flex items-center gap-2.5 rounded-lg bg-black pl-[3px] pr-5 py-[3px] text-[15px] font-semibold text-white border border-white/10 transition-transform hover:scale-[1.02]"
+              className="mt-5 inline-flex items-center gap-2.5 rounded-lg bg-black pl-[3px] pr-5 py-[3px] text-[15px] font-medium text-white border border-white/10 transition-transform hover:scale-[1.02]"
             >
               <span className="cx-badge-chip flex h-9 w-9 items-center justify-center text-[color:var(--cx-ink)]">
                 <ArrowUpRight size={15} />
@@ -101,7 +102,7 @@ export default function LandingHero() {
       {/* Editorial wordmark bleed */}
       <div className="relative z-[1] select-none leading-none pb-[6vw]" aria-hidden>
         <div
-          className="font-black tracking-[-0.04em]"
+          className="font-semibold tracking-[-0.04em]"
           style={{ fontSize: 'clamp(4.5rem, 18vw, 15rem)', color: 'rgba(255,255,255,0.055)' }}
         >
           cardeep

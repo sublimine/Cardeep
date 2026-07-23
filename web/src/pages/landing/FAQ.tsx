@@ -41,11 +41,11 @@ export default function FAQ() {
   const [open, setOpen] = useState<number | null>(0)
 
   return (
-    <section className="px-7 md:px-12 py-24 md:py-28 max-w-[1200px] mx-auto">
+    <section className="px-8 py-24 md:py-28 max-w-[1440px] mx-auto">
       <div className="grid gap-10 md:grid-cols-[0.85fr_1.15fr]">
         <div>
           <CinematicReveal>
-            <h2 className="font-black text-[clamp(2rem,4vw,3rem)] tracking-[-0.03em] leading-[1.05] text-[color:var(--cx-text-1)]">
+            <h2 className="font-semibold text-[clamp(2rem,4vw,3rem)] tracking-[-0.03em] leading-[1.05] text-[color:var(--cx-text-1)]">
               Preguntas frecuentes
             </h2>
             <p className="mt-3 text-sm text-[color:var(--cx-text-2)]">
@@ -58,7 +58,7 @@ export default function FAQ() {
           </CinematicReveal>
 
           <CinematicReveal delay={0.1} className="cx-panel-dark rounded-[20px] p-6 mt-8">
-            <div className="font-bold text-[17px] leading-snug text-white">¿Operas puntos de venta y necesitas el censo entero?</div>
+            <div className="font-semibold text-[17px] leading-snug text-white">¿Operas puntos de venta y necesitas el censo entero?</div>
             <p className="mt-2.5 text-[13px] leading-relaxed text-[color:var(--cx-text-on-dark-2)]">
               Starter es gratis para tu inventario y CRM. El resto del mercado, en Scale.
             </p>

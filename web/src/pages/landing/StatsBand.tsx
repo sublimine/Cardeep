@@ -22,14 +22,14 @@ export default function StatsBand({ stats, coverage }: StatsBandProps) {
   ]
 
   return (
-    <section className="px-7 md:px-12 py-24 md:py-28 max-w-[1200px] mx-auto">
+    <section className="px-8 py-24 md:py-28 max-w-[1440px] mx-auto">
       <div className="grid gap-4 md:grid-cols-[1.3fr_1fr]">
         <CinematicReveal className="cx-panel-dark rounded-[24px] p-8 md:p-10 flex flex-col justify-between min-h-[280px]">
-          <div className="cx-mono text-[11px] uppercase tracking-[.16em] text-[color:var(--cx-text-on-dark-3)]">
+          <div className="text-[13px] font-medium text-[color:var(--cx-text-on-dark-3)]">
             Cobertura verificada, no estimada
           </div>
           <div>
-            <div className="font-black cx-mono text-[clamp(3.4rem,9vw,6.4rem)] leading-none tracking-[-0.03em] text-white">
+            <div className="font-black text-[clamp(3.4rem,9vw,6.4rem)] leading-none tracking-[-0.03em] text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
               {coverage ? <CountUp value={Math.round(coverage.coveragePct)} /> : '—'}
               <span className="text-[0.4em] align-top">%</span>
             </div>
@@ -43,10 +43,10 @@ export default function StatsBand({ stats, coverage }: StatsBandProps) {
         <div className="grid gap-4">
           {small.map((item) => (
             <CinematicReveal key={item.label} className="cx-panel rounded-[20px] p-6 flex flex-col justify-center flex-1">
-              <div className="cx-mono font-bold text-[clamp(1.8rem,3vw,2.4rem)] tracking-[-0.02em] leading-none text-[color:var(--cx-text-1)]">
+              <div className="font-semibold text-[clamp(1.8rem,3vw,2.4rem)] tracking-[-0.02em] leading-none text-[color:var(--cx-text-1)]" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {item.node}
               </div>
-              <div className="cx-mono text-[11px] uppercase tracking-[.08em] text-[color:var(--cx-text-3)] mt-2">{item.label}</div>
+              <div className="text-[13px] text-[color:var(--cx-text-3)] mt-2">{item.label}</div>
             </CinematicReveal>
           ))}
         </div>

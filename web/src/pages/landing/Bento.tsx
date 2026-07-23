@@ -55,10 +55,10 @@ export default function Bento({ stats }: BentoProps) {
   ]
 
   return (
-    <section className="px-7 md:px-12 py-24 md:py-28 max-w-[1200px] mx-auto">
+    <section className="px-8 py-24 md:py-28 max-w-[1440px] mx-auto">
       <CinematicReveal className="mb-14">
-        <div className="cx-mono text-[12px] uppercase tracking-[.2em] text-[color:var(--cx-text-3)]">Una plataforma · todo el ciclo</div>
-        <h2 className="font-black text-[clamp(2rem,4.2vw,3.6rem)] tracking-[-0.03em] leading-[1.05] mt-4 max-w-[22ch] text-[color:var(--cx-text-1)]">
+        <div className="text-[13px] text-[color:var(--cx-text-3)]">Una plataforma · todo el ciclo</div>
+        <h2 className="font-semibold text-[clamp(2rem,4.2vw,3.6rem)] tracking-[-0.03em] leading-[1.05] mt-4 max-w-[22ch] text-[color:var(--cx-text-1)]">
           Lo que hoy vive repartido en seis pestañas, aquí en una.
         </h2>
       </CinematicReveal>
@@ -74,7 +74,7 @@ export default function Bento({ stats }: BentoProps) {
             style={tile.featured ? { background: 'linear-gradient(150deg, var(--cx-accent) 0%, #1d4ed8 100%)' } : undefined}
           >
             <div style={{ color: tile.featured ? '#fff' : tile.dark ? 'var(--cx-badge)' : 'var(--cx-accent-hi)' }}>{tile.icon}</div>
-            <div className={`font-bold text-base mt-4 ${tile.featured || tile.dark ? 'text-white' : 'text-[color:var(--cx-text-1)]'}`}>{tile.title}</div>
+            <div className={`font-semibold text-base mt-4 ${tile.featured || tile.dark ? 'text-white' : 'text-[color:var(--cx-text-1)]'}`}>{tile.title}</div>
             <p className={`text-[13px] leading-relaxed mt-1.5 ${tile.featured ? 'text-white/75' : tile.dark ? 'text-[color:var(--cx-text-on-dark-2)]' : 'text-[color:var(--cx-text-2)]'}`}>
               {tile.copy}
             </p>

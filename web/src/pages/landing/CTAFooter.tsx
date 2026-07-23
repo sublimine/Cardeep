@@ -27,12 +27,12 @@ const COLUMNS = [
 
 export default function CTAFooter() {
   return (
-    <section className="px-7 md:px-12 pt-10 pb-16 max-w-[1200px] mx-auto">
+    <section className="px-8 pt-10 pb-16 max-w-[1440px] mx-auto">
       <CinematicReveal className="cx-panel-dark relative overflow-hidden rounded-[28px]">
         <div className="relative z-10 flex items-start justify-between gap-6 px-8 md:px-12 pt-12 md:pt-16">
           <KineticHeadline
             as="h2"
-            className="font-black text-[clamp(2rem,4.6vw,3.6rem)] tracking-[-0.03em] leading-[1.05] text-white max-w-[16ch]"
+            className="font-semibold text-[clamp(2rem,4.6vw,3.6rem)] tracking-[-0.03em] leading-[1.05] text-white max-w-[16ch]"
           >
             El mapa completo de un mercado que hoy nadie tiene entero.
           </KineticHeadline>
@@ -48,7 +48,7 @@ export default function CTAFooter() {
         {/* Editorial wordmark bleeding at the bottom of the panel */}
         <div className="relative z-0 select-none leading-none mt-8 md:mt-2" aria-hidden>
           <div
-            className="font-black tracking-[-0.04em] px-8 md:px-12"
+            className="font-semibold tracking-[-0.04em] px-8 md:px-12"
             style={{ fontSize: 'clamp(3.5rem, 15vw, 11rem)', color: 'rgba(255,255,255,0.06)' }}
           >
             cardeep
@@ -79,7 +79,7 @@ export default function CTAFooter() {
         <div className="flex flex-wrap gap-10 md:gap-16">
           {COLUMNS.map((col) => (
             <div key={col.h}>
-              <div className="cx-mono text-[11px] font-semibold uppercase tracking-[.1em] text-[color:var(--cx-text-3)]">{col.h}</div>
+              <div className="text-[12px] font-semibold text-[color:var(--cx-text-3)]">{col.h}</div>
               <div className="mt-3.5 flex flex-col gap-2.5">
                 {col.links.map((link) => (
                   <a key={link.href} href={link.href} className="text-[13.5px] font-medium text-[color:var(--cx-text-2)] hover:text-[color:var(--cx-text-1)] transition-colors">
@@ -93,7 +93,7 @@ export default function CTAFooter() {
       </div>
 
       <div
-        className="flex justify-between items-center gap-5 flex-wrap mt-12 pt-6 border-t text-[12px] cx-mono"
+        className="flex justify-between items-center gap-5 flex-wrap mt-12 pt-6 border-t text-[12px]"
         style={{ borderColor: 'var(--cx-line)', color: 'var(--cx-text-3)' }}
       >
         <span>© 2026 cardeep · España</span>

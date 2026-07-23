@@ -25,10 +25,10 @@ const ROWS: Row[] = [
  */
 export default function ComparisonBand({ coverage }: { coverage: MarketCoverage | null }) {
   return (
-    <section className="px-7 md:px-12 py-24 md:py-28 max-w-[1200px] mx-auto">
+    <section className="px-8 py-24 md:py-28 max-w-[1440px] mx-auto">
       <CinematicReveal className="mb-14">
-        <div className="cx-mono text-[12px] uppercase tracking-[.2em] text-[color:var(--cx-text-3)]">Por qué cardeep</div>
-        <h2 className="font-black text-[clamp(2rem,4.2vw,3.6rem)] tracking-[-0.03em] leading-[1.05] mt-4 max-w-[20ch] text-[color:var(--cx-text-1)]">
+        <div className="text-[13px] text-[color:var(--cx-text-3)]">Por qué cardeep</div>
+        <h2 className="font-semibold text-[clamp(2rem,4.2vw,3.6rem)] tracking-[-0.03em] leading-[1.05] mt-4 max-w-[20ch] text-[color:var(--cx-text-1)]">
           Ellos indexan su inventario. Nosotros indexamos el mercado.
         </h2>
       </CinematicReveal>
@@ -37,10 +37,10 @@ export default function ComparisonBand({ coverage }: { coverage: MarketCoverage 
         <div className="grid grid-cols-[1.2fr_1fr_1fr]">
           <div className="px-6 md:px-8 py-4" style={{ background: 'var(--cx-surface-2)' }} />
           <div className="px-6 md:px-8 py-4 flex items-center border-b" style={{ borderColor: 'var(--cx-line)' }}>
-            <span className="font-bold text-[15px] text-[color:var(--cx-text-1)]">cardeep</span>
+            <span className="font-semibold text-[15px] text-[color:var(--cx-text-1)]">cardeep</span>
           </div>
           <div className="px-6 md:px-8 py-4 flex items-center border-b" style={{ borderColor: 'var(--cx-line)' }}>
-            <span className="cx-mono text-[12px] text-[color:var(--cx-text-3)]">El resto del sector</span>
+            <span className="text-[13px] text-[color:var(--cx-text-3)]">El resto del sector</span>
           </div>
 
           {ROWS.map((row) => (
@@ -74,13 +74,13 @@ export default function ComparisonBand({ coverage }: { coverage: MarketCoverage 
               <span />
             )}
             <div className="flex gap-3">
-              <a href="/marketplace" className="inline-flex items-center gap-2 rounded-lg bg-[color:var(--cx-ink)] pl-[3px] pr-4 py-[3px] text-[13.5px] font-semibold text-white">
+              <a href="/marketplace" className="inline-flex items-center gap-2 rounded-lg bg-[color:var(--cx-ink)] pl-[3px] pr-4 py-[3px] text-[13.5px] font-medium text-white">
                 <span className="cx-badge-chip flex h-8 w-8 items-center justify-center text-[color:var(--cx-ink)]">
                   <CheckCircle2 size={13} />
                 </span>
                 Ver el índice completo
               </a>
-              <a href="/inteligencia" className="inline-flex items-center rounded-lg px-4 py-2.5 text-[13.5px] font-semibold cx-panel text-[color:var(--cx-text-1)]">
+              <a href="/inteligencia" className="inline-flex items-center rounded-lg px-4 py-2.5 text-[13.5px] font-medium cx-panel text-[color:var(--cx-text-1)]">
                 Ver inteligencia de mercado
               </a>
             </div>
