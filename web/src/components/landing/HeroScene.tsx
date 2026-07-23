@@ -100,8 +100,8 @@ export default function HeroScene({ className }: HeroSceneProps) {
       camera={{ position: [0, 0, 4.6], fov: 36 }}
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
     >
-      <color attach="background" args={['#0a0e17']} />
-      <fog attach="fog" args={['#0a0e17', 4, 9]} />
+      <color attach="background" args={['#0a0a0a']} />
+      <fog attach="fog" args={['#0a0a0a', 4, 9]} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[3, 4, 2]} intensity={1.4} color={ACCENT} />
       <directionalLight position={[-3, -2, -2]} intensity={0.4} color="#5B96F8" />

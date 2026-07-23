@@ -3,24 +3,24 @@ import { useLandingMotion } from './landing/useLandingMotion'
 import './landing/cinematic.css'
 import LandingHero from './landing/LandingHero'
 import TrustStrip from './landing/TrustStrip'
-import IntelligenceTeaser from './landing/IntelligenceTeaser'
 import Bento from './landing/Bento'
+import StatsBand from './landing/StatsBand'
 import ComparisonBand from './landing/ComparisonBand'
+import FAQ from './landing/FAQ'
 import CTAFooter from './landing/CTAFooter'
 
 /**
  * Public landing (`/landing`, and `/` for anonymous visitors via `RootRedirect`).
  *
- * Deliberately dark/cinematic — a distinct visual identity from the light app
- * shell (Dashboard, Inteligencia, ...), scoped entirely under `.cx-landing`
- * (see `cinematic.css`). This is the owner's explicit, twice-stated reference
- * standard (`docs/frontend/03-MOTIONSITES-AUDIT.md`: "así quiero que sea mi
- * frontend", reaffirmed live 2026-07-16): motionsites.io-grade execution — real
- * GSAP/ScrollTrigger/SplitText choreography, not CSS fade-ins. Same brand
- * cobalt (#3B82F6) as the light app, so it still reads as one product.
- *
- * No 3D map of Spain in the hero (explicit, forceful owner directive this
- * session — that idiom stays exclusive to `/explore` and `/cobertura`).
+ * v3 (owner-directed 2026-07-23): structure, motion quality-bar and flat-card
+ * visual language replicated from the real reference
+ * (productized-agency-template-acetern.vercel.app, confirmed live via
+ * Playwright), content 100% real CARDEEP data (census stats, real indexed
+ * sources, real pricing plans — see tests/test_web_no_fabricated_data.py).
+ * Section order mirrors the reference: dark hero → source trust wall →
+ * capability bento → stats → comparison → FAQ → dark CTA + footer.
+ * Scoped entirely under `.cx-landing` (see `cinematic.css`) so none of this
+ * leaks into the light glassmorphism app shell (Dashboard, Inteligencia, ...).
  */
 export default function Landing() {
   const { stats, coverage } = useLandingStats()
@@ -28,11 +28,12 @@ export default function Landing() {
 
   return (
     <div className="cx-landing min-h-screen">
-      <LandingHero stats={stats} />
-      <TrustStrip stats={stats} coverage={coverage} />
-      <IntelligenceTeaser />
+      <LandingHero />
+      <TrustStrip />
       <Bento stats={stats} />
+      <StatsBand stats={stats} coverage={coverage} />
       <ComparisonBand coverage={coverage} />
+      <FAQ />
       <CTAFooter />
     </div>
   )

@@ -1,38 +1,53 @@
 /*
- * Cinematic dark identity for the public landing ONLY. Scoped under
- * `.cx-landing` so it never leaks into the light app shell (Dashboard,
- * Inteligencia, etc. stay on `tokens.css` / General Sans / light-by-default —
- * see `plans/frontend-definitivo/PLAN.md`). Palette is the sealed brand from
- * `docs/frontend/05-CINEMATIC-ART-DIRECTION.md` (cobalt #3B82F6 · charcoal
- * #0A0E17/#111B27 · white) — same accent blue as the rest of the app, so the
- * brand still reads as one product even though the marketing surface is dark
- * and the product surface is light.
+ * Public landing identity, scoped under `.cx-landing` so it never leaks into
+ * the app shell (Dashboard, Inteligencia, ... stay on `tokens.css` / General
+ * Sans / glassmorphism). v3 (owner-directed 2026-07-23): structure, motion
+ * quality-bar and flat-card visual language copied from the real reference
+ * (productized-agency-template-acetern.vercel.app — a dark-hero/warm-beige
+ * agency template, confirmed live via Playwright, exact tokens sampled from
+ * its computed styles), content 100% real CARDEEP (census data — see
+ * tests/test_web_no_fabricated_data.py). Deliberately FLAT, not glass: the
+ * reference has no blur/translucency anywhere — solid white/black cards with
+ * a hairline border and a soft shadow. Brand accent stays CARDEEP's own blue
+ * for links/CTAs; the reference's signature warm yellow (#FFCC00, sampled
+ * from its icon-badge) is kept as a small compositional accent (icon chips,
+ * badges) exactly where the reference uses it, never as a second brand hue.
  */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 .cx-landing {
-  --cx-ink: #0a0e17;
-  --cx-surface-1: #121826;
-  --cx-surface-2: #1a2234;
-  --cx-surface-3: #232c42;
-  --cx-line: rgba(255, 255, 255, 0.08);
-  --cx-line-strong: rgba(255, 255, 255, 0.14);
-  --cx-text-1: #eaeef7;
-  --cx-text-2: #9aa6be;
-  --cx-text-3: #5c6883;
-  --cx-accent: #3b82f6;
-  --cx-accent-hi: #5b96f8;
-  --cx-emerald: #22c55e;
-  --cx-amber: #f5b33c;
-  --cx-rose: #f0556b;
-  --cx-glass: rgba(26, 34, 52, 0.55);
-  --cx-glass-border: rgba(255, 255, 255, 0.1);
-  --cx-shadow: 0 24px 64px -24px rgba(0, 0, 0, 0.65);
+  --cx-bg: #f0efec;
+  --cx-ink: #0a0a0a;
+  --cx-ink-2: #141414;
+
+  --cx-surface-1: #ffffff;
+  --cx-surface-2: #f7f6f3;
+  --cx-surface-3: #e8e6e1;
+
+  --cx-line: rgba(20, 20, 18, 0.08);
+  --cx-line-strong: rgba(20, 20, 18, 0.14);
+  --cx-line-on-dark: rgba(255, 255, 255, 0.1);
+
+  --cx-text-1: #141414;
+  --cx-text-2: #5b5a55;
+  --cx-text-3: #8f8d86;
+  --cx-text-on-dark-1: #ffffff;
+  --cx-text-on-dark-2: rgba(255, 255, 255, 0.62);
+  --cx-text-on-dark-3: rgba(255, 255, 255, 0.38);
+
+  --cx-accent: #2563eb;
+  --cx-accent-hi: #2563eb;
+  --cx-emerald: #059669;
+  --cx-amber: #d97706;
+  --cx-rose: #e11d48;
+  --cx-badge: #ffcc00;
+
+  --cx-shadow: 0 1px 2px rgba(20, 20, 18, 0.04), 0 12px 32px -16px rgba(20, 20, 18, 0.1);
+  --cx-shadow-dark: 0 12px 32px -16px rgba(0, 0, 0, 0.5);
 
   position: relative;
-  background: var(--cx-ink);
+  background: var(--cx-bg);
   color: var(--cx-text-1);
-  font-family: 'Outfit', 'General Sans', system-ui, sans-serif;
+  font-family: 'Inter', 'General Sans', system-ui, sans-serif;
   overflow-x: clip;
 }
 
@@ -41,17 +56,25 @@
 }
 
 .cx-landing ::selection {
-  background: var(--cx-accent);
-  color: #fff;
+  background: var(--cx-badge);
+  color: var(--cx-ink);
 }
 
-/* Reusable glass surface for cinematic panels — real depth, not a flat card. */
+/* Flat solid card — hairline border + soft shadow, no blur. The reference's
+   only card idiom; glassmorphism is exclusive to the app shell. */
 .cx-panel {
-  background: var(--cx-glass);
-  border: 1px solid var(--cx-glass-border);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  box-shadow: var(--cx-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: var(--cx-surface-1);
+  border: 1px solid var(--cx-line);
+  box-shadow: var(--cx-shadow);
+}
+
+/* Dark counterpart, for cards embedded on the beige page (world-map tile,
+   featured pricing card, CTA band). */
+.cx-panel-dark {
+  background: var(--cx-ink-2);
+  border: 1px solid var(--cx-line-on-dark);
+  box-shadow: var(--cx-shadow-dark);
+  color: var(--cx-text-on-dark-1);
 }
 
 .cx-glow-border {
@@ -63,7 +86,7 @@
   inset: -1px;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), transparent 40%, transparent 60%, rgba(59, 130, 246, 0.25));
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), transparent 40%, transparent 60%, rgba(37, 99, 235, 0.22));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -73,6 +96,14 @@
 }
 .cx-glow-border:hover::before {
   opacity: 1;
+}
+
+/* Signature "badge pill" — the small rounded-square icon chip inside primary
+   CTAs (`bg-[color:var(--cx-badge)]` on a black pill), sampled 1:1 from the
+   reference (#FFCC00, 5px inner radius on a 8px pill). */
+.cx-badge-chip {
+  background: var(--cx-badge);
+  border-radius: 5px;
 }
 
 @media (prefers-reduced-motion: reduce) {
