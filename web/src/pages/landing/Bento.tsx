@@ -57,7 +57,7 @@ export default function Bento({ stats }: BentoProps) {
   return (
     <section className="px-7 md:px-12 py-24 md:py-28 max-w-[1200px] mx-auto">
       <CinematicReveal className="mb-14">
-        <div className="cx-mono text-[12px] uppercase tracking-[.2em] text-[color:var(--cx-accent-hi)]">Una plataforma · todo el ciclo</div>
+        <div className="cx-mono text-[12px] uppercase tracking-[.2em] text-[color:var(--cx-text-3)]">Una plataforma · todo el ciclo</div>
         <h2 className="font-black text-[clamp(2rem,4.2vw,3.6rem)] tracking-[-0.03em] leading-[1.05] mt-4 max-w-[22ch] text-[color:var(--cx-text-1)]">
           Lo que hoy vive repartido en seis pestañas, aquí en una.
         </h2>

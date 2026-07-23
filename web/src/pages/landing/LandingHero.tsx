@@ -7,12 +7,13 @@ const HeroScene = lazy(() => import('../../components/landing/HeroScene'))
 
 /**
  * Dark hero shape sampled from the reference: black canvas, faint grid,
- * bottom-anchored glow, badge pill, LEFT-aligned headline with the
- * subcopy+CTA offset to the right, giant editorial wordmark bleeding at the
- * fold. The reference's glow is warm amber — kept as brand-blue here instead
- * (the app's single-hue rule from tokens.css v3.1: no second competing hue),
- * and `HeroScene`'s real WebGL "índice vivo" core replaces the reference's
- * decorative dust motes with something that actually means what it shows.
+ * bottom-anchored AMBER glow (matches the reference's horizon-arc color
+ * exactly — owner correction 2026-07-23, a prior pass swapped it for brand
+ * blue unasked), badge pill, LEFT-aligned headline with the subcopy+CTA
+ * offset to the right, giant editorial wordmark bleeding at the fold.
+ * `HeroScene`'s real WebGL "índice vivo" core is now receded/scaled down to
+ * a background detail (also recolored amber) instead of a dominant
+ * hero-centered object, so the atmosphere reads sparse like the reference.
  */
 export default function LandingHero() {
   return (
@@ -31,10 +32,17 @@ export default function LandingHero() {
           maskImage: 'linear-gradient(to bottom, transparent 0%, black 30%, black 75%, transparent 100%)',
         }}
       />
-      {/* Bottom-anchored brand glow (blue, not the reference's amber — single-hue rule) */}
+      {/* Bottom-anchored horizon glow — warm amber, sampled from the reference */}
       <div
-        className="absolute inset-x-0 bottom-0 h-[60vh] z-[1] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 60% 100% at 50% 100%, rgba(37,99,235,0.28) 0%, transparent 70%)' }}
+        className="absolute inset-x-0 bottom-0 h-[62vh] z-[1] pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(ellipse 65% 85% at 50% 100%, rgba(245,166,35,0.4) 0%, rgba(245,133,35,0.18) 45%, transparent 72%)',
+        }}
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 h-[3px] z-[1] pointer-events-none"
+        style={{ background: 'linear-gradient(to right, transparent, rgba(245,166,35,0.55) 50%, transparent)' }}
       />
 
       {/* NAV */}

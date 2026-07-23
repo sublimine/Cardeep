@@ -27,7 +27,7 @@ export default function ComparisonBand({ coverage }: { coverage: MarketCoverage 
   return (
     <section className="px-7 md:px-12 py-24 md:py-28 max-w-[1200px] mx-auto">
       <CinematicReveal className="mb-14">
-        <div className="cx-mono text-[12px] uppercase tracking-[.2em] text-[color:var(--cx-accent-hi)]">Por qué cardeep</div>
+        <div className="cx-mono text-[12px] uppercase tracking-[.2em] text-[color:var(--cx-text-3)]">Por qué cardeep</div>
         <h2 className="font-black text-[clamp(2rem,4.2vw,3.6rem)] tracking-[-0.03em] leading-[1.05] mt-4 max-w-[20ch] text-[color:var(--cx-text-1)]">
           Ellos indexan su inventario. Nosotros indexamos el mercado.
         </h2>
