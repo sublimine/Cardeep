@@ -2,39 +2,57 @@ import { Layers, Megaphone, LineChart, Gauge, MapPin, Users } from 'lucide-react
 import CinematicReveal from './CinematicReveal'
 import type { Stats } from '../../api/cardeep'
 
-interface Tile {
+interface RegularTile {
   href: string
   icon: React.ReactNode
   title: string
   copy: string
   dark?: boolean
-  featured?: boolean
 }
 
 interface BentoProps {
   stats: Stats | null
 }
 
+function RegularCard({ tile }: { tile: RegularTile }) {
+  return (
+    <a
+      href={tile.href}
+      className={`cx-glow-border block rounded-[20px] p-6 flex flex-col transition-transform duration-300 hover:-translate-y-1 ${
+        tile.dark ? 'cx-panel-dark' : 'cx-panel'
+      }`}
+    >
+      <div style={{ color: tile.dark ? 'var(--cx-badge)' : 'var(--cx-accent-hi)' }}>{tile.icon}</div>
+      <div className={`font-semibold text-base mt-4 ${tile.dark ? 'text-white' : 'text-[color:var(--cx-text-1)]'}`}>{tile.title}</div>
+      <p className={`text-[13px] leading-relaxed mt-1.5 ${tile.dark ? 'text-[color:var(--cx-text-on-dark-2)]' : 'text-[color:var(--cx-text-2)]'}`}>
+        {tile.copy}
+      </p>
+    </a>
+  )
+}
+
 /**
- * Reference shape: a uniform 3-col grid of 6 flat cards, visual rhythm
- * carried by mixing light/dark tiles (not by grid-span asymmetry — the
- * reference's own bento is a plain 3x2 grid). "Cobertura por provincia" is a
- * dark tile with no embedded chart on purpose: the real interactive map
- * (`CoverageMap`) is theme-coupled to the app shell's tokens and would break
- * inside a forced-dark landing tile — same trade the reference itself makes
- * (its dark "Hosting" card is illustrative, not a live embedded widget). The
- * real map lives one click away on /inteligencia.
+ * Reference shape (round 4, re-verified visually — a plain screenshot, not
+ * just computed-style sampling): NOT a uniform 3×2 grid, that was an
+ * unverified Round 1 assumption. The real bento is asymmetric — one TALL
+ * card (image up top, dark text panel below, spanning both rows in col 1)
+ * next to a 2×2 grid of 4 regular cards. We have 6 real capabilities to
+ * cardeep's 5 reference slots; rather than drop a real one to force-fit the
+ * slot count, the 6th (Arbitrage, already our "featured" gradient tile)
+ * becomes a full-width banner row underneath — keeps every real capability,
+ * still reads as an intentional asymmetric bento rather than a flat grid.
  */
 export default function Bento({ stats }: BentoProps) {
-  const tiles: Tile[] = [
-    {
-      href: '/marketplace',
-      icon: <Layers size={22} />,
-      title: 'Índice nacional',
-      copy: stats
-        ? `${stats.dealers.toLocaleString('es-ES')} puntos de venta, con su stock y su delta.`
-        : 'Cada punto de venta de España, con su stock y su delta.',
-    },
+  const hero = {
+    href: '/marketplace',
+    icon: <Layers size={22} />,
+    title: 'Índice nacional',
+    copy: stats
+      ? `${stats.dealers.toLocaleString('es-ES')} puntos de venta, con su stock y su delta.`
+      : 'Cada punto de venta de España, con su stock y su delta.',
+  }
+
+  const regular: RegularTile[] = [
     { href: '/marketing', icon: <Megaphone size={22} />, title: 'Marketing', copy: 'Radar de canales y multiposting real a las plataformas del mercado.' },
     {
       href: '/inteligencia',
@@ -44,13 +62,6 @@ export default function Bento({ stats }: BentoProps) {
       dark: true,
     },
     { href: '/inteligencia', icon: <LineChart size={22} />, title: 'Inteligencia', copy: 'Valor residual y price-position frente al mercado real, no un modelo.' },
-    {
-      href: '/arbitrage',
-      icon: <Gauge size={22} />,
-      title: 'Arbitrage',
-      copy: 'Chollos y deal-score sobre el 100% del inventario, no una muestra.',
-      featured: true,
-    },
     { href: '/community', icon: <Users size={22} />, title: 'Comunidad', copy: 'Encargos y demanda real de compradores, en abierto.' },
   ]
 
@@ -63,23 +74,50 @@ export default function Bento({ stats }: BentoProps) {
         </h2>
       </CinematicReveal>
 
-      <CinematicReveal stagger className="grid gap-4 md:grid-cols-3">
-        {tiles.map((tile) => (
-          <a
-            key={tile.href + tile.title}
-            href={tile.href}
-            className={`cx-glow-border block rounded-[20px] p-6 min-h-[190px] flex flex-col transition-transform duration-300 hover:-translate-y-1 ${
-              tile.featured ? '' : tile.dark ? 'cx-panel-dark' : 'cx-panel'
-            }`}
-            style={tile.featured ? { background: 'linear-gradient(150deg, var(--cx-accent) 0%, #1d4ed8 100%)' } : undefined}
-          >
-            <div style={{ color: tile.featured ? '#fff' : tile.dark ? 'var(--cx-badge)' : 'var(--cx-accent-hi)' }}>{tile.icon}</div>
-            <div className={`font-semibold text-base mt-4 ${tile.featured || tile.dark ? 'text-white' : 'text-[color:var(--cx-text-1)]'}`}>{tile.title}</div>
-            <p className={`text-[13px] leading-relaxed mt-1.5 ${tile.featured ? 'text-white/75' : tile.dark ? 'text-[color:var(--cx-text-on-dark-2)]' : 'text-[color:var(--cx-text-2)]'}`}>
-              {tile.copy}
-            </p>
-          </a>
+      <CinematicReveal stagger className="grid gap-4 md:grid-cols-3 md:grid-rows-2">
+        <a
+          href={hero.href}
+          className="cx-glow-border cx-panel-dark group flex flex-col overflow-hidden rounded-[20px] md:row-span-2"
+        >
+          <div className="flex items-center gap-1.5 px-4 py-3 border-b" style={{ borderColor: 'var(--cx-line-on-dark)' }}>
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'var(--cx-line-strong)' }} />
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'var(--cx-line-strong)' }} />
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: 'var(--cx-line-strong)' }} />
+          </div>
+          <div className="h-[200px] overflow-hidden">
+            <img
+              src="/screens/marketplace.png"
+              alt="Marketplace de cardeep"
+              loading="lazy"
+              className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+            />
+          </div>
+          <div className="p-6 flex flex-col flex-1">
+            <div style={{ color: 'var(--cx-badge)' }}>{hero.icon}</div>
+            <div className="font-semibold text-base mt-4 text-white">{hero.title}</div>
+            <p className="text-[13px] leading-relaxed mt-1.5 text-[color:var(--cx-text-on-dark-2)]">{hero.copy}</p>
+          </div>
+        </a>
+
+        {regular.map((tile) => (
+          <RegularCard key={tile.href + tile.title} tile={tile} />
         ))}
+
+        <a
+          href="/arbitrage"
+          className="cx-glow-border md:col-span-3 flex flex-col md:flex-row md:items-center gap-4 rounded-[20px] p-6 min-h-[140px] transition-transform duration-300 hover:-translate-y-1"
+          style={{ background: 'linear-gradient(150deg, var(--cx-accent) 0%, #1d4ed8 100%)' }}
+        >
+          <div style={{ color: '#fff' }}>
+            <Gauge size={22} />
+          </div>
+          <div className="flex-1">
+            <div className="font-semibold text-base text-white">Arbitrage</div>
+            <p className="text-[13px] leading-relaxed mt-1.5 text-white/75 max-w-[52ch]">
+              Chollos y deal-score sobre el 100% del inventario, no una muestra.
+            </p>
+          </div>
+        </a>
       </CinematicReveal>
     </section>
   )
