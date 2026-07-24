@@ -1,5 +1,6 @@
 import CinematicReveal from './CinematicReveal'
 import CountUp from '../../components/landing/CountUp'
+import Odometer from '../../components/landing/Odometer'
 import type { Stats } from '../../api/cardeep'
 import type { MarketCoverage } from '../../api/useCardeepStats'
 
@@ -13,6 +14,10 @@ interface StatsBandProps {
  * card next to a stack of smaller supporting numbers, not a flat row — the
  * asymmetry is real weight, not decoration. Coverage% is the featured card
  * since it's cardeep's actual differentiator (censo completo vs. muestra).
+ * The featured number uses `Odometer` (per-digit roller, sampled from the
+ * reference's own "100+ Companies served" stat) — the reference reserves
+ * that treatment for its one hero number too, so the 3 supporting stats
+ * below keep the plain `CountUp` ease-out tween instead of also rolling.
  */
 export default function StatsBand({ stats, coverage }: StatsBandProps) {
   const small = [
@@ -30,7 +35,7 @@ export default function StatsBand({ stats, coverage }: StatsBandProps) {
           </div>
           <div>
             <div className="font-black text-[clamp(3.4rem,9vw,6.4rem)] leading-none tracking-[-0.03em] text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {coverage ? <CountUp value={Math.round(coverage.coveragePct)} /> : '—'}
+              {coverage ? <Odometer value={coverage.coveragePct} /> : '—'}
               <span className="text-[0.4em] align-top">%</span>
             </div>
             <p className="mt-4 max-w-[42ch] text-sm leading-relaxed text-[color:var(--cx-text-on-dark-2)]">
