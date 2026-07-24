@@ -76,7 +76,7 @@ export default function LandingHero() {
         <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
           <KineticHeadline
             as="h1"
-            className="font-semibold text-[clamp(2.6rem,6.4vw,5.6rem)] leading-[0.98] tracking-[-0.03em] text-white max-w-[16ch]"
+            className="font-semibold text-[clamp(2.6rem,6.4vw,4.5rem)] leading-[0.98] tracking-[-0.03em] text-white max-w-[16ch]"
           >
             El mercado entero, en un índice vivo.
           </KineticHeadline>

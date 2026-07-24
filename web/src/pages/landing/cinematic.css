@@ -102,6 +102,17 @@
   border-radius: 5px;
 }
 
+/* Projects masonry width rhythm — flex-grow only applies at md+ (flex-row).
+   Below md the section stacks (flex-col); grow/basis:0 there would fight the
+   column's height distribution instead of width and collapse each card to
+   near-zero height (verified via Playwright at 375px — round 2 fix). */
+@media (min-width: 768px) {
+  .cx-landing .cx-device-frame {
+    flex-grow: var(--cx-w-fr, 1);
+    flex-basis: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cx-landing * {
     animation-duration: 0.01ms !important;

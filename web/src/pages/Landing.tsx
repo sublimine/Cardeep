@@ -7,6 +7,7 @@ import Bento from './landing/Bento'
 import Projects from './landing/Projects'
 import StatsBand from './landing/StatsBand'
 import ComparisonBand from './landing/ComparisonBand'
+import PricingTeaser from './landing/PricingTeaser'
 import FAQ from './landing/FAQ'
 import CTAFooter from './landing/CTAFooter'
 
@@ -21,7 +22,7 @@ import CTAFooter from './landing/CTAFooter'
  * sources, real pricing plans, real product screenshots — see
  * tests/test_web_no_fabricated_data.py). Section order mirrors the
  * reference: dark hero → source trust wall → capability bento → product
- * screens → stats → comparison → FAQ → dark CTA + footer. Scoped entirely
+ * screens → stats → comparison → pricing → FAQ → dark CTA + footer. Scoped entirely
  * under `.cx-landing` (see `cinematic.css`) so none of this leaks into the
  * light glassmorphism app shell (Dashboard, Inteligencia, ...).
  */
@@ -37,6 +38,7 @@ export default function Landing() {
       <Projects />
       <StatsBand stats={stats} coverage={coverage} />
       <ComparisonBand coverage={coverage} />
+      <PricingTeaser />
       <FAQ />
       <CTAFooter />
     </div>
