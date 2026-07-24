@@ -1,0 +1,10 @@
+# Keep the web build context lean and reproducible — local node_modules/dist are
+# Windows/dev artifacts; the image must build its own via `npm ci` + `vite build`.
+node_modules/
+dist/
+_quarantine/
+.git
+.gitignore
+*.md
+debug.mjs
+shot.mjs

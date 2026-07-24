@@ -3692,3 +3692,81 @@
 - PRÓXIMO: si el owner autoriza, ejecutar roadmap del addendum (7 ítems, EUR0, cada uno ~1 PR) —
   empezar por el fix trivial de requirements.txt:42-44 (camoufox[geoip] sin pinar rompe instalación
   limpia de Tier-1 hoy).
+
+## 2026-07-25 — INTEGRACIÓN OPENSHIP (self-hosted deployment platform)
+- Owner pidió integrar github.com/oblien/openship (self-hosted deployment platform,
+  Apache-2.0, TypeScript) para desplegar Cardeep en público. Repo clonado y código
+  fuente leído directamente (detección de stack, schema, edge/routing) — nada asumido
+  de README.
+- AUDITORÍA (2 agentes en paralelo, verificado archivo-por-archivo): Cardeep **no
+  tiene servidor de producción** — todo corre en 127.0.0.1 en este Windows, sin
+  dominio real (`sales@cardeep.io` es solo copy de marketing), sin CI/CD de deploy,
+  `docs/DEPLOY-DURABLE-DAEMONS.md` + `ops/systemd/*` son planos inertes con
+  placeholders. Openship en modo servidor (el único con TLS/dominio/push-to-deploy
+  real) exige VPS Linux+Docker con DNS ya apuntado ANTES de instalar — gasto real,
+  freno explícito del mandato del proyecto (§CLAUDE.md + memoria feedback-cardex-mandate:
+  "GASTAR DINERO" es el único freno duro; "deploy público" requiere orden literal).
+  NINGÚN servidor se ha aprovisionado, ningún dominio se ha comprado.
+- ARQUITECTURA decidida vía subagente Fable 5 (única consulta de arquitectura de la
+  tarea, per CLAUDE.md "que lo monte Fable 5" = pensar, no ejecutar): modo `services`
+  de `openship.json` (no `monorepo`) — declarar `services` apaga globalmente la
+  autodetección de framework (verificado en `prepare.service.ts` de Openship), así
+  que no hay híbrido posible. Ganó `services` porque es traducción 1:1 del
+  `docker-compose.yml` que YA funciona (reutiliza el `Dockerfile` raíz probado para
+  `api`/`autopilot`), en vez de apostar el arranque de FastAPI+APScheduler al
+  buildpack no probado de Openship.
+- ENTREGADO (commit siguiente a esta entrada):
+  - `openship.json` (raíz) — 4 servicios (`cardeep-pg`, `api`, `autopilot`, `web`),
+    validado contra el JSON Schema oficial de Openship (`ajv-cli`, válido).
+  - `web/Dockerfile` + `web/nginx.conf` + `web/.dockerignore` (nuevos) — build
+    multi-stage node:22-alpine (misma versión que CI `frontend-build`) → nginx
+    sirviendo la SPA + proxy same-origin a `/api/*` y `/api/v1/*` (mismo prefijo que
+    `web/vite.config.ts` ya usa en dev — cero CORS, cero dominio necesario mientras
+    no exista uno).
+  - `docs/runbook/DEPLOY_OPENSHIP.md` (nuevo) — arquitectura, checklist explícito de
+    lo NO verificable sin servidor, comandos para cuando el owner autorice.
+- VERIFICADO EN VIVO, no solo escrito (Docker Desktop arrancado, build real x2 +
+  contenedor corriendo): `docker build web/` OK (tsc + vite build limpios, 3727
+  módulos). BUG REAL cazado por la propia verificación: `nginx.conf` con
+  `proxy_pass http://api:8090` literal hace que nginx **rehúse arrancar** si el
+  hostname no resuelve al cargar la config (probado standalone sin `api` presente:
+  "host not found in upstream"). Corregido con `resolver 127.0.0.11` + `proxy_pass`
+  por variable (resolución DNS por-petición). Re-verificado: `/` → 200 (index.html
+  real), ruta SPA → 200, `/api/*` y `/api/v1/*` → 502 limpio (proxy sin backend,
+  NO crash). Sin esta corrección, cualquier reinicio del contenedor `api` en
+  producción se habría llevado el frontend entero.
+- PENDIENTE (bloqueante, no ejecutable por IA — §0 del runbook): decisión del owner
+  de VPS (proveedor, presupuesto) + dominio. Sin eso no hay deploy real que probar
+  — el checklist de `DEPLOY_OPENSHIP.md` §4 lista explícitamente qué queda sin
+  verificar (DNS interno real de Openship, routing por dominio en modo services,
+  persistencia de volumen entre redeploys, Ollama en el VPS nuevo).
+- PRÓXIMO: si el owner autoriza VPS+dominio, ejecutar §5 del runbook (`openship up`
+  en el servidor, `openship init` + `openship deploy` desde este repo) y cerrar el
+  checklist §4 punto por punto contra el deploy real.
+
+### Addendum 2026-07-25 — code review obligatorio cazó 2 bugs CRITICAL reales
+- Antes de commitear, code-reviewer agent revisó los 7 archivos de la entrada anterior. NO
+  se limitó al diff: clonó/leyó el código fuente real de Openship para verificar semántica
+  de negocio (no solo forma del JSON). Encontró y yo verifiqué cada uno de forma
+  independiente antes de aceptar el hallazgo (antialucinación — no confío en el reporte del
+  agente sin comprobar):
+  1. **CRITICAL**: `openship.json` declaraba `api`/`web` como `exposed: true` sin `ports` ni
+     `exposedPort`. Verificado en `apps/api/src/lib/public-endpoints.ts` de Openship:
+     `resolveServicePort()` devuelve `null` sin ambos campos → CERO endpoints públicos, SIN
+     error ni aviso — el deploy se habría reportado "exitoso" con el sitio 100% inalcanzable.
+     Fix: `"ports": ["8090"]` en `api`, `"ports": ["80"]` en `web`.
+  2. **CRITICAL**: `web/src/api/cardeep.ts` (archivo preexistente, no tocado por mí hasta
+     ahora) usa `new URL(BASE + path)` en sus 3 funciones núcleo — exige URL absoluta. Con el
+     `VITE_API_BASE=/api` que mi propio `web/Dockerfile` hornea por defecto,
+     `new URL('/api/stats')` lanza `TypeError: Invalid URL` (reproducido con Node). Habría
+     roto en el navegador prácticamente toda la capa de datos (stats/mapa/entidades/
+     arbitraje/terminal). Fix DE RAÍZ en `cardeep.ts` (no un parche en el Dockerfile):
+     resolver `BASE` relativa contra `window.location.origin` antes de usarla — cero cambios
+     en las ~30 funciones consumidoras.
+  Ambos re-verificados tras el fix: `openship.json` sigue validando contra el schema oficial;
+  `tsc --noEmit` limpio; rebuild Docker completo + contenedor corriendo con el mismo
+  `200`/`200`/`502` esperado. `docs/runbook/DEPLOY_OPENSHIP.md` actualizado con ambos.
+- LECCIÓN: las pruebas `curl` contra nginx (verificación "en vivo" de la entrada anterior)
+  NUNCA habrían cazado el bug #2 — solo prueban la respuesta HTTP del servidor, no la
+  ejecución del bundle JS en un motor de URL real. Verificar "en vivo" el servidor no basta
+  cuando el bug vive en el cliente.

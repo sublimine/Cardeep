@@ -46,5 +46,6 @@ python -m pipeline.ops.scheduler                     # 7. motor durable
 | Ver el estado certificado A→F | [`docs/AUDIT_A-F_STATUS.md`](docs/AUDIT_A-F_STATUS.md) |
 | Entender los workflows (E2E per-dealer + verificación) | [`docs/workflows/`](docs/workflows/README.md) — `e2e/` (descubrir→scrapear→receta→API→borrar) + `verification/` (VAM→ledger→Inquisición→gestionador) |
 | Levantar el sistema de cero | [`docs/runbook/DEPLOY.md`](docs/runbook/DEPLOY.md) |
+| Desplegarlo en público (Openship, servidor+dominio) | [`docs/runbook/DEPLOY_OPENSHIP.md`](docs/runbook/DEPLOY_OPENSHIP.md) — config lista, bloqueado en decisión de gasto del owner |
 | Operarlo (monitor / verify / remediar) | [`docs/runbook/OPERATE.md`](docs/runbook/OPERATE.md) |
 | Entender el stack de verificación (4 capas) | [`docs/architecture/10-VERIFICATION-STACK.md`](docs/architecture/10-VERIFICATION-STACK.md) |

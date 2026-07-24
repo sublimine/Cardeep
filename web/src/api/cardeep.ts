@@ -5,7 +5,13 @@
 
 import type { Bar } from '../components/chart-engine/types';
 
-const BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? 'http://127.0.0.1:8090';
+const RAW_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '') ?? 'http://127.0.0.1:8090';
+// `new URL(BASE + path)` below requires an ABSOLUTE URL. A same-origin relative base
+// (e.g. "/api", what web/nginx.conf proxies to the api service in production — see
+// docs/runbook/DEPLOY_OPENSHIP.md) is valid for fetch() but throws "Invalid URL" if
+// used as-is here. Resolve it against the current origin so every call site below
+// keeps working unchanged in both dev (absolute default) and same-origin prod (relative).
+const BASE = /^https?:\/\//.test(RAW_BASE) ? RAW_BASE : window.location.origin + RAW_BASE;
 const API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) ?? '';
 
 export interface Envelope<T> {
