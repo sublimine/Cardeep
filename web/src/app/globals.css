@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+@import './fonts.css';
+
+/* Design tokens transcribed from the reference build's compiled theme layer.
+   Every value here is the literal one the target ships, not an approximation. */
+@theme {
+  --font-inter: 'Inter', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono: 'Geist Mono', 'Geist Mono Fallback', ui-monospace, monospace;
+  --font-dm-mono: 'DM Mono', 'DM Mono Fallback', ui-monospace, monospace;
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+
+  --color-background: #f0efec;
+  --color-offwhite: #f0efec;
+  --color-foreground: #000;
+  --color-heading: #343434;
+  --color-primary: #fc0;
+  --color-secondary: #f7f7f7;
+  --color-natural-white: #fff;
+  --color-natural-black: #000;
+  --color-muted-foreground: #8b8b8b;
+  --color-dusty-green: #447e68;
+  --color-dusty-red: #ff6464;
+
+  /* Oversized display sizes used by the section watermarks. */
+  --text-page-header: 100px;
+  --text-page-header--line-height: 8.75rem;
+  --text-page-header-md: 200px;
+  --text-page-header-md--line-height: 17.5rem;
+  --text-page-header-lg: 280px;
+  --text-page-header-lg--line-height: 17.5rem;
+
+  /* Percentage tracking scale; used almost exclusively in its negative form. */
+  --tracking-xs: 1%;
+  --tracking-sm: 2%;
+  --tracking-lg: 3%;
+  --tracking-xl: 4%;
+
+  --shadow-card-md: 0 2px 6px 0 #0000001f;
+  --shadow-card-lg: 0 4px 12px 0 #0000001f;
+  --shadow-card-xl: 0 8px 24px 0 #0000001f;
+
+  /* Drives `max-w-container`, the 1440px page gutter used by every section. */
+  --container-container: 1440px;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
+  }
+  to {
+    height: 0;
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+}
