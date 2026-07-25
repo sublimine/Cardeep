@@ -15,21 +15,25 @@ import { SiteFooter } from '@/components/site-footer';
 export default function App() {
   return (
     <div className="bg-background relative font-sans antialiased">
-      <Navbar />
-      <section className="flex max-w-screen flex-col items-center justify-center overflow-x-hidden">
-        <Hero />
-        <LogoWall />
-        <EngineeringBento />
-        <Projects />
-        <Insights />
-        <Scaling />
-        <Comparison />
-        <Pricing />
-        <FoundersDesk />
-        <Feedback />
-        <Faq />
-      </section>
-      <SiteFooter />
+      {/* Ambient bloom the glass panels refract; purely decorative. */}
+      <div className="aurora" aria-hidden="true" />
+      <div className="relative z-10">
+        <Navbar />
+        <section className="flex max-w-screen flex-col items-center justify-center overflow-x-hidden">
+          <Hero />
+          <LogoWall />
+          <EngineeringBento />
+          <Projects />
+          <Insights />
+          <Scaling />
+          <Comparison />
+          <Pricing />
+          <FoundersDesk />
+          <Feedback />
+          <Faq />
+        </section>
+        <SiteFooter />
+      </div>
     </div>
   );
 }

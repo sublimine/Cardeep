@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { IconBrandGithubFilled } from '@tabler/icons-react';
+import { ArrowDown, Check, Plus } from 'lucide-react';
+import { BENTO } from '@/content/site';
 
 /* -------------------------------------------------------------------------- */
 /*                              Decorative dots                               */
@@ -157,97 +158,34 @@ function ProgressGauge() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                             Notification stack                             */
+/*                               Movement stack                               */
 /* -------------------------------------------------------------------------- */
 
-/** Slack mark, inlined verbatim — it is a brand logo, not an icon-set glyph. */
-function SlackMark() {
-  return (
-    <svg
-      width="17"
-      height="16"
-      viewBox="0 0 17 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="size-4"
-    >
-      <path
-        d="M3.37492 10.1148C3.37492 11.0447 2.62335 11.7963 1.69344 11.7963C0.763533 11.7963 0.0119629 11.0447 0.0119629 10.1148C0.0119629 9.18492 0.763533 8.43335 1.69344 8.43335H3.37492V10.1148Z"
-        fill="#E01E5A"
-      />
-      <path
-        d="M4.21631 10.1148C4.21631 9.18492 4.96788 8.43335 5.89779 8.43335C6.8277 8.43335 7.57927 9.18492 7.57927 10.1148V14.3185C7.57927 15.2484 6.8277 16 5.89779 16C4.96788 16 4.21631 15.2484 4.21631 14.3185V10.1148Z"
-        fill="#E01E5A"
-      />
-      <path
-        d="M5.89754 3.3632C4.96763 3.3632 4.21606 2.61163 4.21606 1.68172C4.21606 0.751815 4.96763 0.000244141 5.89754 0.000244141C6.82745 0.000244141 7.57902 0.751815 7.57902 1.68172V3.3632H5.89754Z"
-        fill="#36C5F0"
-      />
-      <path
-        d="M5.89792 4.2168C6.82782 4.2168 7.57939 4.96837 7.57939 5.89828C7.57939 6.82819 6.82782 7.57975 5.89792 7.57975H1.68148C0.75157 7.57975 0 6.82819 0 5.89828C0 4.96837 0.75157 4.2168 1.68148 4.2168H5.89792Z"
-        fill="#36C5F0"
-      />
-      <path
-        d="M12.637 5.89828C12.637 4.96837 13.3885 4.2168 14.3184 4.2168C15.2484 4.2168 15.9999 4.96837 15.9999 5.89828C15.9999 6.82819 15.2484 7.57975 14.3184 7.57975H12.637V5.89828Z"
-        fill="#2EB67D"
-      />
-      <path
-        d="M11.7956 5.89792C11.7956 6.82782 11.044 7.57939 10.1141 7.57939C9.18419 7.57939 8.43262 6.82782 8.43262 5.89792V1.68148C8.43262 0.751571 9.18419 0 10.1141 0C11.044 0 11.7956 0.751571 11.7956 1.68148V5.89792Z"
-        fill="#2EB67D"
-      />
-      <path
-        d="M10.1143 12.637C11.0443 12.637 11.7958 13.3885 11.7958 14.3184C11.7958 15.2484 11.0443 15.9999 10.1143 15.9999C9.18443 15.9999 8.43286 15.2484 8.43286 14.3184V12.637H10.1143Z"
-        fill="#ECB22E"
-      />
-      <path
-        d="M10.1141 11.7963C9.18419 11.7963 8.43262 11.0447 8.43262 10.1148C8.43262 9.18492 9.18419 8.43335 10.1141 8.43335H14.3305C15.2604 8.43335 16.012 9.18492 16.012 10.1148C16.012 11.0447 15.2604 11.7963 14.3305 11.7963H10.1141Z"
-        fill="#ECB22E"
-      />
-    </svg>
-  );
-}
+/** Market movements in SSR DOM order. */
+const MOVEMENTS = BENTO.movements.items;
 
-type StackItem = {
-  id: string;
-  message: string;
-  icon: ReactNode;
+type MovementKind = (typeof MOVEMENTS)[number]['kind'];
+
+/**
+ * One neutral glyph per kind of movement: the price fell, the car sold, stock
+ * came in. Same 16px box and same slot the reference brand marks occupied.
+ */
+const MOVEMENT_GLYPHS: Record<MovementKind, ReactNode> = {
+  precio: <ArrowDown className="size-4 text-neutral-500" />,
+  venta: <Check className="size-4 text-neutral-500" />,
+  stock: <Plus className="size-4 text-neutral-500" />,
 };
 
-/** Notifications in SSR DOM order. */
-const NOTIFICATIONS: StackItem[] = [
-  { id: 'revision', message: 'Revision Completed', icon: <SlackMark /> },
-  {
-    id: 'hotfix',
-    message: 'HOTFIX: update design',
-    icon: <IconBrandGithubFilled className="size-4" />,
-  },
-  {
-    id: 'design',
-    message: 'Design Finalized',
-    icon: (
-      <img
-        alt="Design Finalized"
-        loading="lazy"
-        width={20}
-        height={20}
-        decoding="async"
-        className="rounded-full"
-        src="/manu.webp"
-      />
-    ),
-  },
-];
-
-const STACK_SIZE = NOTIFICATIONS.length;
+const STACK_SIZE = MOVEMENTS.length;
 /** Slot geometry: 0 is the front card, each step back sheds 10px and 6% scale. */
 const CARD_OFFSET = 10;
 const SCALE_FACTOR = 0.06;
-/** How long a notification stays in front before the stack promotes. */
+/** How long a movement stays in front before the stack promotes. */
 const CYCLE_MS = 5000;
 /**
- * The captured resting state has `HOTFIX: update design` in front, which is the
- * DOM order two promotions in — so the stack opens on that state instead of on
- * the pre-hydration order.
+ * The captured resting state has the second card in front, which is the DOM
+ * order two promotions in — so the stack opens on that state instead of on the
+ * pre-hydration order.
  */
 const INITIAL_SLOT_OFFSET = 2;
 
@@ -260,7 +198,7 @@ function slotOf(index: number, tick: number) {
   return (index + INITIAL_SLOT_OFFSET + (STACK_SIZE - 1) * tick) % STACK_SIZE;
 }
 
-function NotificationStack() {
+function MovementStack() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -273,12 +211,12 @@ function NotificationStack() {
 
   return (
     <div className="relative mb-8 w-full">
-      {NOTIFICATIONS.map((item, index) => {
+      {MOVEMENTS.map((item, index) => {
         const slot = slotOf(index, tick);
         return (
           <motion.div
-            key={item.id}
-            className="absolute flex h-20 w-full flex-col justify-between rounded-lg bg-white p-4 shadow ring-1 shadow-black/10 ring-black/5"
+            key={item.kind}
+            className="glass absolute flex h-20 w-full flex-col justify-between rounded-lg p-4"
             style={{ transformOrigin: 'top center' }}
             animate={{
               top: slot * -CARD_OFFSET,
@@ -289,11 +227,11 @@ function NotificationStack() {
           >
             <div className="flex justify-between">
               <span className="font-mono text-xs text-neutral-500">
-                notification
+                {item.kind}
               </span>
-              {item.icon}
+              {MOVEMENT_GLYPHS[item.kind]}
             </div>
-            <p className="text-base text-neutral-700">{item.message}</p>
+            <p className="text-base text-neutral-700">{item.text}</p>
           </motion.div>
         );
       })}
@@ -305,19 +243,27 @@ function NotificationStack() {
 /*                                    Card                                    */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The reference heading is a two-line block and the layout below it depends on
+ * that height, so the title breaks before its last word rather than wrapping.
+ */
+const TITLE_BREAK = BENTO.movements.title.lastIndexOf(' ');
+const TITLE_HEAD = BENTO.movements.title.slice(0, TITLE_BREAK);
+const TITLE_TAIL = BENTO.movements.title.slice(TITLE_BREAK + 1);
+
 export function ProgressTrackingCard() {
   return (
-    <div className="bg-natural-white relative col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl p-4 pb-0 lg:col-span-2">
+    <div className="glass relative col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl p-4 pb-0 lg:col-span-2">
       <div className="h-full">
         <DotGrid />
         <h2 className="text-base font-medium text-black">
-          Regular updates and
+          {TITLE_HEAD}
           <br />
-          progress tracking
+          {TITLE_TAIL}
         </h2>
         <div className="relative flex h-full w-full items-center justify-end">
           <ProgressGauge />
-          <NotificationStack />
+          <MovementStack />
         </div>
       </div>
     </div>

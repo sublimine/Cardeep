@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
+import { HERO } from '@/content/site';
 
 /** Side of one square cell in the tiled background grid, in SVG user units. */
 const GRID_CELL = 70;
@@ -358,7 +359,7 @@ export function Hero() {
   }, []);
 
   return (
-    <div className="h-[60vh] w-full p-2 md:h-screen">
+    <div id="indice" className="h-[60vh] w-full p-2 md:h-screen">
       <div className="text-natural-white relative m-0 h-full w-full overflow-hidden rounded-3xl bg-black">
         <div ref={layersRef} className="absolute inset-0 h-full w-full">
           <GridLayer size={size} />
@@ -368,38 +369,33 @@ export function Hero() {
         </div>
         <Container className="relative z-10 flex h-full flex-col justify-between">
           <div className="pt-32 md:pt-42 lg:pt-75">
-            <a
-              target="_blank"
-              className="flex w-fit rounded-full bg-neutral-900 p-1 shadow-lg shadow-black"
-              href="https://ui.aceternity.com/"
-            >
+            <a className="glass-chip-dark flex w-fit rounded-full p-1" href={HERO.badgeHref}>
               <div className="flex items-center gap-1 sm:gap-2">
-                <div className="rounded-full bg-neutral-950 px-2 py-1 text-[10px] sm:text-xs">
-                  Aceternity UI
+                <div className="glass-chip-dark rounded-full px-2 py-1 text-[10px] sm:text-xs">
+                  {HERO.badgeBrand}
                 </div>
                 <div className="text-natural-white rounded-full pr-2 text-[10px] sm:text-xs">
-                  New components every week
+                  {HERO.badgeNote}
                 </div>
               </div>
             </a>
             <div className="mt-6 flex flex-col items-start gap-6 md:mt-10 lg:flex-row lg:gap-10">
               <h1 className="text-natural-white -tracking-xl text-3xl font-semibold text-balance sm:text-4xl md:text-5xl lg:text-7xl">
-                The best design and development agency in the world.
+                {HERO.title}
               </h1>
               <div className="lg:max-w-md">
                 <h2 className="text-sm font-medium text-balance text-neutral-300 sm:text-base lg:text-lg">
-                  We design and build websites that drive results and help your business grow. No
-                  Calls. No BS. Just Results.
+                  {HERO.subtitle}
                 </h2>
-                <Button className="mt-6 md:mt-8" avatar="/manu.webp">
-                  Chat with Alex
+                <Button className="mt-6 md:mt-8" avatar="/shots/mark.webp">
+                  {HERO.cta}
                 </Button>
               </div>
             </div>
           </div>
           <div className="relative h-18 sm:h-48 md:h-72">
             <p className="from-natural-white/10 -tracking-xl to-heading/0 bg-linear-to-r bg-clip-text text-transparent absolute -top-10 left-1/2 -translate-x-1/2 text-center text-[100px] font-semibold sm:text-[6rem] md:-top-6 md:mt-10 md:text-[160px] lg:-top-18 lg:text-[300px]">
-              Aceternity
+              {HERO.watermark}
             </p>
           </div>
         </Container>

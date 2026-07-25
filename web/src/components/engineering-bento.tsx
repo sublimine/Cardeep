@@ -1,4 +1,5 @@
 import { Container } from '@/components/ui/container';
+import { BENTO } from '@/content/site';
 import { DesignDevelopmentCard } from '@/components/bento/design-development-card';
 import { ProgressTrackingCard } from '@/components/bento/progress-tracking-card';
 import { HostingMapCard } from '@/components/bento/hosting-map-card';
@@ -6,7 +7,7 @@ import { GoogleSearchCard } from '@/components/bento/google-search-card';
 import { ComponentsCard } from '@/components/bento/components-card';
 
 /**
- * "Replace your Engineering Team" bento grid.
+ * Product bento grid, anchored at `#producto` for the navbar link.
  *
  * The 19-column track lets the feature card take 6/19 and the four supporting
  * cards share the remaining 13 on large screens, collapsing to one and then two
@@ -15,9 +16,9 @@ import { ComponentsCard } from '@/components/bento/components-card';
  */
 export function EngineeringBento() {
   return (
-    <Container className="flex flex-col gap-15 py-4">
+    <Container id="producto" className="flex flex-col gap-15 py-4">
       <h2 className="text-heading text-left text-4xl font-semibold tracking-tight md:text-5xl">
-        Replace your Engineering Team
+        {BENTO.heading}
       </h2>
       <div className="grid grid-cols-19 gap-3">
         <DesignDevelopmentCard />

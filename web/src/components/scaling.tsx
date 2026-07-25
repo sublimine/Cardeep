@@ -1,25 +1,16 @@
 import { motion } from 'motion/react';
 import Marquee from 'react-fast-marquee';
-import {
-  IconBrandAws,
-  IconBrandFirebase,
-  IconBrandGoogle,
-  IconBrandGoogleAnalytics,
-  IconBrandOpenai,
-  IconBrandReact,
-  IconBrandSupabase,
-} from '@tabler/icons-react';
 
-import { AdobeMark, GoogleMark, MicrosoftMark, RaycastMark } from '@/components/brand-marks';
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
+import { BRAND, FIGURES, SCALING, SOURCES } from '@/content/site';
 
-type MosaicTile =
-  | { kind: 'outline' }
-  | { kind: 'filled' }
-  | { kind: 'avatar'; src: string };
+type MosaicTile = { kind: 'outline' | 'filled' | 'point' };
 
-/** The 5x4 tile mosaic behind the "dream team" card, in DOM order. */
+/**
+ * The 5x4 tile mosaic behind the coverage card, in DOM order. `point` tiles are
+ * the ones carrying an accent dot: a sales point sitting on the national grid.
+ */
 const MOSAIC_TILES: readonly MosaicTile[] = [
   { kind: 'outline' },
   { kind: 'outline' },
@@ -28,17 +19,17 @@ const MOSAIC_TILES: readonly MosaicTile[] = [
   { kind: 'outline' },
   { kind: 'outline' },
   { kind: 'outline' },
-  { kind: 'avatar', src: '/avatar/avatar-1.webp' },
+  { kind: 'point' },
   { kind: 'filled' },
   { kind: 'outline' },
   { kind: 'outline' },
-  { kind: 'avatar', src: '/avatar/avatar-2.webp' },
+  { kind: 'point' },
   { kind: 'outline' },
-  { kind: 'avatar', src: '/avatar/avatar-3.webp' },
+  { kind: 'point' },
   { kind: 'filled' },
   { kind: 'outline' },
   { kind: 'filled' },
-  { kind: 'avatar', src: '/avatar/avatar-4.webp' },
+  { kind: 'point' },
   { kind: 'outline' },
   { kind: 'outline' },
 ];
@@ -49,17 +40,21 @@ const LATTICE_Y = [-49.2031, 25.7969, 100.797, 175.797, 250.797] as const;
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
-/** Digits of "100", each rendered as its own scrolling column. */
-const COUNTER_DIGITS = [1, 0, 0] as const;
-
-/** Height of one odometer cell in px — matches `text-[6.25rem] leading-none`. */
-const CELL_HEIGHT = 100;
+const THOUSANDS_SEPARATOR = '.';
 
 /**
- * Warm tiles drifting behind the testimonial. `peak` is the opacity each tile
+ * The counter split into odometer cells. The Spanish thousands dot gets a cell
+ * of its own so the digits either side keep rolling independently.
+ */
+const COUNTER_CELLS = String(SCALING.counterValue)
+  .replace(/\B(?=(\d{3})+(?!\d))/g, THOUSANDS_SEPARATOR)
+  .split('');
+
+/**
+ * Warm tiles drifting behind the pull-quote. `peak` is the opacity each tile
  * breathes up to; the SSR markup ships them all at `opacity: 0`.
  */
-const TESTIMONIAL_TILES = [
+const QUOTE_TILES = [
   { x: 105.117, y: 28.7969, peak: 0.55 },
   { x: 249.117, y: 28.7969, peak: 0.9, group: 0.6, filter: 'url(#filter0_d_2637_2853)' },
   { x: 177.117, y: 100.797, peak: 1, group: 0.6, filter: 'url(#filter1_di_2637_2853)' },
@@ -75,76 +70,40 @@ const TESTIMONIAL_TILES = [
   { x: 249.117, y: 244.797, peak: 0.65 },
 ] as const;
 
-type BrandChip = {
-  label: string;
-  Mark: () => React.JSX.Element;
-};
-
 /**
- * Client chips in the upper strip; the marquee scrolls them left. These use the
- * reference build's own brand artwork rather than icon-set lookalikes — the
- * Microsoft squares, gradient Google "G", Adobe triangle and Raycast glyph are
- * all distinct enough at 16px for a substitute to read as wrong.
+ * The strip above the pull-quote: the index's headline figures and the date it
+ * was last refreshed. Composed from `FIGURES` so no number is written twice.
  */
-const BRAND_CHIPS: readonly BrandChip[] = [
-  { label: 'Microsoft', Mark: MicrosoftMark },
-  { label: 'Google', Mark: GoogleMark },
-  { label: 'Adobe', Mark: AdobeMark },
-  { label: 'Raycast', Mark: RaycastMark },
-];
-
-type TechChip = {
-  label: string;
-  color: string;
-  tint: string;
-  Icon: typeof IconBrandGoogle;
-};
-
-/** `tint` is the wash bleeding out of each tile's upper-left corner. */
-const TECH_CHIPS: readonly TechChip[] = [
-  { label: 'Firebase', color: '#f5820b', tint: 'rgba(255,152,0,0.3)', Icon: IconBrandFirebase },
-  {
-    label: 'Google Analytics',
-    color: '#e8710a',
-    tint: 'rgba(232,113,10,0.26)',
-    Icon: IconBrandGoogleAnalytics,
-  },
-  { label: 'OpenAI', color: '#101010', tint: 'rgba(116,125,242,0.24)', Icon: IconBrandOpenai },
-  { label: 'Supabase', color: '#3ecf8e', tint: 'rgba(62,207,142,0.3)', Icon: IconBrandSupabase },
-  { label: 'React', color: '#61dafb', tint: 'rgba(97,218,251,0.32)', Icon: IconBrandReact },
-  { label: 'AWS', color: '#ff9900', tint: 'rgba(255,153,0,0.26)', Icon: IconBrandAws },
+const FIGURE_CHIPS: readonly string[] = [
+  `${FIGURES.vehicles.value}${FIGURES.vehicles.suffix} ${FIGURES.vehicles.label}`,
+  `${FIGURES.provinces.value} ${FIGURES.provinces.label}`,
+  `${FIGURES.municipalities.prefix}${FIGURES.municipalities.value} ${FIGURES.municipalities.label}`,
+  `${FIGURES.sources.value} ${FIGURES.sources.label}`,
+  BRAND.indexStamp,
 ];
 
 function MosaicTileBody({ tile }: { tile: MosaicTile }) {
-  if (tile.kind === 'avatar') {
+  if (tile.kind === 'point') {
     return (
       <div
         data-slot="tile-body"
-        className="shadow-card-md p-1 transition-all will-change-contents group-hover:p-0"
+        className="p-1 transition-all will-change-contents group-hover:p-0"
       >
-        <img
-          alt="avatar"
-          loading="lazy"
-          width={80}
-          height={90}
-          decoding="async"
-          className="h-full w-full rounded-lg object-cover will-change-contents"
-          src={tile.src}
-        />
+        <div className="glass flex h-full w-full items-center justify-center rounded-lg">
+          <span className="bg-primary size-2.5 rounded-full" />
+        </div>
       </div>
     );
   }
 
   if (tile.kind === 'filled') {
-    return (
-      <div data-slot="tile-body" className="bg-secondary shadow-[inset_var(--shadow-card-md)]" />
-    );
+    return <div data-slot="tile-body" className="glass-quiet" />;
   }
 
   return (
     <div
       data-slot="tile-body"
-      className="border-natural-black/10 border transition-all group-hover:border-transparent group-hover:bg-secondary group-hover:shadow-[inset_var(--shadow-card-md)]"
+      className="border-natural-black/10 border transition-all group-hover:glass-quiet"
     />
   );
 }
@@ -153,24 +112,36 @@ function MosaicTileBody({ tile }: { tile: MosaicTile }) {
  * One odometer column. All ten digits are stacked on top of each other and the
  * whole stack is shifted so `digit` lands on offset 0; columns to the right
  * start a beat later so the number rolls in left-to-right.
+ *
+ * Two details keep the roll honest for a five-digit number. The shift is a
+ * percentage of the column's own height — one cell per step — so it stays exact
+ * whatever size the counter renders at. And the in-view trigger sits on the
+ * column, not on the digits: a digit parked eight cells below the fold would
+ * never intersect the viewport, and its column would stay blank forever.
  */
 function CounterColumn({ digit, index }: { digit: number; index: number }) {
   return (
-    <div className="relative inline-block w-[1ch] overflow-x-visible overflow-y-clip leading-none tabular-nums">
+    <motion.div
+      className="relative inline-block w-[1ch] overflow-x-visible overflow-y-clip leading-none tabular-nums"
+      initial="rolled"
+      whileInView="settled"
+      viewport={{ once: true }}
+    >
       <div className="invisible">0</div>
       {DIGITS.map((value) => (
         <motion.span
           key={value}
           className="absolute inset-0 flex items-center justify-center"
-          initial={{ y: value * CELL_HEIGHT }}
-          whileInView={{ y: (value - digit) * CELL_HEIGHT }}
-          viewport={{ once: true }}
+          variants={{
+            rolled: { y: `${value * 100}%` },
+            settled: { y: `${(value - digit) * 100}%` },
+          }}
           transition={{ duration: 1.4, delay: index * 0.12, ease: [0.16, 1, 0.3, 1] }}
         >
           {value}
         </motion.span>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -285,14 +256,8 @@ function LatticeBackdrop() {
   );
 }
 
-/** One tile of the warm grid drifting behind the testimonial. */
-function TestimonialTile({
-  tile,
-  index,
-}: {
-  tile: (typeof TESTIMONIAL_TILES)[number];
-  index: number;
-}) {
+/** One tile of the warm grid drifting behind the pull-quote. */
+function QuoteTile({ tile, index }: { tile: (typeof QUOTE_TILES)[number]; index: number }) {
   const rect = (
     <motion.rect
       x={tile.x}
@@ -324,7 +289,7 @@ function TestimonialTile({
   return rect;
 }
 
-function TestimonialBackdrop() {
+function QuoteBackdrop() {
   return (
     <svg
       width="497"
@@ -357,8 +322,8 @@ function TestimonialBackdrop() {
           <rect width="496.8" height="345.6" fill="url(#paint1_linear_2637_2853)" />
         </mask>
         <g mask="url(#mask1_2637_2853)">
-          {TESTIMONIAL_TILES.map((tile, index) => (
-            <TestimonialTile key={`${tile.x}-${tile.y}`} tile={tile} index={index} />
+          {QUOTE_TILES.map((tile, index) => (
+            <QuoteTile key={`${tile.x}-${tile.y}`} tile={tile} index={index} />
           ))}
         </g>
       </g>
@@ -495,12 +460,14 @@ function TestimonialBackdrop() {
   );
 }
 
-/** Shared shell for both marquee rows: clipped track with white edge fades. */
+/**
+ * Shared shell for both marquee rows: clipped track whose ends fade out. The
+ * reference painted two white overlays there; on glass those would read as
+ * bright patches, so the track masks its own content instead.
+ */
 function MarqueeTrack({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative w-full overflow-hidden flex h-full max-h-22 items-center">
-      <div className="absolute top-0 bottom-0 z-10 h-full w-24 to-transparent left-0 bg-linear-to-r from-natural-white" />
-      <div className="absolute top-0 bottom-0 z-10 h-full w-24 to-transparent right-0 bg-linear-to-l from-natural-white" />
+    <div className="relative w-full overflow-hidden flex h-full max-h-22 items-center mask-[linear-gradient(to_right,transparent_0,black_6rem,black_calc(100%_-_6rem),transparent_100%)]">
       {children}
     </div>
   );
@@ -511,9 +478,9 @@ export function Scaling() {
     <section className="w-full">
       <Container className="flex flex-col gap-15 py-20 md:py-30">
         <h2 className="text-heading text-left text-4xl font-semibold tracking-tight md:text-5xl">
-          Scaling Successful Companies
+          {SCALING.heading}
         </h2>
-        <div className="flex min-h-140 w-full flex-col-reverse gap-3 lg:grid lg:grid-cols-3 **:data-[slot=card]:bg-natural-white **:data-[slot=card]:relative **:data-[slot=card]:overflow-hidden **:data-[slot=card]:rounded-2xl">
+        <div className="flex min-h-140 w-full flex-col-reverse gap-3 lg:grid lg:grid-cols-3 **:data-[slot=card]:glass **:data-[slot=card]:relative **:data-[slot=card]:overflow-hidden **:data-[slot=card]:rounded-2xl">
           <div data-slot="card" className="h-140 lg:h-full">
             <div className="group flex h-full flex-col justify-end p-8">
               <div className="absolute inset-0 grid h-fit scale-125 grid-cols-5 gap-3 *:data-[slot=tile-body]:h-20 *:data-[slot=tile-body]:w-20 *:data-[slot=tile-body]:rounded-lg mask-[radial-gradient(circle,rgba(0,0,0,1)_50%,rgba(0,0,0,0)_70%)]">
@@ -523,38 +490,52 @@ export function Scaling() {
               </div>
               <div className="flex flex-col gap-5">
                 <span className="-tracking-xs text-lg leading-6 font-medium">
-                  Get to know our dream team
+                  {SCALING.teamKicker}
                 </span>
                 <div>
-                  <Button avatar="/manu.webp">Chat with Alex</Button>
+                  <Button>{SCALING.teamCta}</Button>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:col-span-2 lg:grid-cols-2 lg:grid-rows-4">
-            <div data-slot="card" className="row-span-1 md:row-span-3 md:min-h-105 lg:min-h-0">
+            <div
+              data-slot="card"
+              className="row-span-1 md:row-span-3 md:min-h-105 lg:min-h-0 @container"
+            >
               <div className="flex h-full flex-col justify-between gap-16 p-8">
                 <div className="absolute inset-0">
                   <LatticeBackdrop />
                 </div>
                 <div className="z-10 flex flex-col gap-3">
-                  <span className="-tracking-xl flex text-[6.25rem] leading-25 font-medium">
+                  {/* Five digits plus a separator need more room than the reference's
+                      three, so the counter is sized off the card instead of fixed.
+                      "19.000+" measures 4.12em wide; the divisor leaves 4% of slack. */}
+                  <span
+                    className="-tracking-xl flex leading-none font-medium"
+                    style={{ fontSize: 'clamp(2.25rem, calc(23.25cqi - 14.9px), 6.25rem)' }}
+                  >
                     <div className="flex items-center">
-                      {COUNTER_DIGITS.map((digit, index) => (
-                        <CounterColumn key={index} digit={digit} index={index} />
-                      ))}
+                      {COUNTER_CELLS.map((cell, index) =>
+                        cell === THOUSANDS_SEPARATOR ? (
+                          <span key={index} className="leading-none">
+                            {cell}
+                          </span>
+                        ) : (
+                          <CounterColumn key={index} digit={Number(cell)} index={index} />
+                        ),
+                      )}
                     </div>
-                    +
+                    {SCALING.counterSuffix}
                   </span>
                   <span className="text-muted-foreground -tracking-xs text-lg leading-6.5 font-medium">
-                    Companies served
+                    {SCALING.counterLabel}
                   </span>
                 </div>
                 <div className="z-10">
                   <span className="-tracking-xs text-muted-foreground text-base leading-6">
-                    We design and build websites that drive results and help your business grow. No
-                    Calls. No BS. Just Results.
+                    {SCALING.body}
                   </span>
                 </div>
               </div>
@@ -564,16 +545,16 @@ export function Scaling() {
               <div className="relative flex h-full items-center">
                 <MarqueeTrack>
                   <Marquee direction="left" speed={50} pauseOnHover pauseOnClick>
-                    {BRAND_CHIPS.map(({ label, Mark }) => (
+                    {FIGURE_CHIPS.map((figure) => (
                       <div
-                        key={label}
-                        className="shadow-card-md mx-2 flex flex-shrink-0 items-center gap-2.5 rounded-lg bg-white object-contain px-2.5 py-1.75"
+                        key={figure}
+                        className="glass-chip mx-2 flex flex-shrink-0 items-center gap-2.5 rounded-lg object-contain px-2.5 py-1.75"
                       >
-                        <div className="size-4">
-                          <Mark />
+                        <div className="flex size-4 items-center justify-center">
+                          <span className="bg-primary size-1.5 rounded-full" />
                         </div>
                         <span className="-tracking-xs text-sm leading-3.5 font-medium text-nowrap">
-                          {label}
+                          {figure}
                         </span>
                       </div>
                     ))}
@@ -586,30 +567,23 @@ export function Scaling() {
               <div className="relative flex h-full flex-col justify-end gap-6 p-8">
                 <div className="absolute inset-0">
                   <div className="-mt-11 ml-20">
-                    <TestimonialBackdrop />
+                    <QuoteBackdrop />
                   </div>
                 </div>
                 <div className="z-10">
-                  <img
-                    alt="Primer Logo"
-                    loading="lazy"
-                    width={100}
-                    height={100}
-                    decoding="async"
-                    className="w-20"
-                    src="/logos/1.webp"
-                  />
+                  <span className="font-dm-mono -tracking-xs text-muted-foreground block w-20 text-sm leading-4 font-normal uppercase">
+                    {BRAND.name}
+                  </span>
                 </div>
                 <div className="-tracking-xs text-muted-foreground z-10 text-base leading-6 font-medium">
-                  “Since adding the AI assistant to our store, our support load has dropped by
-                  nearly 60% Customers now get instant answers about supplements, dosages.”
+                  {SCALING.quote}
                 </div>
                 <div className="flex items-center gap-2 z-10">
                   <span className="-tracking-xs text-base leading-6 font-medium">
-                    — James Finley
+                    — {SCALING.quoteAuthor}
                   </span>
                   <span className="-tracking-xs text-muted-foreground text-base leading-6 font-medium">
-                    Founder, Primer
+                    {SCALING.quoteRole}
                   </span>
                 </div>
               </div>
@@ -621,20 +595,19 @@ export function Scaling() {
             >
               <div className="relative flex h-full items-center px-8">
                 <div className="-tracking-xs text-lg leading-6.5 font-medium text-nowrap">
-                  Technologies we use
+                  {SCALING.sourcesLabel}
                 </div>
                 <MarqueeTrack>
                   <Marquee direction="right" speed={69} pauseOnHover pauseOnClick>
-                    {TECH_CHIPS.map(({ label, color, tint, Icon }) => (
+                    {SOURCES.map(({ name, mark, accent }) => (
                       <div
-                        key={label}
-                        aria-label={label}
-                        className="shadow-card-md mx-6 flex size-14 shrink-0 items-center justify-center rounded-xl bg-white"
-                        style={{
-                          backgroundImage: `radial-gradient(90% 90% at 28% 26%, ${tint} 0%, #fff 68%)`,
-                        }}
+                        key={name}
+                        className="glass-chip mx-6 flex h-14 shrink-0 items-center justify-center rounded-xl px-5"
                       >
-                        <Icon className="size-7" style={{ color }} />
+                        <span className="-tracking-xs text-base leading-5 font-medium text-nowrap">
+                          {mark}
+                          {accent ? <span className="text-cardeep">{accent}</span> : null}
+                        </span>
                       </div>
                     ))}
                   </Marquee>

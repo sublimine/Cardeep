@@ -1,13 +1,37 @@
 import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
-import {
-  WORLD_MAP_DOT_FILL,
-  WORLD_MAP_DOT_RADIUS,
-  WORLD_MAP_ROWS,
-} from './world-map-dots';
+
+import { BENTO } from '@/content/site';
+import { SPAIN_DOTS, SPAIN_MARKERS } from './spain-map-dots';
 
 /** Seconds between consecutive pin entrances, applied in DOM order. */
 const PIN_STAGGER = 0.12;
+
+/**
+ * Dot geometry. The reference used a near-black fill because its world map was
+ * only texture; here the map carries the section's whole message, so the dots are
+ * lifted to a translucent white that still sits behind the markers.
+ */
+const MAP_DOT_RADIUS = 0.26;
+const MAP_DOT_FILL = 'rgba(255,255,255,0.30)';
+
+/**
+ * The map and the marker layer share one square box, so a marker's `[x, y]`
+ * always lands on the dots it belongs to whatever the card ends up measuring.
+ * Both boxes being square is also why `slice` never crops or stretches Spain.
+ */
+const MAP_BOX =
+  'absolute top-1/2 left-1/2 aspect-square h-full -translate-x-1/2 -translate-y-1/2';
+
+/** Marker diameter in px: `points` on a square-root scale, largest at 23px. */
+const MARKER_MIN_SIZE = 8;
+const MARKER_SIZE_RANGE = 15;
+
+const MAX_MARKER_POINTS = Math.max(...SPAIN_MARKERS.map((marker) => marker.points));
+
+function markerSize(points: number) {
+  return MARKER_MIN_SIZE + Math.sqrt(points / MAX_MARKER_POINTS) * MARKER_SIZE_RANGE;
+}
 
 type PinPosition = {
   /** Percentage offsets inside the masked map layer. */
@@ -15,79 +39,26 @@ type PinPosition = {
   left: string;
 };
 
-type AvatarPin = PinPosition & {
-  kind: 'avatar';
-  alt: string;
-  src: string;
-};
-
-type ServerPin = PinPosition & {
-  kind: 'server';
-};
-
-type MapPin = AvatarPin | ServerPin;
-
-/** The ten pins, in DOM order: five portraits, then five server nodes. */
-const MAP_PINS: readonly MapPin[] = [
-  { kind: 'avatar', top: '32%', left: '68%', alt: 'India', src: '/manu.webp' },
-  {
-    kind: 'avatar',
-    top: '72%',
-    left: '82%',
-    alt: 'Australia',
-    src: '/avatar/unsplash-portrait-3.jpg',
-  },
-  {
-    kind: 'avatar',
-    top: '28%',
-    left: '15%',
-    alt: 'California',
-    src: '/avatar/unsplash-portrait-2.jpg',
-  },
-  {
-    kind: 'avatar',
-    top: '40%',
-    left: '52%',
-    alt: 'Dubai',
-    src: '/avatar/unsplash-portrait-1.jpg',
-  },
-  {
-    kind: 'avatar',
-    top: '65%',
-    left: '35%',
-    alt: 'Brazil',
-    src: '/avatar/unsplash-portrait-4.jpg',
-  },
-  { kind: 'server', top: '35%', left: '22%' },
-  { kind: 'server', top: '22%', left: '47%' },
-  { kind: 'server', top: '26%', left: '53%' },
-  { kind: 'server', top: '38%', left: '78%' },
-  { kind: 'server', top: '30%', left: '85%' },
-];
-
 /**
- * The dot-matrix continents: 8550 circles across 115 latitude rows, each row
- * stored as `[cy, ...cx]` so the coordinate table stays compact.
+ * The dot-matrix peninsula: 1969 circles plotted from the real province
+ * outlines, with the Balearics in place and the Canaries as an inset.
  */
-function WorldMapDots() {
+function SpainMapDots() {
   return (
     <svg
-      viewBox="0 0 210 100"
-      className="h-full w-full"
+      viewBox="0 0 100 100"
+      className={MAP_BOX}
       preserveAspectRatio="xMidYMid slice"
     >
-      {WORLD_MAP_ROWS.flatMap((row) => {
-        const [cy, ...cxs] = row;
-        return cxs.map((cx) => (
-          <circle
-            key={`${cy}-${cx}`}
-            cx={cx}
-            cy={cy}
-            r={WORLD_MAP_DOT_RADIUS}
-            fill={WORLD_MAP_DOT_FILL}
-          />
-        ));
-      })}
+      {SPAIN_DOTS.map(([cx, cy]) => (
+        <circle
+          key={`${cx}-${cy}`}
+          cx={cx}
+          cy={cy}
+          r={MAP_DOT_RADIUS}
+          fill={MAP_DOT_FILL}
+        />
+      ))}
     </svg>
   );
 }
@@ -96,6 +67,8 @@ function WorldMapDots() {
  * Shared pin shell: scales in once on scroll and carries the looping halo.
  * The halo keeps the source's inline `animation-*` declarations even though the
  * loop itself is driven by motion, so the rendered markup matches the target.
+ * Its half-size offset rides on motion's own transform, because an inline
+ * transform would otherwise win over the translate utilities.
  */
 function PinShell({
   top,
@@ -113,10 +86,10 @@ function PinShell({
       transition={{ duration: 0.5, delay: index * PIN_STAGGER, ease: 'easeOut' }}
     >
       <motion.div
-        className="absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/10"
+        className="absolute h-6 w-6 rounded-full bg-white/10"
         style={{ animationDuration: '2s', animationIterationCount: 'infinite' }}
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: [0.55, 0], scale: [0.5, 1.8] }}
+        initial={{ opacity: 0, scale: 0.5, x: '-50%', y: '-50%' }}
+        animate={{ opacity: [0.55, 0], scale: [0.5, 1.8], x: '-50%', y: '-50%' }}
         transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
       />
       {children}
@@ -124,67 +97,41 @@ function PinShell({
   );
 }
 
-/** Portrait pin: the wrapper rests at `scale(0.8)`, so 28px renders at ~22px. */
-function AvatarPinBody({ alt, src }: Pick<AvatarPin, 'alt' | 'src'>) {
+/** Province marker: a glass dot sized by that province's weight in the index. */
+function MarkerPinBody({ name, points }: { name: string; points: number }) {
+  const size = markerSize(points);
+  const isLargest = points === MAX_MARKER_POINTS;
+
   return (
     <div
-      className="absolute -translate-x-1/2 -translate-y-1/2"
-      style={{ transform: 'scale(0.8)' }}
+      className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+      style={{
+        width: size,
+        height: size,
+        // The busiest province takes the accent; the rest read as lit points on
+        // the grid rather than the grey smudges a neutral glass chip produced.
+        background: isLargest ? 'var(--color-primary)' : 'rgba(96,165,250,0.85)',
+        boxShadow: isLargest
+          ? '0 0 0 3px rgb(255 204 0 / 0.18), 0 0 14px 2px rgb(255 204 0 / 0.35)'
+          : '0 0 0 3px rgb(96 165 250 / 0.16), 0 0 10px 1px rgb(96 165 250 / 0.28)',
+      }}
     >
-      <div className="relative h-7 w-7 overflow-hidden rounded-full border border-neutral-500 shadow-lg">
-        <img
-          alt={alt}
-          loading="lazy"
-          width={28}
-          height={28}
-          decoding="async"
-          className="h-full w-full object-cover"
-          src={src}
-        />
-      </div>
+      <span className="sr-only">{name}</span>
     </div>
   );
 }
 
-/** Server pin: rises 20px while scaling up from nothing. */
-function ServerPinBody({ index }: { index: number }) {
-  return (
-    <motion.div
-      className="absolute -translate-x-1/2 -translate-y-1/2"
-      initial={{ y: 20, scale: 0 }}
-      whileInView={{ y: 0, scale: 1 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * PIN_STAGGER, ease: 'easeOut' }}
-    >
-      <div className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-500 bg-neutral-900 shadow-lg">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-4 w-4 text-neutral-500"
-        >
-          <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
-          <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
-          <line x1="6" y1="6" x2="6.01" y2="6" />
-          <line x1="6" y1="18" x2="6.01" y2="18" />
-        </svg>
-      </div>
-    </motion.div>
-  );
-}
-
 /**
- * "Hosting, Deployment & Maintenance" — the black bento card: a blurred
- * rotated glow behind the title, over a masked dot-matrix world map dotted
- * with teammate portraits and server nodes.
+ * "Cobertura de España" — the black bento card: a blurred rotated glow behind
+ * the title, over a masked dot-matrix Spain carrying one marker per province,
+ * sized by how much of the index that province holds.
  */
 export function HostingMapCard() {
   return (
-    <div className="bg-natural-black relative col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl lg:col-span-3">
+    <div
+      id="cobertura"
+      className="bg-natural-black relative col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl lg:col-span-3"
+    >
       <div className="relative h-full">
         <svg
           className="absolute -top-20 -left-80 z-40 rotate-45 fill-white/80 blur-3xl"
@@ -194,24 +141,22 @@ export function HostingMapCard() {
           <ellipse cx="50%" cy="50%" rx="100" ry="60" />
         </svg>
         <h2 className="relative z-50 p-4 text-base font-medium text-white">
-          Hosting, Deployment &amp; Maintenance
+          {BENTO.coverage.title}
         </h2>
-        <div className="absolute inset-0 w-full overflow-hidden bg-neutral-950 mask-t-from-50% mask-radial-from-90%">
-          <WorldMapDots />
-          {MAP_PINS.map((pin, index) => (
-            <PinShell
-              key={`${pin.top}-${pin.left}`}
-              top={pin.top}
-              left={pin.left}
-              index={index}
-            >
-              {pin.kind === 'avatar' ? (
-                <AvatarPinBody alt={pin.alt} src={pin.src} />
-              ) : (
-                <ServerPinBody index={index} />
-              )}
-            </PinShell>
-          ))}
+        <div className="glass-dark absolute inset-0 w-full overflow-hidden mask-t-from-50% mask-radial-from-90%">
+          <SpainMapDots />
+          <div className={MAP_BOX}>
+            {SPAIN_MARKERS.map((marker, index) => (
+              <PinShell
+                key={marker.name}
+                top={`${marker.y}%`}
+                left={`${marker.x}%`}
+                index={index}
+              >
+                <MarkerPinBody name={marker.name} points={marker.points} />
+              </PinShell>
+            ))}
+          </div>
         </div>
       </div>
     </div>

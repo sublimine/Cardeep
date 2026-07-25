@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 
 import { Button } from '@/components/ui/button';
+import { BENTO } from '@/content/site';
 
 /**
  * Dot-matrix backdrop drawn on the card's bottom-right canvas.
@@ -108,8 +109,11 @@ export function DesignDevelopmentCard() {
             <ellipse cx="50%" cy="50%" rx="100" ry="60" />
           </motion.svg>
 
+          {/* Bezel behind the product window. It is the one surface here with
+              nothing legible on it, so it can go translucent: the blurred glow
+              above blooms through it while the window itself stays opaque. */}
           <motion.div
-            className="bg-offwhite relative z-40 h-full overflow-hidden rounded-lg"
+            className="glass-dark relative z-40 h-full overflow-hidden rounded-lg"
             variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
             transition={{ duration: DURATION, delay: DELAY.panel, ease: EASE }}
           >
@@ -233,14 +237,11 @@ export function DesignDevelopmentCard() {
 
         <div className="mt-4 flex flex-col gap-6 px-4 py-4 z-10">
           <div className="relative">
-            <h2 className="text-base font-medium text-white">Design and Development</h2>
-            <p className="mt-4 text-base text-neutral-400">
-              Designed to perfection, Aceternity helps you take your dream idea to reality through
-              our expert design and development services.
-            </p>
+            <h2 className="text-base font-medium text-white">{BENTO.feature.title}</h2>
+            <p className="mt-4 text-base text-neutral-400">{BENTO.feature.body}</p>
           </div>
           <div>
-            <Button className="my-4">View pricing</Button>
+            <Button className="my-4">{BENTO.feature.cta}</Button>
           </div>
         </div>
       </div>

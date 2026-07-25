@@ -1,67 +1,28 @@
 import { motion, type Variants } from 'motion/react';
 
 import { Container } from '@/components/ui/container';
+import { SURFACES, SURFACES_HEADING, type Surface } from '@/content/site';
 
-const PROJECTS = [
-  {
-    alt: 'Project 1',
-    src: '/assets/project-1.webp',
-    // Column spans are asymmetric per card, so the class string travels with the data.
-    className: 'group relative block text-left col-span-14 md:col-span-7 lg:col-span-9',
-    title: 'AI search landing page',
-    description:
-      'A conversion-focused landing page designed to explain a complex AI product in under 10 seconds.',
-    tags: 'Figma Design, Next.js Development',
-  },
-  {
-    alt: 'Project 2',
-    src: '/assets/project-2.webp',
-    className: 'group relative block text-left col-span-14 md:col-span-7 lg:col-span-5',
-    title: 'SaaS homepage refresh',
-    description:
-      'A tighter homepage structure that helps visitors understand product value without reading a wall of text.',
-    tags: 'Strategy, Design System, Frontend Build',
-  },
-  {
-    alt: 'Project 3',
-    src: '/assets/project-3.webp',
-    className: 'group relative block text-left col-span-14 md:col-span-7 lg:col-span-7',
-    title: 'Agency portfolio upgrade',
-    description:
-      'A premium portfolio layout that feels editorial while still being easy to scan for leads.',
-    tags: 'Brand Refresh, Web Design',
-  },
-  {
-    alt: 'Project 4',
-    src: '/assets/project-4.webp',
-    // Verbatim from the target markup, duplicated `group` and all.
-    className: 'group block text-left group relative col-span-14 md:col-span-7 lg:col-span-7',
-    title: 'Funding launch page',
-    description:
-      'A narrative-led launch page built to support credibility, conversions, and investor attention.',
-    tags: 'Figma Design, Next.js Development',
-  },
-  {
-    alt: 'Project 5',
-    src: '/assets/project-5.webp',
-    className: 'group relative block text-left col-span-14 md:col-span-7 lg:col-span-5',
-    title: 'Conversion page redesign',
-    description:
-      'A cleaner layout that guides the user from awareness to action with fewer distractions.',
-    tags: 'UX Strategy, UI Design',
-  },
-  {
-    alt: 'Project 6',
-    src: '/assets/project-6.webp',
-    className: 'group relative block text-left col-span-14 md:col-span-7 lg:col-span-9',
-    title: 'Productized service homepage',
-    description:
-      'A homepage that positions a service like a product, making the offer easier to buy.',
-    tags: 'Positioning, Design, Development',
-  },
+/**
+ * Column spans are asymmetric per card, so the class string travels beside the
+ * data instead of inside it — the surfaces themselves know nothing about layout.
+ * Index order matches `SURFACES`: índice, precio, cobertura, historial,
+ * oportunidades, terminal.
+ */
+const CARD_CLASSNAMES = [
+  'group relative block text-left col-span-14 md:col-span-7 lg:col-span-9',
+  'group relative block text-left col-span-14 md:col-span-7 lg:col-span-5',
+  'group relative block text-left col-span-14 md:col-span-7 lg:col-span-7',
+  // Verbatim from the target markup, duplicated `group` and all.
+  'group block text-left group relative col-span-14 md:col-span-7 lg:col-span-7',
+  'group relative block text-left col-span-14 md:col-span-7 lg:col-span-5',
+  'group relative block text-left col-span-14 md:col-span-7 lg:col-span-9',
 ] as const;
 
-type Project = (typeof PROJECTS)[number];
+const CARDS = SURFACES.map((surface, index) => ({
+  surface,
+  className: CARD_CLASSNAMES[index],
+}));
 
 /** Next.js `fill` image geometry, minus the `color: transparent` placeholder rule. */
 const FILL_IMAGE_STYLE = {
@@ -109,34 +70,32 @@ function ArrowRight() {
   );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({ surface, className }: { surface: Surface; className: string }) {
   return (
     <motion.a
       data-slot="card"
-      className={project.className}
-      href="#"
+      className={className}
+      href={surface.href}
       initial="rest"
       animate="rest"
       whileHover="hover"
     >
       <img
-        alt={project.alt}
+        alt={`Cardeep · ${surface.title}`}
         decoding="async"
         className="rounded-3xl object-cover object-center"
         style={FILL_IMAGE_STYLE}
-        src={project.src}
+        src={surface.image}
       />
       <motion.div
-        className="bg-natural-black/50 absolute inset-0 flex flex-col justify-between rounded-3xl p-6 backdrop-blur-md md:p-8"
+        className="glass-dark absolute inset-0 flex flex-col justify-between rounded-3xl p-6 md:p-8"
         variants={overlayVariants}
       >
         <motion.div className="space-y-2" variants={blockVariants}>
           <div className="text-natural-white -tracking-sm text-2xl leading-8 font-medium">
-            {project.title}
+            {surface.title}
           </div>
-          <p className="text-natural-white/80 text-base leading-6 font-medium">
-            {project.description}
-          </p>
+          <p className="text-natural-white/80 text-base leading-6 font-medium">{surface.body}</p>
         </motion.div>
         <motion.div
           className="flex w-full items-end justify-between gap-4"
@@ -144,12 +103,12 @@ function ProjectCard({ project }: { project: Project }) {
         >
           <div className="flex items-center gap-1">
             <span className="text-natural-white tracking-xs text-sm leading-3.5 font-medium">
-              View Project
+              Ver
             </span>
             <ArrowRight />
           </div>
           <span className="-tracking-xs text-natural-white/80 text-right text-sm leading-3.5 font-medium">
-            {project.tags}
+            {surface.tags}
           </span>
         </motion.div>
       </motion.div>
@@ -163,12 +122,12 @@ export function Projects() {
       <Container className="relative flex w-full flex-col gap-20 overflow-hidden pt-40 pb-20 md:pt-65 md:pb-30 lg:pt-80 lg:pb-30">
         <div>
           <h2 className="absolute top-20 overflow-hidden opacity-25 md:top-30 lg:top-50 -tracking-xl text-page-header font-medium md:text-page-header-md lg:text-page-header-lg bg-linear-180 from-[#8C8879] to-transparent bg-clip-text text-transparent">
-            Projects
+            {SURFACES_HEADING}
           </h2>
         </div>
         <div className="z-10 grid grid-cols-14 gap-6 [--card-height:440px] *:data-[slot='card']:max-h-(--card-height) *:data-[slot='card']:min-h-(--card-height) *:data-[slot='card']:overflow-hidden *:data-[slot='card']:rounded-3xl">
-          {PROJECTS.map((project) => (
-            <ProjectCard key={project.alt} project={project} />
+          {CARDS.map(({ surface, className }) => (
+            <ProjectCard key={surface.id} surface={surface} className={className} />
           ))}
         </div>
       </Container>

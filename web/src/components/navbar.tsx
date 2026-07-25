@@ -1,17 +1,15 @@
 import { IconMenu2 } from '@tabler/icons-react';
 
 import { Button } from '@/components/ui/button';
-
-const NAV_LINKS = [
-  { label: 'Work', href: '/work' },
-  { label: 'Products', href: '/products' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'Blog', href: '/blog' },
-] as const;
+import { Logo } from '@/components/ui/logo';
+import { BRAND, NAV_LINKS, PRIMARY_CTA } from '@/content/site';
 
 /**
  * Top navigation floating over the dark hero. No entrance animation: the only
  * motion is the CSS colour transition on the links and the shared Button hover.
+ *
+ * The bar itself carries no surface — it sits directly on the hero — so no glass
+ * utility is applied here.
  */
 export function Navbar() {
   return (
@@ -19,25 +17,9 @@ export function Navbar() {
       <div className="max-w-container mx-auto px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex shrink-0 items-center gap-2 lg:min-w-45">
-            <a className="size-8" href="/">
-              <img
-                alt="Logo"
-                loading="lazy"
-                width={50}
-                height={50}
-                decoding="async"
-                className="block dark:hidden size-8"
-                src="/logo.webp"
-              />
-              <img
-                alt="Logo"
-                loading="lazy"
-                width={50}
-                height={50}
-                decoding="async"
-                className="hidden dark:block size-8"
-                src="/logo-dark.webp"
-              />
+            <a className="size-8" href="/" aria-label={BRAND.name}>
+              {/* The nav floats over the black hero, so the mark is always the light one. */}
+              <Logo tone="light" className="size-8" title={BRAND.name} />
             </a>
           </div>
 
@@ -56,11 +38,13 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:block">
-            <Button avatar="/manu.webp">Chat with Alex</Button>
+            {/* The accent box reveals the Cardeep mark on hover, where the reference
+                template revealed a portrait. Same motion, no invented person. */}
+            <Button avatar="/shots/mark.webp">{PRIMARY_CTA}</Button>
           </div>
 
           <div className="md:hidden">
-            <button className="p-2 text-white/80 hover:text-white">
+            <button aria-label="Abrir menú" className="p-2 text-white/80 hover:text-white">
               <IconMenu2 className="size-6 text-natural-white" />
             </button>
           </div>

@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { motion } from 'motion/react';
+import { BENTO } from '@/content/site';
 
 /** Colour of the dormant PCB traces. */
 const TRACE_COLOR = '#F2F2F2';
@@ -222,7 +223,7 @@ function Chip() {
  */
 export function ComponentsCard() {
   return (
-    <div className="bg-natural-white col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl lg:col-span-2">
+    <div className="glass col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl lg:col-span-2">
       <div className="relative p-4">
         <div className="absolute inset-0">
           <div className="relative ml-4 h-[314px] w-[336px] scale-110 overflow-hidden mask-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(0,0,0,1)_50%)]">
@@ -234,7 +235,7 @@ export function ComponentsCard() {
           </div>
         </div>
         <div className="text-lg leading-6 font-medium tracking-tight z-10 relative">
-          Components, Dashboards and Everything else
+          {BENTO.more.title}
         </div>
       </div>
     </div>
