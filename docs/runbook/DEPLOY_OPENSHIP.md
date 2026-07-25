@@ -374,14 +374,28 @@ openship service env set autopilot --secret \
   CARDEEP_ASYNCPG_DSN='postgresql://cardeep:<CARDEEP_PROD_PG_PASSWORD real>@cardeep-pg:5432/cardeep' \
   CARDEEP_DB_URL='postgresql+psycopg2://cardeep:<CARDEEP_PROD_PG_PASSWORD real>@cardeep-pg:5432/cardeep'
 
-# 5. Enlazar y desplegar (desde esta máquina o por SSH en la VM, autenticado vía `openship login`):
+# 5. Autenticar la CLI (desde esta máquina) contra la instancia remota. El PAT se crea a
+#    mano en el dashboard (https://deepcar.duckdns.org → login con el admin de la Fase 2 →
+#    Settings → Personal Access Tokens) — es un paso de navegador de una sola vez, no
+#    scriptable sin herramientas de browser automation:
+openship login --token <PAT creado en el dashboard> --api-url https://deepcar.duckdns.org
+
+# 6. Crear el proyecto CON el origen de GitHub ya fijado (así `deploy` construye desde el
+#    repo real, no sube archivos locales — confirmado: `deploy --branch/--commit` defaults a
+#    "current branch"/"latest commit", es decir opera sobre el git remoto, no un upload):
+openship project create --name cardeep --git-owner sublimine --git-repo Cardeep \
+  --git-branch main --type services
+
+# 7. Enlazar ESTE directorio (el repo local, cualquier clon de Cardeep) al proyecto recién
+#    creado, y disparar el primer deploy:
 cd Cardeep   # el repo, con openship.json ya en la raíz
-openship init
-openship deploy
+openship init --project <project-id del paso 6>
+openship deploy --watch
 
-# 6. Migrar los datos reales (§5).
+# 8. Migrar los datos reales (§5).
 
-# 7. Configurar push-to-deploy (§7).
+# 9. Configurar push-to-deploy (§7) — el link de git ya existe desde el paso 6, falta el PAT
+#    con permiso de webhooks (§7 paso 2-3) y activar auto-deploy.
 
-# 8. Recorrer el checklist §6 punto por punto contra el deploy real.
+# 10. Recorrer el checklist §6 punto por punto contra el deploy real.
 ```
