@@ -594,8 +594,13 @@ export function Scaling() {
               className="col-span-1 min-h-20 md:col-span-2 md:h-full lg:min-h-0"
             >
               <div className="relative flex h-full items-center px-8">
-                <div className="-tracking-xs text-lg leading-6.5 font-medium text-nowrap">
-                  {SCALING.sourcesLabel}
+                {/* The label sits over the track, so it needs to own its band:
+                    raised above the chips and backed by a fade that lets them
+                    slide out from behind it instead of colliding with it. */}
+                <div className="glass-quiet relative z-10 -my-2 -ml-2 rounded-xl py-2 pr-6 pl-2">
+                  <span className="-tracking-xs text-lg leading-6.5 font-medium text-nowrap">
+                    {SCALING.sourcesLabel}
+                  </span>
                 </div>
                 <MarqueeTrack>
                   <Marquee direction="right" speed={69} pauseOnHover pauseOnClick>
