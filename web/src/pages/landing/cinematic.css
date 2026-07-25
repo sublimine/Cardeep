@@ -1,0 +1,121 @@
+/*
+ * Public landing identity, scoped under `.cx-landing` so it never leaks into
+ * the app shell (Dashboard, Inteligencia, ... stay on `tokens.css` / General
+ * Sans / glassmorphism). v3 (owner-directed 2026-07-23): structure, motion
+ * quality-bar and flat-card visual language copied from the real reference
+ * (productized-agency-template-acetern.vercel.app — a dark-hero/warm-beige
+ * agency template, confirmed live via Playwright, exact tokens sampled from
+ * its computed styles), content 100% real CARDEEP (census data — see
+ * tests/test_web_no_fabricated_data.py). Deliberately FLAT, not glass: the
+ * reference has no blur/translucency anywhere — solid white/black cards with
+ * a hairline border and a soft shadow. Brand accent stays CARDEEP's own blue
+ * for links/CTAs; the reference's signature warm yellow (#FFCC00, sampled
+ * from its icon-badge) is kept as a small compositional accent (icon chips,
+ * badges) exactly where the reference uses it, never as a second brand hue.
+ */
+
+.cx-landing {
+  --cx-bg: #f0efec;
+  --cx-ink: #0a0a0a;
+  --cx-ink-2: #141414;
+
+  --cx-surface-1: #ffffff;
+  --cx-surface-2: #f7f6f3;
+  --cx-surface-3: #e8e6e1;
+
+  --cx-line: rgba(20, 20, 18, 0.08);
+  --cx-line-strong: rgba(20, 20, 18, 0.14);
+  --cx-line-on-dark: rgba(255, 255, 255, 0.1);
+
+  --cx-text-1: #141414;
+  --cx-text-2: #5b5a55;
+  --cx-text-3: #8f8d86;
+  --cx-text-on-dark-1: #ffffff;
+  --cx-text-on-dark-2: rgba(255, 255, 255, 0.62);
+  --cx-text-on-dark-3: rgba(255, 255, 255, 0.38);
+
+  --cx-accent: #2563eb;
+  --cx-accent-hi: #2563eb;
+  --cx-emerald: #059669;
+  --cx-amber: #d97706;
+  --cx-rose: #e11d48;
+  --cx-badge: #ffcc00;
+
+  --cx-shadow: 0 1px 2px rgba(20, 20, 18, 0.04), 0 12px 32px -16px rgba(20, 20, 18, 0.1);
+  --cx-shadow-dark: 0 12px 32px -16px rgba(0, 0, 0, 0.5);
+
+  position: relative;
+  background: var(--cx-bg);
+  color: var(--cx-text-1);
+  font-family: 'Inter', 'General Sans', system-ui, sans-serif;
+  overflow-x: clip;
+}
+
+.cx-landing ::selection {
+  background: var(--cx-badge);
+  color: var(--cx-ink);
+}
+
+/* Flat solid card — hairline border + soft shadow, no blur. The reference's
+   only card idiom; glassmorphism is exclusive to the app shell. */
+.cx-panel {
+  background: var(--cx-surface-1);
+  border: 1px solid var(--cx-line);
+  box-shadow: var(--cx-shadow);
+}
+
+/* Dark counterpart, for cards embedded on the beige page (world-map tile,
+   featured pricing card, CTA band). */
+.cx-panel-dark {
+  background: var(--cx-ink-2);
+  border: 1px solid var(--cx-line-on-dark);
+  box-shadow: var(--cx-shadow-dark);
+  color: var(--cx-text-on-dark-1);
+}
+
+.cx-glow-border {
+  position: relative;
+}
+.cx-glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), transparent 40%, transparent 60%, rgba(37, 99, 235, 0.22));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.cx-glow-border:hover::before {
+  opacity: 1;
+}
+
+/* Signature "badge pill" — the small rounded-square icon chip inside primary
+   CTAs (`bg-[color:var(--cx-badge)]` on a black pill), sampled 1:1 from the
+   reference (#FFCC00, 5px inner radius on a 8px pill). */
+.cx-badge-chip {
+  background: var(--cx-badge);
+  border-radius: 5px;
+}
+
+/* Projects masonry width rhythm — flex-grow only applies at md+ (flex-row).
+   Below md the section stacks (flex-col); grow/basis:0 there would fight the
+   column's height distribution instead of width and collapse each card to
+   near-zero height (verified via Playwright at 375px — round 2 fix). */
+@media (min-width: 768px) {
+  .cx-landing .cx-device-frame {
+    flex-grow: var(--cx-w-fr, 1);
+    flex-basis: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-landing * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

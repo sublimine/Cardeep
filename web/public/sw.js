@@ -1,31 +1,46 @@
-// Tombstone service worker.
-//
-// The previous frontend registered a cache-first service worker that answered every
-// navigation from a cached `/index.html`. Browsers that visited the old site still
-// have it installed, so simply deleting the file is not enough — they would keep
-// serving the stale shell. This replacement takes over, drops every cache it finds,
-// unregisters itself, and reloads open clients onto the live site. Once a visitor
-// has run it, no service worker remains for this origin.
-//
-// Keep this file until it is safe to assume no stale installs are left in the wild.
+const CACHE = 'cardeep-v2';
+const SHELL = ['/', '/index.html'];
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
-      await self.registration.unregister();
-
-      const clients = await self.clients.matchAll({ type: 'window' });
-      for (const client of clients) {
-        client.navigate(client.url);
-      }
-    })(),
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
   );
+  self.clients.claim();
 });
 
-// Never intercept a request: everything goes straight to the network.
+self.addEventListener('fetch', (e) => {
+  const { request } = e;
+  const url = new URL(request.url);
+
+  // API: network-first, fall back to cache (only cache GET — never POST/PUT/PATCH).
+  if (url.pathname.startsWith('/api/')) {
+    e.respondWith(
+      fetch(request)
+        .then((res) => {
+          const clone = res.clone();
+          if (res.ok && request.method === 'GET') {
+            caches.open(CACHE).then((c) => c.put(request, clone));
+          }
+          return res;
+        })
+        .catch(() => (request.method === 'GET' ? caches.match(request) : Promise.reject(new Error('offline'))))
+    );
+    return;
+  }
+
+  // Navigation: serve shell
+  if (request.mode === 'navigate') {
+    e.respondWith(caches.match('/index.html').then((r) => r || fetch(request)));
+    return;
+  }
+
+  // Static assets: cache-first
+  e.respondWith(caches.match(request).then((r) => r || fetch(request)));
+});
