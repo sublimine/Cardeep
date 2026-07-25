@@ -70,11 +70,40 @@ No invented customer logos, testimonials, ratings, case studies or headshots.
 Where the reference template used social proof we do not have, the slot is
 re-cast as a truthful statement of capability, keeping the same visual shape.
 
-## 4. The seven platforms indexed
+## 4. The six tier-1 platforms indexed
 
-coches.net · AutoScout24 · Wallapop · Milanuncios · Autocasión · coches.com · motor.es
+The set and the counts come from `docs/runbook/groups/tier1-marketplaces.md`, where
+each figure is the **persisted verdict** — the only number in that table with a
+recorded verification. The live database has drained past several of them, but the
+site quotes the validated figure, never the unverified live edge.
+
+| Platform | Cars indexed |
+|---|---:|
+| Wallapop | 565.128 |
+| coches.net | 272.903 |
+| Milanuncios | 259.706 |
+| Autocasión | 111.844 |
+| coches.com | 91.066 |
+| motor.es | 49.009 |
 
 Framing: **"Indexamos donde vive el mercado"** — not "clientes", not "partners".
+The count is the argument. Each platform shows its own mark above its name.
+
+AutoScout24 is deliberately absent: it is not one of the six validated tier-1
+members in the runbook, and an unverified logo on that wall would be a claim we
+cannot back.
+
+## 4b. The brand wall
+
+All **135** marques in `web/tools/brands/catalog.source.json`, normalised into one
+alpha sprite (`public/brand/marks.webp`) by `tools/brands/build-sprite.mjs` and
+painted as a CSS mask, so a single asset serves both themes and the per-brand
+hover colour.
+
+Twenty-five brands have no trustworthy vector logo in public sources. A keyword
+search returns confidently wrong artwork for several of them — Bayer for BAIC,
+Barnes & Noble for Noble — so those are hand-set as wordmarks in the site's own
+typeface instead. Uniform, correct, attributable to nobody but us.
 
 ## 5. What Cardeep offers (product surfaces)
 

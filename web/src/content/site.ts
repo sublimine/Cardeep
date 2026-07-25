@@ -53,18 +53,32 @@ export const HERO = {
 
 /* ------------------------------------------------------------ source wall */
 
-/** The platforms the index reads. Framed as coverage, never as clients. */
+/**
+ * The tier-1 platforms the index reads, each with its own mark. Framed as
+ * coverage — these are the places the market lives, never clients or partners.
+ */
 export const SOURCES = [
-  { name: 'coches.net', mark: 'coches', accent: '.net' },
-  { name: 'AutoScout24', mark: 'AutoScout', accent: '24' },
-  { name: 'Wallapop', mark: 'Wallapop', accent: '' },
-  { name: 'Milanuncios', mark: 'Milanuncios', accent: '' },
-  { name: 'Autocasión', mark: 'Autocasión', accent: '' },
-  { name: 'coches.com', mark: 'coches', accent: '.com' },
-  { name: 'motor.es', mark: 'motor', accent: '.es' },
+  { name: 'Wallapop', logo: '/platforms/wallapop.webp', count: '565.128' },
+  { name: 'coches.net', logo: '/platforms/coches-net.webp', count: '272.903' },
+  { name: 'Milanuncios', logo: '/platforms/milanuncios.webp', count: '259.706' },
+  { name: 'Autocasión', logo: '/platforms/autocasion.webp', count: '111.844' },
+  { name: 'coches.com', logo: '/platforms/coches-com.webp', count: '91.066' },
+  { name: 'motor.es', logo: '/platforms/motor-es.webp', count: '49.009' },
 ] as const;
 
 export const SOURCE_WALL_KICKER = 'Indexamos donde vive el mercado';
+export const SOURCE_WALL_NOTE =
+  'Los seis portales donde se publica el coche de ocasión en España, con lo que hemos contado en cada uno. Y por debajo, las webs de los propios puntos de venta.';
+export const SOURCE_WALL_UNIT = 'coches indexados';
+
+/* --------------------------------------------------------------- brand wall */
+
+export const BRAND_WALL = {
+  kicker: 'Todas las marcas',
+  heading: 'Si se vende en España, está en el índice',
+  body: 'Ciento treinta y cinco marcas, de las que llenan los concesionarios a las que solo verás una vez al año. Sin listas cortas ni «principales fabricantes».',
+  hint: 'Pasa el cursor por una marca',
+} as const;
 
 /* -------------------------------------------------------------------- bento */
 

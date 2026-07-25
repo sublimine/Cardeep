@@ -1,250 +1,374 @@
-import { useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useInView,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+} from 'motion/react';
 
 import { Button } from '@/components/ui/button';
-import { BENTO } from '@/content/site';
+import { Glass } from '@/components/ui/glass';
+import { BENTO, FIGURES } from '@/content/site';
 
 /**
- * Dot-matrix backdrop drawn on the card's bottom-right canvas.
+ * "Índice nacional" — the lead bento card.
  *
- * Measured off the reference render at DPR 1: 4px white squares on an 8px
- * pitch, each square at its own random alpha. The three `mask-*` utilities on
- * the wrapper do the fading, so the canvas itself paints edge to edge.
+ * The artwork is the index itself, running: rows arrive from the bottom, the
+ * oldest dissolves into the fade at the top, and every stock count rolls up
+ * from zero as its row lands. Underneath, the three national figures count
+ * themselves in once the card is on screen. The motion carries the claim the
+ * copy makes — this is not a snapshot, it is a census that never stops.
+ *
+ * On truth: naming real businesses would mean inventing them, so each row is
+ * named by what the point of sale *is* — the trade categories the copy already
+ * uses ("cada compraventa, cada concesionario, cada garaje de pueblo") — over a
+ * real Spanish municipality. Stock counts are illustrative; the figures at the
+ * foot are the stamped ones from `FIGURES`.
  */
-const DOT_SIZE = 4;
-const DOT_PITCH = 8;
-const DOT_MIN_ALPHA = 0.05;
-const DOT_ALPHA_RANGE = 0.5;
 
-function DotMatrixCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+/* ------------------------------------------------------------------- copy -- */
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
+/**
+ * Four strings `site.ts` has no equivalent for: the live badge and the three
+ * column headers of the index table. Written in the same voice as the rest.
+ */
+const LIVE_LABEL = 'En vivo';
+const COLUMN_LABELS = ['Punto de venta', 'Municipio', 'Coches'] as const;
 
-    // Redraw only on a real size change, otherwise every observer tick would
-    // reshuffle the random alphas and make the field flicker.
-    let lastKey = '';
+/* ------------------------------------------------------------------- data -- */
 
-    const draw = () => {
-      const { width, height } = canvas.getBoundingClientRect();
-      const ratio = window.devicePixelRatio || 1;
-      const key = `${width}x${height}x${ratio}`;
-      if (width === 0 || height === 0 || key === lastKey) return;
-      lastKey = key;
+type IndexRow = {
+  /** What the point of sale is, not who it is. */
+  kind: string;
+  municipality: string;
+  stock: number;
+};
 
-      canvas.width = Math.round(width * ratio);
-      canvas.height = Math.round(height * ratio);
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context.clearRect(0, 0, width, height);
+/** The pool the stream cycles through: fourteen municipalities, fourteen provinces. */
+const POINTS: readonly IndexRow[] = [
+  { kind: 'Concesionario', municipality: 'Vigo', stock: 312 },
+  { kind: 'Compraventa', municipality: 'Getafe', stock: 148 },
+  { kind: 'Multimarca', municipality: 'Elche', stock: 96 },
+  { kind: 'Garaje', municipality: 'Cangas de Onís', stock: 11 },
+  { kind: 'Compraventa', municipality: 'Manresa', stock: 74 },
+  { kind: 'Concesionario', municipality: 'Lorca', stock: 203 },
+  { kind: 'Multimarca', municipality: 'Talavera de la Reina', stock: 58 },
+  { kind: 'Garaje', municipality: 'Baza', stock: 17 },
+  { kind: 'Compraventa', municipality: 'Utrera', stock: 63 },
+  { kind: 'Concesionario', municipality: 'Santiago de Compostela', stock: 176 },
+  { kind: 'Multimarca', municipality: 'Ejea de los Caballeros', stock: 34 },
+  { kind: 'Garaje', municipality: 'Almendralejo', stock: 26 },
+  { kind: 'Compraventa', municipality: 'Xàtiva', stock: 45 },
+  { kind: 'Concesionario', municipality: 'Tudela', stock: 129 },
+];
 
-      for (let y = 0; y < height; y += DOT_PITCH) {
-        for (let x = 0; x < width; x += DOT_PITCH) {
-          const alpha = DOT_MIN_ALPHA + Math.random() * DOT_ALPHA_RANGE;
-          context.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-          context.fillRect(x, y, DOT_SIZE, DOT_SIZE);
-        }
-      }
-    };
+/** The three stamped national figures, in the order they read best. */
+const FIGURE_CELLS = [
+  { id: 'dealers', prefix: FIGURES.dealers.prefix, raw: FIGURES.dealers.value, suffix: '', label: FIGURES.dealers.label },
+  { id: 'vehicles', prefix: '', raw: FIGURES.vehicles.value, suffix: FIGURES.vehicles.suffix, label: FIGURES.vehicles.label },
+  { id: 'provinces', prefix: '', raw: FIGURES.provinces.value, suffix: '', label: FIGURES.provinces.label },
+] as const;
 
-    draw();
-    const observer = new ResizeObserver(draw);
-    observer.observe(canvas);
-    return () => observer.disconnect();
-  }, []);
+/* ------------------------------------------------------------------ timing -- */
 
-  return <canvas ref={canvasRef} className="block h-full w-full" />;
+/** Six rows fill the window the lead card gets on the large layout. */
+const VISIBLE_ROWS = 6;
+/** Slow enough to read a row before the next one lands, fast enough to feel live. */
+const STREAM_INTERVAL_MS = 2300;
+const REVEAL_DELAY = 0.28;
+const ROW_STAGGER = 0.07;
+const ROW_DURATION = 0.5;
+const EASE = 'easeOut' as const;
+/** One threshold for the card entrance and for arming the stream, so they fire together. */
+const VIEWPORT_AMOUNT = 0.25;
+
+/**
+ * Shared column template. The header labels and every row use the same one, so
+ * the list aligns as a table instead of drifting per row.
+ */
+const ROW_GRID = 'grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3.5rem] items-center gap-3';
+
+/* ------------------------------------------------------------------ number -- */
+
+/** Spanish formatting: dot for thousands, comma for the decimal. */
+function formatFigure(value: number, decimals: number) {
+  const [whole, fraction] = value.toFixed(decimals).split('.');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return fraction ? `${grouped},${fraction}` : grouped;
+}
+
+/** Reads a figure written for humans ('19.000', '1,5') back into a number. */
+function parseFigure(raw: string) {
+  return {
+    amount: Number(raw.replace(/\./g, '').replace(',', '.')),
+    decimals: raw.includes(',') ? 1 : 0,
+  };
 }
 
 /**
- * Entrance offsets in seconds. The mockup assembles outside-in — shell first,
- * then chrome, then the skeleton content — so the card reads as a UI being
- * built rather than a picture fading in.
+ * A number that counts itself up. The value lives in a motion value and is
+ * formatted through a transform, so the roll never re-renders React.
  */
-const DELAY = {
-  panel: 0,
-  glow: 0.1,
-  window: 0.1,
-  trafficLights: 0.25,
-  urlBar: 0.3,
-  dotField: 0.3,
-  viewport: 0.35,
-  titleBar: 0.45,
-  subtitleBar: 0.5,
-  chips: 0.55,
-  avatars: 0.6,
-  imageTile: 0.65,
-} as const;
+function Ticker({
+  target,
+  decimals,
+  duration,
+  delay,
+  run,
+  reduced,
+}: {
+  target: number;
+  decimals: number;
+  duration: number;
+  delay: number;
+  run: boolean;
+  reduced: boolean;
+}) {
+  const count = useMotionValue(reduced ? target : 0);
+  const text = useTransform(count, (value) => formatFigure(value, decimals));
 
-/** Resting opacity of the masked dot layer, captured from the settled target. */
-const DOT_FIELD_OPACITY = 0.2;
+  useEffect(() => {
+    // Reduced motion parks the number on its final value instead of rolling it.
+    if (reduced) {
+      count.set(target);
+      return;
+    }
+    if (!run) return;
+    const controls = animate(count, target, { duration, delay, ease: EASE });
+    return () => controls.stop();
+  }, [count, delay, duration, reduced, run, target]);
 
-/** Skeleton bar widths the two placeholder rows animate out to. */
-const TITLE_BAR_WIDTH = 128;
-const SUBTITLE_BAR_WIDTH = 96;
+  return <motion.span>{text}</motion.span>;
+}
 
-const EASE = 'easeOut';
-const DURATION = 0.5;
+/* ------------------------------------------------------------------ stream -- */
+
+type FeedEntry = IndexRow & { key: number };
+
+/**
+ * The rolling window over the pool. One row leaves the top and one arrives at
+ * the bottom per tick; the clock only starts once the card is on screen.
+ */
+function useIndexStream(active: boolean) {
+  const [feed, setFeed] = useState<FeedEntry[]>(() =>
+    POINTS.slice(0, VISIBLE_ROWS).map((point, index) => ({ ...point, key: index })),
+  );
+  const cursor = useRef(VISIBLE_ROWS);
+
+  useEffect(() => {
+    if (!active) return;
+    const timer = setInterval(() => {
+      setFeed((current) => {
+        const next = POINTS[cursor.current % POINTS.length];
+        const entry: FeedEntry = { ...next, key: cursor.current };
+        cursor.current += 1;
+        return [...current.slice(1), entry];
+      });
+    }, STREAM_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [active]);
+
+  return feed;
+}
+
+function StreamRow({ entry, delay, reduced }: { entry: FeedEntry; delay: number; reduced: boolean }) {
+  return (
+    <motion.li
+      layout
+      className={`glass-chip ${ROW_GRID} rounded-xl px-3 py-2.5`}
+      initial={{ opacity: 0, y: reduced ? 0 : 26, scale: reduced ? 1 : 0.97 }}
+      // Two details, both about the seam between one row and the next.
+      // The stagger belongs to the entrance only: on the shared transition it
+      // would also delay a settled row's slide up, tearing the list apart.
+      // And the fade runs far shorter than the slide, so the arriving row is
+      // solid while it is still rising out of the bottom edge — otherwise its
+      // slot reads as a hole for as long as it takes to fade in.
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: {
+          duration: ROW_DURATION,
+          delay,
+          ease: EASE,
+          opacity: { duration: 0.18, delay, ease: EASE },
+        },
+      }}
+      exit={{ opacity: 0, scale: reduced ? 1 : 0.97, transition: { duration: 0.3, ease: EASE } }}
+      transition={{ layout: { duration: 0.45, ease: EASE } }}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <span aria-hidden className="bg-primary size-1.5 shrink-0 rounded-full" />
+        <span className="text-foreground truncate text-[13px] leading-4 font-medium">
+          {entry.kind}
+        </span>
+      </span>
+      <span className="text-muted-foreground truncate text-[13px] leading-4">
+        {entry.municipality}
+      </span>
+      <span className="text-foreground text-right font-mono text-[13px] leading-4 tabular-nums">
+        <Ticker
+          target={entry.stock}
+          decimals={0}
+          duration={0.7}
+          delay={delay}
+          run
+          reduced={reduced}
+        />
+      </span>
+    </motion.li>
+  );
+}
+
+/* -------------------------------------------------------------------- card -- */
 
 export function DesignDevelopmentCard() {
+  const shellRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(shellRef, { once: true, amount: VIEWPORT_AMOUNT });
+  const reduced = useReducedMotion() ?? false;
+  const feed = useIndexStream(inView && !reduced);
+
   return (
+    // Grid placement and the card's own entrance belong to the bento slot that
+    // wraps this component; what is left here is the hover lift and the
+    // choreography inside the panel.
     <motion.div
-      className="bg-natural-black relative col-span-19 grid overflow-hidden rounded-2xl p-4 lg:col-span-6"
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.2 }}
+      ref={shellRef}
+      className="flex min-w-0"
+      whileHover={reduced ? undefined : { y: -3, transition: { duration: 0.25, ease: EASE } }}
     >
-      <div className="h-full w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1">
-        <div className="w-full flex-1 h-85">
-          <motion.svg
-            className="absolute bottom-0 -left-40 z-40 rotate-45 fill-white/80 blur-3xl"
-            width="100%"
-            height="100%"
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-            transition={{ duration: 0.8, delay: DELAY.glow, ease: EASE }}
-          >
-            <ellipse cx="50%" cy="50%" rx="100" ry="60" />
-          </motion.svg>
-
-          {/* Bezel behind the product window. It is the one surface here with
-              nothing legible on it, so it can go translucent: the blurred glow
-              above blooms through it while the window itself stays opaque. */}
-          <motion.div
-            className="glass-dark relative z-40 h-full overflow-hidden rounded-lg"
-            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: DURATION, delay: DELAY.panel, ease: EASE }}
-          >
-            <motion.div
-              className="absolute inset-x-0 -bottom-4 mx-auto flex h-full w-[90%] flex-col rounded-lg bg-[#E6E6E6] p-2"
-              variants={{ hidden: { y: 30 }, visible: { y: 0 } }}
-              transition={{ duration: DURATION, delay: DELAY.window, ease: EASE }}
+      <Glass radius={20} elevated interactive className="h-full w-full">
+        <div className="flex h-full min-h-0 flex-col gap-5 p-5">
+          <header className="flex items-start justify-between gap-4">
+            <motion.h2
+              className="text-foreground text-base leading-6 font-medium"
+              initial={{ opacity: 0, y: reduced ? 0 : 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: VIEWPORT_AMOUNT }}
+              transition={{ duration: 0.45, delay: 0.05, ease: EASE }}
             >
-              <div className="relative flex">
-                <motion.div
-                  className="flex items-center gap-1.5"
-                  variants={{ hidden: { opacity: 0, scale: 0.8 }, visible: { opacity: 1, scale: 1 } }}
-                  transition={{ duration: 0.35, delay: DELAY.trafficLights, ease: EASE }}
+              {BENTO.feature.title}
+            </motion.h2>
+            <motion.span
+              className="glass-chip inline-flex shrink-0 items-center gap-2 rounded-full px-2.5 py-1"
+              initial={{ opacity: 0, y: reduced ? 0 : 8 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: VIEWPORT_AMOUNT }}
+              transition={{ duration: 0.45, delay: 0.1, ease: EASE }}
+            >
+              <span className="relative flex size-1.5 shrink-0">
+                {reduced ? null : (
+                  <motion.span
+                    aria-hidden
+                    className="bg-primary absolute inset-0 rounded-full"
+                    animate={{ opacity: [0.5, 0], scale: [1, 2.8] }}
+                    transition={{ duration: 2.3, repeat: Infinity, ease: EASE }}
+                  />
+                )}
+                <span className="bg-primary relative size-1.5 rounded-full" />
+              </span>
+              <span className="text-muted-foreground text-[11px] leading-4">{LIVE_LABEL}</span>
+            </motion.span>
+          </header>
+
+          <motion.p
+            className="text-muted-foreground max-w-prose text-sm leading-relaxed"
+            initial={{ opacity: 0, y: reduced ? 0 : 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: VIEWPORT_AMOUNT }}
+            transition={{ duration: 0.45, delay: 0.14, ease: EASE }}
+          >
+            {BENTO.feature.body}
+          </motion.p>
+
+          <div className="flex min-h-0 flex-1 flex-col">
+            <motion.div
+              className={`border-line ${ROW_GRID} border-b px-3 pb-2`}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, amount: VIEWPORT_AMOUNT }}
+              transition={{ duration: 0.4, delay: 0.2, ease: EASE }}
+            >
+              {COLUMN_LABELS.map((label, index) => (
+                <span
+                  key={label}
+                  className={
+                    'text-subtle text-[10px] leading-3 font-medium tracking-[0.14em] uppercase' +
+                    (index === COLUMN_LABELS.length - 1 ? ' text-right' : '')
+                  }
                 >
-                  <div className="size-1.5 rounded-full bg-[#FF5F57]" />
-                  <div className="size-1.5 rounded-full bg-[#FFBD2E]" />
-                  <div className="size-1.5 rounded-full bg-[#28C840]" />
-                </motion.div>
-                <motion.div
-                  className="absolute inset-x-0 mx-auto h-2 w-32 rounded-full bg-white"
-                  variants={{ hidden: { opacity: 0, scaleX: 0 }, visible: { opacity: 1, scaleX: 1 } }}
-                  transition={{ duration: 0.4, delay: DELAY.urlBar, ease: EASE }}
-                />
-              </div>
-
-              <motion.div
-                className="mt-3 flex w-full flex-1 flex-col rounded-lg bg-white"
-                variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-                transition={{ duration: 0.4, delay: DELAY.viewport, ease: EASE }}
-              >
-                <div className="flex">
-                  <div className="flex w-full items-center justify-between px-1.5 py-1">
-                    <div className="size-2 rounded-full bg-[#D9D9D9]" />
-                    <div className="flex items-center gap-1">
-                      <div className="h-1 w-3 rounded-full bg-[#E6E6E6]" />
-                      <div className="h-1 w-3 rounded-full bg-[#E6E6E6]" />
-                      <div className="h-1 w-3 rounded-full bg-[#E6E6E6]" />
-                      <div className="ml-1 h-1.5 w-4 rounded-sm bg-[#D9D9D9]" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-1 flex-col items-center justify-center px-2 py-3">
-                  <motion.div
-                    className="h-2 rounded-full bg-[#D9D9D9]"
-                    variants={{
-                      hidden: { opacity: 0, width: 0 },
-                      visible: { opacity: 1, width: TITLE_BAR_WIDTH },
-                    }}
-                    transition={{ duration: DURATION, delay: DELAY.titleBar, ease: EASE }}
-                  />
-                  <motion.div
-                    className="mt-1.5 h-1 rounded-full bg-[#E6E6E6]"
-                    variants={{
-                      hidden: { opacity: 0, width: 0 },
-                      visible: { opacity: 1, width: SUBTITLE_BAR_WIDTH },
-                    }}
-                    transition={{ duration: DURATION, delay: DELAY.subtitleBar, ease: EASE }}
-                  />
-                  <motion.div
-                    className="mt-2 flex items-center gap-1"
-                    variants={{ hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0 } }}
-                    transition={{ duration: 0.4, delay: DELAY.chips, ease: EASE }}
-                  >
-                    <div className="h-2 w-8 rounded-sm bg-[#D9D9D9]" />
-                    <div className="h-2 w-8 rounded-sm bg-[#E6E6E6]" />
-                  </motion.div>
-                  <motion.div
-                    className="mt-2 flex items-center gap-1"
-                    variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-                    transition={{ duration: 0.4, delay: DELAY.avatars, ease: EASE }}
-                  >
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                  </motion.div>
-                  <motion.div
-                    className="mt-3 flex h-full w-3/4 items-center justify-center rounded-sm bg-gray-100"
-                    variants={{ hidden: { opacity: 0, scale: 0.9 }, visible: { opacity: 1, scale: 1 } }}
-                    transition={{ duration: 0.45, delay: DELAY.imageTile, ease: EASE }}
-                  >
-                    {/* Inlined rather than imported: the installed @tabler/icons-react ships
-                        newer corner paths (M3 7…) than the reference build (M4 8…). */}
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="tabler-icon tabler-icon-photo-scan size-6 text-neutral-400"
-                    >
-                      <path d="M15 8h.01" />
-                      <path d="M6 13l2.644 -2.644a1.21 1.21 0 0 1 1.712 0l3.644 3.644" />
-                      <path d="M13 13l1.644 -1.644a1.21 1.21 0 0 1 1.712 0l1.644 1.644" />
-                      <path d="M4 8v-2a2 2 0 0 1 2 -2h2" />
-                      <path d="M4 16v2a2 2 0 0 0 2 2h2" />
-                      <path d="M16 4h2a2 2 0 0 1 2 2v2" />
-                      <path d="M16 20h2a2 2 0 0 0 2 -2v-2" />
-                    </svg>
-                  </motion.div>
-                </div>
-              </motion.div>
+                  {label}
+                </span>
+              ))}
             </motion.div>
-          </motion.div>
+
+            {/* The window the index runs through. The list is pinned to the
+                bottom edge, so a new row rises into it from underneath and the
+                oldest one is already inside the top fade when it leaves. */}
+            <div className="relative flex min-h-[17rem] flex-1 flex-col justify-end overflow-hidden pt-2 mask-t-from-80%">
+              <ul className="flex flex-col gap-2">
+                <AnimatePresence mode="popLayout">
+                  {inView
+                    ? feed.map((entry) => (
+                        <StreamRow
+                          key={entry.key}
+                          entry={entry}
+                          // Only the first painted window staggers; everything
+                          // after it is a single row arriving on its own.
+                          delay={entry.key < VISIBLE_ROWS ? REVEAL_DELAY + entry.key * ROW_STAGGER : 0}
+                          reduced={reduced}
+                        />
+                      ))
+                    : null}
+                </AnimatePresence>
+              </ul>
+            </div>
+          </div>
 
           <motion.div
-            className="absolute right-0 bottom-0 h-80 w-full mask-t-from-20% mask-b-from-90% mask-l-from-50%"
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: DOT_FIELD_OPACITY } }}
-            transition={{ duration: 0.8, delay: DELAY.dotField, ease: EASE }}
+            className="border-line grid grid-cols-3 gap-3 border-t pt-4"
+            initial={{ opacity: 0, y: reduced ? 0 : 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: VIEWPORT_AMOUNT }}
+            transition={{ duration: 0.5, delay: 0.5, ease: EASE }}
           >
-            <div className="pointer-events-none select-none absolute inset-0 w-full">
-              <DotMatrixCanvas />
-            </div>
+            {FIGURE_CELLS.map((cell, index) => {
+              const { amount, decimals } = parseFigure(cell.raw);
+              return (
+                <div key={cell.id} className="flex flex-col gap-1">
+                  <span className="text-foreground font-mono text-xl leading-6 tabular-nums">
+                    {cell.prefix}
+                    <Ticker
+                      target={amount}
+                      decimals={decimals}
+                      duration={1.2}
+                      delay={0.55 + index * 0.1}
+                      run={inView}
+                      reduced={reduced}
+                    />
+                    {cell.suffix}
+                  </span>
+                  <span className="text-muted-foreground text-[11px] leading-4">{cell.label}</span>
+                </div>
+              );
+            })}
+          </motion.div>
+
+          {/* No date stamp here: the section header already carries it, and a
+              third copy in the same bento would be noise. */}
+          <motion.div
+            initial={{ opacity: 0, y: reduced ? 0 : 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: VIEWPORT_AMOUNT }}
+            transition={{ duration: 0.5, delay: 0.6, ease: EASE }}
+          >
+            <Button>{BENTO.feature.cta}</Button>
           </motion.div>
         </div>
-
-        <div className="mt-4 flex flex-col gap-6 px-4 py-4 z-10">
-          <div className="relative">
-            <h2 className="text-base font-medium text-white">{BENTO.feature.title}</h2>
-            <p className="mt-4 text-base text-neutral-400">{BENTO.feature.body}</p>
-          </div>
-          <div>
-            <Button className="my-4">{BENTO.feature.cta}</Button>
-          </div>
-        </div>
-      </div>
+      </Glass>
     </motion.div>
   );
 }

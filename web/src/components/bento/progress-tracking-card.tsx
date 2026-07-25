@@ -1,237 +1,162 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion } from 'motion/react';
-import { ArrowDown, Check, Plus } from 'lucide-react';
-import { BENTO } from '@/content/site';
+import { useEffect, useState } from 'react';
+import { motion, useReducedMotion, type Variants } from 'motion/react';
+import { ArrowDown, Check, Plus, type LucideIcon } from 'lucide-react';
+
+import { Glass } from '@/components/ui/glass';
+import { BENTO, BRAND } from '@/content/site';
 
 /* -------------------------------------------------------------------------- */
-/*                              Decorative dots                               */
+/*                                   Copy                                     */
 /* -------------------------------------------------------------------------- */
-
-/** Grid pitch and dot edge, in CSS px, measured off the reference render. */
-const DOT_PITCH = 8;
-const DOT_SIZE = 4;
-/**
- * Per-dot alpha range; the wrapper's `opacity-10` plus the masks do the rest.
- * The noise is squared before it is mapped onto the range because the reference
- * texture has far more near-invisible dots than a flat distribution produces —
- * squaring matches its measured mean darkness while keeping the same darkest dot.
- */
-const DOT_MIN_ALPHA = 0.12;
-const DOT_MAX_ALPHA = 0.8;
-
-/** Deterministic value in [0, 1) per cell, so the texture never reshuffles. */
-function cellNoise(col: number, row: number) {
-  const seeded = Math.sin(col * 127.1 + row * 311.7) * 43758.5453;
-  return seeded - Math.floor(seeded);
-}
 
 /**
- * Dot texture bleeding off the card's top-right corner.
- *
- * The reference never sizes its canvas, so the element keeps the 300x150
- * default backing store and maps 1:1 to CSS pixels — sizing it here would
- * change the dot pitch, so the attributes are deliberately left off.
+ * Not in `site.ts`: the header needs a two-word status marker and the content
+ * module only carries the long form ("Índice nacional en vivo"). Same voice.
  */
-function DotGrid() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let row = 0; row * DOT_PITCH < canvas.height; row++) {
-      for (let col = 0; col * DOT_PITCH < canvas.width; col++) {
-        const noise = cellNoise(col, row);
-        const alpha =
-          DOT_MIN_ALPHA + noise * noise * (DOT_MAX_ALPHA - DOT_MIN_ALPHA);
-        ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
-        ctx.fillRect(col * DOT_PITCH, row * DOT_PITCH, DOT_SIZE, DOT_SIZE);
-      }
-    }
-  }, []);
-
-  return (
-    <div className="absolute top-0 -right-20 size-40 w-full mask-b-from-10% mask-radial-[100%_100%] mask-radial-from-25% mask-radial-at-right opacity-10">
-      <div className="pointer-events-none select-none absolute">
-        <canvas ref={canvasRef} className="block h-full w-full" />
-      </div>
-    </div>
-  );
-}
+const LIVE_LABEL = 'En vivo';
 
 /* -------------------------------------------------------------------------- */
-/*                                Radial gauge                                */
+/*                                 Movements                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Seconds the needle takes to sweep a full turn, and the pause between sweeps. */
-const SWEEP_DURATION = 3.5;
-const SWEEP_REST = 4.5;
-
-/**
- * Donut gauge. The gradient arc carries motion's `pathLength` attributes exactly
- * as the reference ships them — the path is filled rather than stroked, so the
- * draw-on is invisible, but the markup stays faithful. The needle group spins a
- * full turn and settles back on its resting `rotate(360deg)`.
- */
-function ProgressGauge() {
-  return (
-    <svg
-      width="213"
-      height="216"
-      viewBox="0 0 213 216"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="absolute inset-x-0 top-2 mx-auto size-40 mask-b-from-50%"
-    >
-      <path
-        d="M213 109.5C213 168.318 165.318 216 106.5 216C47.6817 216 0 168.318 0 109.5C0 50.6812 47.6817 2.99951 106.5 2.99951C165.318 2.99951 213 50.6812 213 109.5ZM46.237 109.5C46.237 142.782 73.2177 169.762 106.5 169.762C139.782 169.762 166.763 142.782 166.763 109.5C166.763 76.2172 139.782 49.2365 106.5 49.2365C73.2177 49.2365 46.237 76.2172 46.237 109.5Z"
-        fill="#F8F8F8"
-      />
-      <motion.path
-        d="M86.0381 4.98367C63.9665 9.3048 43.8295 20.5024 28.5131 36.9716C13.1967 53.4408 3.48731 74.3362 0.776455 96.6628C-1.9344 118.989 2.49248 141.601 13.4226 161.257C24.3527 180.913 41.225 196.604 61.6212 206.082C82.0173 215.559 104.89 218.336 126.962 214.015C149.033 209.694 169.171 198.497 184.487 182.027C199.803 165.558 209.513 144.663 212.224 122.336C214.934 100.01 210.508 77.3979 199.577 57.7419L159.168 80.2125C165.353 91.3348 167.858 104.13 166.324 116.763C164.79 129.397 159.296 141.22 150.629 150.539C141.962 159.858 130.568 166.195 118.078 168.64C105.589 171.085 92.6465 169.513 81.1053 164.151C69.5642 158.788 60.017 149.909 53.8322 138.787C47.6474 127.664 45.1425 114.869 46.6764 102.236C48.2103 89.6023 53.7044 77.7787 62.3712 68.4596C71.0379 59.1406 82.4325 52.8044 94.9216 50.3593L86.0381 4.98367Z"
-        fill="url(#paint0_linear_1_614)"
-        initial={{ pathLength: 0 }}
-        whileInView={{ pathLength: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1.6, ease: 'easeInOut' }}
-      />
-      <motion.g
-        style={{ transformOrigin: '50% 50%', transformBox: 'view-box' }}
-        initial={{ rotate: 0 }}
-        whileInView={{ rotate: 360 }}
-        viewport={{ once: true }}
-        transition={{
-          duration: SWEEP_DURATION,
-          ease: 'easeInOut',
-          repeat: Infinity,
-          repeatDelay: SWEEP_REST,
-        }}
-      >
-        <rect
-          x="84"
-          y="0.380371"
-          width="2"
-          height="56"
-          rx="1"
-          transform="rotate(-10.9638 84 0.380371)"
-          fill="white"
-        />
-        <rect
-          x="84"
-          y="0.380371"
-          width="2"
-          height="56"
-          rx="1"
-          transform="rotate(-10.9638 84 0.380371)"
-          fill="url(#paint1_linear_1_614)"
-        />
-      </motion.g>
-      <defs>
-        <linearGradient
-          id="paint0_linear_1_614"
-          x1="13"
-          y1="0"
-          x2="121"
-          y2="0"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#F0F0F0" />
-          <stop offset="1" stopColor="#EDE5CB" />
-        </linearGradient>
-        <linearGradient
-          id="paint1_linear_1_614"
-          x1="88.669"
-          y1="27.3238"
-          x2="72.6514"
-          y2="27.5191"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#F1F1F1" />
-          <stop offset="1" stopColor="#C9B76E" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                               Movement stack                               */
-/* -------------------------------------------------------------------------- */
-
-/** Market movements in SSR DOM order. */
 const MOVEMENTS = BENTO.movements.items;
 
 type MovementKind = (typeof MOVEMENTS)[number]['kind'];
 
-/**
- * One neutral glyph per kind of movement: the price fell, the car sold, stock
- * came in. Same 16px box and same slot the reference brand marks occupied.
- */
-const MOVEMENT_GLYPHS: Record<MovementKind, ReactNode> = {
-  precio: <ArrowDown className="size-4 text-neutral-500" />,
-  venta: <Check className="size-4 text-neutral-500" />,
-  stock: <Plus className="size-4 text-neutral-500" />,
+/** One glyph and one semantic colour per kind of movement. */
+const MOVEMENT_STYLE: Record<MovementKind, { icon: LucideIcon; tone: string }> = {
+  /** A price drop is the reader's good news, so it takes the positive tone. */
+  precio: { icon: ArrowDown, tone: 'var(--cd-positive)' },
+  /** A sale is a settled fact rather than an opportunity: plain ink. */
+  venta: { icon: Check, tone: 'var(--cd-fg)' },
+  /** New stock is something to act on: the brand accent. */
+  stock: { icon: Plus, tone: 'var(--cd-accent)' },
 };
 
-const STACK_SIZE = MOVEMENTS.length;
-/** Slot geometry: 0 is the front card, each step back sheds 10px and 6% scale. */
-const CARD_OFFSET = 10;
-const SCALE_FACTOR = 0.06;
-/** How long a movement stays in front before the stack promotes. */
-const CYCLE_MS = 5000;
-/**
- * The captured resting state has the second card in front, which is the DOM
- * order two promotions in — so the stack opens on that state instead of on the
- * pre-hydration order.
- */
-const INITIAL_SLOT_OFFSET = 2;
-
-/**
- * Slot a card occupies on a given tick. Every tick promotes each card one slot
- * forward, which for a three-card stack is the same as adding `STACK_SIZE - 1`,
- * so the front card wraps around to the back.
- */
-function slotOf(index: number, tick: number) {
-  return (index + INITIAL_SLOT_OFFSET + (STACK_SIZE - 1) * tick) % STACK_SIZE;
+/** `"Bajada de precio · −1.200 €"` → the headline and the figure that carries it. */
+function splitMovement(text: string) {
+  const at = text.indexOf(' · ');
+  if (at === -1) return { headline: text, detail: '' };
+  return { headline: text.slice(0, at), detail: text.slice(at + 3) };
 }
 
-function MovementStack() {
-  const [tick, setTick] = useState(0);
+/* -------------------------------------------------------------------------- */
+/*                              Stack geometry                                */
+/* -------------------------------------------------------------------------- */
+
+/** Cards visible at once. Position 0 is the front card. */
+const DEPTH = 3;
+const CARD_HEIGHT = 88;
+/** How far each card behind the front one rises, and how much it recedes. */
+const SLOT_RISE = 16;
+const SLOT_SCALE = 0.05;
+const SLOT_OPACITY = [1, 0.6, 0.32];
+/** Travel of the card leaving the front of the stack. */
+const EXIT_DROP = 20;
+/**
+ * Promotion ripples backwards: the front card takes its place first and the
+ * queue settles behind it. The lag is also what keeps the card arriving at the
+ * back from showing up while the one it repeats is still fading out — with only
+ * three movements in the list, the two are the same notification.
+ */
+const SLOT_LAG = 0.13;
+const STACK_HEIGHT = CARD_HEIGHT + (DEPTH - 1) * SLOT_RISE;
+/** Calm enough to read one movement and then ignore the rest. */
+const CYCLE_MS = 4500;
+
+/**
+ * Positions rendered on every tick: the card on its way out (-1) plus the
+ * visible stack. Keeping the leaving card mounted is what lets it slide out and
+ * fade instead of vanishing, and it costs nothing — by the time its slot is
+ * recycled it is already at zero opacity.
+ */
+const POSITIONS = Array.from({ length: DEPTH + 1 }, (_, index) => index - 1);
+
+/** Index into the movement list, for a head counter that only ever grows. */
+function movementAt(id: number) {
+  const size = MOVEMENTS.length;
+  return MOVEMENTS[((id % size) + size) % size];
+}
+
+function MovementStack({ active }: { active: boolean }) {
+  const reduced = useReducedMotion();
+  const [head, setHead] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(
-      () => setTick((current) => (current + 1) % STACK_SIZE),
-      CYCLE_MS,
-    );
-    return () => clearInterval(interval);
-  }, []);
+    // The loop is infinite, so it stays off under reduced motion, and it does
+    // not start until the card has actually been seen.
+    if (!active || reduced) return;
+    const timer = window.setInterval(() => setHead((current) => current + 1), CYCLE_MS);
+    return () => window.clearInterval(timer);
+  }, [active, reduced]);
 
   return (
-    <div className="relative mb-8 w-full">
-      {MOVEMENTS.map((item, index) => {
-        const slot = slotOf(index, tick);
+    <div className="relative w-full" style={{ height: STACK_HEIGHT }}>
+      {POSITIONS.map((position) => {
+        const id = head + position;
+        const item = movementAt(id);
+        const { icon: Icon, tone } = MOVEMENT_STYLE[item.kind];
+        const { headline, detail } = splitMovement(item.text);
+        const leaving = position < 0;
+
         return (
           <motion.div
-            key={item.kind}
-            className="glass absolute flex h-20 w-full flex-col justify-between rounded-lg p-4"
-            style={{ transformOrigin: 'top center' }}
-            animate={{
-              top: slot * -CARD_OFFSET,
-              scale: 1 - slot * SCALE_FACTOR,
-              zIndex: STACK_SIZE - slot,
+            key={id}
+            // The leaving card repeats the one at the back of the stack.
+            aria-hidden={leaving}
+            className="absolute inset-x-0 bottom-0"
+            style={{
+              height: CARD_HEIGHT,
+              transformOrigin: 'center bottom',
+              zIndex: leaving ? DEPTH + 1 : DEPTH - position,
             }}
-            transition={{ duration: 0.45, ease: 'easeOut' }}
+            initial={
+              reduced
+                ? false
+                : {
+                    opacity: 0,
+                    y: -(DEPTH - 1) * SLOT_RISE - 8,
+                    scale: 1 - (DEPTH - 1) * SLOT_SCALE,
+                  }
+            }
+            animate={
+              leaving
+                ? { opacity: 0, y: EXIT_DROP, scale: 0.97 }
+                : {
+                    opacity: SLOT_OPACITY[position],
+                    y: -position * SLOT_RISE,
+                    scale: 1 - position * SLOT_SCALE,
+                  }
+            }
+            transition={
+              leaving
+                ? { duration: 0.45, ease: 'easeOut' }
+                : { duration: 0.55, ease: 'easeOut', delay: position * SLOT_LAG }
+            }
           >
-            <div className="flex justify-between">
-              <span className="font-mono text-xs text-neutral-500">
-                {item.kind}
-              </span>
-              {MOVEMENT_GLYPHS[item.kind]}
-            </div>
-            <p className="text-base text-neutral-700">{item.text}</p>
+            <Glass radius={12} elevated glow={false} className="h-full">
+              <div className="flex flex-1 items-center gap-3 px-3.5">
+                <span
+                  className="glass-chip grid size-9 shrink-0 place-items-center rounded-[10px]"
+                  style={{
+                    color: tone,
+                    background: `color-mix(in srgb, ${tone} 14%, transparent)`,
+                  }}
+                >
+                  <Icon className="size-4" strokeWidth={2.4} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="text-foreground block truncate text-[13px] font-medium tracking-tight">
+                    {headline}
+                  </span>
+                  {detail ? (
+                    <span className="text-muted-foreground font-dm-mono mt-0.5 block truncate text-[11px]">
+                      {detail}
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            </Glass>
           </motion.div>
         );
       })}
@@ -240,32 +165,91 @@ function MovementStack() {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                 Live mark                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Status marker for the header. Cobalt rather than green: green is reserved for
+ * a movement that is good news, this only says the index is receiving.
+ */
+function LiveMark() {
+  const reduced = useReducedMotion();
+
+  return (
+    <span className="glass-chip mt-0.5 flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1">
+      <span className="relative grid size-1.5 shrink-0 place-items-center">
+        {reduced ? null : (
+          <motion.span
+            aria-hidden
+            className="absolute inset-0 rounded-full"
+            style={{ background: 'var(--cd-accent)' }}
+            animate={{ scale: [1, 2.4], opacity: [0.5, 0] }}
+            transition={{ duration: 2.4, ease: 'easeOut', repeat: Infinity, repeatDelay: 0.6 }}
+          />
+        )}
+        <span className="size-1.5 rounded-full" style={{ background: 'var(--cd-accent)' }} />
+      </span>
+      <span className="text-muted-foreground font-dm-mono text-[10px] tracking-[0.08em] uppercase">
+        {LIVE_LABEL}
+      </span>
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                    Card                                    */
 /* -------------------------------------------------------------------------- */
 
 /**
- * The reference heading is a two-line block and the layout below it depends on
- * that height, so the title breaks before its last word rather than wrapping.
+ * Header, stack and stamp reveal in reading order off a single observer, so the
+ * three bands cannot fire out of order the way three separate ones would when
+ * the card is scrolled into view from below.
  */
-const TITLE_BREAK = BENTO.movements.title.lastIndexOf(' ');
-const TITLE_HEAD = BENTO.movements.title.slice(0, TITLE_BREAK);
-const TITLE_TAIL = BENTO.movements.title.slice(TITLE_BREAK + 1);
+const CARD_REVEAL: Variants = {
+  hidden: {},
+  shown: { transition: { delayChildren: 0.12, staggerChildren: 0.08 } },
+};
+
+const BAND_REVEAL: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } },
+};
 
 export function ProgressTrackingCard() {
+  const reduced = useReducedMotion();
+  const [seen, setSeen] = useState(false);
+
   return (
-    <div className="glass relative col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl p-4 pb-0 lg:col-span-2">
-      <div className="h-full">
-        <DotGrid />
-        <h2 className="text-base font-medium text-black">
-          {TITLE_HEAD}
-          <br />
-          {TITLE_TAIL}
-        </h2>
-        <div className="relative flex h-full w-full items-center justify-end">
-          <ProgressGauge />
-          <MovementStack />
-        </div>
-      </div>
-    </div>
+    <Glass radius={16} interactive className="col-span-1 min-h-(--box-min-height) lg:col-span-2">
+      <motion.div
+        className="flex min-h-0 flex-1 flex-col gap-4 p-4"
+        variants={CARD_REVEAL}
+        initial={reduced ? 'shown' : 'hidden'}
+        whileInView="shown"
+        viewport={{ once: true, amount: 0.3 }}
+        onViewportEnter={() => setSeen(true)}
+      >
+        <motion.div variants={BAND_REVEAL} className="flex items-start justify-between gap-3">
+          <h3 className="text-foreground -tracking-xs text-base leading-5 font-medium text-balance">
+            {BENTO.movements.title}
+          </h3>
+          <LiveMark />
+        </motion.div>
+
+        <motion.div variants={BAND_REVEAL} className="flex min-h-0 flex-1 items-center">
+          <MovementStack active={seen} />
+        </motion.div>
+
+        <motion.div
+          variants={BAND_REVEAL}
+          className="pt-3"
+          style={{ borderTop: '1px solid var(--cd-glass-border)' }}
+        >
+          <span className="text-muted-foreground font-dm-mono -tracking-xs block truncate text-[11px]">
+            {BRAND.indexStamp}
+          </span>
+        </motion.div>
+      </motion.div>
+    </Glass>
   );
 }

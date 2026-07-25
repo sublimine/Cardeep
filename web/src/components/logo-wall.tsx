@@ -1,59 +1,68 @@
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { Container } from '@/components/ui/container';
-import { SOURCE_WALL_KICKER, SOURCES } from '@/content/site';
+import { SOURCE_WALL_KICKER, SOURCE_WALL_NOTE, SOURCE_WALL_UNIT, SOURCES } from '@/content/site';
 
 /**
- * The wall of platforms the index reads. There is no hidden pool to rotate
- * through — the seven are the seven — so the board is static once assembled and
- * only the staggered entrance survives from the original flip board.
+ * The tier-1 platforms the index reads.
+ *
+ * Each one shows its own mark above its name — a wall of bare domain text said
+ * nothing, and these are the seven places the Spanish used-car market actually
+ * lives. The plates lift on hover and the row assembles with a stagger, so the
+ * band has motion without becoming a carousel.
  */
-
-type Source = (typeof SOURCES)[number];
-
-type SourceMarkProps = {
-  source: Source;
-  index: number;
-};
-
-/**
- * One board slot. The 800px perspective on the wrapper is what turns the
- * `rotateX` entrance into a physical flip rather than a squash.
- */
-function SourceMark({ source, index }: SourceMarkProps) {
-  return (
-    <div className="relative h-6 w-30 transition-all duration-300" style={{ perspective: '800px' }}>
-      <motion.div
-        className="absolute inset-0 flex items-center"
-        initial={{ opacity: 0, rotateX: -90 }}
-        animate={{ opacity: 1, rotateX: 0 }}
-        transition={{ duration: 0.5, delay: index * 0.04, ease: 'easeOut' }}
-      >
-        <span className="text-heading -tracking-sm text-sm leading-none font-semibold whitespace-nowrap md:text-base">
-          {source.mark}
-          {source.accent ? (
-            <span className="text-muted-foreground font-normal">{source.accent}</span>
-          ) : null}
-        </span>
-      </motion.div>
-    </div>
-  );
-}
-
 export function LogoWall() {
+  const reduced = useReducedMotion();
+
   return (
-    <Container className="max-w-7xl py-20">
-      <h2 className="font-dm-mono -tracking-xs text-muted-foreground text-center text-sm leading-4 font-normal uppercase">
-        {SOURCE_WALL_KICKER}
-      </h2>
-      {/* The reference wall held fifteen logos and wrapped naturally; seven sources
-          at the original 80px gap wrap 6 + 1 and orphan the last mark, so the gap
-          tightens just enough to keep the row whole. */}
-      <div className="mx-auto mt-12 flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-4 md:gap-x-12 md:gap-y-14">
-        {SOURCES.map((source, index) => (
-          <SourceMark key={source.name} source={source} index={index} />
-        ))}
-      </div>
-    </Container>
+    <section id="fuentes" className="w-full">
+      <Container className="max-w-7xl py-20">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h2 className="font-dm-mono -tracking-xs text-muted-foreground text-sm leading-4 font-normal uppercase">
+            {SOURCE_WALL_KICKER}
+          </h2>
+          <p className="text-muted-foreground -tracking-xs max-w-xl text-sm leading-5">
+            {SOURCE_WALL_NOTE}
+          </p>
+        </div>
+
+        <div className="mx-auto mt-12 flex max-w-6xl flex-wrap items-stretch justify-center gap-3 md:gap-4">
+          {SOURCES.map((source, index) => (
+            <motion.div
+              key={source.name}
+              initial={reduced ? false : { opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5, delay: index * 0.07, ease: 'easeOut' }}
+              whileHover={reduced ? undefined : { y: -4 }}
+              className="glass group flex w-[8.5rem] cursor-default flex-col items-center gap-3 rounded-2xl px-4 py-5 transition-shadow duration-300 md:w-40"
+            >
+              <img
+                src={source.logo}
+                alt={source.name}
+                width={128}
+                height={128}
+                loading="lazy"
+                decoding="async"
+                className="size-10 rounded-xl object-contain transition-transform duration-300 group-hover:scale-110 md:size-11"
+              />
+              <span className="flex flex-col items-center gap-1 text-center">
+                <span className="text-foreground -tracking-sm text-sm leading-4 font-semibold">
+                  {source.name}
+                </span>
+                {/* The count is the argument: not "we support this portal" but
+                    "we have counted this many cars in it". */}
+                <span className="text-primary font-dm-mono -tracking-xs text-[13px] leading-4 font-medium">
+                  {source.count}
+                </span>
+                <span className="text-subtle -tracking-xs text-[10px] leading-3">
+                  {SOURCE_WALL_UNIT}
+                </span>
+              </span>
+            </motion.div>
+          ))}
+        </div>
+      </Container>
+    </section>
   );
 }

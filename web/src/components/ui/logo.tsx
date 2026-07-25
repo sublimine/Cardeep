@@ -1,50 +1,25 @@
+import { cn } from '@/lib/utils';
+
 /**
- * The Cardeep mark: a "C" drawn as a dot matrix.
+ * The Cardeep mark — the car silhouette enclosed in a rounded triangle, taken
+ * from the brand artwork rather than redrawn.
  *
- * It is the product in one glyph — an index built point by point — and it shares
- * a language with the rest of the page: the dot arrow inside every CTA and the
- * dotted map of Spain. Because it is a grid rather than a drawing, it stays
- * legible at 16px and needs no separate favicon artwork.
+ * It renders as a masked block so it inherits `currentColor`: cobalt on a light
+ * surface, white over the hero plate, charcoal in print. One asset, every
+ * context, crisp at any size.
  */
+export function Logo({ className }: { className?: string }) {
+  return <span aria-hidden className={cn('brand-mark inline-block', className)} />;
+}
 
-/** `1` is a lit dot. Reading the rows top-to-bottom spells a C. */
-const MARK = [
-  [0, 1, 1, 1, 0],
-  [1, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0],
-  [1, 0, 0, 0, 1],
-  [0, 1, 1, 1, 0],
-] as const;
-
-const CELL = 4;
-const ORIGIN = 2;
-const RADIUS = 1.35;
-
-type LogoProps = {
-  /** `light` for dark backgrounds, `dark` for light ones. */
-  tone?: 'light' | 'dark';
-  className?: string;
-  title?: string;
-};
-
-export function Logo({ tone = 'light', className, title = 'Cardeep' }: LogoProps) {
-  const lit = tone === 'light' ? '#ffffff' : '#05070c';
-  const dim = tone === 'light' ? 'rgba(255,255,255,0.22)' : 'rgba(5,7,12,0.18)';
-
+/** Mark plus wordmark, for the footer and anywhere the full lockup fits. */
+export function Wordmark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 20 20" className={className} role="img" aria-label={title}>
-      {MARK.flatMap((row, y) =>
-        row.map((on, x) => (
-          <circle
-            key={`${x}-${y}`}
-            cx={ORIGIN + x * CELL}
-            cy={ORIGIN + y * CELL}
-            r={RADIUS}
-            // The one accent dot marks the index's densest point, the way the map does.
-            fill={on ? (x === 0 && y === 2 ? '#fc0' : lit) : dim}
-          />
-        )),
-      )}
-    </svg>
+    <span className={cn('inline-flex items-center gap-2.5', className)}>
+      <Logo className="text-primary size-7" />
+      <span className="text-foreground -tracking-lg text-[1.35rem] leading-none font-semibold">
+        cardeep
+      </span>
+    </span>
   );
 }

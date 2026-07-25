@@ -1,41 +1,79 @@
-import * as Accordion from '@radix-ui/react-accordion';
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Fragment } from 'react';
+import { useRef } from 'react';
+import { motion, useReducedMotion, useScroll, useTransform, type Variants } from 'motion/react';
 
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
+import { Glass } from '@/components/ui/glass';
 import { Logo } from '@/components/ui/logo';
-import { BRAND, COMPARISON } from '@/content/site';
+import { BRAND, COMPARISON, FIGURES } from '@/content/site';
+import { cn } from '@/lib/utils';
 
 /**
- * Every label icon is a 20x20 outline drawing sharing the same stroke setup, so
- * only the path data differs between them. The drawings are the reference set,
- * renamed after what they depict and reassigned to the row each one actually
- * illustrates.
+ * Cardeep against a single marketplace.
+ *
+ * The argument is structural, so the section is built as one object: a glass
+ * table whose middle column — ours — is framed by a cobalt spine that fills as
+ * the reader scrolls the rows. The verdict marks are drawn, not faded, and the
+ * Cardeep verdict always lands before the portal's, so the motion carries the
+ * order of the argument instead of decorating it.
+ *
+ * The copy below is written here rather than in `@/content/site`: `COMPARISON`
+ * models the older frame (Cardeep versus doing it by hand, portal by portal),
+ * and this section compares against one marketplace, which needs different
+ * rows. Everything still shared with the rest of the page — the free label, both
+ * calls to action, the three closing cards and the coverage figures — comes from
+ * the content module, so no number is restated here.
  */
-const GEM_PATHS = [
-  'M8.7513 2.5L6.66797 7.5L10.0013 18.3333L13.3346 7.5L11.2513 2.5',
-  'M14.1682 2.5C14.427 2.5 14.6822 2.56024 14.9136 2.67595C15.145 2.79167 15.3463 2.95967 15.5016 3.16667L18.0016 6.5C18.216 6.78597 18.3328 7.13329 18.3347 7.49071C18.3367 7.84813 18.2237 8.19671 18.0124 8.485L11.3541 17.64C11.1997 17.8546 10.9965 18.0293 10.7613 18.1499C10.526 18.2705 10.2655 18.3333 10.0012 18.3333C9.73683 18.3333 9.47629 18.2705 9.24105 18.1499C9.00581 18.0293 8.80262 17.8546 8.64825 17.64L1.98991 8.485C1.77875 8.19662 1.6659 7.84799 1.668 7.49057C1.6701 7.13316 1.78705 6.78588 2.00158 6.5L4.49991 3.16917C4.65506 2.96149 4.85652 2.79286 5.08827 2.6767C5.32002 2.56053 5.57568 2.50003 5.83491 2.5H14.1682Z',
-  'M1.66797 7.5H18.3346',
-] as const;
 
-const CHIP_PATHS = [
-  'M10 16.6641V18.3307',
-  'M10 1.66406V3.33073',
-  'M14.168 16.6641V18.3307',
-  'M14.168 1.66406V3.33073',
-  'M1.66797 10H3.33464',
-  'M1.66797 14.1641H3.33464',
-  'M1.66797 5.83594H3.33464',
-  'M16.668 10H18.3346',
-  'M16.668 14.1641H18.3346',
-  'M16.668 5.83594H18.3346',
-  'M5.83203 16.6641V18.3307',
-  'M5.83203 1.66406V3.33073',
-  'M14.9987 3.33594H4.9987C4.07822 3.33594 3.33203 4.08213 3.33203 5.0026V15.0026C3.33203 15.9231 4.07822 16.6693 4.9987 16.6693H14.9987C15.9192 16.6693 16.6654 15.9231 16.6654 15.0026V5.0026C16.6654 4.08213 15.9192 3.33594 14.9987 3.33594Z',
-  'M12.5013 6.66406H7.5013C7.04106 6.66406 6.66797 7.03716 6.66797 7.4974V12.4974C6.66797 12.9576 7.04106 13.3307 7.5013 13.3307H12.5013C12.9615 13.3307 13.3346 12.9576 13.3346 12.4974V7.4974C13.3346 7.03716 12.9615 6.66406 12.5013 6.66406Z',
-] as const;
+const COPY = {
+  kicker: 'Cara a cara',
+  heading: 'Un portal enseña su casa. Cardeep enseña el mercado.',
+  standfirst:
+    'La misma pregunta contestada por los dos lados. Uno vive de los anuncios que publica; el otro, de que el mapa esté completo.',
+  criterion: 'Criterio',
+  them: 'Un portal',
+  footerNote: 'El plan gratuito ya te enseña tu precio frente al mercado.',
+  rows: [
+    {
+      label: 'Alcance',
+      us: 'Todos los portales indexados y, debajo, las webs de los puntos de venta.',
+      them: 'Solo el inventario que se publica en su casa.',
+    },
+    {
+      label: 'Precio',
+      us: 'La distribución completa del mercado, no un dato suelto.',
+      them: 'Lo que se pide dentro de un único portal.',
+    },
+    {
+      label: 'Histórico',
+      us: 'Cada precio que existió se queda guardado con su fecha.',
+      them: 'El anuncio desaparece en cuanto el coche se vende.',
+    },
+    {
+      label: 'Cobertura',
+      us: `${FIGURES.provinces.value} provincias y más de ${FIGURES.municipalities.value} municipios, hasta el último garaje.`,
+      them: 'Hasta donde llega su comercial.',
+    },
+    {
+      label: 'Sesgo',
+      us: 'No vendemos anuncios. No hay nada que empujarte.',
+      them: 'Vive de que publiques en él.',
+    },
+    {
+      label: 'Salida',
+      us: 'Pantalla y API: los datos también se van contigo.',
+      them: 'Una pantalla, y hasta ahí.',
+    },
+  ],
+} as const;
 
+/* ------------------------------------------------------------------- icons */
+
+/**
+ * Every label icon is a 20x20 outline drawing sharing one stroke setup, so only
+ * the path data differs. They inherit `currentColor`, which is what lets a row
+ * turn cobalt on hover without a second copy of the drawing.
+ */
 const NETWORK_PATHS = [
   'M10.0013 5.83073C11.1519 5.83073 12.0846 4.89799 12.0846 3.7474C12.0846 2.5968 11.1519 1.66406 10.0013 1.66406C8.85071 1.66406 7.91797 2.5968 7.91797 3.7474C7.91797 4.89799 8.85071 5.83073 10.0013 5.83073Z',
   'M8.5 5.25L5.25 8.5',
@@ -46,24 +84,24 @@ const NETWORK_PATHS = [
   'M10.0013 18.3307C11.1519 18.3307 12.0846 17.398 12.0846 16.2474C12.0846 15.0968 11.1519 14.1641 10.0013 14.1641C8.85071 14.1641 7.91797 15.0968 7.91797 16.2474C7.91797 17.398 8.85071 18.3307 10.0013 18.3307Z',
 ] as const;
 
+const GEM_PATHS = [
+  'M8.7513 2.5L6.66797 7.5L10.0013 18.3333L13.3346 7.5L11.2513 2.5',
+  'M14.1682 2.5C14.427 2.5 14.6822 2.56024 14.9136 2.67595C15.145 2.79167 15.3463 2.95967 15.5016 3.16667L18.0016 6.5C18.216 6.78597 18.3328 7.13329 18.3347 7.49071C18.3367 7.84813 18.2237 8.19671 18.0124 8.485L11.3541 17.64C11.1997 17.8546 10.9965 18.0293 10.7613 18.1499C10.526 18.2705 10.2655 18.3333 10.0012 18.3333C9.73683 18.3333 9.47629 18.2705 9.24105 18.1499C9.00581 18.0293 8.80262 17.8546 8.64825 17.64L1.98991 8.485C1.77875 8.19662 1.6659 7.84799 1.668 7.49057C1.6701 7.13316 1.78705 6.78588 2.00158 6.5L4.49991 3.16917C4.65506 2.96149 4.85652 2.79286 5.08827 2.6767C5.32002 2.56053 5.57568 2.50003 5.83491 2.5H14.1682Z',
+  'M1.66797 7.5H18.3346',
+] as const;
+
 const CUBE_PATHS = [
   'M17.5 6.67017C17.4997 6.37789 17.4225 6.09084 17.2763 5.8378C17.13 5.58476 16.9198 5.37463 16.6667 5.2285L10.8333 1.89517C10.58 1.74889 10.2926 1.67188 10 1.67188C9.70744 1.67188 9.42003 1.74889 9.16667 1.89517L3.33333 5.2285C3.08022 5.37463 2.86998 5.58476 2.72372 5.8378C2.57745 6.09084 2.5003 6.37789 2.5 6.67017V13.3368C2.5003 13.6291 2.57745 13.9162 2.72372 14.1692C2.86998 14.4222 3.08022 14.6324 3.33333 14.7785L9.16667 18.1118C9.42003 18.2581 9.70744 18.3351 10 18.3351C10.2926 18.3351 10.58 18.2581 10.8333 18.1118L16.6667 14.7785C16.9198 14.6324 17.13 14.4222 17.2763 14.1692C17.4225 13.9162 17.4997 13.6291 17.5 13.3368V6.67017Z',
   'M2.75 5.83594L10 10.0026L17.25 5.83594',
   'M10 18.3333V10',
 ] as const;
 
-const BUBBLE_PATHS = [
-  'M2.49438 13.6155C2.61691 13.9246 2.64419 14.2633 2.57271 14.588L1.68521 17.3296C1.65661 17.4687 1.66401 17.6127 1.70669 17.7481C1.74937 17.8835 1.82593 18.0057 1.9291 18.1032C2.03227 18.2007 2.15864 18.2702 2.29621 18.3052C2.43379 18.3401 2.57801 18.3394 2.71521 18.303L5.55938 17.4713C5.86581 17.4105 6.18315 17.4371 6.47521 17.548C8.2547 18.379 10.2705 18.5548 12.167 18.0444C14.0635 17.534 15.7188 16.3702 16.8408 14.7583C17.9628 13.1464 18.4795 11.19 18.2996 9.23426C18.1198 7.27855 17.255 5.4492 15.8578 4.06897C14.4606 2.68874 12.6208 1.84634 10.663 1.69039C8.70526 1.53444 6.75532 2.07496 5.15725 3.21659C3.55917 4.35822 2.41565 6.02759 1.92846 7.93017C1.44126 9.83275 1.64169 11.8463 2.49438 13.6155Z',
-  'M6.66797 10H6.6763',
-  'M10 10H10.0083',
-  'M13.332 10H13.3404',
+/** Handset glyph. In Spanish «cobertura» is what a signal has, so it labels that row. */
+const SIGNAL_PATHS = [
+  'M11.528 13.8041C11.7001 13.8831 11.894 13.9012 12.0777 13.8553C12.2615 13.8094 12.4241 13.7022 12.5388 13.5516L12.8346 13.1641C12.9899 12.9571 13.1912 12.7891 13.4226 12.6734C13.654 12.5576 13.9092 12.4974 14.168 12.4974H16.668C17.11 12.4974 17.5339 12.673 17.8465 12.9856C18.159 13.2981 18.3346 13.722 18.3346 14.1641V16.6641C18.3346 17.1061 18.159 17.53 17.8465 17.8426C17.5339 18.1551 17.11 18.3307 16.668 18.3307C12.6897 18.3307 8.87441 16.7504 6.06137 13.9373C3.24832 11.1243 1.66797 7.30898 1.66797 3.33073C1.66797 2.8887 1.84356 2.46478 2.15612 2.15222C2.46868 1.83966 2.89261 1.66406 3.33464 1.66406H5.83464C6.27666 1.66406 6.70059 1.83966 7.01315 2.15222C7.32571 2.46478 7.5013 2.8887 7.5013 3.33073V5.83073C7.5013 6.08947 7.44106 6.34466 7.32535 6.57609C7.20963 6.80751 7.04163 7.00882 6.83464 7.16406L6.44464 7.45656C6.29165 7.57338 6.18382 7.73955 6.13946 7.92685C6.0951 8.11416 6.11695 8.31104 6.2013 8.48406C7.3402 10.7973 9.21332 12.6681 11.528 13.8041Z',
 ] as const;
 
-const PLANE_PATHS = [
-  'M12.1145 18.0711C12.1461 18.15 12.2012 18.2174 12.2722 18.2641C12.3432 18.3108 12.4269 18.3347 12.5118 18.3325C12.5968 18.3303 12.6791 18.3022 12.7477 18.2519C12.8162 18.2016 12.8677 18.1316 12.8953 18.0511L18.312 2.21781C18.3386 2.14397 18.3437 2.06406 18.3266 1.98744C18.3096 1.91081 18.271 1.84064 18.2155 1.78513C18.16 1.72961 18.0898 1.69106 18.0132 1.67397C17.9366 1.65688 17.8566 1.66197 17.7828 1.68864L1.94947 7.10531C1.86905 7.13289 1.79899 7.18441 1.7487 7.25295C1.69841 7.3215 1.67028 7.40379 1.66811 7.48878C1.66593 7.57377 1.6898 7.65739 1.73652 7.72842C1.78324 7.79945 1.85057 7.85448 1.92947 7.88614L8.53781 10.5361C8.74671 10.6198 8.93652 10.7449 9.09578 10.9038C9.25504 11.0628 9.38046 11.2524 9.46447 11.4611L12.1145 18.0711Z',
-  'M18.2104 1.78906L9.09375 10.9049',
-] as const;
-
+/** Handshake: whose interest the answer serves. It labels «Sesgo». */
 const HANDSHAKE_PATHS = [
   'M9.16797 14.1693L10.8346 15.8359C10.9988 16.0001 11.1937 16.1303 11.4081 16.2191C11.6226 16.308 11.8525 16.3537 12.0846 16.3537C12.3168 16.3537 12.5467 16.308 12.7611 16.2191C12.9756 16.1303 13.1705 16.0001 13.3346 15.8359C13.4988 15.6718 13.629 15.4769 13.7178 15.2624C13.8067 15.048 13.8524 14.8181 13.8524 14.5859C13.8524 14.3538 13.8067 14.1239 13.7178 13.9094C13.629 13.695 13.4988 13.5001 13.3346 13.3359',
   'M11.6688 11.6671L13.7521 13.7504C14.0837 14.0819 14.5333 14.2682 15.0021 14.2682C15.471 14.2682 15.9206 14.0819 16.2521 13.7504C16.5837 13.4189 16.7699 12.9693 16.7699 12.5004C16.7699 12.0316 16.5837 11.5819 16.2521 11.2504L13.0188 8.01709C12.5501 7.54892 11.9146 7.28595 11.2521 7.28595C10.5896 7.28595 9.95423 7.54892 9.48548 8.01709L8.75214 8.75042C8.42062 9.08194 7.97098 9.26819 7.50214 9.26819C7.0333 9.26819 6.58366 9.08194 6.25214 8.75042C5.92062 8.4189 5.73438 7.96926 5.73438 7.50042C5.73438 7.03158 5.92062 6.58194 6.25214 6.25042L8.59381 3.90875C9.35401 3.15054 10.3454 2.66755 11.411 2.53623C12.4766 2.40491 13.5556 2.63278 14.4771 3.18375L14.8688 3.41709C15.2236 3.63124 15.6455 3.70552 16.0521 3.62542L17.5021 3.33375',
@@ -72,20 +110,23 @@ const HANDSHAKE_PATHS = [
   'M2.5 3.33594H9.16667',
 ] as const;
 
-/** Handset glyph. In Spanish «cobertura» is what a signal has, so it labels that row. */
-const SIGNAL_PATHS = [
-  'M11.528 13.8041C11.7001 13.8831 11.894 13.9012 12.0777 13.8553C12.2615 13.8094 12.4241 13.7022 12.5388 13.5516L12.8346 13.1641C12.9899 12.9571 13.1912 12.7891 13.4226 12.6734C13.654 12.5576 13.9092 12.4974 14.168 12.4974H16.668C17.11 12.4974 17.5339 12.673 17.8465 12.9856C18.159 13.2981 18.3346 13.722 18.3346 14.1641V16.6641C18.3346 17.1061 18.159 17.53 17.8465 17.8426C17.5339 18.1551 17.11 18.3307 16.668 18.3307C12.6897 18.3307 8.87441 16.7504 6.06137 13.9373C3.24832 11.1243 1.66797 7.30898 1.66797 3.33073C1.66797 2.8887 1.84356 2.46478 2.15612 2.15222C2.46868 1.83966 2.89261 1.66406 3.33464 1.66406H5.83464C6.27666 1.66406 6.70059 1.83966 7.01315 2.15222C7.32571 2.46478 7.5013 2.8887 7.5013 3.33073V5.83073C7.5013 6.08947 7.44106 6.34466 7.32535 6.57609C7.20963 6.80751 7.04163 7.00882 6.83464 7.16406L6.44464 7.45656C6.29165 7.57338 6.18382 7.73955 6.13946 7.92685C6.0951 8.11416 6.11695 8.31104 6.2013 8.48406C7.3402 10.7973 9.21332 12.6681 11.528 13.8041Z',
+/** Paper plane: the data leaving for your own system. It labels «Salida». */
+const PLANE_PATHS = [
+  'M12.1145 18.0711C12.1461 18.15 12.2012 18.2174 12.2722 18.2641C12.3432 18.3108 12.4269 18.3347 12.5118 18.3325C12.5968 18.3303 12.6791 18.3022 12.7477 18.2519C12.8162 18.2016 12.8677 18.1316 12.8953 18.0511L18.312 2.21781C18.3386 2.14397 18.3437 2.06406 18.3266 1.98744C18.3096 1.91081 18.271 1.84064 18.2155 1.78513C18.16 1.72961 18.0898 1.69106 18.0132 1.67397C17.9366 1.65688 17.8566 1.66197 17.7828 1.68864L1.94947 7.10531C1.86905 7.13289 1.79899 7.18441 1.7487 7.25295C1.69841 7.3215 1.67028 7.40379 1.66811 7.48878C1.66593 7.57377 1.6898 7.65739 1.73652 7.72842C1.78324 7.79945 1.85057 7.85448 1.92947 7.88614L8.53781 10.5361C8.74671 10.6198 8.93652 10.7449 9.09578 10.9038C9.25504 11.0628 9.38046 11.2524 9.46447 11.4611L12.1145 18.0711Z',
+  'M18.2104 1.78906L9.09375 10.9049',
 ] as const;
 
-const WARNING_PATH =
-  'M19.5099 5.85L13.5699 2.42C12.5999 1.86 11.3999 1.86 10.4199 2.42L4.48992 5.85C3.51992 6.41 2.91992 7.45 2.91992 8.58V15.42C2.91992 16.54 3.51992 17.58 4.48992 18.15L10.4299 21.58C11.3999 22.14 12.5999 22.14 13.5799 21.58L19.5199 18.15C20.4899 17.59 21.0899 16.55 21.0899 15.42V8.58C21.0799 7.45 20.4799 6.42 19.5099 5.85ZM11.2499 7.75C11.2499 7.34 11.5899 7 11.9999 7C12.4099 7 12.7499 7.34 12.7499 7.75V13C12.7499 13.41 12.4099 13.75 11.9999 13.75C11.5899 13.75 11.2499 13.41 11.2499 13V7.75ZM12.9199 16.63C12.8699 16.75 12.7999 16.86 12.7099 16.96C12.5199 17.15 12.2699 17.25 11.9999 17.25C11.8699 17.25 11.7399 17.22 11.6199 17.17C11.4899 17.12 11.3899 17.05 11.2899 16.96C11.1999 16.86 11.1299 16.75 11.0699 16.63C11.0199 16.51 10.9999 16.38 10.9999 16.25C10.9999 15.99 11.0999 15.73 11.2899 15.54C11.3899 15.45 11.4899 15.38 11.6199 15.33C11.9899 15.17 12.4299 15.26 12.7099 15.54C12.7999 15.64 12.8699 15.74 12.9199 15.87C12.9699 15.99 12.9999 16.12 12.9999 16.25C12.9999 16.38 12.9699 16.51 12.9199 16.63Z';
+/** Speech bubble, for the free-plan line in the panel footer. */
+const BUBBLE_PATHS = [
+  'M2.49438 13.6155C2.61691 13.9246 2.64419 14.2633 2.57271 14.588L1.68521 17.3296C1.65661 17.4687 1.66401 17.6127 1.70669 17.7481C1.74937 17.8835 1.82593 18.0057 1.9291 18.1032C2.03227 18.2007 2.15864 18.2702 2.29621 18.3052C2.43379 18.3401 2.57801 18.3394 2.71521 18.303L5.55938 17.4713C5.86581 17.4105 6.18315 17.4371 6.47521 17.548C8.2547 18.379 10.2705 18.5548 12.167 18.0444C14.0635 17.534 15.7188 16.3702 16.8408 14.7583C17.9628 13.1464 18.4795 11.19 18.2996 9.23426C18.1198 7.27855 17.255 5.4492 15.8578 4.06897C14.4606 2.68874 12.6208 1.84634 10.663 1.69039C8.70526 1.53444 6.75532 2.07496 5.15725 3.21659C3.55917 4.35822 2.41565 6.02759 1.92846 7.93017C1.44126 9.83275 1.64169 11.8463 2.49438 13.6155Z',
+  'M6.66797 10H6.6763',
+  'M10 10H10.0083',
+  'M13.332 10H13.3404',
+] as const;
 
-type ComparisonRow = {
-  label: string;
-  us: string;
-  them: string;
-  paths: readonly string[];
-};
+/** Shield with a raised mark: the caveat on the portal's side of every row. */
+const CAVEAT_PATH =
+  'M19.5099 5.85L13.5699 2.42C12.5999 1.86 11.3999 1.86 10.4199 2.42L4.48992 5.85C3.51992 6.41 2.91992 7.45 2.91992 8.58V15.42C2.91992 16.54 3.51992 17.58 4.48992 18.15L10.4299 21.58C11.3999 22.14 12.5999 22.14 13.5799 21.58L19.5199 18.15C20.4899 17.59 21.0899 16.55 21.0899 15.42V8.58C21.0799 7.45 20.4799 6.42 19.5099 5.85ZM11.2499 7.75C11.2499 7.34 11.5899 7 11.9999 7C12.4099 7 12.7499 7.34 12.7499 7.75V13C12.7499 13.41 12.4099 13.75 11.9999 13.75C11.5899 13.75 11.2499 13.41 11.2499 13V7.75ZM12.9199 16.63C12.8699 16.75 12.7999 16.86 12.7099 16.96C12.5199 17.15 12.2699 17.25 11.9999 17.25C11.8699 17.25 11.7399 17.22 11.6199 17.17C11.4899 17.12 11.3899 17.05 11.2899 16.96C11.1999 16.86 11.1299 16.75 11.0699 16.63C11.0199 16.51 10.9999 16.38 10.9999 16.25C10.9999 15.99 11.0999 15.73 11.2899 15.54C11.3899 15.45 11.4899 15.38 11.6199 15.33C11.9899 15.17 12.4299 15.26 12.7099 15.54C12.7999 15.64 12.8699 15.74 12.9199 15.87C12.9699 15.99 12.9999 16.12 12.9999 16.25C12.9999 16.38 12.9699 16.51 12.9199 16.63Z';
 
 /**
  * One drawing per entry of the copy tuple it is paired with. Mapping over a
@@ -94,23 +135,20 @@ type ComparisonRow = {
  */
 type IconsFor<T extends readonly unknown[]> = { readonly [K in keyof T]: readonly string[] };
 
-/** One drawing per row of `COMPARISON.rows`, in the same order. */
-const ROW_PATHS: IconsFor<typeof COMPARISON.rows> = [
+const ROW_PATHS: IconsFor<typeof COPY.rows> = [
   NETWORK_PATHS,
   GEM_PATHS,
-  CHIP_PATHS,
   CUBE_PATHS,
   SIGNAL_PATHS,
-  PLANE_PATHS,
   HANDSHAKE_PATHS,
+  PLANE_PATHS,
 ];
 
-const ROWS: readonly ComparisonRow[] = COMPARISON.rows.map((row, index) => ({
-  ...row,
-  paths: ROW_PATHS[index],
-}));
+type Row = { label: string; us: string; them: string; paths: readonly string[] };
 
-/** Bottom cards: 24x24 outline icons drawn in the orange accent. */
+const ROWS: readonly Row[] = COPY.rows.map((row, index) => ({ ...row, paths: ROW_PATHS[index] }));
+
+/** 24x24 outline icons for the three closing cards, in the order of the copy. */
 const PERK_PATHS: IconsFor<typeof COMPARISON.perks> = [
   [
     'M11 20H2',
@@ -137,30 +175,92 @@ const PERK_PATHS: IconsFor<typeof COMPARISON.perks> = [
 
 const PERKS = COMPARISON.perks.map((perk, index) => ({ ...perk, paths: PERK_PATHS[index] }));
 
-const TABLE_ROW_CLASS =
-  'relative grid grid-cols-3 px-12 *:data-[slot=tabel-cell]:flex *:data-[slot=tabel-cell]:items-center *:data-[slot=tabel-cell]:gap-3 *:data-[slot=tabel-cell]:py-8';
+/* ------------------------------------------------------------------ motion */
 
-const DIVIDER_CLASS = 'bg-natural-black/7 h-px w-full';
+const EASE_OUT = 'easeOut';
+/** Expo-out: long tail, no overshoot — things settle instead of arriving. */
+const EASE_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-const VALUE_LABEL_CLASS = '-tracking-sm text-lg leading-4.5 font-medium';
+const HEADING_WORDS = COPY.heading.split(' ');
+
+const headerVariants: Variants = {
+  hidden: {},
+  show: { transition: { delayChildren: 0.05, staggerChildren: 0.05 } },
+};
+
+const fadeUpVariants: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_OUT } },
+};
+
+const wordVariants: Variants = {
+  hidden: { y: '110%' },
+  show: { y: '0%', transition: { duration: 0.65, ease: EASE_EXPO } },
+};
+
+const ruleVariants: Variants = {
+  hidden: { scaleX: 0 },
+  show: { scaleX: 1, transition: { duration: 0.8, ease: EASE_OUT } },
+};
+
+/** Rows cascade top to bottom; inside a row the cells follow the argument. */
+const tableVariants: Variants = {
+  hidden: {},
+  show: { transition: { delayChildren: 0.12, staggerChildren: 0.07 } },
+};
+
+const rowVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
+const cellVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE_OUT } },
+};
+
+/** The tick is stroked on, so each row reads as a verdict being signed. */
+const drawVariants: Variants = {
+  hidden: { pathLength: 0, opacity: 0 },
+  show: { pathLength: 1, opacity: 1, transition: { duration: 0.55, ease: EASE_OUT } },
+};
+
+const capVariants: Variants = {
+  hidden: { scaleX: 0 },
+  show: { scaleX: 1, transition: { duration: 0.7, ease: EASE_EXPO } },
+};
+
+/* ------------------------------------------------------------------ layout */
 
 /**
- * Base UI reads the open panel height from this variable; the Radix port drives
- * the height animation itself, so `auto` keeps the inner wrapper self-sizing.
+ * One source of truth for the three-column rhythm. The spine is positioned off
+ * the same two values, so it can never drift from the column it frames — and the
+ * two compared columns are exactly equal, which is the whole point.
  */
-const ACCORDION_PANEL_VARS = {
-  '--accordion-panel-height': 'auto',
-  '--accordion-panel-width': 'auto',
+const GRID_VARS = {
+  '--cd-col-label': '26%',
+  '--cd-col-side': '37%',
 } as React.CSSProperties;
+
+const ROW_STYLE: React.CSSProperties = {
+  gridTemplateColumns: 'var(--cd-col-label) var(--cd-col-side) var(--cd-col-side)',
+};
+
+const VALUE_CLASS = 'text-muted-foreground -tracking-xs text-base leading-6';
+
+/** Accessible name for the grid, derived from the two column heads. */
+const TABLE_LABEL = `${BRAND.name} frente a ${COPY.them.toLowerCase()}`;
+
+/* ------------------------------------------------------------------- parts */
 
 function LabelIcon({ paths }: { paths: readonly string[] }) {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden focusable="false">
       {paths.map((d, index) => (
         <path
           key={index}
           d={d}
-          stroke="black"
+          stroke="currentColor"
           strokeWidth="1.25"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -170,251 +270,450 @@ function LabelIcon({ paths }: { paths: readonly string[] }) {
   );
 }
 
-function CheckIcon() {
+/** Cobalt ring with a tick that draws itself in. Ours. */
+function CheckMark() {
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="20" height="20" rx="10" fill="#12A113" />
-      <path
-        d="M14 7L8.5 12.5L6 10"
-        stroke="white"
-        strokeWidth="1.5"
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      className="text-primary shrink-0"
+      aria-hidden
+      focusable="false"
+    >
+      <circle cx="10" cy="10" r="9.15" stroke="currentColor" strokeOpacity={0.32} strokeWidth="1.2" />
+      <motion.path
+        d="M14 7L8.6 12.4L6 9.9"
+        stroke="currentColor"
+        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
+        variants={drawVariants}
       />
     </svg>
   );
 }
 
-function WarningIcon() {
+/** The same shield as before, demoted to the quiet ink. Theirs. */
+function CaveatMark() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d={WARNING_PATH} fill="#FFBC00" />
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="text-subtle shrink-0"
+      aria-hidden
+      focusable="false"
+    >
+      <path d={CAVEAT_PATH} fill="currentColor" />
     </svg>
   );
 }
 
 /**
- * Cardeep mark next to the "Con Cardeep" column. The desktop table always scales
- * the mark up; the mobile accordion only does so from `lg` upwards.
+ * The cobalt spine framing the Cardeep column.
+ *
+ * It fills with the reader: `scrollYProgress` over the panel drives `scaleY`, so
+ * the column completes exactly as the last row is read. That is the argument in
+ * one gesture — a portal shows a slice, this one fills in.
  */
-function LogoLink({ scaleClassName }: { scaleClassName: string }) {
+function ColumnSpine({ target }: { target: React.RefObject<HTMLDivElement | null> }) {
+  const reduced = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target,
+    offset: ['start 0.9', 'end 0.55'],
+  });
+  const scaleY = useTransform(scrollYProgress, [0, 1], [0.06, 1]);
+
   return (
-    <a className={`size-5 ${scaleClassName}`} href="/" aria-label={BRAND.name}>
-      {/* The table sits on the light page, so the dark mark. */}
-      <Logo tone="dark" className={`size-5 ${scaleClassName}`} title={BRAND.name} />
-    </a>
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0 z-0"
+      style={{ left: 'var(--cd-col-label)', width: 'var(--cd-col-side)' }}
+    >
+      <motion.div
+        className="absolute inset-0 origin-top"
+        style={{
+          borderLeft: '1px solid var(--cd-line)',
+          borderRight: '1px solid var(--cd-line)',
+          background: 'linear-gradient(180deg, var(--cd-glass-sheen) 0%, transparent 76%)',
+          scaleY: reduced ? 1 : scaleY,
+        }}
+      />
+      <motion.div
+        className="bg-primary absolute inset-x-0 top-0 h-0.5 origin-left"
+        variants={capVariants}
+      />
+    </div>
   );
 }
 
-function DesktopRow({ row }: { row: ComparisonRow }) {
+function ComparisonRow({ row }: { row: Row }) {
   return (
-    <div className={TABLE_ROW_CLASS}>
-      <div data-slot="tabel-cell" className="relative">
-        <div className="absolute inset-0 -left-8 w-8/10 glass-quiet" />
-        <span className="z-10">
+    <motion.div
+      role="row"
+      variants={rowVariants}
+      className="group/row border-line relative grid border-t"
+      style={ROW_STYLE}
+    >
+      {/* Hover wash and left marker: they say which line you are reading. The
+          wash is the glass sheen, so it tints toward cobalt in both themes
+          instead of bleaching the row white on the light one. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/row:opacity-100"
+        style={{ background: 'var(--cd-glass-sheen)' }}
+      />
+      <span
+        aria-hidden
+        className="bg-primary pointer-events-none absolute inset-y-0 left-0 w-0.5 origin-center scale-y-0 transition-transform duration-300 group-hover/row:scale-y-100"
+      />
+
+      <motion.div
+        role="rowheader"
+        variants={cellVariants}
+        className="relative flex items-start gap-3 py-5 pr-6 pl-8"
+      >
+        <span className="text-muted-foreground mt-px transition-colors duration-300 group-hover/row:text-primary">
           <LabelIcon paths={row.paths} />
         </span>
-        <span className="-tracking-sm z-10 text-lg leading-4.5 font-medium">{row.label}</span>
-      </div>
-      <div data-slot="tabel-cell">
-        <CheckIcon />
-        <span className={VALUE_LABEL_CLASS}>{row.us}</span>
-      </div>
-      <div data-slot="tabel-cell">
-        <WarningIcon />
-        <span className={VALUE_LABEL_CLASS}>{row.them}</span>
-      </div>
-    </div>
-  );
-}
+        <span className="text-foreground -tracking-sm text-base leading-6 font-medium">
+          {row.label}
+        </span>
+      </motion.div>
 
-function DesktopTable() {
-  return (
-    <div className="glass hidden w-full rounded-3xl lg:block">
-      <div className="w-full">
-        <div className={TABLE_ROW_CLASS}>
-          <div data-slot="tabel-cell" className="relative">
-            <div className="absolute inset-0 top-4 -left-8 w-8/10 rounded-t-3xl glass-quiet" />
-          </div>
-          <div data-slot="tabel-cell">
-            <LogoLink scaleClassName="scale-125" />
-            <span className={VALUE_LABEL_CLASS}>{COMPARISON.us}</span>
-          </div>
-          <div data-slot="tabel-cell">
-            <span className="-tracking-sm text-muted-foreground text-lg leading-4.5 font-medium">
-              {COMPARISON.them}
-            </span>
-          </div>
-        </div>
-        <div className={DIVIDER_CLASS} />
-        {ROWS.map((row) => (
-          <Fragment key={row.label}>
-            <DesktopRow row={row} />
-            <div className={DIVIDER_CLASS} />
-          </Fragment>
-        ))}
-        <div className={TABLE_ROW_CLASS}>
-          <div data-slot="tabel-cell" className="relative">
-            <div className="absolute inset-0 bottom-4 -left-8 w-8/10 rounded-b-3xl glass-quiet" />
-            <span className="z-10">
-              <LabelIcon paths={BUBBLE_PATHS} />
-            </span>
-            <span className="-tracking-sm z-10 text-lg leading-4.5 font-medium">
-              {COMPARISON.freeLabel}
-            </span>
-          </div>
-          <div data-slot="tabel-cell">
-            <Button avatar="/shots/mark.webp">{COMPARISON.primaryCta}</Button>
-          </div>
-          <div data-slot="tabel-cell">
-            <Button
-              className="**:data-[slot=button-box]:bg-gray-500 **:[span]:text-muted-foreground"
-              avatar="/shots/mark.webp"
-            >
-              {COMPARISON.secondaryCta}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+      <motion.div
+        role="cell"
+        variants={cellVariants}
+        className="relative flex items-start gap-3 px-6 py-5"
+      >
+        <span className="mt-px">
+          <CheckMark />
+        </span>
+        <span className="text-foreground -tracking-xs text-base leading-6">{row.us}</span>
+      </motion.div>
+
+      <motion.div
+        role="cell"
+        variants={cellVariants}
+        className="relative flex items-start gap-3 py-5 pr-8 pl-6"
+      >
+        <span className="mt-px">
+          <CaveatMark />
+        </span>
+        <span className={VALUE_CLASS}>{row.them}</span>
+      </motion.div>
+    </motion.div>
   );
 }
 
 /**
- * Below `lg` the three-column table collapses into one accordion item per row,
- * with the first item open by default.
+ * Free-plan line and the two calls to action. Inside the desktop table it is the
+ * last row and needs its rule; as its own card on mobile there is nothing above
+ * it to divide from, so the rule is a prop rather than an assumption.
  */
-function MobileAccordion() {
+function PanelFooter({ divided = false }: { divided?: boolean }) {
   return (
-    <div className="block w-full lg:hidden">
-      <div className="w-full">
-        <Accordion.Root
-          type="single"
-          collapsible
-          defaultValue={ROWS[0].label}
-          dir="ltr"
-          data-slot="accordion"
-          className="flex w-full flex-col gap-4"
-        >
-          {ROWS.map((row) => (
-            <Accordion.Item
-              key={row.label}
-              value={row.label}
-              data-slot="accordion-item"
-              className="glass rounded-3xl p-6"
-            >
-              <Accordion.Header className="flex">
-                <Accordion.Trigger
-                  data-slot="accordion-trigger"
-                  className="group/accordion-trigger relative flex flex-1 justify-between rounded-lg border border-transparent text-left text-sm font-medium transition-all outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:after:border-ring aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-6 **:data-[slot=accordion-trigger-icon]:text-muted-foreground items-center py-0"
-                >
-                  <div className="relative flex items-center gap-3">
-                    <span className="z-10">
-                      <LabelIcon paths={row.paths} />
-                    </span>
-                    <span className="-tracking-sm z-10 text-lg leading-4.5 font-medium">
-                      {row.label}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    aria-hidden="true"
-                    data-slot="accordion-trigger-icon"
-                    className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
-                  />
-                  <ChevronUp
-                    aria-hidden="true"
-                    data-slot="accordion-trigger-icon"
-                    className="pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline"
-                  />
-                </Accordion.Trigger>
-              </Accordion.Header>
-              <Accordion.Content
-                data-slot="accordion-content"
-                style={ACCORDION_PANEL_VARS}
-                className="overflow-hidden text-sm data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
-              >
-                <div className="h-(--accordion-panel-height) pt-0 pb-2.5 data-ending-style:h-0 data-starting-style:h-0 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4 mt-6 flex flex-col gap-6">
-                  <div className={DIVIDER_CLASS} />
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <LogoLink scaleClassName="lg:scale-125" />
-                      <span className={VALUE_LABEL_CLASS}>{COMPARISON.us}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <CheckIcon />
-                      <span className={VALUE_LABEL_CLASS}>{row.us}</span>
-                    </div>
-                  </div>
-                  <div className={DIVIDER_CLASS} />
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="-tracking-sm text-muted-foreground text-lg leading-4.5 font-medium">
-                        {COMPARISON.them}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <WarningIcon />
-                      <span className={VALUE_LABEL_CLASS}>{row.them}</span>
-                    </div>
-                  </div>
-                </div>
-              </Accordion.Content>
-            </Accordion.Item>
-          ))}
-        </Accordion.Root>
+    <motion.div
+      variants={fadeUpVariants}
+      className={cn(
+        // px-5 matches the mobile cards; from md it matches the table's gutter.
+        'flex flex-col gap-5 px-5 py-5 md:flex-row md:items-center md:justify-between md:px-8 md:py-6',
+        divided && 'border-line border-t',
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-primary mt-0.5">
+          <LabelIcon paths={BUBBLE_PATHS} />
+        </span>
+        <div className="flex flex-col gap-1">
+          <span className="text-foreground -tracking-sm text-base leading-6 font-medium">
+            {COMPARISON.freeLabel}
+          </span>
+          <span className="text-muted-foreground -tracking-xs text-sm leading-5">
+            {COPY.footerNote}
+          </span>
+        </div>
       </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button avatar="/brand/cardeep-mark.png">{COMPARISON.primaryCta}</Button>
+        <a
+          href="#precios"
+          className="glass-chip text-foreground -tracking-xs inline-flex items-center rounded-lg px-4 py-2.5 text-sm font-medium transition-transform duration-200 hover:-translate-y-0.5"
+        >
+          {COMPARISON.secondaryCta}
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
+function DesktopTable() {
+  const panel = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
+
+  return (
+    <motion.div
+      ref={panel}
+      className="hidden lg:block"
+      initial={reduced ? false : { opacity: 0, y: 26 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{ duration: 0.7, ease: EASE_OUT }}
+    >
+      <Glass radius={24} elevated interactive>
+        {/* A tall panel would never reach `amount: 0.3`, so the cascade is armed
+            as soon as its top quarter is on screen and then paced by the stagger. */}
+        <motion.div
+          className="relative"
+          style={GRID_VARS}
+          variants={tableVariants}
+          initial={reduced ? 'show' : 'hidden'}
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+        >
+          <ColumnSpine target={panel} />
+
+          <div className="relative z-[1]">
+            {/* The layout is a grid, so the table semantics have to be declared:
+                without them the comparison reaches a screen reader as six
+                unrelated sentences. */}
+            <div role="table" aria-label={TABLE_LABEL}>
+              <motion.div role="row" variants={rowVariants} className="grid" style={ROW_STYLE}>
+                <motion.div
+                  role="columnheader"
+                  variants={cellVariants}
+                  className="py-5 pr-6 pl-8"
+                >
+                  {/* `text-subtle` would drop this label under 3:1 on the light
+                      panel, so the column head takes the muted ink instead. */}
+                  <span className="font-dm-mono text-muted-foreground -tracking-xs text-xs uppercase">
+                    {COPY.criterion}
+                  </span>
+                </motion.div>
+                <motion.div
+                  role="columnheader"
+                  variants={cellVariants}
+                  className="flex items-center gap-2.5 px-6 py-5"
+                >
+                  <Logo className="text-primary size-5" />
+                  <span className="text-foreground -tracking-sm text-base leading-6 font-semibold">
+                    {BRAND.name}
+                  </span>
+                </motion.div>
+                <motion.div
+                  role="columnheader"
+                  variants={cellVariants}
+                  className="flex items-center py-5 pr-8 pl-6"
+                >
+                  <span className="text-muted-foreground -tracking-sm text-base leading-6 font-medium">
+                    {COPY.them}
+                  </span>
+                </motion.div>
+              </motion.div>
+
+              {ROWS.map((row) => (
+                <ComparisonRow key={row.label} row={row} />
+              ))}
+            </div>
+
+            <PanelFooter divided />
+          </div>
+        </motion.div>
+      </Glass>
+    </motion.div>
+  );
+}
+
+/**
+ * Below `lg` the table becomes one card per criterion. Both verdicts stay
+ * visible — hiding half the argument behind an accordion would be hiding the
+ * half that closes the sale.
+ */
+function MobileCards() {
+  const reduced = useReducedMotion();
+
+  return (
+    <div className="flex flex-col gap-3 lg:hidden">
+      {ROWS.map((row) => (
+        // Each card carries its own viewport trigger, so the cascade is the
+        // reader's own scroll. A `transition` prop here would replace the one
+        // inside `rowVariants` and silently drop the stagger.
+        <motion.div
+          key={row.label}
+          variants={rowVariants}
+          initial={reduced ? 'show' : 'hidden'}
+          whileInView="show"
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          <Glass radius={20}>
+            <div className="flex flex-col gap-4 p-5">
+              <motion.div variants={cellVariants} className="flex items-center gap-3">
+                <span className="text-primary">
+                  <LabelIcon paths={row.paths} />
+                </span>
+                <span className="text-foreground -tracking-sm text-base leading-6 font-medium">
+                  {row.label}
+                </span>
+              </motion.div>
+
+              {/* The cobalt wash stands in for the desktop spine: same claim,
+                  same colour, one column narrower. */}
+              <motion.div
+                variants={cellVariants}
+                className="border-line flex flex-col gap-2.5 rounded-xl border p-4"
+                style={{
+                  background: 'linear-gradient(120deg, var(--cd-glass-sheen), transparent 70%)',
+                }}
+              >
+                <span className="text-primary -tracking-xs text-sm leading-5 font-semibold">
+                  {BRAND.name}
+                </span>
+                <div className="flex items-start gap-3">
+                  <span className="mt-px">
+                    <CheckMark />
+                  </span>
+                  <span className="text-foreground -tracking-xs text-base leading-6">{row.us}</span>
+                </div>
+              </motion.div>
+
+              <motion.div variants={cellVariants} className="flex flex-col gap-2.5 px-4">
+                <span className="text-muted-foreground -tracking-xs text-sm leading-5 font-medium">
+                  {COPY.them}
+                </span>
+                <div className="flex items-start gap-3">
+                  <span className="mt-px">
+                    <CaveatMark />
+                  </span>
+                  <span className={VALUE_CLASS}>{row.them}</span>
+                </div>
+              </motion.div>
+            </div>
+          </Glass>
+        </motion.div>
+      ))}
+
+      <motion.div
+        variants={tableVariants}
+        initial={reduced ? 'show' : 'hidden'}
+        whileInView="show"
+        viewport={{ once: true, amount: 0.3 }}
+      >
+        <Glass radius={20}>
+          <PanelFooter />
+        </Glass>
+      </motion.div>
+    </div>
+  );
+}
+
+function Perks() {
+  const reduced = useReducedMotion();
+
+  return (
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      {PERKS.map((perk, index) => (
+        <motion.div
+          key={perk.title}
+          className="min-w-0"
+          initial={reduced ? false : { opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.55, delay: index * 0.08, ease: EASE_OUT }}
+          whileHover={reduced ? undefined : { y: -3 }}
+        >
+          <Glass radius={20} interactive className="h-full">
+            <div className="flex h-full flex-col gap-3 px-6 py-7">
+              <span className="text-primary">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
+                  {perk.paths.map((d, pathIndex) => (
+                    <path
+                      key={pathIndex}
+                      d={d}
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                </svg>
+              </span>
+              <span className="text-foreground -tracking-sm text-lg leading-7 font-medium">
+                {perk.title}
+              </span>
+              <span className="text-muted-foreground -tracking-xs text-base leading-6">
+                {perk.body}
+              </span>
+            </div>
+          </Glass>
+        </motion.div>
+      ))}
     </div>
   );
 }
 
 export function Comparison() {
+  const reduced = useReducedMotion();
+
   return (
     <section className="w-full">
-      <Container className="flex flex-col gap-15 py-20 md:py-30">
-        <div className="flex flex-col gap-6">
-          <h2 className="text-heading text-left text-4xl font-semibold tracking-tight md:text-5xl">
-            {COMPARISON.heading}
-          </h2>
-          <div className="block lg:hidden">
-            <Button avatar="/shots/mark.webp">{COMPARISON.primaryCta}</Button>
-          </div>
-        </div>
-        <div className="flex flex-col gap-6">
-          <DesktopTable />
-          <MobileAccordion />
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            {PERKS.map((perk) => (
-              <div
-                key={perk.title}
-                className="glass flex lg:items-center flex-col gap-3 rounded-3xl px-6 py-8"
-              >
-                <div>
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {perk.paths.map((d, index) => (
-                      <path
-                        key={index}
-                        d={d}
-                        stroke="#FF6200"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    ))}
-                  </svg>
-                </div>
-                <span className="font-medium text-xl leading-7 -tracking-sm">{perk.title}</span>
-                <span className="-tracking-xs text-base leading-6 font-medium lg:text-center text-muted-foreground">
-                  {perk.body}
+      <Container className="flex flex-col gap-12 py-20 md:gap-16 md:py-30">
+        <motion.div
+          className="flex flex-col gap-8"
+          variants={headerVariants}
+          initial={reduced ? 'show' : 'hidden'}
+          whileInView="show"
+          viewport={{ once: true, amount: 0.4 }}
+        >
+          <div className="flex max-w-3xl flex-col gap-4">
+            <motion.span
+              className="font-dm-mono text-muted-foreground -tracking-xs text-xs uppercase"
+              variants={fadeUpVariants}
+            >
+              {COPY.kicker}
+            </motion.span>
+
+            <h2 className="text-heading -tracking-lg text-4xl font-semibold text-balance md:text-5xl">
+              {HEADING_WORDS.map((word, index) => (
+                // The clip box carries bottom padding so descenders survive it,
+                // and an equal negative margin so the line height is unchanged.
+                <span
+                  key={`${word}-${index}`}
+                  className="mr-[0.26em] -mb-[0.16em] inline-block overflow-hidden pb-[0.16em] align-bottom"
+                >
+                  <motion.span className="inline-block" variants={wordVariants}>
+                    {word}
+                  </motion.span>
                 </span>
-              </div>
-            ))}
+              ))}
+            </h2>
+
+            <motion.p
+              className="text-muted-foreground -tracking-xs max-w-xl text-base leading-6 md:text-lg md:leading-7"
+              variants={fadeUpVariants}
+            >
+              {COPY.standfirst}
+            </motion.p>
           </div>
+
+          {/* Section rule: cobalt at the origin, dissolving into the hairline. */}
+          <motion.div
+            aria-hidden
+            className="h-px w-full origin-left"
+            style={{
+              background:
+                'linear-gradient(90deg, var(--cd-accent) 0%, var(--cd-line) 18%, var(--cd-line) 100%)',
+            }}
+            variants={ruleVariants}
+          />
+        </motion.div>
+
+        <div className="flex flex-col gap-3">
+          <DesktopTable />
+          <MobileCards />
+          <Perks />
         </div>
       </Container>
     </section>
