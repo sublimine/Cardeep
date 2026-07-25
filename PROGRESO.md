@@ -3770,3 +3770,28 @@
   NUNCA habrían cazado el bug #2 — solo prueban la respuesta HTTP del servidor, no la
   ejecución del bundle JS en un motor de URL real. Verificar "en vivo" el servidor no basta
   cuando el bug vive en el cliente.
+
+### Addendum 2026-07-25 (2) — dominio resuelto, servidor Oracle en curso
+- Workflow de 5 agentes en paralelo decidió la infraestructura €0: **Oracle Cloud Always
+  Free, shape Ampere A1 (ARM, 2 OCPU/12GB RAM tras el recorte silencioso de Oracle de
+  junio-2026 — antes eran 4 OCPU/24GB), región Frankfurt** (menor fricción de "out of host
+  capacity" que EEUU) + **DuckDNS** para el dominio. Verificado con evidencia, no asumido:
+  las imágenes oficiales de Openship son multi-arch amd64+arm64; los 11 paquetes
+  C-extension de `requirements.txt` (incluido `curl_cffi`, mi sospecha inicial de pin
+  obsoleto quedó refutada leyendo el historial real en PyPI) publican wheel aarch64 — riesgo
+  de build ARM64 = bajo. AWS/Azure/Fly.io descartados (no perpetuos); GCP e2-micro descartado
+  (1GB RAM insuficiente); Render/Railway/Koyeb descartados (cold-start incompatible con
+  bindear :80/:443 always-on). Freenom (dominios TLD gratis) confirmado muerto desde 2024 —
+  no existe vía legítima de dominio propio real a €0, solo subdominios (DuckDNS elegido).
+- Owner creó la cuenta DuckDNS (`sublimine@github`) y el subdominio **`deepcar.duckdns.org`**.
+  Verificado en vivo: resuelve vía DNS público (8.8.8.8) y el endpoint de actualización
+  responde `OK`. Token guardado en `~/.cardeep-ops-secrets/duckdns.env` (fuera del repo
+  público, permisos 600) — confirmado con `git grep` que ni el token ni la IP doméstica del
+  owner quedaron en ningún archivo trackeado. `openship.json` actualizado: `web.domain =
+  "deepcar.duckdns.org"`; `api` queda sin dominio propio a propósito (same-origin proxy).
+- PENDIENTE (único bloqueante real): cuenta Oracle Cloud en creación por el owner — exige
+  verificación de identidad con tarjeta real, tarea que ninguna IA puede completar. En cuanto
+  el owner entregue API key de Oracle (o acceso SSH al VM ya creado), ejecuto sin pausa:
+  captura de instancia ARM (retry-loop si hay "out of host capacity" en Frankfurt),
+  hardening, `openship up`, `openship deploy` de los 4 servicios, migración de los 10GB de
+  Postgres, verificación TLS/Let's Encrypt, smoke test E2E, monitorización de disco/RAM.
