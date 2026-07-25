@@ -3795,3 +3795,65 @@
   captura de instancia ARM (retry-loop si hay "out of host capacity" en Frankfurt),
   hardening, `openship up`, `openship deploy` de los 4 servicios, migración de los 10GB de
   Postgres, verificación TLS/Let's Encrypt, smoke test E2E, monitorización de disco/RAM.
+
+### Addendum 2026-07-25 (3) — auditoría exhaustiva de segunda vuelta: 9 hallazgos más, todos corregidos
+- Con el goal "supervisión activa + impecable en todas partes + hands-off total" del owner,
+  lancé una segunda auditoría (4 agentes en paralelo: re-audit de config, audit del script de
+  VM, investigación de push-to-deploy, audit de completitud E2E) mientras Oracle seguía sin
+  capacidad. Encontró 5 CRITICAL + 3 HIGH + varios MEDIUM/LOW, todos reales y verificados
+  leyendo código fuente (repo + fuente de Openship), ninguno inventado:
+  1. CRITICAL: las migraciones nunca corrían contra el Postgres del VPS — esquema vacío,
+     `/health` mentía. Fix: `openship.json` encadena `migrate.py up && exec uvicorn` en `api`.
+  2. CRITICAL: cero procedimiento de migración de los 10GB de datos reales — añadido §5 al
+     runbook (dump ya probado en vivo: 813MB, 2m12s) + script `migrate_db_step1_dump.sh`.
+  3. CRITICAL: push-to-deploy sin un solo paso documentado. Investigado a fondo el mecanismo
+     REAL de Openship (self-hosted usa estrategia "repo" vía PAT, NO GitHub App —
+     GITHUB_APP_SLUG solo aplica en CLOUD_MODE). Cardeep es UN proyecto Openship (modo
+     services), no 4 — el link de git y el webhook se hacen una sola vez. Documentado completo
+     en §7 con los 8 pasos verificados archivo:línea contra el código de Openship.
+  4. CRITICAL: `ufw` no protege puertos que Docker publica con `-p` (Docker escribe en las
+     cadenas DOCKER/FORWARD, nunca pasa por INPUT). Fix: `ufw-docker` instalado tras Docker.
+  5. CRITICAL: el sed que desactivaba SSH password-auth era un no-op en Ubuntu 24.04 — el
+     drop-in de cloud-init (`50-cloud-init.conf`) gana por precedencia (bug confirmado y
+     cerrado "not planned" por Canonical). Fix: escribir el drop-in real + verificar con
+     `sshd -T` (config EFECTIVA, no el texto del archivo) antes de dar el paso por bueno.
+  6. HIGH: `CARDEEP_ENV`/`CARDEEP_API_KEY` nunca se fijaban — el fail-fast de producción que
+     el propio código construye (`assert_safe_dsn`) quedaba inerte. Investigado a fondo cómo
+     Openship resuelve el merge de env real (`deploy.service.ts:788-796`): el `env` de
+     `openship.json` GANA sobre `openship project env set`, así que un secreto real NUNCA debe
+     escribirse en el JSON commiteado (repo público) — solo `openship service env set` (scope
+     de servicio) gana sobre git. Documentado en §2 con los 3 `service env set` reales
+     (contraseña Postgres real + API key generadas 2026-07-25, guardadas en
+     `~/.cardeep-ops-secrets/production.env`, nunca en el repo — confirmado con `git grep`).
+  7. HIGH: el instalador `get.openship.io` (bun-based) tiene roturas reportadas jul-2026.
+     Cambiado a `npm install -g openship` (mismo método ya verificado funcionando en esta
+     sesión) + `openship up --managed-edge --acme-email` (deja que el propio CLI instale
+     OpenResty+Let's Encrypt, en vez de nginx/certbot manual) + bootstrap del primer admin
+     100% no-interactivo vía `POST /api/system/bootstrap-admin` con el `X-Internal-Token`
+     local — verificado leyendo el bundle real instalado (`apps/cli/src/commands/up.ts` +
+     `setup.controller.ts` + `middleware/internal-auth.ts`).
+  8. HIGH: `ufw` tiene fama documentada de comportamiento poco fiable específicamente en
+     imágenes Oracle Cloud — añadida verificación externa post-hardening + firewalld como
+     plan B documentado.
+  9. MEDIUM/LOW varios: `CARDEEP_OLLAMA_URL` con `host.docker.internal` (irresoluble en Docker
+     nativo de Linux) corregido a `127.0.0.1` — confirmado NO bloqueante leyendo
+     `pipeline/recipe_cracker.py`/`scheduler.py`: Ollama no se llama nunca en el arranque, solo
+     en rutas de trabajo con try/except; `$schema` muerto eliminado del JSON.
+- SEGUNDA vuelta de review (sobre los fixes de la primera) encontró 1 CRITICAL más: el grupo
+  `docker` de `usermod -aG docker` no llega al manager `systemd --user` bajo el que
+  `openship up` despliega los contenedores — verificado leyendo el bundle REAL instalado de
+  Openship (`dist/index.js`/`dist/server/index.js`), no de forma teórica. Fix: el bootstrap se
+  partió en dos scripts — `vm_bootstrap_phase1.sh` (sistema, Docker, firewall, hardening SSH,
+  termina en `sudo reboot`) y `vm_bootstrap_phase2.sh` (Node, CLI, `openship up`, bootstrap de
+  admin) — el reinicio garantiza un manager systemd-user completamente nuevo con el grupo ya
+  aplicado. Más 3 hallazgos menores (manejo de error del curl de espera, `exec` faltante en
+  el command de `api` para shutdown limpio en redeploys) también corregidos.
+- Scripts movidos de scratchpad a `ops/openship/` (tracked, referenciados por ruta real desde
+  el runbook — nada suelto en un temp que se pueda perder).
+- Sistema de notificación activo: `Monitor` persistente vigila
+  `oci_instance_status.json` y avisa en cuanto la instancia consiga capacidad, éxito o error
+  — no hace falta que el owner ni yo sondeemos manualmente.
+- SIGUE PENDIENTE (único bloqueante real, no ejecutable por IA): Zúrich sin capacidad ARM
+  disponible — el reintento paciente sigue corriendo en background (intento 32+ al cierre de
+  este addendum). En cuanto consiga instancia, se ejecuta automáticamente el resto de la
+  secuencia (§8 del runbook) sin pausas.
