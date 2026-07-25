@@ -46,7 +46,10 @@ export function LogoWall() {
       <h2 className="font-dm-mono -tracking-xs text-muted-foreground text-center text-sm leading-4 font-normal uppercase">
         {SOURCE_WALL_KICKER}
       </h2>
-      <div className="mx-auto mt-12 flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-4 md:gap-x-20 md:gap-y-14">
+      {/* The reference wall held fifteen logos and wrapped naturally; seven sources
+          at the original 80px gap wrap 6 + 1 and orphan the last mark, so the gap
+          tightens just enough to keep the row whole. */}
+      <div className="mx-auto mt-12 flex max-w-6xl flex-wrap items-center justify-center gap-x-4 gap-y-4 md:gap-x-12 md:gap-y-14">
         {SOURCES.map((source, index) => (
           <SourceMark key={source.name} source={source} index={index} />
         ))}
