@@ -5,10 +5,11 @@
 > siendo el camino recomendado para desarrollo. Este doc es el siguiente paso, cuando el
 > owner decida hacer Cardeep públicamente accesible.
 >
-> **Estado: config lista, sin ejecutar.** `openship.json` (raíz del repo) y `web/Dockerfile`
-> están escritos, validados contra el JSON Schema oficial de Openship y con el build de
-> `web/` verificado localmente (ver §4). Ningún deploy real se ha ejecutado — no existe
-> servidor. Ver §0 (bloqueante).
+> **Estado: dominio resuelto, servidor pendiente.** `openship.json` (raíz del repo) y
+> `web/Dockerfile` están escritos, validados contra el JSON Schema oficial de Openship y con
+> el build de `web/` verificado localmente (ver §4). Dominio decidido y verificado en vivo:
+> **`deepcar.duckdns.org`** (DuckDNS, €0, A record resolviendo globalmente desde
+> 2026-07-25). Falta solo el servidor — ver §0.
 
 ---
 
@@ -19,17 +20,25 @@ puede correr localmente o en la nube de Openship, pero para que Cardeep quede **
 accesible** —con push-to-deploy, TLS y dominio propio— hace falta:
 
 1. Un **servidor Linux con Docker** (VPS) — Openship necesita host networking en Linux para
-   su edge (`:80`/`:443`). Auditado: **no existe hoy** ningún VPS ni servidor de Cardeep en
-   producción (todo corre en `127.0.0.1` en este Windows).
+   su edge (`:80`/`:443`). **PENDIENTE, en curso**: decisión tomada — Oracle Cloud Always
+   Free, shape Ampere A1 (ARM, 2 OCPU/12GB RAM), región Frankfurt. Cuenta en creación por el
+   owner (verificación de identidad con tarjeta real — paso que ninguna IA puede completar).
 2. Un **dominio** con su DNS apuntando a ese servidor — Openship exige el registro DNS
-   *antes* de instalar. Auditado: **no existe** ningún dominio real de Cardeep (solo
-   `sales@cardeep.io` como copy de marketing en la landing, sin infraestructura detrás).
+   *antes* de instalar. **RESUELTO 2026-07-25**: `deepcar.duckdns.org` (DuckDNS, cuenta
+   `sublimine@github`, €0). Verificado en vivo: resuelve vía DNS público (`nslookup` contra
+   8.8.8.8) y el mecanismo de actualización probado responde `OK`
+   (`https://www.duckdns.org/update?domains=deepcar&token=...`). Token guardado FUERA del
+   repo en `~/.cardeep-ops-secrets/duckdns.env` (permisos 600) — Cardeep es repo público,
+   nunca se commitea. Apunta hoy a la IP doméstica del owner como placeholder operativo; se
+   re-apunta a la IP real del VPS con el mismo comando en cuanto exista.
 
-Ambos implican **gasto real** (VPS de pago + registro/renovación de dominio) y **exposición
-externa** (el sistema pasa de privado a público). Por doctrina del proyecto esto es
-exactamente el tipo de decisión que requiere orden literal del owner — no se aprovisiona ni
-se gasta sin esa autorización explícita. Todo lo demás en este documento está construido,
-probado localmente donde es posible, y listo para ejecutarse en cuanto esa decisión llegue.
+El VPS implica **gasto potencial** (el Ampere A1 es €0 dentro de cuota, pero Oracle recortó
+la cuota Always Free en junio-2026 sin aviso y hay ambigüedad no resuelta sobre facturación
+del excedente — detalle en PROGRESO.md) y **exposición externa** (el sistema pasa de privado
+a público). Por doctrina del proyecto esto exige orden literal del owner — **recibida**
+(autorización explícita a implementar todo A→Z). Lo que resta depende únicamente de que la
+cuenta Oracle —gesto que solo el owner puede completar por la verificación de identidad—
+quede lista.
 
 **Alternativa sin VPS propio:** Openship Cloud (`openship.io`, gestionado) evita provisionar
 un servidor, pero es un servicio de pago de terceros — misma decisión de gasto, forma
@@ -79,8 +88,11 @@ credenciales usan el mismo placeholder no-secreto `cardeep_dev_only` que el rest
 fuerte vía el dashboard de Openship (o su editor de env por servicio) — el placeholder es
 válido para levantar y probar, no para producción expuesta.
 
-**`domain` sin rellenar en `api` y `web`** — a propósito: no existe dominio (§0). El owner
-lo rellena en el dashboard de Openship cuando lo tenga, o se añade directo en el JSON.
+**`domain: "deepcar.duckdns.org"` en `web`** — dominio real, ya resuelto (§0). `api` queda
+sin `domain` a propósito: el diseño same-origin (§3) la sirve a través del proxy de `web` en
+`/api/*` y `/api/v1/*`, así que no necesita su propio hostname público. Si el owner quisiera
+más adelante el API en un subdominio independiente (p. ej. un segundo hostname DuckDNS), se
+añade directo en el JSON.
 
 ⚠️ **`ports` es obligatorio en todo servicio `exposed: true`, no cosmético.** Verificado
 leyendo el código real de Openship (`apps/api/src/lib/public-endpoints.ts::resolveServicePublicEndpoints`
@@ -186,12 +198,19 @@ supuestos silenciosos (ninguna está "asumida como buena", todas están marcadas
       `services/api/main.py` (toca arranque del backend, no solo el empaquetado de deploy) —
       queda anotado para que el owner decida si lo quiere antes del primer deploy real.
 
-## 5. Comandos, cuando el owner autorice servidor + dominio
+## 5. Comandos, en cuanto exista el VPS
+
+Dominio ya resuelto (§0): `deepcar.duckdns.org`. Antes de `openship up`, re-apuntar el A
+record a la IP real del VPS (mismo comando probado en §0, solo cambia el valor de `ip`):
 
 ```bash
-# En el VPS (Linux + Docker), una vez el DNS del dominio ya apunta ahí:
+curl -s "https://www.duckdns.org/update?domains=deepcar&token=<token en ~/.cardeep-ops-secrets/duckdns.env>&ip=<IP pública del VPS>"
+```
+
+```bash
+# En el VPS (Linux + Docker), con el DNS ya apuntando ahí:
 curl -fsSL https://get.openship.io | sh
-openship up --public-url https://<dominio-elegido>
+openship up --public-url https://deepcar.duckdns.org
 
 # Desde una máquina con el repo (puede ser esta misma):
 cd Cardeep

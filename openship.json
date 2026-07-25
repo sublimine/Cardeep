@@ -63,6 +63,7 @@
       "build": "web",
       "dockerfile": "Dockerfile",
       "ports": ["80"],
+      "domain": "deepcar.duckdns.org",
       "dependsOn": ["api"],
       "restart": "unless-stopped",
       "exposed": true,
