@@ -51,15 +51,50 @@ export default {
           subtle: 'var(--border-subtle)',
           active: 'var(--border-active)',
         },
+
+        // ── New landing (2026-07-25 rebuild) tokens — literal values from its
+        // Tailwind v4 `@theme` block, ported here since the rest of the app
+        // runs Tailwind v3. Top-level keys, so no collision with the nested
+        // bg.*/accent.*/text.* tokens above (those generate bg-bg-primary
+        // etc., these generate bg-primary etc.).
+        background: '#f0efec',
+        offwhite: '#f0efec',
+        foreground: '#000',
+        heading: '#343434',
+        primary: '#fc0',
+        secondary: '#f7f7f7',
+        'natural-white': '#fff',
+        'natural-black': '#000',
+        'muted-foreground': '#8b8b8b',
+        'dusty-green': '#447e68',
+        'dusty-red': '#ff6464',
+        cardeep: '#2563eb',
+        'cardeep-ink': '#0b1220',
       },
 
       // ── Typography ───────────────────────────────────────────────────────────
       fontFamily: {
         sans: ['General Sans', 'Inter Variable', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'ui-monospace', 'monospace'],
+        // New landing's own brand font — scoped via .cx-newlanding, does not
+        // touch the shared `font-sans`/`font-mono` used by the rest of the app.
+        landing: ['Inter', 'Inter Fallback', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        'landing-mono': ['Geist Mono', 'Geist Mono Fallback', 'ui-monospace', 'monospace'],
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        'page-header': ['100px', { lineHeight: '8.75rem' }],
+        'page-header-md': ['200px', { lineHeight: '17.5rem' }],
+        'page-header-lg': ['280px', { lineHeight: '17.5rem' }],
+      },
+      letterSpacing: {
+        xs: '1%',
+        sm: '2%',
+        lg: '3%',
+        xl: '4%',
+      },
+      maxWidth: {
+        container: '1440px',
       },
 
       // ── Border radius (CSS var–backed) ───────────────────────────────────────
@@ -71,6 +106,9 @@ export default {
       },
 
       // ── Elevation shadows ────────────────────────────────────────────────────
+      // (merged: 'elevation-*'/'glow-*' from the app shell, 'card-*' from the
+      // new landing — two separate theme.extend.boxShadow blocks would silently
+      // clobber each other in a plain JS object literal.)
       boxShadow: {
         'elevation-1': 'var(--shadow-1)',
         'elevation-2': 'var(--shadow-2)',
@@ -78,6 +116,9 @@ export default {
         'elevation-4': 'var(--shadow-4)',
         'glow-blue':   'var(--shadow-glow-blue)',
         'glow-amber':  'var(--shadow-glow-amber)',
+        'card-md': '0 2px 6px 0 #0000001f',
+        'card-lg': '0 4px 12px 0 #0000001f',
+        'card-xl': '0 8px 24px 0 #0000001f',
       },
 
       // ── Backdrop blur extras ─────────────────────────────────────────────────
@@ -120,6 +161,14 @@ export default {
           from: { opacity: '1' },
           to:   { opacity: '0' },
         },
+        'accordion-down': {
+          from: { height: '0' },
+          to:   { height: 'var(--radix-accordion-content-height, auto)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height, auto)' },
+          to:   { height: '0' },
+        },
       },
 
       // ── Animation shorthands ─────────────────────────────────────────────────
@@ -133,6 +182,8 @@ export default {
         'shimmer':    'shimmer 1.5s infinite',
         // Alias used by existing Toast component
         'in': 'slide-in-from-right 200ms ease-out',
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up':   'accordion-up 0.2s ease-out',
       },
     },
   },

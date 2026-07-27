@@ -3,6 +3,8 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..700&display=swap');
 
 @import './styles/tokens.css';
+/* New landing (2026-07-25 rebuild): self-hosted Inter/Geist Mono/DM Mono @font-face rules. */
+@import './app/fonts.css';
 
 @tailwind base;
 @tailwind components;
@@ -56,4 +58,62 @@
     to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
   }
   .animate-fade-up { animation: fade-up 0.6s cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+  /* ---- New landing (2026-07-25 rebuild) — ported from its Tailwind v4
+     `@utility`/`@theme` blocks (globals.css) to plain v3 utilities, since the
+     rest of the app runs Tailwind v3. Scoped to `.cx-newlanding` where the
+     original relied on a page-wide `font-sans`/`bg-background` the shared
+     app shell already claims for its own (General Sans) defaults. */
+  .cx-newlanding {
+    font-family: theme('fontFamily.landing');
+    background: #f0efec;
+  }
+  .cx-newlanding .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(58rem 40rem at 12% 18%, rgb(37 99 235 / 0.1), transparent 62%),
+      radial-gradient(46rem 34rem at 88% 34%, rgb(255 204 0 / 0.09), transparent 60%),
+      radial-gradient(52rem 40rem at 50% 96%, rgb(37 99 235 / 0.07), transparent 64%);
+  }
+
+  .glass {
+    background: color-mix(in oklab, #ffffff 60%, transparent);
+    -webkit-backdrop-filter: blur(20px) saturate(165%);
+    backdrop-filter: blur(20px) saturate(165%);
+    border: 1px solid rgb(255 255 255 / 0.65);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+      0 12px 34px -16px rgb(16 18 22 / 0.22);
+  }
+  .glass-quiet {
+    background: color-mix(in oklab, #ffffff 42%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgb(255 255 255 / 0.5);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.7);
+  }
+  .glass-dark {
+    background: rgb(255 255 255 / 0.055);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    backdrop-filter: blur(22px) saturate(150%);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+      0 24px 60px -30px rgb(0 0 0 / 0.85);
+  }
+  .glass-chip {
+    background: color-mix(in oklab, #ffffff 55%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid rgb(255 255 255 / 0.6);
+  }
+  .glass-chip-dark {
+    background: rgb(255 255 255 / 0.07);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid rgb(255 255 255 / 0.12);
+  }
 }

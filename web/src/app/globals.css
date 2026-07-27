@@ -1,0 +1,159 @@
+@import 'tailwindcss';
+@import './fonts.css';
+
+/* Design tokens transcribed from the reference build's compiled theme layer.
+   Every value here is the literal one the target ships, not an approximation. */
+@theme {
+  --font-inter: 'Inter', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono: 'Geist Mono', 'Geist Mono Fallback', ui-monospace, monospace;
+  --font-dm-mono: 'DM Mono', 'DM Mono Fallback', ui-monospace, monospace;
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+
+  --color-background: #f0efec;
+  --color-offwhite: #f0efec;
+  --color-foreground: #000;
+  --color-heading: #343434;
+  --color-primary: #fc0;
+  --color-secondary: #f7f7f7;
+  --color-natural-white: #fff;
+  --color-natural-black: #000;
+  --color-muted-foreground: #8b8b8b;
+  --color-dusty-green: #447e68;
+  --color-dusty-red: #ff6464;
+
+  /* Oversized display sizes used by the section watermarks. */
+  --text-page-header: 100px;
+  --text-page-header--line-height: 8.75rem;
+  --text-page-header-md: 200px;
+  --text-page-header-md--line-height: 17.5rem;
+  --text-page-header-lg: 280px;
+  --text-page-header-lg--line-height: 17.5rem;
+
+  /* Percentage tracking scale; used almost exclusively in its negative form. */
+  --tracking-xs: 1%;
+  --tracking-sm: 2%;
+  --tracking-lg: 3%;
+  --tracking-xl: 4%;
+
+  --shadow-card-md: 0 2px 6px 0 #0000001f;
+  --shadow-card-lg: 0 4px 12px 0 #0000001f;
+  --shadow-card-xl: 0 8px 24px 0 #0000001f;
+
+  /* Drives `max-w-container`, the 1440px page gutter used by every section. */
+  --container-container: 1440px;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  /* Cardeep's single supporting hue. Yellow stays the accent; blue carries data,
+     links and anything that means "verified". */
+  --color-cardeep: #2563eb;
+  --color-cardeep-ink: #0b1220;
+}
+
+/* ---------------------------------------------------------------- glass ---
+   Glass only reads as glass when there is something behind it to refract, so
+   these surfaces are designed against the ambient bloom painted by `.aurora`.
+   Blur is paired with saturation so the colour behind lifts instead of greying
+   out, and every panel gets one hairline top highlight rather than a heavy
+   shadow — depth from light, not from darkness.                             */
+
+@utility glass {
+  background: color-mix(in oklab, #ffffff 60%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+  backdrop-filter: blur(20px) saturate(165%);
+  border: 1px solid rgb(255 255 255 / 0.65);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+    0 12px 34px -16px rgb(16 18 22 / 0.22);
+}
+
+@utility glass-quiet {
+  background: color-mix(in oklab, #ffffff 42%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.5);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.7);
+}
+
+@utility glass-dark {
+  background: rgb(255 255 255 / 0.055);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+    0 24px 60px -30px rgb(0 0 0 / 0.85);
+}
+
+/** Thin translucent chip — used for badges, tags and pills. */
+@utility glass-chip {
+  background: color-mix(in oklab, #ffffff 55%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.6);
+}
+
+@utility glass-chip-dark {
+  background: rgb(255 255 255 / 0.07);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.12);
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height, var(--accordion-panel-height, auto));
+  }
+  to {
+    height: 0;
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  /* Anchored sections sit under a floating navbar; keep their headings clear of it. */
+  [id] {
+    scroll-margin-top: 6rem;
+  }
+
+  /**
+   * Ambient bloom behind the whole page. Two very low-opacity washes — Cardeep
+   * blue and the accent yellow — give the glass panels something to refract.
+   * Fixed and non-interactive, so it costs one paint and never moves.
+   */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(58rem 40rem at 12% 18%, rgb(37 99 235 / 0.1), transparent 62%),
+      radial-gradient(46rem 34rem at 88% 34%, rgb(255 204 0 / 0.09), transparent 60%),
+      radial-gradient(52rem 40rem at 50% 96%, rgb(37 99 235 / 0.07), transparent 64%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
