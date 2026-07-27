@@ -40,7 +40,9 @@ export function Navbar() {
           <div className="hidden md:block">
             {/* The accent box reveals the Cardeep mark on hover, where the reference
                 template revealed a portrait. Same motion, no invented person. */}
-            <Button avatar="/shots/mark.webp">{PRIMARY_CTA}</Button>
+            <Button avatar="/shots/mark.webp" onClick={() => { window.location.href = '/login'; }}>
+              {PRIMARY_CTA}
+            </Button>
           </div>
 
           <div className="md:hidden">
