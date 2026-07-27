@@ -13,14 +13,6 @@
 
   "rewrites": [
     {
-      "source": "/api/v1/:path*",
-      "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

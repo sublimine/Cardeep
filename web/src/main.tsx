@@ -1,43 +1,13 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import App from './App'
-import { AuthProvider } from './auth/AuthContext'
-import { ToastProvider } from './components/Toast'
-import './index.css'
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import './app/globals.css';
 
-// Apply saved theme before first paint.
-// CSS tokens: :root = dark (default), .light = light overrides.
-// Tailwind darkMode:'class' requires the .dark class on <html>.
-// cardeep = light-first (la referencia es el landing). Dark solo si se guardó explícitamente.
-const saved = localStorage.getItem('theme')
-if (saved === 'dark') {
-  document.documentElement.classList.add('dark')
-} else {
-  document.documentElement.classList.add('light')
-}
+const container = document.getElementById('root');
+if (!container) throw new Error('Root element #root is missing from index.html');
 
-// The service worker's cache-first strategy (serves cached /index.html on every
-// navigation) was serving stale builds after every deploy — real visitors could
-// get stuck on old JS/CSS hashes indefinitely. Retired: sw.js now self-unregisters
-// (below) instead of caching anything, so it actively cleans up existing installs
-// rather than just not registering new ones.
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.getRegistrations().then((regs) => {
-      for (const reg of regs) reg.unregister()
-    })
-  })
-}
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
+createRoot(container).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <App />
-        </ToastProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <App />
   </React.StrictMode>,
-)
+);
