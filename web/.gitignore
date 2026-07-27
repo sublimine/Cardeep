@@ -1,8 +1,3 @@
 node_modules/
 dist/
 .vercel
-
-# Intermediate PNGs from the artwork renderer; the shipped WebPs live in
-# public/shots and are committed.
-tools/mockups/out/
-tools/unused-assets.txt
