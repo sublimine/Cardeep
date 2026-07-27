@@ -12,6 +12,8 @@
   },
 
   "rewrites": [
+    { "source": "/api/v1/:path*", "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*" },
+    { "source": "/api/:path*", "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*" },
     { "source": "/workspace-assets/:path*", "destination": "https://cardeep-workspace.vercel.app/workspace-assets/:path*" },
 
     { "source": "/login", "destination": "https://cardeep-workspace.vercel.app/login" },
