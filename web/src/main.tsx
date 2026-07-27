@@ -17,10 +17,16 @@ if (saved === 'dark') {
   document.documentElement.classList.add('light')
 }
 
-// Register service worker
+// The service worker's cache-first strategy (serves cached /index.html on every
+// navigation) was serving stale builds after every deploy — real visitors could
+// get stuck on old JS/CSS hashes indefinitely. Retired: sw.js now self-unregisters
+// (below) instead of caching anything, so it actively cleans up existing installs
+// rather than just not registering new ones.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(console.error)
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const reg of regs) reg.unregister()
+    })
   })
 }
 
