@@ -360,7 +360,10 @@ export function Hero() {
 
   return (
     <div id="indice" className="h-[60vh] w-full p-2 md:h-screen">
-      <div className="text-natural-white relative m-0 h-full w-full overflow-hidden rounded-3xl bg-black">
+      <div
+        className="cx-hero-panel text-natural-white relative m-0 h-full w-full overflow-hidden rounded-3xl bg-black"
+        style={{ backgroundColor: '#000000' }}
+      >
         <div ref={layersRef} className="absolute inset-0 h-full w-full">
           <GridLayer size={size} />
           <HorizonArc />

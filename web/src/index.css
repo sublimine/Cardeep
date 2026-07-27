@@ -10,6 +10,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hero panel (components/hero.tsx): background-color computed correctly as
+   black (verified via getComputedStyle) but did not paint — reproduced even
+   with an inline style and with !important scoped to just this element.
+   Only forcing background-color on the panel AND every descendant fixed the
+   paint (isolated empirically: a scoped rule without `*` failed, the same
+   rule on `.cx-hero-panel *` worked). Descendants have their own transparent
+   background already; this is redundant for them and only actually changes
+   the panel itself, but is required for it to actually render. */
+.cx-hero-panel,
+.cx-hero-panel * {
+  background-color: #000 !important;
+}
+
 @layer base {
   *, *::before, *::after {
     -webkit-tap-highlight-color: transparent;
