@@ -227,12 +227,51 @@ export const BENTO = {
     ],
   },
   coverage: { title: 'Cobertura de España' },
-  price: {
-    title: 'Precio real',
-    query: 'Golf 2.0 TDI 150 CV · 2021 · Madrid',
-    resultTitle: 'Tu anuncio',
-    resultMeta: '18.900 € · 34 días publicado',
-    resultVerdict: '1.340 € por encima de la mediana del mercado',
+  /**
+   * The vehicle's own record — Cardeep's answer to a Carfax or a carVertical.
+   *
+   * This replaces "Precio real", which showed a mocked search box typing a query
+   * and a card announcing the listing was 1.340 € over the median. That claim is
+   * already made twice on this page, by the comparison table and by the movements
+   * feed, and a bento is not the place to say a third time what two other surfaces
+   * say better.
+   *
+   * WHAT IS HONEST HERE, AND WHY THE THIRD CARD IS MARKED. The first two cards
+   * describe things the index genuinely holds, because it holds every version of
+   * every listing it has ever seen: what a car has cost over time, where it has
+   * been published, how long it sat, whether it vanished and came back. The
+   * paperwork is different — ITV, registered keepers and outstanding finance
+   * belong to the DGT and to lenders, not to the open market, and Cardeep cannot
+   * derive them from listings. Showing them unmarked would be exactly the kind of
+   * quiet borrowing this file exists to prevent, so the card names its source
+   * instead of implying one.
+   */
+  history: {
+    title: 'Historial del vehículo',
+    lede: 'Todo lo que le ha pasado a un coche, reunido solo.',
+    cards: [
+      {
+        id: 'precio',
+        kicker: 'Historial de precio',
+        headline: '5 bajadas desde el alta',
+        detail: '24.900 € → 21.400 € · 143 días en el mercado',
+        source: 'índice',
+      },
+      {
+        id: 'anuncio',
+        kicker: 'Vida del anuncio',
+        headline: 'Publicado en 3 portales',
+        detail: 'Retirado y republicado 2 veces · fotos cambiadas 4 veces',
+        source: 'índice',
+      },
+      {
+        id: 'papeles',
+        kicker: 'Documentación',
+        headline: 'ITV, titulares y cargas',
+        detail: 'Procede de la DGT, no del mercado abierto',
+        source: 'dgt',
+      },
+    ],
   },
   more: { title: 'Encargos, publicación y terminal' },
 } as const;

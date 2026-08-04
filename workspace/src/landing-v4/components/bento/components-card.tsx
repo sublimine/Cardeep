@@ -1,249 +1,176 @@
-import type { CSSProperties } from 'react';
-import { motion } from 'framer-motion';
-import { BENTO } from '@landing/content/site';
+import { motion, useReducedMotion } from 'framer-motion';
 
-/** Colour of the dormant PCB traces. */
-const TRACE_COLOR = '#F2F2F2';
+import { BENTO, SOURCES } from '@landing/content/site';
+import { Logo } from '@landing/components/ui/logo';
+
+/* -------------------------------------------------------------------------- */
+/*                                   Layout                                   */
+/* -------------------------------------------------------------------------- */
 
 /**
- * Colour of the travelling pulse and of the chip itself.
+ * Node positions, as percentages of the diagram box.
  *
- * Was `#FA9A63` — the agency template's orange, and the last hue on this page
- * that belonged to neither Cardeep's identity nor its two semantic colours. A
- * bento card whose largest single element is an orange square reads as a
- * different product from the one in the tile beside it.
+ * MEASURED, NOT MEASURED-AT-RUNTIME. The animated-beam pattern this is modelled
+ * on reads both endpoints with `getBoundingClientRect` and keeps them in sync
+ * with a ResizeObserver. That is the right tool when the endpoints are arbitrary
+ * DOM the component does not own — and the wrong one here, where this file
+ * decides where every node goes. Sharing one percentage space between the SVG
+ * and the chips makes them align by construction, at every width, with no
+ * measurement, no observer and no reflow. The failure mode that pattern is
+ * famous for — beams detaching from their nodes on resize — cannot occur.
+ *
+ * `dir` is what the beam MEANS. Inbound is the market's data arriving to be
+ * priced; outbound is the dealer's stock going out to be published. The hub sits
+ * between the two, which is the claim the card makes.
  */
-const PULSE_COLOR = '#126efd';
+const NODES = [
+  { at: SOURCES[0], x: 12, y: 16, dir: 'in' },
+  { at: SOURCES[1], x: 8, y: 50, dir: 'in' },
+  { at: SOURCES[2], x: 12, y: 84, dir: 'in' },
+  { at: SOURCES[3], x: 88, y: 16, dir: 'out' },
+  { at: SOURCES[4], x: 92, y: 50, dir: 'out' },
+  { at: SOURCES[5], x: 88, y: 84, dir: 'out' },
+] as const;
+
+const HUB = { x: 50, y: 50 };
+
+/** Seconds for one beam to travel its path, and the gap between departures. */
+const BEAM_S = 2.2;
+const BEAM_GAP = 1.1;
 
 /**
- * A plate renders every trace twice: once dormant (flat `#F2F2F2` stroke) and once as a
- * dashed pulse painted with `tailGradient`. The three plates differ only in how many
- * layers the pulse is built from.
+ * A quadratic curve from a node to the hub, bowed away from the straight line.
+ *
+ * Straight spokes would read as a diagram of a star; the bow is what makes them
+ * read as routes. The control point is pushed perpendicular to the chord, so the
+ * bow always bends the same way relative to travel whatever the node's angle.
  */
-type PlateStyle = 'blur' | 'shadow' | 'plain';
-
-type PulseLayer = {
-  strokeWidth: string;
-  opacity?: number;
-  style?: CSSProperties;
-};
-
-const PULSE_LAYERS: Record<PlateStyle, readonly PulseLayer[]> = {
-  blur: [{ strokeWidth: '2.5', style: { filter: 'blur(0.4px)' } }],
-  shadow: [
-    { strokeWidth: '2.5' },
-    {
-      strokeWidth: '1.5',
-      opacity: 0.3,
-      style: { filter: `drop-shadow(0 0 12px ${PULSE_COLOR})` },
-    },
-  ],
-  plain: [{ strokeWidth: '2.5' }, { strokeWidth: '1.5', opacity: 0.3 }],
-};
-
-type Plate = {
-  /** Placement of the plate inside the 336x314 graphic box. */
-  position: string;
-  width: number;
-  height: number;
-  /** Path `d` strings, shared by the dormant trace and its pulse. */
-  paths: readonly string[];
-  dashArray: string;
-  /**
-   * Length of one dash period. Advancing `strokeDashoffset` by exactly one period
-   * returns the pattern to its starting phase, so the loop has no visible seam.
-   */
-  period: number;
-  style: PlateStyle;
-  /** Seconds for one pulse period. */
-  duration: number;
-  /** Seconds added per trace, so the traces in a plate fire in sequence. */
-  stagger: number;
-  /** Seconds added to the whole plate, so plates never pulse in lockstep. */
-  offset: number;
-};
-
-const PLATES: readonly Plate[] = [
-  {
-    position: 'absolute bottom-6.5 left-0',
-    width: 201,
-    height: 166,
-    paths: [
-      'M12.427 165.594V126.58L32.3598 103.929H200.148',
-      'M200.148 85.8084H27.8296L0.648438 113.896',
-      'M0.648438 70.4057H200.148',
-      'M200.148 50.4728H22.3934L0.648438 30.54',
-      'M0.648438 0.640625L32.3598 32.352H200.148',
-    ],
-    dashArray: '60 500',
-    period: 560,
-    style: 'blur',
-    duration: 6,
-    stagger: 0.9,
-    offset: 0,
-  },
-  {
-    position: 'absolute top-1 left-0',
-    width: 303,
-    height: 124,
-    paths: [
-      'M241.461 -19.625V7.85497L301.26 68.5597V123.375',
-      'M284.045 123.375V77.6201L221.528 15.1033V-19.625',
-      'M109.641 -20.625L152.669 26.8818H210.656L265.924 83.0563V123.375',
-      'M247.803 122.875V91.2107L200.689 44.0966H79.2799L15.1406 -21.125',
-      'M0.640625 -5.625L69.3134 62.2174H192.535L229.683 98.459V123.375',
-    ],
-    dashArray: '30 500',
-    period: 530,
-    style: 'shadow',
-    duration: 5,
-    stagger: 0.7,
-    offset: 0.35,
-  },
-  {
-    position: 'absolute right-0.5 bottom-1',
-    width: 167,
-    height: 56,
-    paths: [
-      'M118.875 0V64.2816L169.613 115.926V142',
-      'M99.8516 0V76.966L144.664 121V142',
-      'M82.6391 0V83.3087L30.1641 142.5M63.6122 0V74.2483L0.664062 142.5',
-      'M136.094 0V51.5975L178.678 96.8995H296.463',
-    ],
-    dashArray: '30 500',
-    period: 530,
-    style: 'plain',
-    duration: 5,
-    stagger: 0.55,
-    offset: 0.15,
-  },
-];
-
-/** The three chip pins down the left edge and the three down the right edge. */
-const SIDE_PIN_OFFSETS = ['top-0', 'top-[17px]', 'top-[34px]', 'top-[51px]', 'top-[68px]'] as const;
-
-/** Pins along the top and bottom edges are identical; only the row wrapper differs. */
-const EDGE_PIN_COUNT = 5;
-
-function TracePlate({ plate }: { plate: Plate }) {
-  const layers = PULSE_LAYERS[plate.style];
-
-  return (
-    <div className={plate.position}>
-      <svg
-        width={plate.width}
-        height={plate.height}
-        viewBox={`0 0 ${plate.width} ${plate.height}`}
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {plate.paths.map((d) => (
-          <path key={d} d={d} stroke={TRACE_COLOR} strokeWidth="1.81208" />
-        ))}
-        {plate.paths.map((d, index) => (
-          <g key={d}>
-            {layers.map((layer) => (
-              <motion.path
-                key={layer.strokeWidth}
-                d={d}
-                stroke="url(#tailGradient)"
-                strokeWidth={layer.strokeWidth}
-                strokeLinecap="round"
-                fill="none"
-                opacity={layer.opacity}
-                strokeDasharray={plate.dashArray}
-                style={layer.style}
-                // SSR ships every pulse at offset 0; the loop drives it one full dash
-                // period forward, which lands back on the starting phase.
-                animate={{ strokeDashoffset: [0, -plate.period] }}
-                transition={{
-                  duration: plate.duration,
-                  delay: plate.offset + index * plate.stagger,
-                  repeat: Infinity,
-                  ease: 'linear',
-                }}
-              />
-            ))}
-          </g>
-        ))}
-        <defs>
-          <linearGradient id="tailGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor={PULSE_COLOR} stopOpacity="0" />
-            <stop offset="50%" stopColor={PULSE_COLOR} stopOpacity="1" />
-            <stop offset="100%" stopColor={PULSE_COLOR} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </div>
-  );
+function path(x: number, y: number) {
+  const mx = (x + HUB.x) / 2;
+  const my = (y + HUB.y) / 2;
+  const dx = HUB.x - x;
+  const dy = HUB.y - y;
+  const len = Math.hypot(dx, dy) || 1;
+  const bow = 12;
+  return `M ${x} ${y} Q ${mx + (-dy / len) * bow} ${my + (dx / len) * bow} ${HUB.x} ${HUB.y}`;
 }
 
-/** The dimmed companion chip clipped by the bottom-left corner of the graphic box. */
-function GhostChip() {
-  return (
-    <div className="absolute -bottom-48 left-12 -translate-x-full -translate-y-full">
-      <div className="absolute -top-3 right-8 h-3 w-1.5 bg-[#EEEEEE]" />
-      <div className="relative size-28 rounded-3xl bg-white/50 shadow-[0px_2px_12px_0px_rgba(0,0,0,0.12)]" />
-    </div>
-  );
-}
-
-/** The chip with its four rows of pins and four blurred highlight blobs. */
-function Chip() {
-  return (
-    <div className="absolute right-3 bottom-16">
-      <div className="absolute -inset-3">
-        <div className="absolute top-1/2 h-20 w-3 -translate-y-1/2">
-          {SIDE_PIN_OFFSETS.map((top) => (
-            <div key={top} className={`absolute ${top} left-0 h-1.5 w-3 bg-[#EEEEEE]`} />
-          ))}
-        </div>
-        <div className="absolute top-1/2 right-0 h-20 w-3 -translate-y-1/2">
-          {SIDE_PIN_OFFSETS.map((top) => (
-            <div key={top} className={`absolute ${top} right-0 h-1.5 w-3 bg-[#EEEEEE]`} />
-          ))}
-        </div>
-        <div className="absolute left-1/2 flex h-3 w-20 -translate-x-1/2 items-center gap-3">
-          {Array.from({ length: EDGE_PIN_COUNT }, (_, index) => (
-            <div key={index} className="h-3 w-1.5 self-stretch bg-[#EEEEEE]" />
-          ))}
-        </div>
-        <div className="absolute bottom-0 left-1/2 flex h-3 w-20 -translate-x-1/2 items-center gap-3">
-          {Array.from({ length: EDGE_PIN_COUNT }, (_, index) => (
-            <div key={index} className="h-3 w-1.5 self-stretch bg-[#EEEEEE]" />
-          ))}
-        </div>
-      </div>
-      <div className="relative size-28 overflow-hidden rounded-3xl bg-[#126efd] shadow-[0px_3.200000047683716px_9.600000381469727px_0px_rgba(0,0,0,0.12)]">
-        <div className="absolute top-[-25.60px] left-[26.80px] size-16 rounded-full bg-orange-200 blur-[48px]" />
-        <div className="absolute top-[82.38px] left-[-47.20px] h-32 w-5 origin-top-left rotate-[-59.09deg] rounded-full bg-orange-200 blur-[48px]" />
-        <div className="absolute top-[-35.30px] left-[113.80px] h-16 w-14 rounded-full bg-white blur-[48px]" />
-        <div className="absolute top-[45.60px] left-[63.20px] h-44 w-36 rounded-full bg-orange-200/60 blur-[160px]" />
-      </div>
-    </div>
-  );
-}
+/* -------------------------------------------------------------------------- */
+/*                                   Beams                                    */
+/* -------------------------------------------------------------------------- */
 
 /**
- * Bento card 1-3: a circuit board of traced lines feeding a chip, with the heading
- * floating above it. The graphic box is masked so the top half fades out behind the copy.
+ * One route, and the light travelling it.
+ *
+ * The route itself is a permanent hairline — the connection exists whether or not
+ * something is moving on it, and a line that only appears when lit reads as a
+ * glitch. The beam is a short dash driven along that same path by
+ * `strokeDashoffset`, which is the technique the card already used for its circuit
+ * traces and the reason it stays on the compositor.
+ *
+ * Direction carries the meaning without a legend: inbound beams run node -> hub,
+ * outbound run hub -> node, and the two are simply the same animation with the
+ * offset reversed.
+ */
+function Beam({ node, index }: { node: (typeof NODES)[number]; index: number }) {
+  const reduced = useReducedMotion();
+  const d = path(node.x, node.y);
+  const inbound = node.dir === 'in';
+  /* One dash and a gap longer than the path, so exactly one pulse is ever in
+   * flight and the loop has no seam. */
+  const DASH = 14;
+  const GAP = 200;
+
+  return (
+    <g>
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="0.4" className="text-brand/15" />
+      {!reduced && (
+        <motion.path
+          d={d}
+          fill="none"
+          stroke="url(#cx-beam)"
+          strokeWidth="1.1"
+          strokeLinecap="round"
+          strokeDasharray={`${DASH} ${GAP}`}
+          initial={{ strokeDashoffset: inbound ? DASH + GAP : 0 }}
+          animate={{ strokeDashoffset: inbound ? -GAP : DASH + GAP }}
+          transition={{
+            duration: BEAM_S,
+            delay: index * (BEAM_GAP / NODES.length) + (inbound ? 0 : BEAM_GAP / 2),
+            repeat: Infinity,
+            repeatDelay: BEAM_GAP,
+            ease: 'easeInOut',
+          }}
+        />
+      )}
+    </g>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                    Card                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * "Encargos, publicación y terminal".
+ *
+ * What this replaces was a printed-circuit illustration: three plates of traced
+ * lines feeding an orange chip. It was well made and it said nothing — a chip is
+ * not what this product does, and the card's largest element being an orange
+ * square made the tile read as a different product from the ones beside it.
+ *
+ * This says the actual claim. Cardeep is the point everything passes through:
+ * the platforms' listings arrive to be priced and compared, the dealer's stock
+ * leaves to be published on all of them at once. One hub, traffic both ways.
  */
 export function ComponentsCard() {
   return (
-    <div className="glass col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl lg:col-span-2">
-      <div className="relative p-4">
-        <div className="absolute inset-0">
-          <div className="relative ml-4 h-[314px] w-[336px] scale-110 overflow-hidden mask-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(0,0,0,1)_50%)]">
-            {PLATES.map((plate) => (
-              <TracePlate key={plate.position} plate={plate} />
-            ))}
-            <GhostChip />
-            <Chip />
-          </div>
-        </div>
-        <div className="text-lg leading-6 font-medium tracking-tight z-10 relative">
-          {BENTO.more.title}
-        </div>
+    <div className="glass relative col-span-1 flex min-h-(--box-min-height) flex-col overflow-hidden rounded-2xl p-4 lg:col-span-2">
+      <h2 className="text-foreground relative z-10 text-lg leading-6 font-medium tracking-tight">
+        {BENTO.more.title}
+      </h2>
+
+      <div className="relative mt-2 min-h-0 flex-1">
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          className="absolute inset-0 h-full w-full"
+          aria-hidden="true"
+        >
+          <defs>
+            <linearGradient id="cx-beam" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#126efd" stopOpacity="0" />
+              <stop offset="50%" stopColor="#126efd" stopOpacity="1" />
+              <stop offset="100%" stopColor="#8ab9fd" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          {NODES.map((node, index) => (
+            <Beam key={node.at.name} node={node} index={index} />
+          ))}
+        </svg>
+
+        {/* The platforms. Wordmarks rather than logos because no platform ships a
+          * logo asset in public/logos, and a fabricated mark is not an option. */}
+        {NODES.map((node) => (
+          <span
+            key={node.at.name}
+            /* `glass-chip`, not `glass-chip-dark`, and a theme token for the
+             * text. The dark chip carries white type, which on this tile — glass
+             * over the page's LIGHT ground — rendered the platform name white on
+             * near-white and left only the blue accent visible. */
+            className="glass-chip text-foreground absolute -translate-x-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-[10px] leading-none font-medium whitespace-nowrap"
+            style={{ left: `${node.x}%`, top: `${node.y}%` }}
+          >
+            {node.at.mark}
+            {node.at.accent && <span className="text-brand-soft">{node.at.accent}</span>}
+          </span>
+        ))}
+
+        {/* The hub. It sits above the beams so every route visibly terminates
+          * behind it rather than crossing it. */}
+        <span className="absolute top-1/2 left-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-[#0b1526] shadow-[0_0_28px_6px_rgb(18_110_253/0.35)] ring-1 ring-white/12">
+          <Logo tone="light" className="size-6" />
+        </span>
       </div>
     </div>
   );
