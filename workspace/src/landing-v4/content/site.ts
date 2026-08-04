@@ -236,40 +236,226 @@ export const BENTO = {
    * feed, and a bento is not the place to say a third time what two other surfaces
    * say better.
    *
-   * WHAT IS HONEST HERE, AND WHY THE THIRD CARD IS MARKED. The first two cards
+   * WHAT IS HONEST HERE, AND WHY THE PAPERWORK IS MARKED. Two of these chapters
    * describe things the index genuinely holds, because it holds every version of
    * every listing it has ever seen: what a car has cost over time, where it has
    * been published, how long it sat, whether it vanished and came back. The
    * paperwork is different — ITV, registered keepers and outstanding finance
    * belong to the DGT and to lenders, not to the open market, and Cardeep cannot
    * derive them from listings. Showing them unmarked would be exactly the kind of
-   * quiet borrowing this file exists to prevent, so the card names its source
-   * instead of implying one.
+   * quiet borrowing this file exists to prevent, so every chapter names its own
+   * source and the surface draws the two families differently.
+   *
+   * WHY THIS IS NOW A CHAPTERED RECORD AND NOT THREE STANDING CARDS. What it
+   * replaces was three summary cards fanned into a stack: `Historial de precio`,
+   * `Vida del anuncio`, `Documentación`. Three headlines is not a history — a
+   * history is DATED, and nothing on that tile carried a date, so the section
+   * asserted "todo lo que le ha pasado a un coche" and then showed no events at
+   * all. Worse, the fan overlapped its own kickers: the second and third cards
+   * were physically covered by the card in front of them, so two of the three
+   * titles were unreadable in the resting state. This block therefore carries the
+   * actual chronology, in four chapters that open one at a time.
+   *
+   * EVERY FIGURE BELOW IS INTERNALLY CONSISTENT AND WAS CHECKED BY ARITHMETIC,
+   * not written by feel — one example car, one coherent life:
+   *   · 14 feb 2026 → 4 ago 2026 = 171 días desde el alta.
+   *   · 28 abr → 12 may = 14 días fuera del mercado, luego 171 − 14 = 157 publicado.
+   *   · 24.900 → 23.700 → 22.900 → 22.100 → 21.400 = 4 bajadas, −3.500 € en total.
+   *   · Tres portales distintos a lo largo de su vida, dos de ellos hoy.
+   *   · Matriculado 12 mar 2019 ⇒ primera ITV a los 4 años (mar 2023) y luego cada
+   *     dos (mar 2025); la reinspección cae dentro de los dos meses que da la ley.
+   *   · 92.140 km en la última ITV frente a 88.000 km declarados en el anuncio =
+   *     4.140 km de incoherencia. Ese cruce sólo existe porque una fuente es la
+   *     DGT y la otra es el índice, y es la mejor prueba de por qué hacen falta
+   *     las dos.
+   * No se nombra a ningún concesionario, cliente ni particular. El bastidor va
+   * enmascarado, como lo publica cualquier informe de vehículo serio.
    */
   history: {
     title: 'Historial del vehículo',
     lede: 'Todo lo que le ha pasado a un coche, reunido solo.',
-    cards: [
+    /**
+     * The legend, and the whole ethical load of this tile in four words each.
+     * Blue means the index produced it; grey means somebody else did.
+     */
+    legend: { index: 'del índice', official: 'de la DGT' },
+    /** The hands-off promise: the dealer supplies nothing and assembles nothing. */
+    handsOff: 'Sin intervención del punto de venta',
+    vehicle: {
+      model: 'Golf 2.0 TDI 150 CV',
+      year: '2019',
+      /** Masked, exactly as a real vehicle report publishes it. */
+      vin: 'WVWZZZAUZKW••••••',
+    },
+    chapters: [
       {
-        id: 'precio',
-        kicker: 'Historial de precio',
-        headline: '5 bajadas desde el alta',
-        detail: '24.900 € → 21.400 € · 143 días en el mercado',
-        source: 'índice',
-      },
-      {
-        id: 'anuncio',
-        kicker: 'Vida del anuncio',
-        headline: 'Publicado en 3 portales',
-        detail: 'Retirado y republicado 2 veces · fotos cambiadas 4 veces',
-        source: 'índice',
-      },
-      {
-        id: 'papeles',
-        kicker: 'Documentación',
-        headline: 'ITV, titulares y cargas',
-        detail: 'Procede de la DGT, no del mercado abierto',
+        id: 'origen',
+        tab: 'Origen',
+        kicker: 'Origen y titulares',
+        headline: 'Tres titulares desde 2019',
+        detail: 'Matriculado en Madrid · dos años en renting',
         source: 'dgt',
+        origin: 'Registro de la DGT',
+        events: [
+          {
+            date: '12 mar 2019',
+            text: 'Matriculación en Madrid',
+            value: '1.er titular',
+          },
+          {
+            date: '12 mar 2019',
+            text: 'Alta como flota de renting',
+            value: 'uso profesional',
+          },
+          {
+            date: '04 jun 2021',
+            text: 'Cambio de titular · particular, Madrid',
+            value: '2.º titular',
+          },
+          {
+            date: '18 sep 2023',
+            text: 'Cambio de titular · particular, Toledo',
+            value: '3.er titular',
+          },
+          {
+            date: 'hoy',
+            text: 'Sin registro de importación',
+            value: 'nacional',
+            tone: 'good',
+          },
+        ],
+      },
+      {
+        id: 'itv',
+        tab: 'ITV y km',
+        kicker: 'ITV y kilometraje',
+        headline: 'El cuentakilómetros no cuadra',
+        detail: '88.000 km en el anuncio · 92.140 km en la última ITV',
+        source: 'dgt',
+        origin: 'Estaciones ITV vía DGT',
+        events: [
+          {
+            date: '10 mar 2023',
+            text: 'Primera ITV · favorable',
+            value: '58.400 km',
+          },
+          {
+            date: '22 mar 2025',
+            text: 'Segunda ITV · desfavorable por emisiones',
+            value: '92.100 km',
+          },
+          {
+            date: '05 abr 2025',
+            text: 'Reinspección · favorable',
+            value: '92.140 km',
+            tone: 'good',
+          },
+          {
+            date: 'hoy',
+            text: 'El anuncio declara 4.140 km menos que la última ITV',
+            value: 'incoherencia',
+            tone: 'alert',
+          },
+        ],
+      },
+      {
+        id: 'cargas',
+        tab: 'Cargas',
+        kicker: 'Cargas y siniestros',
+        headline: 'Libre de cargas desde 2024',
+        detail: 'Tuvo reserva de dominio · cancelada hace dos años',
+        source: 'dgt',
+        origin: 'DGT y entidades financieras',
+        events: [
+          {
+            date: '04 jun 2021',
+            text: 'Reserva de dominio inscrita · financiera',
+            value: 'con carga',
+          },
+          {
+            date: '19 nov 2024',
+            text: 'Reserva de dominio cancelada',
+            value: 'libre',
+            tone: 'good',
+          },
+          {
+            date: 'hoy',
+            text: 'Sin anotación de embargo ni precinto',
+            value: 'limpio',
+            tone: 'good',
+          },
+          {
+            date: 'hoy',
+            text: 'No consta siniestro con baja definitiva',
+            value: 'sin siniestro',
+            tone: 'good',
+          },
+        ],
+      },
+      {
+        id: 'mercado',
+        tab: 'Mercado',
+        kicker: 'Vida en el mercado',
+        headline: '4 bajadas y una reaparición',
+        detail: '24.900 € → 21.400 € · 3 portales · 157 días publicado',
+        source: 'index',
+        origin: 'Índice de Cardeep',
+        events: [
+          {
+            date: '14 feb 2026',
+            text: 'Primera vez que lo vemos',
+            value: '24.900 €',
+            platform: 'coches.net',
+          },
+          {
+            date: '02 mar 2026',
+            text: 'Aparece también en Milanuncios',
+            value: '24.900 €',
+            platform: 'Milanuncios',
+          },
+          {
+            date: '21 mar 2026',
+            text: 'Baja de precio',
+            value: '23.700 €',
+          },
+          {
+            date: '09 abr 2026',
+            text: 'Cambia el juego de fotos',
+            value: '14 fotos',
+          },
+          {
+            date: '28 abr 2026',
+            text: 'Desaparece de los dos portales',
+            value: '14 días fuera',
+            tone: 'alert',
+          },
+          {
+            date: '12 may 2026',
+            text: 'Vuelve, y esta vez entra en AutoScout24',
+            value: '22.900 €',
+            platform: 'AutoScout24',
+          },
+          {
+            date: '03 jun 2026',
+            text: 'Cambia el juego de fotos',
+            value: '9 fotos',
+          },
+          {
+            date: '15 jul 2026',
+            text: 'Baja de precio',
+            value: '22.100 €',
+          },
+          {
+            date: '31 jul 2026',
+            text: 'Baja de precio',
+            value: '21.400 €',
+          },
+          {
+            date: 'hoy',
+            text: '171 días desde el alta · 157 publicado',
+            value: '−3.500 €',
+          },
+        ],
       },
     ],
   },

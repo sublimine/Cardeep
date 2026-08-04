@@ -1,0 +1,117 @@
+{
+  "coches.net": {
+    "file": "/logos/platforms/coches-net.svg",
+    "source": "https://www.coches.net/",
+    "sourceDetail": "Marca del header, servida como data URI SVG en el ancla a.sui-TopbarUser-brand. Extraida con navegador real: curl recibe 403 sin User-Agent de navegador.",
+    "format": "svg",
+    "width": 130,
+    "height": 20,
+    "bytes": 3054,
+    "colors": ["#000E23", "#E60E27"],
+    "onDark": {
+      "file": "/logos/platforms/coches-net-light.svg",
+      "bytes": 3054,
+      "derived": true,
+      "derivedFrom": "/logos/platforms/coches-net.svg",
+      "derivation": "Sustitucion de la tinta #000E23 por #FFFFFF. Ni un solo trazo, coordenada o proporcion se ha tocado.",
+      "evidence": "https://pro.coches.net/",
+      "evidenceDetail": "coches.net no publica un negativo del logotipo plano en ninguna ruta localizada. Su portal profesional si sirve el lockup en negativo (blanco + #E60E27, mismas letras) y prueba cual es el tratamiento oficial en negativo; ese asset no se usa tal cual porque incluye el distintivo PRO, que es otra submarca."
+    }
+  },
+
+  "AutoScout24": {
+    "file": "/logos/platforms/autoscout24.svg",
+    "source": "https://upload.wikimedia.org/wikipedia/commons/f/fe/AutoScout24_Logo_horizontal_%282022%29.svg",
+    "sourceDetail": "Wikimedia Commons, dominio publico (por debajo del umbral de originalidad). Version positiva del lockup horizontal de 2022.",
+    "format": "svg",
+    "width": 1006,
+    "height": 239,
+    "bytes": 9687,
+    "colors": ["#333333", "#F5F200"],
+    "onDark": {
+      "file": "/logos/platforms/autoscout24-light.svg",
+      "source": "https://www.autoscout24.es/assets/as24-header-footer/as24-horizontal-inverse.19d65360.svg",
+      "sourceDetail": "Asset oficial del propio header de AutoScout24 Espana. Mismo viewBox que el positivo. La URL lleva hash de contenido y cambiara cuando AutoScout24 redespliegue.",
+      "bytes": 9587,
+      "derived": false,
+      "colors": ["#333333", "#F5F200", "#FFFFFF"]
+    }
+  },
+
+  "Wallapop": {
+    "file": "/logos/platforms/wallapop.svg",
+    "source": "https://web-static.wallapop.com/nextjs/_next/static/media/wallapop-logo.a8a98573.svg",
+    "sourceDetail": "Marca horizontal oficial del header de es.wallapop.com. Se le ha anadido el viewBox que ya implicaban su propio width/height (0 0 182 40) para que escale de forma responsive; no cambia ningun trazo ni color. Se descarto el SVG de Wikimedia Commons: su tinta ocupaba solo el 72%x47% del viewBox, por lo que se veia notablemente mas pequeno que el resto de marcas.",
+    "format": "svg",
+    "width": 182,
+    "height": 40,
+    "bytes": 4214,
+    "colors": ["#13C1AC"],
+    "onDark": null,
+    "onDarkNote": "Monocromo turquesa: legible sobre claro y sobre oscuro, no necesita variante."
+  },
+
+  "Milanuncios": {
+    "file": "/logos/platforms/milanuncios.svg",
+    "source": "https://scm-milanuncios-frontend-pro.milanuncios.com/statics/images/common/logo.svg",
+    "sourceDetail": "CDN propio de Milanuncios, la misma marca que sirve su header.",
+    "format": "svg",
+    "width": 1000,
+    "height": 179,
+    "bytes": 8116,
+    "colors": ["#18BA5D"],
+    "onDark": null,
+    "onDarkNote": "Monocromo verde: legible sobre claro y sobre oscuro, no necesita variante."
+  },
+
+  "Autocasión": {
+    "file": "/logos/platforms/autocasion.svg",
+    "source": "https://assets0.autocasion.com/ao-assets/img/logo.svg",
+    "sourceDetail": "CDN propio de Autocasion. Su header sirve logo-white.svg, invisible sobre fondo claro; la version a color estaba en la misma carpeta bajo logo.svg. El color se declara en un bloque <style> interno con la clase .cls-1.",
+    "format": "svg",
+    "width": 284,
+    "height": 47,
+    "bytes": 5643,
+    "colors": ["#E6301B"],
+    "onDark": null,
+    "onDarkNote": "Monocromo rojo: legible sobre claro y sobre oscuro, no necesita variante."
+  },
+
+  "coches.com": {
+    "file": "/logos/platforms/coches-com.svg",
+    "source": "https://images.coches.com/_static_/cochescom/logos/logo.svg",
+    "sourceDetail": "CDN propio de coches.com, la marca de su header.",
+    "format": "svg",
+    "width": 83,
+    "height": 24,
+    "bytes": 3122,
+    "colors": ["#004558", "#00FF3B"],
+    "onDark": {
+      "file": "/logos/platforms/coches-com-light.svg",
+      "source": "https://images.coches.com/_static_/cochescom/logos/logotipo-coches-light.svg",
+      "sourceDetail": "Variante clara oficial publicada por coches.com en la misma carpeta.",
+      "bytes": 10085,
+      "derived": false,
+      "colors": ["#00FF3B", "#FFFFFF"]
+    }
+  },
+
+  "motor.es": {
+    "file": "/logos/platforms/motor-es.svg",
+    "source": "https://static.motor.es/imagenes/svg/motor-es-positivo.svg",
+    "sourceDetail": "CDN propio de motor.es. Su header sirve el negativo; el positivo esta en la misma carpeta bajo -positivo. El JSON-LD Organization de motor.es declara este mismo archivo como imagen oficial de la empresa.",
+    "format": "svg",
+    "width": 251,
+    "height": 48,
+    "bytes": 14105,
+    "colors": ["#085FC9", "#F8941D"],
+    "onDark": {
+      "file": "/logos/platforms/motor-es-light.svg",
+      "source": "https://static.motor.es/imagenes/svg/motor-es-negativo.svg",
+      "sourceDetail": "Negativo oficial, el que motor.es usa en su propio header.",
+      "bytes": 14102,
+      "derived": false,
+      "colors": ["#FFFFFF", "#F8941D"]
+    }
+  }
+}
