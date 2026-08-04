@@ -1,0 +1,25 @@
+.vercel
+
+# Build output. Vercel runs `npm run build` from source (see vercel.json), so a
+# committed bundle is 165 files of noise that go stale the moment anyone edits a
+# component — and a stale bundle in a repo is worse than none, because it looks
+# authoritative.
+dist/
+
+# Retired assets: twenty files that were an Arial <text> node impersonating a
+# trademark. Kept on disk so the removal is reversible, kept out of the repo so
+# nobody mistakes them for logos.
+public/logos/_retirados_arial/
+
+# Orphaned media from abandoned directions — 26 MB that NOTHING references.
+# Verified by searching all 235 source files: zero hits for any of them. The hero
+# reads /hero/hero-familia-*.{avif,webp,jpg}, which is tracked. These stay on disk
+# in case a direction is revived; they do not enter the history, because 26 MB of
+# unused video cannot be taken back out of a public repo without rewriting it.
+public/landing-rivr-bg.mp4
+public/landing-rivr-scene.png
+public/uploads/hero-video.mp4
+public/hero-city.png
+public/hero-cardeep-scene.png
+public/hero-road.png
+public/hero-family.png

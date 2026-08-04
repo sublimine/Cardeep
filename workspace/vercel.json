@@ -1,0 +1,39 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+
+  "build": {
+    "env": {
+      "VITE_API_BASE": "/api"
+    }
+  },
+
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}

@@ -50,3 +50,4 @@ scratch_*.py
 # data/ above — a derived build artifact, not source, never versioned.
 graphify-out/
 docs/second-brain/gf/
+.vercel
