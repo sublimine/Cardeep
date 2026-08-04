@@ -30,6 +30,30 @@
   --color-ink: #05142c;
 
   /**
+   * The template's yellow, retired.
+   *
+   * `--color-primary: #fc0` still lived in app/globals.css and still reached the
+   * page in three places: the sliding square inside every `Button`, the largest
+   * marker on the coverage map, and the bullet dots in `scaling`. The comment
+   * below already said that yellow was the agency template's accent and never
+   * Cardeep's — but saying it and shipping it are different things, and a page
+   * with a blue identity and a yellow control has two accents, which the design
+   * system does not allow.
+   *
+   * Overridden here rather than edited in place: app/globals.css is kept
+   * byte-identical to its source in `web/` so the landing can be re-synced by
+   * copy, and this block is the landing's own layer, declared after that import
+   * so it wins.
+   *
+   * What the yellow was FOR survives. It marked the index's densest point — the
+   * map's largest marker and the logo's one accent dot, deliberately the same
+   * colour. That distinction now runs on intensity instead of hue: the densest
+   * point takes the full-strength brand, everything around it a softer blue. One
+   * accent, same meaning.
+   */
+  --color-primary: #126efd;
+
+  /**
    * Fill vs accent are deliberately two different blues.
    *
    * White text on the brand blue measures 4.492:1 against a required 4.5:1 — it

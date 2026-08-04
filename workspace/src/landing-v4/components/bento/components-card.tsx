@@ -5,8 +5,15 @@ import { BENTO } from '@landing/content/site';
 /** Colour of the dormant PCB traces. */
 const TRACE_COLOR = '#F2F2F2';
 
-/** Colour of the travelling pulse and of the chip itself. */
-const PULSE_COLOR = '#FA9A63';
+/**
+ * Colour of the travelling pulse and of the chip itself.
+ *
+ * Was `#FA9A63` — the agency template's orange, and the last hue on this page
+ * that belonged to neither Cardeep's identity nor its two semantic colours. A
+ * bento card whose largest single element is an orange square reads as a
+ * different product from the one in the tile beside it.
+ */
+const PULSE_COLOR = '#126efd';
 
 /**
  * A plate renders every trace twice: once dormant (flat `#F2F2F2` stroke) and once as a
@@ -181,7 +188,7 @@ function GhostChip() {
   );
 }
 
-/** The orange chip with its four rows of pins and four blurred highlight blobs. */
+/** The chip with its four rows of pins and four blurred highlight blobs. */
 function Chip() {
   return (
     <div className="absolute right-3 bottom-16">
@@ -207,7 +214,7 @@ function Chip() {
           ))}
         </div>
       </div>
-      <div className="relative size-28 overflow-hidden rounded-3xl bg-[#FA9A63] shadow-[0px_3.200000047683716px_9.600000381469727px_0px_rgba(0,0,0,0.12)]">
+      <div className="relative size-28 overflow-hidden rounded-3xl bg-[#126efd] shadow-[0px_3.200000047683716px_9.600000381469727px_0px_rgba(0,0,0,0.12)]">
         <div className="absolute top-[-25.60px] left-[26.80px] size-16 rounded-full bg-orange-200 blur-[48px]" />
         <div className="absolute top-[82.38px] left-[-47.20px] h-32 w-5 origin-top-left rotate-[-59.09deg] rounded-full bg-orange-200 blur-[48px]" />
         <div className="absolute top-[-35.30px] left-[113.80px] h-16 w-14 rounded-full bg-white blur-[48px]" />

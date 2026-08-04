@@ -83,7 +83,6 @@
     --color-zinc-100: oklch(96.7% 0.001 286.375);
     --color-zinc-800: oklch(27.4% 0.006 286.033);
     --color-neutral-400: oklch(70.8% 0 none);
-    --color-neutral-500: oklch(55.6% 0 none);
     --color-stone-800: oklch(26.8% 0.007 34.298);
     --color-black: #000;
     --color-white: #fff;
@@ -159,7 +158,7 @@
     --color-background: #f0efec;
     --color-foreground: #000;
     --color-heading: #343434;
-    --color-primary: #fc0;
+    --color-primary: #126efd;
     --color-natural-white: #fff;
     --color-natural-black: #000;
     --color-muted-foreground: #8b8b8b;
@@ -2497,6 +2496,9 @@
 #cx-v4 .bg-\[\#28C840\] {
     background-color: #28C840;
   }
+#cx-v4 .bg-\[\#126efd\] {
+    background-color: #126efd;
+  }
 #cx-v4 .bg-\[\#27251F\] {
     background-color: #27251F;
   }
@@ -2508,9 +2510,6 @@
   }
 #cx-v4 .bg-\[\#EEEEEE\] {
     background-color: #EEEEEE;
-  }
-#cx-v4 .bg-\[\#FA9A63\] {
-    background-color: #FA9A63;
   }
 #cx-v4 .bg-\[\#FF5F57\] {
     background-color: #FF5F57;

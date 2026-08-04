@@ -40,8 +40,11 @@ export function Logo({ tone = 'light', className, title = 'Cardeep' }: LogoProps
             cx={ORIGIN + x * CELL}
             cy={ORIGIN + y * CELL}
             r={RADIUS}
-            // The one accent dot marks the index's densest point, the way the map does.
-            fill={on ? (x === 0 && y === 2 ? '#fc0' : lit) : dim}
+            // The one accent dot marks the index's densest point, the way the map
+            // does. It was the template's yellow; it is the brand's soft blue now,
+            // so the mark carries one hue and the dot still reads as the accent
+            // against both the white and the near-black dots around it.
+            fill={on ? (x === 0 && y === 2 ? '#8ab9fd' : lit) : dim}
           />
         )),
       )}
