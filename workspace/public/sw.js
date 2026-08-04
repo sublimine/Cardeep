@@ -1,4 +1,7 @@
-const CACHE = 'cardeep-v2';
+// Bumped so the activate handler evicts every cache written by the cache-first
+// version above — otherwise a browser that already has 'cardeep-v2' keeps serving
+// the shell it stored under the old rules.
+const CACHE = 'cardeep-v3';
 const SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', (e) => {
@@ -35,9 +38,28 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Navigation: serve shell
+  // Navigation: NETWORK FIRST, cache only as the offline fallback.
+  //
+  // This was cache-first, and cache-first on the document is how a deployment
+  // stops being visible: the browser kept serving the shell it had and only
+  // reached the network when that failed, so every visitor kept yesterday's page
+  // until they cleared storage. It was already fixed once (5e74203) and came back
+  // with the full-session revert (8cd8c6c).
+  //
+  // Offline still works — the cached shell is still there, it is simply the
+  // fallback rather than the answer.
   if (request.mode === 'navigate') {
-    e.respondWith(caches.match('/index.html').then((r) => r || fetch(request)));
+    e.respondWith(
+      fetch(request)
+        .then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then((c) => c.put('/index.html', clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
     return;
   }
 

@@ -103,6 +103,18 @@ export const HERO = {
   subtitle:
     '{n} coches a la venta en España, en un solo índice. El mayor portal ' +
     'especializado del país enseña uno de cada siete.',
+  /**
+   * The same sentence for when the figure is not available.
+   *
+   * Stripping the placeholder left "coches a la venta en España, en un solo
+   * índice" — a sentence starting mid-clause, which is what the page showed the
+   * moment the API was unreachable. The rule against inventing a number does not
+   * excuse leaving broken grammar in its place: the claim simply has to be
+   * writable without it.
+   */
+  subtitleNoCount:
+    'Todos los coches a la venta en España, en un solo índice. El mayor portal ' +
+    'especializado del país enseña uno de cada siete.',
   /** Second line of the subtitle: the verdict, handed to the reader. */
   subtitleSecond:
     'Cada coche medido contra los suyos, para que sepas cuál está por debajo de su precio.',

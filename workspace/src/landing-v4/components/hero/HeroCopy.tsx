@@ -127,7 +127,7 @@ export function HeroCopy({ stats }: { stats: Stats | null }) {
             {HERO.subtitle.replace('{n}', '')}
           </>
         ) : (
-          HERO.subtitle.replace('{n} ', '')
+          HERO.subtitleNoCount
         )}
       </motion.p>
       {/* The second line is the only sentence on the page whose verb belongs to

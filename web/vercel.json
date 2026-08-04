@@ -11,10 +11,29 @@
     }
   },
 
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "https://cardeep-workspace.vercel.app/",
+      "permanent": false
+    }
+  ],
+
   "rewrites": [
     { "source": "/api/v1/:path*", "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*" },
     { "source": "/api/:path*", "destination": "https://movers-sparc-downtown-quizzes.trycloudflare.com/:path*" },
     { "source": "/workspace-assets/:path*", "destination": "https://cardeep-workspace.vercel.app/workspace-assets/:path*" },
+
+    { "source": "/", "destination": "https://cardeep-workspace.vercel.app/" },
+    { "source": "/hero/:path*", "destination": "https://cardeep-workspace.vercel.app/hero/:path*" },
+    { "source": "/logos/:path*", "destination": "https://cardeep-workspace.vercel.app/logos/:path*" },
+    { "source": "/fonts/:path*", "destination": "https://cardeep-workspace.vercel.app/fonts/:path*" },
+    { "source": "/icons/:path*", "destination": "https://cardeep-workspace.vercel.app/icons/:path*" },
+    { "source": "/screens/:path*", "destination": "https://cardeep-workspace.vercel.app/screens/:path*" },
+    { "source": "/shots/:path*", "destination": "https://cardeep-workspace.vercel.app/shots/:path*" },
+    { "source": "/uploads/:path*", "destination": "https://cardeep-workspace.vercel.app/uploads/:path*" },
+    { "source": "/manifest.json", "destination": "https://cardeep-workspace.vercel.app/manifest.json" },
+    { "source": "/sw.js", "destination": "https://cardeep-workspace.vercel.app/sw.js" },
 
     { "source": "/login", "destination": "https://cardeep-workspace.vercel.app/login" },
     { "source": "/register", "destination": "https://cardeep-workspace.vercel.app/register" },
