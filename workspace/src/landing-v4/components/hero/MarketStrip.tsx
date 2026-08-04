@@ -20,8 +20,21 @@ const CARD_H = 112;
 const GAP = 10;
 const STEP = CARD_W + GAP;
 
-/** Track speed in px/s — slow enough to read a card in passing, never a treadmill. */
-const SPEED = 26;
+/**
+ * Track speed in px/s.
+ *
+ * 26 was too slow to register as motion at all. Measured in the browser, the rail
+ * was moving exactly as designed — 39px in 1.5s — but at that rate a 158px card
+ * takes six seconds to cross its own width, and a glance lasts about one. The
+ * rail read as a static row of tiles, which is the worst of both: the cost of an
+ * animation frame every frame, and none of the signal that the index is live.
+ *
+ * 56 puts a card's width at about three seconds. Fast enough that the movement is
+ * unmistakable in the first second of the page, slow enough that a price and a
+ * model still resolve as they pass — and it stops under the pointer, which is
+ * where actual reading happens.
+ */
+const SPEED = 56;
 
 const eur = (n: number) => `${n.toLocaleString('es-ES')} €`;
 

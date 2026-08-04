@@ -315,3 +315,119 @@
   text-rendering: auto;
   font-synthesis: weight style small-caps;
 }
+
+/* ======================================================================== *
+ *                                  THEME                                   *
+ * ======================================================================== */
+
+/**
+ * Class-based dark mode for the landing.
+ *
+ * Tailwind v4 defaults `dark:` to `@media (prefers-color-scheme: dark)`, which
+ * would ignore the app's own switch. This app decides the theme in main.tsx —
+ * `.dark` or `.light` goes on <html> before first paint — so the variant has to
+ * follow that class, not the OS.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/**
+ * WHY EVERY DARK SELECTOR HERE STARTS WITH `#cx-v4`.
+ *
+ * This stylesheet is compiled on its own and every selector is then rewritten by
+ * tools/build-landing-css.mjs, which prefixes `#cx-v4 ` onto anything that is not
+ * already scoped and rewrites `:root`/`html`/`body` INTO the scope element. That
+ * transformation quietly destroys the two obvious ways to write a theme override:
+ *
+ *   `.dark { --x: … }`        becomes `#cx-v4 .dark { … }`      — requires a
+ *                             `.dark` INSIDE the landing; the real one is on
+ *                             <html>, an ancestor, so it matches nothing.
+ *   `html.dark { --x: … }`    becomes `#cx-v4.dark #cx-v4 { … }` — nonsense.
+ *
+ * A selector that ALREADY begins with the scope is returned untouched (see
+ * `scopeSelector`), so writing the scope element first is the only form that
+ * survives. `:is()` rather than `:where()` on purpose: `:where()` contributes no
+ * specificity, which would leave these overrides tied with the `@theme` block
+ * they must beat and hand the decision to source order. `:is()` carries its
+ * arguments' specificity, so (1,1,0) beats (1,0,0) whatever the order.
+ *
+ * `.dark *` is what actually matches: the class is on <html> and `#cx-v4` is a
+ * descendant of it.
+ */
+#cx-v4:is(.dark, .dark *) {
+  /* The page base. Not pure black — the identity's navy, dropped below the ink
+   * used for panels so surfaces still have somewhere to rise to. */
+  --color-background: #060e1a;
+  --color-offwhite: #060e1a;
+  --color-foreground: #e9eef6;
+  --color-heading: #f4f7fb;
+  --color-secondary: #131c29;
+  --color-muted-foreground: #94a5bb;
+
+  /**
+   * `--color-natural-white` and `--color-natural-black` are deliberately NOT
+   * overridden, and the first attempt at this file got that wrong.
+   *
+   * They are LITERAL colour names, not semantic roles. `bg-natural-black` on the
+   * feature card and the coverage card means "this surface is black" — those two
+   * tiles are dark by design, in both themes, and they are the page's darkest
+   * surfaces precisely so the map and the browser mock read against them.
+   * Inverting the token flipped both cards to white and put white type on a white
+   * ground; the map vanished. A literal that inverts is not a theme token, it is
+   * a landmine. Anything that genuinely needs to swap uses `background`,
+   * `foreground`, `secondary` or the glass utilities above.
+   */
+
+  /* The two semantic hues lift on dark: #447e68 and #ff6464 were chosen against
+   * a #f0efec page and go muddy and glaring respectively against this one. */
+  --color-dusty-green: #5fbf94;
+  --color-dusty-red: #ff8383;
+}
+
+/**
+ * Glass, re-lit for a dark base.
+ *
+ * The utilities in app/globals.css are authored against a light page: a 60% white
+ * fill and a near-white hairline. Left alone on this background they read as
+ * bright slabs, which is the opposite of glass — depth from light only works when
+ * the surface is barely lighter than what is behind it.
+ *
+ * These override the utilities in place rather than asking every component to
+ * write `glass dark:glass-dark`, so every existing usage becomes theme-aware
+ * without being touched. app/globals.css stays byte-identical to its source in
+ * `web/`, which is the contract that lets the landing be re-synced by copy.
+ */
+#cx-v4:is(.dark, .dark *) .glass {
+  background: rgb(255 255 255 / 0.055);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  border-color: rgb(255 255 255 / 0.1);
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.1),
+    0 24px 60px -30px rgb(0 0 0 / 0.85);
+}
+
+#cx-v4:is(.dark, .dark *) .glass-quiet {
+  background: rgb(255 255 255 / 0.035);
+  border-color: rgb(255 255 255 / 0.075);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+}
+
+#cx-v4:is(.dark, .dark *) .glass-chip {
+  background: rgb(255 255 255 / 0.07);
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+/**
+ * The ambient bloom.
+ *
+ * Same three washes, roughly doubled. A 10%-opacity gradient that reads as a
+ * gentle haze over #f0efec is invisible over #060e1a — the glass panels above it
+ * would have nothing to refract, and glass with nothing behind it is just a grey
+ * box with a border.
+ */
+#cx-v4:is(.dark, .dark *) .aurora {
+  background:
+    radial-gradient(58rem 40rem at 12% 18%, rgb(37 99 235 / 0.22), transparent 62%),
+    radial-gradient(46rem 34rem at 88% 34%, rgb(18 110 253 / 0.14), transparent 60%),
+    radial-gradient(52rem 40rem at 50% 96%, rgb(37 99 235 / 0.16), transparent 64%);
+}

@@ -123,18 +123,21 @@ function MovementRow({ item }: { item: Movement }) {
         <Glyph className="size-3.5" strokeWidth={2.25} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
+        {/* Theme tokens, not fixed greys: `text-black` here was invisible the
+          * moment the page had a dark theme, and a hardcoded neutral ramp only
+          * ever reads correctly against one of the two backgrounds. */}
         <figcaption className="flex items-baseline justify-between gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-neutral-500">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
             {item.kind}
           </span>
-          <span className="shrink-0 text-[10px] text-neutral-400">
+          <span className="text-muted-foreground/70 shrink-0 text-[10px]">
             {item.time}
           </span>
         </figcaption>
-        <p className="mt-0.5 text-[13px] leading-[1.35] font-medium text-black">
+        <p className="text-foreground mt-0.5 text-[13px] leading-[1.35] font-medium">
           {item.text}
         </p>
-        <p className="mt-0.5 text-[11.5px] leading-[1.35] text-neutral-500">
+        <p className="text-muted-foreground mt-0.5 text-[11.5px] leading-[1.35]">
           {item.meta}
         </p>
       </div>
@@ -165,7 +168,7 @@ export function ProgressTrackingCard() {
   return (
     <div className="glass relative col-span-1 flex min-h-(--box-min-height) flex-col overflow-hidden rounded-2xl p-4 lg:col-span-2">
       <DotGrid />
-      <h2 className="relative text-base font-medium text-black">
+      <h2 className="text-foreground relative text-base font-medium">
         {TITLE_HEAD}
         <br />
         {TITLE_TAIL}
