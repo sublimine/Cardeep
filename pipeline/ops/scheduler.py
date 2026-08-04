@@ -946,6 +946,17 @@ PRODUCT_STATS_REFRESH_MIN: int = int(os.environ.get("CARDEEP_STATS_REFRESH_MIN",
 # claim: reacting to new stock fast, not AutoTrader's once-daily batch).
 WANTED_MATCHER_CADENCE_MINUTES: int = int(os.environ.get("CARDEEP_WANTED_MATCHER_CADENCE_MIN", "10"))
 
+# How often `search_cube` is rebuilt (env-overridable). The build measures ~190 s
+# on this host, so 20 minutes leaves the machine idle between runs rather than
+# permanently mid-rebuild. The count endpoint publishes its own `as_of`, so the
+# staleness this leaves is disclosed rather than hidden.
+SEARCH_CUBE_REBUILD_MIN: int = int(os.environ.get("CARDEEP_SEARCH_CUBE_REBUILD_MIN", "20"))
+
+# How often the deal-score run is recomputed (env-overridable). Six hours: the run
+# reads 1.58M rows and its cross-check alone measured 71 s, and a car's position
+# against its cohort does not move on a shorter horizon than that.
+DEAL_SCORE_CADENCE_HOURS: int = int(os.environ.get("CARDEEP_DEAL_SCORE_CADENCE_H", "6"))
+
 
 def _refresh_product_stats_job() -> None:
     """Picklable cadence job: refresh the product_stats cache (fast /stats). Best-effort — a failed
@@ -961,6 +972,74 @@ def _refresh_product_stats_job() -> None:
         log.info("product_stats refreshed: %s", counts)
     except Exception as exc:  # best-effort — never propagate into the scheduler
         log.warning("product_stats refresh failed: %s", exc)
+
+
+def _deal_score_job() -> None:
+    """Recompute the deal-score run that backs the landing's opportunity strip.
+
+    Without this the strip ages out: the only run in the database was computed on
+    2026-07-18 and nothing was scheduled to replace it, so a page advertising
+    "oportunidades" was quoting verdicts against a market two weeks gone.
+
+    PUBLICATION IS CONDITIONAL, and that is the point. `run_score` writes the run
+    row even when its dual-path cross-check fails — SQL medians recomputed in
+    Python across twenty cohorts, 0.5% tolerance — precisely so a failure is
+    auditable rather than invisible. This job publishes only when that check
+    passed; a failed run stays in the table, unpublished, and the public endpoint
+    keeps serving the last good one. Automating the computation must never mean
+    automating the trust.
+    """
+    import asyncio
+
+    async def _run() -> str:
+        import asyncpg
+
+        from pipeline.arbitrage.score import run_score
+
+        conn = await asyncpg.connect(_ASYNCPG_DSN, command_timeout=3600)
+        try:
+            run_id, checks = await run_score(conn)
+            if not checks.get("passed"):
+                return f"run {run_id} FAILED crosscheck — left unpublished"
+            await conn.execute(
+                "UPDATE arbitrage_run SET published = TRUE WHERE run_id = $1", run_id)
+            return (f"run {run_id} published "
+                    f"(max_divergence={checks.get('max_divergence_pct')}%)")
+        finally:
+            await conn.close()
+
+    try:
+        log.info("deal-score: %s", asyncio.run(_run()))
+    except Exception as exc:  # best-effort — never propagate into the scheduler
+        log.warning("deal-score job failed: %s", exc)
+
+
+def _rebuild_search_cube_job() -> None:
+    """Rebuild `search_cube`, which backs the landing's live result counter.
+
+    Without this the counter slowly lies: the cube is a snapshot of a census that
+    gains and loses roughly two thousand cars an hour, and the endpoint publishes
+    `as_of` precisely so a stale one is visible rather than silently wrong. This
+    keeps the staleness small enough that the disclosure stays uninteresting.
+
+    Best-effort by design — the build verifies itself against the same query
+    /stats uses and REFUSES to swap on a mismatch, so a failure here leaves the
+    previous, correct cube serving. The counter degrading to slightly older data is
+    always preferable to it degrading to wrong data.
+
+    Cadence is deliberately not five minutes: the build measures ~190 s on this
+    host, and a job that occupies its own interval is a job that never stops
+    running.
+    """
+    import asyncio
+
+    try:
+        from scripts.build_search_cube import main as build_cube
+
+        asyncio.run(build_cube(dry_run=False))
+        log.info("search_cube rebuilt")
+    except Exception as exc:  # best-effort — never propagate into the scheduler
+        log.warning("search_cube rebuild failed: %s", exc)
 
 
 def wanted_matcher_job() -> None:
@@ -1009,6 +1088,23 @@ def _lease_heartbeat_job(lock_key: int, holder: str) -> None:
             conn.close()
         except psycopg2.Error:
             pass
+
+
+def refresh_market_make_model() -> None:
+    """Rebuild the brand-selector roll-up.
+
+    CONCURRENTLY so the pickers keep answering during the rebuild; it needs the
+    unique index migration 0097 creates for exactly that reason.
+    """
+    conn = psycopg2.connect(_RAW_DSN)
+    try:
+        # CONCURRENTLY cannot run inside a transaction block.
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_market_make_model")
+    finally:
+        conn.close()
+    log.info("refresh_market_make_model: roll-up rebuilt")
 
 
 def _start_scheduler() -> None:
@@ -1064,6 +1160,23 @@ def _start_scheduler() -> None:
         max_instances=1,   # enforce single-producer: never two ticks overlapping
         coalesce=True,     # if the scheduler was down for multiple ticks, fire once
         misfire_grace_time=300,  # allow 5 min of slippage before skipping a misfired tick
+    )
+
+    # Brand-selector roll-up. `mv_market_make_model` (migration 0097) backs the
+    # public make/model pickers; without a refresh it is a snapshot that ages in
+    # silence while the API keeps serving it as current. Hourly is well inside
+    # the rate at which a new marque appears, and CONCURRENTLY keeps readers
+    # served throughout the rebuild.
+    scheduler.add_job(
+        refresh_market_make_model,
+        trigger="interval",
+        hours=1,
+        id="refresh_market_make_model",
+        name="cardeep market make/model roll-up",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=900,
     )
 
     # B2.4 — silence watchdog: independent hourly job, separate from the heartbeat.
@@ -1218,6 +1331,34 @@ def _start_scheduler() -> None:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=300,
+    )
+
+    # The landing's opportunity strip is served from deal_score; without this job
+    # it quotes a market that stopped moving on the day of the last manual run.
+    scheduler.add_job(
+        _deal_score_job,
+        trigger="interval",
+        hours=DEAL_SCORE_CADENCE_HOURS,
+        id="deal_score_run",
+        name="cardeep deal-score run (landing opportunities)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=1800,
+    )
+
+    # The landing's result counter is served from search_cube; without this job it
+    # would answer from whatever snapshot happened to be built last by hand.
+    scheduler.add_job(
+        _rebuild_search_cube_job,
+        trigger="interval",
+        minutes=SEARCH_CUBE_REBUILD_MIN,
+        id="search_cube_rebuild",
+        name="cardeep search_cube rebuild (live result counter)",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=600,
     )
 
     log.info(

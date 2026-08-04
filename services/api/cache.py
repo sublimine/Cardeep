@@ -65,6 +65,10 @@ CACHEABLE_PATH_PREFIXES: tuple[str, ...] = (
     "/terminal/",     # /terminal/symbols|{symbol}/ohlc|stats|rating|methodology — buckets
                       # only change once/day (pipeline/terminal/compute_buckets.py's cadence),
                       # 09-trading-terminal F2.
+    "/search/",       # /search/count — answered from search_cube, which only changes
+                      # when the cube is rebuilt. Without this prefix the endpoint
+                      # gets zero caching, and it is the one route on the landing
+                      # that fires on every filter change.
 )
 
 # Paths that MUST NOT be cached regardless of prefix match.
