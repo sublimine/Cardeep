@@ -1,94 +1,186 @@
-import { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import { Button } from '@landing/components/ui/button';
 import { BENTO } from '@landing/content/site';
 
+/* -------------------------------------------------------------------------- */
+/*                                   Radar                                    */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Dot-matrix backdrop drawn on the card's bottom-right canvas.
+ * Seconds for one full sweep.
  *
- * Measured off the reference render at DPR 1: 4px white squares on an 8px
- * pitch, each square at its own random alpha. The three `mask-*` utilities on
- * the wrapper do the fading, so the canvas itself paints edge to edge.
+ * Slow enough that the beam reads as an instrument scanning rather than a
+ * spinner, and slow enough that a marque stays lit long enough to be recognised
+ * after the beam has passed it.
  */
-const DOT_SIZE = 4;
-const DOT_PITCH = 8;
-const DOT_MIN_ALPHA = 0.05;
-const DOT_ALPHA_RANGE = 0.5;
+const SWEEP_S = 7;
 
-function DotMatrixCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+/** Range rings, as a fraction of the radar's radius. */
+const RINGS = [0.34, 0.62, 0.9] as const;
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
+/**
+ * What the sweep finds.
+ *
+ * Every entry is a real file in `public/logos` — checked against the directory,
+ * not assumed. There is no platform logo on disk (coches.net, AutoScout24,
+ * Wallapop and the rest ship no asset), and inventing one is not an option, so
+ * the radar shows what the index is actually FULL of: marques. That is also the
+ * truer picture — the platforms are channels, the marques are the stock.
+ *
+ * `a` is the bearing in degrees clockwise from twelve o'clock, `r` the distance
+ * from centre as a fraction of the radius. Positions are hand-placed rather than
+ * generated: an even ring reads as decoration, an uneven scatter reads as a
+ * reading.
+ */
+const BLIPS = [
+  { file: 'seat.svg', name: 'SEAT', a: 22, r: 0.5 },
+  { file: 'volkswagen.svg', name: 'Volkswagen', a: 58, r: 0.82 },
+  { file: 'renault.svg', name: 'Renault', a: 96, r: 0.44 },
+  { file: 'peugeot.svg', name: 'Peugeot', a: 133, r: 0.74 },
+  { file: 'citroen.svg', name: 'Citroën', a: 168, r: 0.36 },
+  { file: 'opel.svg', name: 'Opel', a: 196, r: 0.66 },
+  { file: 'ford.svg', name: 'Ford', a: 228, r: 0.86 },
+  { file: 'toyota.svg', name: 'Toyota', a: 254, r: 0.42 },
+  { file: 'kia.svg', name: 'Kia', a: 288, r: 0.7 },
+  { file: 'hyundai.svg', name: 'Hyundai', a: 316, r: 0.34 },
+  { file: 'audi.svg', name: 'Audi', a: 340, r: 0.78 },
+  { file: 'bmw.svg', name: 'BMW', a: 8, r: 0.9 },
+] as const;
 
-    // Redraw only on a real size change, otherwise every observer tick would
-    // reshuffle the random alphas and make the field flicker.
-    let lastKey = '';
-
-    const draw = () => {
-      const { width, height } = canvas.getBoundingClientRect();
-      const ratio = window.devicePixelRatio || 1;
-      const key = `${width}x${height}x${ratio}`;
-      if (width === 0 || height === 0 || key === lastKey) return;
-      lastKey = key;
-
-      canvas.width = Math.round(width * ratio);
-      canvas.height = Math.round(height * ratio);
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      context.clearRect(0, 0, width, height);
-
-      for (let y = 0; y < height; y += DOT_PITCH) {
-        for (let x = 0; x < width; x += DOT_PITCH) {
-          const alpha = DOT_MIN_ALPHA + Math.random() * DOT_ALPHA_RANGE;
-          context.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-          context.fillRect(x, y, DOT_SIZE, DOT_SIZE);
-        }
-      }
-    };
-
-    draw();
-    const observer = new ResizeObserver(draw);
-    observer.observe(canvas);
-    return () => observer.disconnect();
-  }, []);
-
-  return <canvas ref={canvasRef} className="block h-full w-full" />;
+/** Polar bearing to a percentage offset inside the square radar box. */
+function place(a: number, r: number) {
+  const rad = ((a - 90) * Math.PI) / 180;
+  return {
+    left: `${50 + Math.cos(rad) * r * 46}%`,
+    top: `${50 + Math.sin(rad) * r * 46}%`,
+  };
 }
 
 /**
- * Entrance offsets in seconds. The mockup assembles outside-in — shell first,
- * then chrome, then the skeleton content — so the card reads as a UI being
- * built rather than a picture fading in.
+ * A marque, lit as the beam crosses it.
+ *
+ * The pulse is not on a loop of its own — its delay is derived from the blip's
+ * own bearing, so it fires exactly when the sweep arrives and the two never drift
+ * apart. That coupling is the whole illusion: a light that pulses NEAR a rotating
+ * line is decoration; a light that pulses BECAUSE the line reached it is an
+ * instrument.
  */
-const DELAY = {
-  panel: 0,
-  glow: 0.1,
-  window: 0.1,
-  trafficLights: 0.25,
-  urlBar: 0.3,
-  dotField: 0.3,
-  viewport: 0.35,
-  titleBar: 0.45,
-  subtitleBar: 0.5,
-  chips: 0.55,
-  avatars: 0.6,
-  imageTile: 0.65,
-} as const;
+function Blip({ blip, index }: { blip: (typeof BLIPS)[number]; index: number }) {
+  const reduced = useReducedMotion();
+  const delay = (blip.a / 360) * SWEEP_S;
 
-/** Resting opacity of the masked dot layer, captured from the settled target. */
-const DOT_FIELD_OPACITY = 0.2;
+  return (
+    <motion.span
+      className="absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[10px] border border-white/12 bg-white/[0.06]"
+      style={place(blip.a, blip.r)}
+      initial={reduced ? false : { opacity: 0, scale: 0.7 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.5, delay: 0.15 + index * 0.06, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {/* `invert` because the self-hosted marks are black-on-transparent and this
+        * card is the page's darkest surface. */}
+      <img
+        src={`/logos/${blip.file}`}
+        alt={blip.name}
+        loading="lazy"
+        className="max-h-4 max-w-4 object-contain opacity-85 invert"
+      />
+      {!reduced && (
+        <motion.span
+          aria-hidden
+          className="ring-brand absolute inset-0 rounded-[10px] ring-1"
+          animate={{ opacity: [0, 0.9, 0], scale: [1, 1.45, 1.75] }}
+          transition={{
+            duration: 1.5,
+            delay,
+            repeat: Infinity,
+            repeatDelay: SWEEP_S - 1.5,
+            ease: 'easeOut',
+          }}
+        />
+      )}
+    </motion.span>
+  );
+}
 
-/** Skeleton bar widths the two placeholder rows animate out to. */
-const TITLE_BAR_WIDTH = 128;
-const SUBTITLE_BAR_WIDTH = 96;
+/**
+ * The instrument.
+ *
+ * BUILT IN CSS AND DOM, NOT THREE.JS. The repo ships @react-three/fiber and drei,
+ * so a rotating logo sphere was available, and it was rejected on cost: three plus
+ * drei is hundreds of kilobytes of JavaScript and a live WebGL context, spent on
+ * one tile of a bento grid a visitor may never scroll to. This is a conic
+ * gradient, three rings and twelve images — one compositor-side rotation, no
+ * JavaScript at all once mounted. On a landing page that is the right trade every
+ * time.
+ *
+ * The sweep is a conic gradient rather than a drawn line because that carries a
+ * decaying trail for free: bright at the leading edge, gone about ninety degrees
+ * behind it. That decay is the difference between a radar and a clock hand.
+ */
+function Radar() {
+  const reduced = useReducedMotion();
 
-const EASE = 'easeOut';
-const DURATION = 0.5;
+  return (
+    <div className="relative mx-auto aspect-square w-full max-w-[280px]">
+      {/* Range rings and axes. Hairlines only — the grid is a reference, and the
+        * moment it competes with the marques for attention it has failed. */}
+      <div className="absolute inset-0">
+        {RINGS.map((r) => (
+          <span
+            key={r}
+            className="absolute rounded-full border border-white/[0.07]"
+            style={{
+              left: `${50 - r * 46}%`,
+              top: `${50 - r * 46}%`,
+              width: `${r * 92}%`,
+              height: `${r * 92}%`,
+            }}
+          />
+        ))}
+        <span className="absolute top-1/2 left-[4%] h-px w-[92%] bg-white/[0.05]" />
+        <span className="absolute top-[4%] left-1/2 h-[92%] w-px bg-white/[0.05]" />
+      </div>
 
+      {/* The beam, clipped to the outer ring so it never paints the card's corners. */}
+      <div className="absolute inset-0 overflow-hidden" style={{ clipPath: 'circle(46% at 50% 50%)' }}>
+        <motion.div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              'conic-gradient(from 0deg, rgb(18 110 253 / 0.55) 0deg, rgb(18 110 253 / 0.16) 24deg, rgb(18 110 253 / 0.04) 62deg, transparent 96deg, transparent 360deg)',
+          }}
+          animate={reduced ? { rotate: 34 } : { rotate: 360 }}
+          transition={reduced ? { duration: 0 } : { duration: SWEEP_S, repeat: Infinity, ease: 'linear' }}
+        />
+      </div>
+
+      {/* The centre: Cardeep's own position. Everything else is measured from it. */}
+      <span className="bg-brand absolute top-1/2 left-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_16px_2px_rgb(18_110_253/0.7)]" />
+
+      {BLIPS.map((blip, index) => (
+        <Blip key={blip.file} blip={blip} index={index} />
+      ))}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                    Card                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The feature tile: "Índice nacional".
+ *
+ * What this replaces was a mocked browser window — grey chrome, traffic lights,
+ * skeleton bars, a placeholder image tile. It said "there is a web app", which is
+ * the one claim this section does not need to make and the least interesting
+ * thing about the product. The sweep says the real one: Cardeep scans the whole
+ * market, continuously, and pulls every marque in it into one index.
+ */
 export function DesignDevelopmentCard() {
   return (
     <motion.div
@@ -97,145 +189,20 @@ export function DesignDevelopmentCard() {
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
     >
-      <div className="h-full w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1">
-        <div className="w-full flex-1 h-85">
-          <motion.svg
-            className="absolute bottom-0 -left-40 z-40 rotate-45 fill-white/80 blur-3xl"
-            width="100%"
-            height="100%"
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-            transition={{ duration: 0.8, delay: DELAY.glow, ease: EASE }}
-          >
-            <ellipse cx="50%" cy="50%" rx="100" ry="60" />
-          </motion.svg>
+      {/* The bloom the instrument sits in, so the card has a light source rather
+        * than a flat black ground. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-24 left-1/2 size-[420px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
+        style={{ background: 'radial-gradient(circle, rgb(18 110 253 / 0.22), transparent 68%)' }}
+      />
 
-          {/* Bezel behind the product window. It is the one surface here with
-              nothing legible on it, so it can go translucent: the blurred glow
-              above blooms through it while the window itself stays opaque. */}
-          <motion.div
-            className="glass-dark relative z-40 h-full overflow-hidden rounded-lg"
-            variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-            transition={{ duration: DURATION, delay: DELAY.panel, ease: EASE }}
-          >
-            <motion.div
-              className="absolute inset-x-0 -bottom-4 mx-auto flex h-full w-[90%] flex-col rounded-lg bg-[#E6E6E6] p-2"
-              variants={{ hidden: { y: 30 }, visible: { y: 0 } }}
-              transition={{ duration: DURATION, delay: DELAY.window, ease: EASE }}
-            >
-              <div className="relative flex">
-                <motion.div
-                  className="flex items-center gap-1.5"
-                  variants={{ hidden: { opacity: 0, scale: 0.8 }, visible: { opacity: 1, scale: 1 } }}
-                  transition={{ duration: 0.35, delay: DELAY.trafficLights, ease: EASE }}
-                >
-                  <div className="size-1.5 rounded-full bg-[#FF5F57]" />
-                  <div className="size-1.5 rounded-full bg-[#FFBD2E]" />
-                  <div className="size-1.5 rounded-full bg-[#28C840]" />
-                </motion.div>
-                <motion.div
-                  className="absolute inset-x-0 mx-auto h-2 w-32 rounded-full bg-white"
-                  variants={{ hidden: { opacity: 0, scaleX: 0 }, visible: { opacity: 1, scaleX: 1 } }}
-                  transition={{ duration: 0.4, delay: DELAY.urlBar, ease: EASE }}
-                />
-              </div>
-
-              <motion.div
-                className="mt-3 flex w-full flex-1 flex-col rounded-lg bg-white"
-                variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-                transition={{ duration: 0.4, delay: DELAY.viewport, ease: EASE }}
-              >
-                <div className="flex">
-                  <div className="flex w-full items-center justify-between px-1.5 py-1">
-                    <div className="size-2 rounded-full bg-[#D9D9D9]" />
-                    <div className="flex items-center gap-1">
-                      <div className="h-1 w-3 rounded-full bg-[#E6E6E6]" />
-                      <div className="h-1 w-3 rounded-full bg-[#E6E6E6]" />
-                      <div className="h-1 w-3 rounded-full bg-[#E6E6E6]" />
-                      <div className="ml-1 h-1.5 w-4 rounded-sm bg-[#D9D9D9]" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-1 flex-col items-center justify-center px-2 py-3">
-                  <motion.div
-                    className="h-2 rounded-full bg-[#D9D9D9]"
-                    variants={{
-                      hidden: { opacity: 0, width: 0 },
-                      visible: { opacity: 1, width: TITLE_BAR_WIDTH },
-                    }}
-                    transition={{ duration: DURATION, delay: DELAY.titleBar, ease: EASE }}
-                  />
-                  <motion.div
-                    className="mt-1.5 h-1 rounded-full bg-[#E6E6E6]"
-                    variants={{
-                      hidden: { opacity: 0, width: 0 },
-                      visible: { opacity: 1, width: SUBTITLE_BAR_WIDTH },
-                    }}
-                    transition={{ duration: DURATION, delay: DELAY.subtitleBar, ease: EASE }}
-                  />
-                  <motion.div
-                    className="mt-2 flex items-center gap-1"
-                    variants={{ hidden: { opacity: 0, y: 5 }, visible: { opacity: 1, y: 0 } }}
-                    transition={{ duration: 0.4, delay: DELAY.chips, ease: EASE }}
-                  >
-                    <div className="h-2 w-8 rounded-sm bg-[#D9D9D9]" />
-                    <div className="h-2 w-8 rounded-sm bg-[#E6E6E6]" />
-                  </motion.div>
-                  <motion.div
-                    className="mt-2 flex items-center gap-1"
-                    variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-                    transition={{ duration: 0.4, delay: DELAY.avatars, ease: EASE }}
-                  >
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                    <div className="size-3 rounded-full bg-[#E6E6E6]" />
-                  </motion.div>
-                  <motion.div
-                    className="mt-3 flex h-full w-3/4 items-center justify-center rounded-sm bg-gray-100"
-                    variants={{ hidden: { opacity: 0, scale: 0.9 }, visible: { opacity: 1, scale: 1 } }}
-                    transition={{ duration: 0.45, delay: DELAY.imageTile, ease: EASE }}
-                  >
-                    {/* Inlined rather than imported: the installed @tabler/icons-react ships
-                        newer corner paths (M3 7…) than the reference build (M4 8…). */}
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="tabler-icon tabler-icon-photo-scan size-6 text-neutral-400"
-                    >
-                      <path d="M15 8h.01" />
-                      <path d="M6 13l2.644 -2.644a1.21 1.21 0 0 1 1.712 0l3.644 3.644" />
-                      <path d="M13 13l1.644 -1.644a1.21 1.21 0 0 1 1.712 0l1.644 1.644" />
-                      <path d="M4 8v-2a2 2 0 0 1 2 -2h2" />
-                      <path d="M4 16v2a2 2 0 0 0 2 2h2" />
-                      <path d="M16 4h2a2 2 0 0 1 2 2v2" />
-                      <path d="M16 20h2a2 2 0 0 0 2 -2v-2" />
-                    </svg>
-                  </motion.div>
-                </div>
-              </motion.div>
-            </motion.div>
-          </motion.div>
-
-          <motion.div
-            className="absolute right-0 bottom-0 h-80 w-full mask-t-from-20% mask-b-from-90% mask-l-from-50%"
-            variants={{ hidden: { opacity: 0 }, visible: { opacity: DOT_FIELD_OPACITY } }}
-            transition={{ duration: 0.8, delay: DELAY.dotField, ease: EASE }}
-          >
-            <div className="pointer-events-none select-none absolute inset-0 w-full">
-              <DotMatrixCanvas />
-            </div>
-          </motion.div>
+      <div className="relative z-10 flex flex-col">
+        <div className="px-2 pt-6 pb-2">
+          <Radar />
         </div>
 
-        <div className="mt-4 flex flex-col gap-6 px-4 py-4 z-10">
+        <div className="mt-4 flex flex-col gap-6 px-4 py-4">
           <div className="relative">
             <h2 className="text-base font-medium text-white">{BENTO.feature.title}</h2>
             <p className="mt-4 text-base text-neutral-400">{BENTO.feature.body}</p>
