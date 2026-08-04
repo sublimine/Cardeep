@@ -56,76 +56,80 @@ export const HERO = {
   /**
    * Two lines, no more. The second carries the accent.
    *
-   * The previous version leaned on "muestreamos" — a real verb that reads as a
-   * typo of "mostramos" at a glance, which is a failure whatever the dictionary
-   * says: a cover headline has one pass to land. This one states possession of
-   * the market instead of the method behind it.
-   */
-  /**
-   * Why the previous headline failed, precisely: both halves described Cardeep,
-   * not the reader. "Todo el mercado" is a property the company owns, and "sin
-   * puntos ciegos" defines the product by an absence — it made the reader
-   * assemble the positive claim himself. The subtitle then said "Sabemos", which
-   * hands the knowledge to the company, and floated 1.483.606 with nothing to
-   * measure it against. A large number without a baseline means nothing; the
-   * oldest rule in direct response is that "33% more light" beats "brighter"
-   * because it compares.
+   * WHY THE RATIO IS GONE. What this replaces argued by proportion — "siete
+   * veces más mercado del que ves hoy", proved underneath by "uno de cada
+   * siete". The arithmetic was sound (coches.net carries 215.494 of the
+   * 1.483.606 available Spanish cars in the index = 14,5%, one in 6,9) and it
+   * still failed, because a ratio is an analyst's sentence. The reader is a
+   * dealer with a forecourt: he does not divide, he recognises. A fraction on a
+   * cover asks him to do arithmetic before he is allowed to feel anything, and
+   * he will simply not do it.
    *
-   * So: the number is anchored against what the reader sees TODAY, and the verb
-   * moves to his side — "sepas", not "sabemos".
-   *
-   * THE ANCHOR IS MEASURED, and measured on BOTH sides of the same universe,
-   * which is where the first attempt at this went wrong. An earlier draft claimed
-   * "five times" from 277.083 platform_listing rows against 1.483.606 canonical
-   * cluster heads — two different populations, so the ratio meant nothing. Counted
-   * properly (distinct canonical, available, Spanish cars carrying a listing on
-   * each platform): coches.net 215.494 of 1.483.606 = 14,5%, one in 6,9. The
-   * subtitle names the scope out loud — "portal especializado" — because Wallapop,
-   * a general classifieds site whose car stock is overwhelmingly private sellers,
-   * reaches 42% and would otherwise contradict the headline.
+   * So the claim is now a POSITION, not a comparison, in the plainest words the
+   * language has for it. The evidence did not weaken — it moved into the
+   * subtitle and changed form, from a division into a range he can picture.
    */
   eyebrow: 'Índice nacional en vivo',
-  titleLines: ['Siete veces más mercado', 'del que ves hoy.'],
-  title: 'Siete veces más mercado del que ves hoy.',
+  titleLines: ['La mayor plataforma', 'de vehículos de España.'],
+  title: 'La mayor plataforma de vehículos de España.',
   /**
-   * Two sentences, forty words shorter than what it replaces.
+   * `{n}` is substituted with the live census figure at render time — the number
+   * does work inside the sentence instead of standing beside it as a statistic.
+   * Nothing is frozen into the string; a number written here is a number that
+   * will be wrong (tests/test_web_no_fabricated_data.py).
    *
-   * The old one spent three clauses describing the method — what we index, how,
-   * and what we can therefore infer — and a cover has one pass to land. This one
-   * states the scale and the single claim that follows from it, and stops.
+   * The headline's proof is scale AND reach, and reach is what the second clause
+   * buys — stated as something the reader recognises rather than a figure he has
+   * to divide.
    *
-   * `{n}` is substituted with the live census figure at render time. That is
-   * deliberate: the three counters that used to sit under this paragraph are
-   * gone, so the number has to earn its place inside the argument instead of
-   * standing beside it as a statistic. A figure that is doing work in a sentence
-   * sells; the same figure in a row of tiles is furniture.
+   * It does NOT use the "de la plataforma nacional al garaje de pueblo" span,
+   * even though that is the page's best line for reach. That span is already
+   * spent: SCALING.body and MISSION both run a variant of it, and BENTO.feature
+   * closes on "cada garaje de pueblo". Four printings of one image on one page
+   * turns a memorable phrase into a tic, and the cover is the wrong place to
+   * spend a line the page will say better later. "Cada punto de venta del país"
+   * is the reach claim the hero owns outright, and it names the thing a dealer
+   * actually cares about: his competition.
    */
   subtitle:
-    '{n} coches a la venta en España, en un solo índice. El mayor portal ' +
-    'especializado del país enseña uno de cada siete.',
+    '{n} coches a la venta ahora mismo. Cada punto de venta del país, en la ' +
+    'misma pantalla.',
   /**
-   * The same sentence for when the figure is not available.
+   * The same claim for when the figure is not available.
    *
-   * Stripping the placeholder left "coches a la venta en España, en un solo
-   * índice" — a sentence starting mid-clause, which is what the page showed the
-   * moment the API was unreachable. The rule against inventing a number does not
-   * excuse leaving broken grammar in its place: the claim simply has to be
-   * writable without it.
+   * Stripping the placeholder must never leave a sentence starting mid-clause,
+   * which is what the page showed the moment the API was unreachable. Refusing
+   * to invent a number is not a licence to leave broken grammar in its place.
    */
   subtitleNoCount:
-    'Todos los coches a la venta en España, en un solo índice. El mayor portal ' +
-    'especializado del país enseña uno de cada siete.',
-  /** Second line of the subtitle: the verdict, handed to the reader. */
+    'Todos los coches a la venta en España. Cada punto de venta del país, en la ' +
+    'misma pantalla.',
+  /**
+   * The verdict, and the only sentence on the page whose verb belongs to the
+   * reader — "sabes", not "sabemos".
+   *
+   * It names the two ways a dealer actually loses money, in his own terms:
+   * overpaying for stock he buys, and being undercut on stock he already holds.
+   * No metric, no comparison, nothing to compute.
+   */
   subtitleSecond:
-    'Cada coche medido contra los suyos, para que sepas cuál está por debajo de su precio.',
+    'Sabes lo que vale cada coche antes de comprarlo, y quién lo está vendiendo más barato que tú.',
   cta: PRIMARY_CTA,
   secondaryCta: 'Explorar el índice',
   watermark: 'Cardeep',
 } as const;
 
-/* ------------------------------------------------------------ source wall */
+/* --------------------------------------------------------------- sources */
 
-/** The platforms the index reads. Framed as coverage, never as clients. */
+/**
+ * The platforms the index reads. Framed as coverage, never as clients.
+ *
+ * The wall that used to carry these under the hero ("Indexamos donde vive el
+ * mercado") is gone: the same platforms are now argued for further down the
+ * page, where they connect to the hub instead of sitting in a row. A logo strip
+ * that only names sources is the weakest possible use of a full-width band.
+ * These entries stay — `founders-desk` and `scaling` both still read them.
+ */
 export const SOURCES = [
   { name: 'coches.net', mark: 'coches', accent: '.net' },
   { name: 'AutoScout24', mark: 'AutoScout', accent: '24' },
@@ -136,8 +140,6 @@ export const SOURCES = [
   { name: 'motor.es', mark: 'motor', accent: '.es' },
 ] as const;
 
-export const SOURCE_WALL_KICKER = 'Indexamos donde vive el mercado';
-
 /* -------------------------------------------------------------------- bento */
 
 export const BENTO = {
@@ -147,12 +149,81 @@ export const BENTO = {
     body: 'Cada compraventa, cada concesionario, cada garaje de pueblo. Con todo su stock y su ficha, ordenados hasta el último municipio.',
     cta: 'Ver el índice',
   },
+  /**
+   * The live feed, written as the alerts a dealer would actually want pushed to
+   * him rather than as a sample of what the system emits.
+   *
+   * The three entries this replaces — "Bajada de precio · −1.200 €", "Vendido ·
+   * 41 días en stock", "Stock nuevo · 6 unidades" — described EVENTS. An event
+   * is not a notification: nothing in "bajada de precio" tells the reader why he
+   * was interrupted. Every line here answers "why am I being told this", and
+   * they are the four things a compraventa loses or makes money on: what he is
+   * about to overpay for, who is undercutting him, what is not moving, and where
+   * the same car is cheaper.
+   *
+   * `tone` is semantic, never decorative — `warn` is money leaving, `good` is
+   * money arriving, `brand` is information. No marque, model or province here is
+   * invented, and no dealer or customer is ever named.
+   */
   movements: {
     title: 'Movimientos del mercado',
     items: [
-      { kind: 'precio', text: 'Bajada de precio · −1.200 €' },
-      { kind: 'venta', text: 'Vendido · 41 días en stock' },
-      { kind: 'stock', text: 'Stock nuevo · 6 unidades' },
+      {
+        kind: 'competencia',
+        tone: 'warn',
+        text: 'Te han bajado el precio a un rival directo',
+        meta: 'León 1.5 TSI · 700 € por debajo del tuyo',
+        time: 'hace 4 min',
+      },
+      {
+        kind: 'arbitraje',
+        tone: 'good',
+        text: 'El mismo Q3 35 TDI, más barato en Zaragoza',
+        meta: '2.300 € por debajo de la mediana de Madrid',
+        time: 'hace 11 min',
+      },
+      {
+        kind: 'tu stock',
+        tone: 'warn',
+        text: 'Tu Ibiza 1.0 TSI se ha quedado caro',
+        meta: '+840 € sobre la mediana · 38 días publicado',
+        time: 'hace 26 min',
+      },
+      {
+        kind: 'rotación',
+        tone: 'warn',
+        text: 'Tu Clase A 180 d cumple 60 días en stock',
+        meta: 'La mediana del modelo son 41 días',
+        time: 'hace 38 min',
+      },
+      {
+        kind: 'vendido',
+        tone: 'good',
+        text: 'Vendido un Tucson 1.6 CRDi como el tuyo',
+        meta: '19.400 € · 22 días publicado',
+        time: 'hace 1 h',
+      },
+      {
+        kind: 'mercado',
+        tone: 'brand',
+        text: 'La mediana del Golf 2.0 TDI 150 baja un 1,4%',
+        meta: '21.300 € → 21.000 € en las últimas dos semanas',
+        time: 'hace 2 h',
+      },
+      {
+        kind: 'oportunidad',
+        tone: 'good',
+        text: 'Un Sportage 1.6 CRDi entra por debajo de su precio',
+        meta: 'Margen estimado 1.900 € · Valencia',
+        time: 'hace 3 h',
+      },
+      {
+        kind: 'stock nuevo',
+        tone: 'brand',
+        text: 'Seis Corsa 1.2 nuevos en tu provincia',
+        meta: 'Desde 13.900 € · dos puntos de venta',
+        time: 'hace 5 h',
+      },
     ],
   },
   coverage: { title: 'Cobertura de España' },

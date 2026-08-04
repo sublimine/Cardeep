@@ -1,7 +1,19 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowDown, Check, Plus } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import {
+  Activity,
+  AlertTriangle,
+  Check,
+  Clock,
+  MapPin,
+  Plus,
+  Target,
+  TrendingDown,
+  type LucideIcon,
+} from 'lucide-react';
+
 import { BENTO } from '@landing/content/site';
+import { AnimatedList } from '@landing/components/ui/animated-list';
+import { cn } from '@landing/lib/utils';
 
 /* -------------------------------------------------------------------------- */
 /*                              Decorative dots                               */
@@ -63,179 +75,70 @@ function DotGrid() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                Radial gauge                                */
+/*                                    Feed                                    */
 /* -------------------------------------------------------------------------- */
 
-/** Seconds the needle takes to sweep a full turn, and the pause between sweeps. */
-const SWEEP_DURATION = 3.5;
-const SWEEP_REST = 4.5;
+type Movement = (typeof BENTO.movements.items)[number];
+type Tone = Movement['tone'];
 
 /**
- * Donut gauge. The gradient arc carries motion's `pathLength` attributes exactly
- * as the reference ships them — the path is filled rather than stroked, so the
- * draw-on is invisible, but the markup stays faithful. The needle group spins a
- * full turn and settles back on its resting `rotate(360deg)`.
+ * One glyph per alert kind. The icon is the only thing the reader parses before
+ * the text, so it carries the CATEGORY, never the sentiment — sentiment is the
+ * tone's job, and encoding both in one mark makes neither legible.
  */
-function ProgressGauge() {
-  return (
-    <svg
-      width="213"
-      height="216"
-      viewBox="0 0 213 216"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="absolute inset-x-0 top-2 mx-auto size-40 mask-b-from-50%"
-    >
-      <path
-        d="M213 109.5C213 168.318 165.318 216 106.5 216C47.6817 216 0 168.318 0 109.5C0 50.6812 47.6817 2.99951 106.5 2.99951C165.318 2.99951 213 50.6812 213 109.5ZM46.237 109.5C46.237 142.782 73.2177 169.762 106.5 169.762C139.782 169.762 166.763 142.782 166.763 109.5C166.763 76.2172 139.782 49.2365 106.5 49.2365C73.2177 49.2365 46.237 76.2172 46.237 109.5Z"
-        fill="#F8F8F8"
-      />
-      <motion.path
-        d="M86.0381 4.98367C63.9665 9.3048 43.8295 20.5024 28.5131 36.9716C13.1967 53.4408 3.48731 74.3362 0.776455 96.6628C-1.9344 118.989 2.49248 141.601 13.4226 161.257C24.3527 180.913 41.225 196.604 61.6212 206.082C82.0173 215.559 104.89 218.336 126.962 214.015C149.033 209.694 169.171 198.497 184.487 182.027C199.803 165.558 209.513 144.663 212.224 122.336C214.934 100.01 210.508 77.3979 199.577 57.7419L159.168 80.2125C165.353 91.3348 167.858 104.13 166.324 116.763C164.79 129.397 159.296 141.22 150.629 150.539C141.962 159.858 130.568 166.195 118.078 168.64C105.589 171.085 92.6465 169.513 81.1053 164.151C69.5642 158.788 60.017 149.909 53.8322 138.787C47.6474 127.664 45.1425 114.869 46.6764 102.236C48.2103 89.6023 53.7044 77.7787 62.3712 68.4596C71.0379 59.1406 82.4325 52.8044 94.9216 50.3593L86.0381 4.98367Z"
-        fill="url(#paint0_linear_1_614)"
-        initial={{ pathLength: 0 }}
-        whileInView={{ pathLength: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1.6, ease: 'easeInOut' }}
-      />
-      <motion.g
-        style={{ transformOrigin: '50% 50%', transformBox: 'view-box' }}
-        initial={{ rotate: 0 }}
-        whileInView={{ rotate: 360 }}
-        viewport={{ once: true }}
-        transition={{
-          duration: SWEEP_DURATION,
-          ease: 'easeInOut',
-          repeat: Infinity,
-          repeatDelay: SWEEP_REST,
-        }}
-      >
-        <rect
-          x="84"
-          y="0.380371"
-          width="2"
-          height="56"
-          rx="1"
-          transform="rotate(-10.9638 84 0.380371)"
-          fill="white"
-        />
-        <rect
-          x="84"
-          y="0.380371"
-          width="2"
-          height="56"
-          rx="1"
-          transform="rotate(-10.9638 84 0.380371)"
-          fill="url(#paint1_linear_1_614)"
-        />
-      </motion.g>
-      <defs>
-        <linearGradient
-          id="paint0_linear_1_614"
-          x1="13"
-          y1="0"
-          x2="121"
-          y2="0"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#F0F0F0" />
-          <stop offset="1" stopColor="#EDE5CB" />
-        </linearGradient>
-        <linearGradient
-          id="paint1_linear_1_614"
-          x1="88.669"
-          y1="27.3238"
-          x2="72.6514"
-          y2="27.5191"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#F1F1F1" />
-          <stop offset="1" stopColor="#C9B76E" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                               Movement stack                               */
-/* -------------------------------------------------------------------------- */
-
-/** Market movements in SSR DOM order. */
-const MOVEMENTS = BENTO.movements.items;
-
-type MovementKind = (typeof MOVEMENTS)[number]['kind'];
-
-/**
- * One neutral glyph per kind of movement: the price fell, the car sold, stock
- * came in. Same 16px box and same slot the reference brand marks occupied.
- */
-const MOVEMENT_GLYPHS: Record<MovementKind, ReactNode> = {
-  precio: <ArrowDown className="size-4 text-neutral-500" />,
-  venta: <Check className="size-4 text-neutral-500" />,
-  stock: <Plus className="size-4 text-neutral-500" />,
+const GLYPHS: Record<Movement['kind'], LucideIcon> = {
+  competencia: TrendingDown,
+  arbitraje: MapPin,
+  'tu stock': AlertTriangle,
+  rotación: Clock,
+  vendido: Check,
+  mercado: Activity,
+  oportunidad: Target,
+  'stock nuevo': Plus,
 };
 
-const STACK_SIZE = MOVEMENTS.length;
-/** Slot geometry: 0 is the front card, each step back sheds 10px and 6% scale. */
-const CARD_OFFSET = 10;
-const SCALE_FACTOR = 0.06;
-/** How long a movement stays in front before the stack promotes. */
-const CYCLE_MS = 5000;
 /**
- * The captured resting state has the second card in front, which is the DOM
- * order two promotions in — so the stack opens on that state instead of on the
- * pre-hydration order.
+ * Tone is money, not decoration: `warn` is money leaving the business, `good` is
+ * money arriving, `brand` is information that is neither. Three roles, one accent
+ * plus the two semantic hues the theme already defines — nothing here introduces
+ * a colour the design system does not own.
  */
-const INITIAL_SLOT_OFFSET = 2;
+const TONES: Record<Tone, string> = {
+  warn: 'bg-dusty-red/12 text-[#b3403a]',
+  good: 'bg-dusty-green/12 text-dusty-green',
+  brand: 'bg-brand/10 text-brand',
+};
 
-/**
- * Slot a card occupies on a given tick. Every tick promotes each card one slot
- * forward, which for a three-card stack is the same as adding `STACK_SIZE - 1`,
- * so the front card wraps around to the back.
- */
-function slotOf(index: number, tick: number) {
-  return (index + INITIAL_SLOT_OFFSET + (STACK_SIZE - 1) * tick) % STACK_SIZE;
-}
-
-function MovementStack() {
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(
-      () => setTick((current) => (current + 1) % STACK_SIZE),
-      CYCLE_MS,
-    );
-    return () => clearInterval(interval);
-  }, []);
+function MovementRow({ item }: { item: Movement }) {
+  const Glyph = GLYPHS[item.kind];
 
   return (
-    <div className="relative mb-8 w-full">
-      {MOVEMENTS.map((item, index) => {
-        const slot = slotOf(index, tick);
-        return (
-          <motion.div
-            key={item.kind}
-            className="glass absolute flex h-20 w-full flex-col justify-between rounded-lg p-4"
-            style={{ transformOrigin: 'top center' }}
-            animate={{
-              top: slot * -CARD_OFFSET,
-              scale: 1 - slot * SCALE_FACTOR,
-              zIndex: STACK_SIZE - slot,
-            }}
-            transition={{ duration: 0.45, ease: 'easeOut' }}
-          >
-            <div className="flex justify-between">
-              <span className="font-mono text-xs text-neutral-500">
-                {item.kind}
-              </span>
-              {MOVEMENT_GLYPHS[item.kind]}
-            </div>
-            <p className="text-base text-neutral-700">{item.text}</p>
-          </motion.div>
-        );
-      })}
-    </div>
+    <figure className="glass-quiet mb-2 flex w-full items-start gap-2.5 rounded-xl p-2.5">
+      <span
+        className={cn(
+          'mt-px flex size-7 shrink-0 items-center justify-center rounded-lg',
+          TONES[item.tone],
+        )}
+      >
+        <Glyph className="size-3.5" strokeWidth={2.25} aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <figcaption className="flex items-baseline justify-between gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-neutral-500">
+            {item.kind}
+          </span>
+          <span className="shrink-0 text-[10px] text-neutral-400">
+            {item.time}
+          </span>
+        </figcaption>
+        <p className="mt-0.5 text-[13px] leading-[1.35] font-medium text-black">
+          {item.text}
+        </p>
+        <p className="mt-0.5 text-[11.5px] leading-[1.35] text-neutral-500">
+          {item.meta}
+        </p>
+      </div>
+    </figure>
   );
 }
 
@@ -251,20 +154,31 @@ const TITLE_BREAK = BENTO.movements.title.lastIndexOf(' ');
 const TITLE_HEAD = BENTO.movements.title.slice(0, TITLE_BREAK);
 const TITLE_TAIL = BENTO.movements.title.slice(TITLE_BREAK + 1);
 
+/**
+ * What this card used to be: a donut gauge with a sweeping needle beside a stack
+ * of three cards that promoted on a timer. The gauge measured nothing — it was a
+ * dial with no quantity behind it — and three rotating strings cannot carry the
+ * claim the section makes. A feed can, because a feed is what the product is:
+ * the market moving, and Cardeep telling you which movements are yours.
+ */
 export function ProgressTrackingCard() {
   return (
-    <div className="glass relative col-span-1 min-h-(--box-min-height) overflow-hidden rounded-2xl p-4 pb-0 lg:col-span-2">
-      <div className="h-full">
-        <DotGrid />
-        <h2 className="text-base font-medium text-black">
-          {TITLE_HEAD}
-          <br />
-          {TITLE_TAIL}
-        </h2>
-        <div className="relative flex h-full w-full items-center justify-end">
-          <ProgressGauge />
-          <MovementStack />
-        </div>
+    <div className="glass relative col-span-1 flex min-h-(--box-min-height) flex-col overflow-hidden rounded-2xl p-4 lg:col-span-2">
+      <DotGrid />
+      <h2 className="relative text-base font-medium text-black">
+        {TITLE_HEAD}
+        <br />
+        {TITLE_TAIL}
+      </h2>
+      {/* The feed runs to the card's bottom edge and is faded out there rather
+        * than clipped, so the newest row reads as the top of something ongoing
+        * instead of the whole of something short. */}
+      <div className="relative mt-3 min-h-0 flex-1 mask-b-from-72%">
+        <AnimatedList visibleCount={3} delay={2800}>
+          {BENTO.movements.items.map((item) => (
+            <MovementRow key={item.kind} item={item} />
+          ))}
+        </AnimatedList>
       </div>
     </div>
   );

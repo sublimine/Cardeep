@@ -1,6 +1,5 @@
 import { Navbar } from '@landing/components/navbar';
 import { Hero } from '@landing/components/hero';
-import { LogoWall } from '@landing/components/logo-wall';
 import { EngineeringBento } from '@landing/components/engineering-bento';
 import { Projects } from '@landing/components/projects';
 import { Insights } from '@landing/components/insights';
@@ -54,7 +53,6 @@ export default function LandingV4() {
           <Navbar />
           <section className="flex max-w-screen flex-col items-center justify-center overflow-x-hidden">
             <Hero />
-            <LogoWall />
             <EngineeringBento />
             <Projects />
             <Insights />

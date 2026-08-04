@@ -16,10 +16,12 @@ interface FreeTextFieldProps {
  * Three things distinguish it from the input it replaces.
  *
  * THE RIM. A field that can answer a sentence has to advertise it before anyone
- * risks typing one. `field-invite` puts a travelling arc of brand light around
- * the edge — barely breathing at rest, firm on hover, running on focus. The
- * breathing stops for good at the first character: an invitation that keeps
- * pulsing after it has been accepted is just noise.
+ * risks typing one. `field-beam` runs a soft highlight along the field's own
+ * border — low at rest, firmer on hover, full on focus. It stops for good at the
+ * first character: an invitation that keeps running after it has been accepted is
+ * just noise. What this replaces lit the entire box from behind, which read as a
+ * glowing control rather than a lit edge; see the utility for why this is also
+ * not the hairline arc that came before that.
  *
  * THE EXAMPLES. They are typed into an `aria-hidden` overlay, never into the
  * `placeholder` attribute. The attribute is the LAST fallback in the accessible
@@ -58,15 +60,14 @@ export function FreeTextField({ value, onChange, onRunExample }: FreeTextFieldPr
   return (
     <div
       className={
-        /* A more solid interior than its sibling fields, and deliberately so: the
-         * lit gradient sits BEHIND this box, and at 5% white it shone straight
-         * through the middle and tinted the whole control. An opaque-ish fill is
-         * what turns the effect from a glow smeared across the field into a lit
-         * edge around it — the same reason the reference component gives its card
-         * a solid background. */
-        'field-invite flex h-11 w-full items-center gap-2.5 rounded-[11px] border border-white/10 ' +
+        /* The fill stays solid. It was made solid when the effect was a gradient
+         * sitting BEHIND the box, which at 5% white shone through and tinted the
+         * whole control; the beam no longer needs that, but the field still reads
+         * better as a distinct surface than its siblings. The static border stays
+         * too, and now it is load-bearing: it is the track the beam travels. */
+        'field-beam flex h-11 w-full items-center gap-2.5 rounded-[11px] border border-white/10 ' +
         'bg-[rgb(9_16_32/0.72)] px-3.5 transition-colors duration-200 focus-within:border-white/25 ' +
-        (empty && !engaged ? 'field-invite-idle' : '')
+        (empty && !engaged ? 'field-beam-idle' : '')
       }
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}

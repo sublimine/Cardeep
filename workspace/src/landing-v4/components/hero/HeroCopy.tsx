@@ -41,7 +41,14 @@ function Counter({ value }: { value: number }) {
 function Line({ text, accent, order }: { text: string; accent: boolean; order: number }) {
   const reduced = useReducedMotion();
   return (
-    <span className="block">
+    /* `text-balance` because these lines wrap.
+     *
+     * At the hero's type size the column fits roughly ten characters, so a
+     * `titleLines` entry is a phrase the browser will break again — and left to
+     * itself it breaks greedily, which put "España." alone on a fourth line. A
+     * widow is the one wrapping fault a cover cannot carry. Balancing evens the
+     * ragged edge instead of filling each line to capacity. */
+    <span className="block text-balance">
       {text.split(' ').map((word, i) => (
         <span key={`${word}-${i}`} className="inline-block overflow-hidden pb-[0.06em] align-bottom">
           <motion.span

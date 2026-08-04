@@ -192,57 +192,91 @@
  * peripheral. Brand cobalt into electric cyan keeps the same physics and the same
  * intensity while still belonging to this company.
  */
-@utility field-invite {
+/**
+ * Registered so the angle can be animated at all.
+ *
+ * A custom property is a string to the animation engine unless its type is
+ * declared, so an unregistered `--cx-beam-angle` would jump 0deg -> 360deg in one
+ * frame and the beam would never move. `@property` is in the build's opaque
+ * at-rule list (tools/build-landing-css.mjs), so it is emitted unscoped, which is
+ * what a registration needs.
+ */
+@property --cx-beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@utility field-beam {
   position: relative;
   isolation: isolate;
 
-  &::before,
-  &::after {
+  /**
+   * The beam. A conic gradient masked down to the border ring, so the light is
+   * ON the edge rather than behind the box.
+   *
+   * WHY THIS IS NOT THE ARC THAT WAS REJECTED. The first attempt at this page
+   * spun a conic gradient too, and it read as a loading spinner — correctly, and
+   * the owner said so. Three things separate the two, and all three matter:
+   *
+   *  - The arc is WIDE and soft, not a hairline. 120deg of gradient with the
+   *    intensity ramped across it, so the eye reads a highlight sliding along an
+   *    edge instead of a dot completing laps.
+   *  - The border it travels is ALREADY THERE. The field keeps its static
+   *    `border-white/10`, so the beam highlights an existing edge rather than
+   *    being the only thing drawing one. A spinner is a mark with no track; this
+   *    has a track.
+   *  - It is slow. 7s a lap against the old 3s slide — below the speed at which
+   *    motion reads as "working on it".
+   *
+   * The mask is the standard ring trick: two full-size masks, one clipped to the
+   * content box, composited so only the 1px padding band survives. Everything
+   * animated is a registered custom property, so the whole effect is one
+   * compositor-side paint of a pseudo-element.
+   */
+  &::before {
     content: '';
     position: absolute;
-    inset: -2px;
+    inset: -1px;
     border-radius: inherit;
-    z-index: -1;
-    opacity: 0;
+    padding: 1px;
     pointer-events: none;
-    transition: opacity 0.4s ease;
-    background-image: linear-gradient(0deg, #126efd, #00d9f5);
-    background-size: 100% 200%;
-    animation: cx-neon-slide 3s infinite alternate;
+    opacity: 0;
+    transition: opacity 0.45s ease;
+    background: conic-gradient(
+      from var(--cx-beam-angle),
+      transparent 0deg,
+      transparent 232deg,
+      rgb(18 110 253 / 0.14) 288deg,
+      rgb(150 205 255 / 0.92) 332deg,
+      rgb(18 110 253 / 0.14) 352deg,
+      transparent 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: cx-beam-orbit 7s linear infinite;
   }
 
-  /* The glow. Same gradient, pushed back and blurred hard — the blur radius is
-   * what separates "lit" from "outlined".
-   *
-   * 44px, not the 22px this started at. The reference computes its blur as a
-   * THIRD of the element's width, which for a field this size is over a hundred
-   * pixels; at 22 the glow was technically present and invisible against a
-   * photograph. The point of this effect is that the field looks lit from behind,
-   * and a glow nobody notices is just GPU cost. */
-  &::after {
-    z-index: -2;
-    filter: blur(44px);
-  }
-
-  &:hover::before { opacity: 0.8; }
-  &:hover::after  { opacity: 0.6; }
-
+  &:hover::before { opacity: 0.85; }
   &:focus-within::before { opacity: 1; }
-  &:focus-within::after  { opacity: 0.85; }
 }
 
-/* At rest, while the field is empty and untouched: the glow breathes faintly so
- * the field reads as live without demanding attention. It dies at the first
- * keystroke — an invitation that keeps pulsing after it has been accepted is
+/* At rest, while the field is empty and untouched: the beam runs at low opacity
+ * so the field reads as live without demanding attention. It dies at the first
+ * keystroke — an invitation that keeps running after it has been accepted is
  * just noise. */
-@utility field-invite-idle {
-  &::before { opacity: 0.55; }
-  &::after  { opacity: 0.42; }
+@utility field-beam-idle {
+  &::before { opacity: 0.6; }
 }
 
-@keyframes cx-neon-slide {
-  0%   { background-position: top center; }
-  100% { background-position: bottom center; }
+@keyframes cx-beam-orbit {
+  to { --cx-beam-angle: 360deg; }
 }
 
 /**
@@ -260,12 +294,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Motion is what the preference refuses, not the affordance. The gradient stays
-   * lit — it simply stops sliding — so the field still announces itself. */
-  .field-invite::before,
-  .field-invite::after {
+  /* Motion is what the preference refuses, not the affordance. The beam parks at
+   * an angle that leaves its bright head on the field's top edge and stays there,
+   * so the field still reads as live and the border still has its highlight. */
+  .field-beam::before {
     animation: none !important;
-    background-position: center;
+    --cx-beam-angle: 28deg;
   }
 }
 
