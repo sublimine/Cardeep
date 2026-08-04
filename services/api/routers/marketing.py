@@ -395,11 +395,21 @@ _RADAR_C5_SQL = """
            ) AS median_days
       FROM vehicle_event ve
       JOIN vehicle v ON v.vehicle_ulid = ve.vehicle_ulid
+      -- Tenant scope comes through `entity`, not off the vehicle.
+      --
+      -- This clause read `v.country_code` and there is no such column on
+      -- `vehicle` — the country lives on the owning entity, which is how
+      -- services/api/stats.py and every other tenant-scoped query resolves it.
+      -- The endpoint therefore returned a 500 on every call since 2026-07-19
+      -- (commit d4c029b); the three TestChannelRadarContract cases have been red
+      -- ever since. Found while auditing an unrelated change, fixed here because a
+      -- one-line repair is cheaper than carrying a broken route.
+      JOIN entity e ON e.entity_ulid = v.entity_ulid
       JOIN platform_listing pl ON pl.vehicle_ulid = v.vehicle_ulid
      WHERE ve.event_type = 'GONE'
        AND ve.observed_at > now() - ($2 || ' days')::interval
        AND pl.platform_entity_ulid = ANY($1::text[])
-       AND v.country_code = 'ES'
+       AND e.country_code = 'ES'
      GROUP BY pl.platform_entity_ulid
 """
 
