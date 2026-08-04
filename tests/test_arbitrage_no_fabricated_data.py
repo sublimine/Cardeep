@@ -16,7 +16,18 @@ import pytest
 pytestmark = pytest.mark.unit
 
 _REPO = Path(__file__).resolve().parent.parent
-_ARBITRAGE_TSX = _REPO / "web" / "src" / "pages" / "Arbitrage.tsx"
+
+# The page moved from `web/` to `workspace/` on 2026-07-27 (commit 8cd8c6c) and this
+# path did not follow it. The four tests below had been failing with
+# FileNotFoundError ever since — which is worse than a red suite, because a
+# guardrail that cannot find its target is not failing loudly, it is silently
+# guarding nothing. `web/` is now the marketing landing; the app lives in
+# `workspace/`. Both are checked so a future move is caught rather than repeated.
+_CANDIDATE_TSX = (
+    _REPO / "workspace" / "src" / "pages" / "Arbitrage.tsx",
+    _REPO / "web" / "src" / "pages" / "Arbitrage.tsx",
+)
+_ARBITRAGE_TSX = next((p for p in _CANDIDATE_TSX if p.exists()), _CANDIDATE_TSX[0])
 
 # The exact mock identifiers this page shipped before F3 (04-arbitrage.md §1.2). Their
 # reappearance ANYWHERE in the file (even renamed-but-reintroduced as a new hardcoded
