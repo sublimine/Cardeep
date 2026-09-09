@@ -90,8 +90,8 @@
 /**
  * The hero's search panel — the deepest of the three glass levels the page uses
  * (chip → rail → panel; `glass-chip-dark` and `glass-dark` in globals.css cover
- * the first two). Values are the ones CARDEX ships on the panel this replicates,
- * kept rather than re-tuned so the two products read as one system.
+ * the first two). Values preserve the established panel treatment so the public
+ * surfaces read as one visual system.
  *
  * The parts that make it read as glass instead of a translucent box: `saturate`
  * paired with the blur, so colour behind lifts instead of greying out; a fill
