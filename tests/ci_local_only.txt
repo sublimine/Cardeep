@@ -136,6 +136,14 @@ tests/test_comarca_trigger_country.py
 # first. Not census-dependent in the usual sense; the conflict is structural, not fixable by
 # more/different seed data. Verified 2026-07-19: passes against a genuinely empty DB.
 tests/test_autopilot_supervisor.py
+# Live-census search-language evaluation (2026-09-09, reproduced on the db-tests fixture):
+# QueryParser.load intentionally derives its make/model vocabulary from the intersection of the
+# curated make registry and the currently published search_cube. The ephemeral CI fixture carries
+# synthetic vehicles with no production make/model corpus, so all 12 marque cases are unresolved
+# there even though the parser logic is unchanged. This file is an evaluation of the populated
+# census vocabulary, not a self-seeding DB test; keep running it against the populated local DB.
+# origin/main already failed for this same data precondition (Actions run 30934248186).
+tests/test_search_parse_eval.py
 # 01-market-intelligence F3/F4/F5 routers (2026-07-19, first run against a clean CI DB): by their
 # OWN module docstrings, these three files pin fixtures to the REAL F2/F4/F5 production runs —
 # KNOWN_MAKE/MODEL/YEAR/FUEL="Peugeot 208 2024 Gasolina" re-verified against the live published
