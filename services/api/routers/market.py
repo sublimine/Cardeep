@@ -466,11 +466,11 @@ _SHOWCASE_POOL = 400
 # rejected: no index covers it, so it degrades to a full scan plus a sort.
 _SHOWCASE_SAMPLE_PCT = 0.4
 
-_SHOWCASE_SQL = f"""
+_SHOWCASE_SQL = """
 WITH sample AS (
     SELECT vehicle_ulid, make, model, year, km, price, currency, fuel,
            photo_url, entity_ulid, first_seen
-      FROM vehicle TABLESAMPLE SYSTEM ({_SHOWCASE_SAMPLE_PCT})
+      FROM vehicle TABLESAMPLE SYSTEM ({sample_pct})
      WHERE status = 'available'
        AND price > 0
        AND photo_url <> ''
@@ -478,7 +478,13 @@ WITH sample AS (
        AND km IS NOT NULL
        AND make <> ''
        AND model <> ''
-     LIMIT {_SHOWCASE_POOL}
+       AND EXISTS (
+           SELECT 1
+             FROM entity sample_entity
+            WHERE sample_entity.entity_ulid = vehicle.entity_ulid
+              AND sample_entity.country_code = 'ES'
+       )
+     LIMIT {pool}
 )
 SELECT s.vehicle_ulid,
        s.make,
@@ -494,7 +500,8 @@ SELECT s.vehicle_ulid,
   FROM sample s
   LEFT JOIN entity e ON e.entity_ulid = s.entity_ulid
   LEFT JOIN geo_province gp ON gp.code = e.province_code
-"""
+                           AND gp.country_code = e.country_code
+""".format(sample_pct=_SHOWCASE_SAMPLE_PCT, pool=_SHOWCASE_POOL)
 
 
 # Marques written in capitals because they ARE initialisms or stylised that way.
@@ -1062,7 +1069,9 @@ SELECT ds.vehicle_ulid,
   JOIN servable_vehicle v ON v.vehicle_ulid = ds.vehicle_ulid
   LEFT JOIN entity e      ON e.entity_ulid = v.entity_ulid
   LEFT JOIN geo_province gp ON gp.code = e.province_code
- WHERE v.photo_url <> ''
+                           AND gp.country_code = e.country_code
+ WHERE e.country_code = 'ES'
+   AND v.photo_url <> ''
    AND v.price > 0
    AND v.year IS NOT NULL
    AND v.km IS NOT NULL
