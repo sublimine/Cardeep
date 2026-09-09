@@ -6,14 +6,16 @@ name with the following province + the next website button.
 """
 from __future__ import annotations
 
+import argparse
 import html as _html
 import json
 import os
 import re
+from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-RAW = os.path.join(ROOT, "docs", "research", "associations", "aecs_raw.html")
-OUT = os.path.join(ROOT, "docs", "research", "associations", "aecs_members.json")
+DEFAULT_RAW = Path(ROOT) / "data" / "raw" / "associations" / "aecs.html"
+DEFAULT_OUT = Path(ROOT) / "docs" / "research" / "associations" / "aecs_members.json"
 
 PROVINCES = {
     "MADRID", "BARCELONA", "VALENCIA", "SEVILLA", "ZARAGOZA", "MALAGA", "MÁLAGA",
@@ -30,15 +32,33 @@ PROVINCES = {
 }
 
 
-def main():
-    t = open(RAW, encoding="utf-8").read()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Parse an externally captured AECS directory page."
+    )
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=DEFAULT_RAW,
+        help="Raw HTML input (default: ignored data/raw/associations/aecs.html)",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=DEFAULT_OUT,
+        help="Structured JSON output",
+    )
+    return parser.parse_args()
+
+
+def parse_dealers(source: str) -> list[dict[str, str]]:
     # Build an ORDERED token stream of two kinds: ('text', value) and ('btn', href).
     # Walk it so a website binds to the dealer it physically follows.
     tokens = []
     for m in re.finditer(
         r'elementor-widget-text-editor[^>]*>\s*<div class="elementor-widget-container">\s*(.*?)\s*</div>'
         r'|class="elementor-button[^"]*"\s+href="([^"]+)"',
-        t, re.DOTALL):
+        source, re.DOTALL):
         if m.group(1) is not None:
             val = _html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip()
             if val:
@@ -66,9 +86,17 @@ def main():
         else:
             i += 1
 
-    with open(OUT, "w", encoding="utf-8") as f:
+    return dealers
+
+
+def main():
+    args = parse_args()
+    dealers = parse_dealers(args.input.read_text(encoding="utf-8"))
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with args.output.open("w", encoding="utf-8") as f:
         json.dump(dealers, f, ensure_ascii=False, indent=1)
-    print(f"WROTE {OUT}: {len(dealers)} dealers, {sum(1 for d in dealers if d.get('website'))} with website")
+    print(f"WROTE {args.output}: {len(dealers)} dealers, {sum(1 for d in dealers if d.get('website'))} with website")
     for d in dealers[:6]:
         print(" ", d)
     print("  ...")

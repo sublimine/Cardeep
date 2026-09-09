@@ -27,14 +27,14 @@ skills/tools aplican a cada caso de uso del pipeline Cardeep.
 | Descubrimiento de entidades | `pipeline/discover.py` | Python determinista | — | €0 |
 | Scraping Tier-0 (open HTTP) | `pipeline/platform/*.py` + `fetch.py` + `governor.py` | Python determinista | — | €0 |
 | Scraping Tier-1 (anti-bot) | `pipeline/platform/*.py` + camoufox | Python + proxies premium | — | GASTO (proxies) |
-| Recipe-hunting Tier-1 nuevo dealer | `pipeline/recipe.py` | LLM agente | `cardex-pipeline` skill, Playwright browser | GASTO (LLM + proxies) |
+| Recipe-hunting Tier-1 nuevo dealer | `pipeline/recipe.py` | LLM agente | `data-scraper-agent` skill, Playwright browser | GASTO (LLM + proxies) |
 | Recipe template (familia conocida) | `pipeline/recipe.py` | Python determinista | — | €0 |
 | Ingesta + delta | `pipeline/ingest.py` + `pipeline/delta.py` | Python determinista | — | €0 |
 | VAM count verdict (L1) | `pipeline/verify.py` | Python determinista | — | €0 |
 | Deep Ledger δ cadencia (L2) | `pipeline/ops/inquisition_schedule.py` | Python determinista | — | €0 |
 | Inquisition Lens A (requery) | `pipeline/inquisition/_lens_a.py` | Python determinista | — | €0 |
 | Inquisition Lens B (raw recount) | `pipeline/inquisition/lenses.py` | Python determinista | — | €0 |
-| Inquisition Lens C (live re-fetch) | `pipeline/inquisition/lenses.py` (stub) | LLM agente + HTTP | `cardex-pipeline` skill | HARVEST-GATED |
+| Inquisition Lens C (live re-fetch) | `pipeline/inquisition/lenses.py` (stub) | LLM agente + HTTP | `data-scraper-agent` skill | HARVEST-GATED |
 | Inquisition Lens D (cross-source) | `pipeline/inquisition/_lens_d.py` | Python determinista | — | €0 |
 | Inquisition Lens E (batch hash) | `pipeline/inquisition/lenses.py` | Python determinista | — | €0 |
 | Inquisition quórum + routing | `pipeline/inquisition/quorum.py` + `router.py` | Python determinista | — | €0 |
@@ -53,7 +53,7 @@ skills/tools aplican a cada caso de uso del pipeline Cardeep.
 
 | Skill | Cuándo activar |
 |-------|---------------|
-| `cardex-pipeline` | Recipe-hunting Tier-1 nuevo dealer; Lens C live re-fetch cuando es determinante; debugging de conectores de plataforma |
+| `data-scraper-agent` | Recipe-hunting Tier-1 nuevo dealer; Lens C live re-fetch cuando es determinante; debugging de conectores de plataforma |
 | `systematic-debugging` | Cuando un detector del gestionador dispara una anomalía y la causa raíz no es obvia en los logs |
 | `deep-research` | Análisis de cobertura de mercado; estudio de dealers no identificados; benchmarking de fuentes alternativas |
 | `code-reviewer` | Tras cualquier modificación en `inquisition/`, `gestionador/` u `ops/` |
