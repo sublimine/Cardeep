@@ -29,6 +29,9 @@ CONSUMER_EMAIL = re.compile(
 PINTEREST_PROFILE_URL = re.compile(
     rb"(?i)(?:https?://)?(?:[a-z]{2}\.)?pinterest\.com/[a-z0-9._-]+/"
 )
+CARDEX_BRANDED_RUNTIME_EXAMPLE = re.compile(
+    rb"(?i)(?:session[-_]?cardex|postgresql(?:\+asyncpg)?://[^\s\"']*cardex)"
+)
 
 
 def _tracked_paths() -> list[Path]:
@@ -60,6 +63,16 @@ def test_cardeep_docs_do_not_prescribe_cardex_owned_agents_or_skills() -> None:
             offenders.append(path.relative_to(ROOT).as_posix())
 
     assert offenders == [], f"Cardeep docs prescribe CARDEX-owned operations: {offenders}"
+
+
+def test_cardeep_docs_have_no_cardex_branded_runtime_examples() -> None:
+    offenders = [
+        path.relative_to(ROOT).as_posix()
+        for path in (ROOT / "docs").rglob("*.md")
+        if CARDEX_BRANDED_RUNTIME_EXAMPLE.search(path.read_bytes())
+    ]
+
+    assert offenders == [], f"Cardeep docs contain CARDEX-branded runtime examples: {offenders}"
 
 
 def test_raw_third_party_aecs_page_is_not_versioned() -> None:

@@ -192,6 +192,7 @@ Pair its `ParselCrawler` with Scrapling's adaptive parser. Use the
 ```python
 # Fallback path for a new, low-defense source — Crawlee handles the plumbing.
 import asyncio
+import os
 from crawlee.crawlers import ParselCrawler, ParselCrawlingContext
 from crawlee.storage_clients import SqlStorageClient  # v1.0+ multi-process queue
 
@@ -201,7 +202,7 @@ async def main() -> None:
         max_request_retries=5,              # built-in retry/backoff
         concurrency_settings=None,          # autoscale by system resources
         storage_client=SqlStorageClient(    # concurrent multi-worker queue
-            connection_string="postgresql+asyncpg://cardex:***@pg/cardex",
+            connection_string=os.environ["CARDEEP_DATABASE_URL"],
         ),
     )
 

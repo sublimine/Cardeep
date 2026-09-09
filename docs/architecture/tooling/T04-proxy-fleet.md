@@ -91,7 +91,7 @@ where noted.
 # HTTP(S) — gate.decodo.com, port 7000 (rotating) / sticky via username params
 # Username pattern: user-<USER>-country-es-session-<ID>-sessionduration-<MIN>
 curl -x gate.decodo.com:7000 \
-  -U "user-USERNAME-country-es-session-cardex01-sessionduration-30:PASSWORD" \
+  -U "user-USERNAME-country-es-session-<SESSION_ID>-sessionduration-30:PASSWORD" \
   "https://ip.decodo.com/json"
 ```
 
@@ -123,9 +123,9 @@ curl -x gate.decodo.com:7000 \
 **Integration:**
 ```
 # geo.iproyal.com:12321, geo + sticky via username params
-# user:PASS_country-es_session-cardex01_lifetime-30m  (lifetime up to 7d)
+# user:PASS_country-es_session-<SESSION_ID>_lifetime-30m  (lifetime up to 7d)
 curl -x geo.iproyal.com:12321 \
-  -U "USERNAME:PASSWORD_country-es_session-cardex01_lifetime-30m" \
+  -U "USERNAME:PASSWORD_country-es_session-<SESSION_ID>_lifetime-30m" \
   "https://ipv4.icanhazip.com"
 ```
 (Exact param tokens per IPRoyal dashboard "proxy generator" — confirm in panel;
@@ -163,7 +163,7 @@ the `_country-`/`_session-`/`_lifetime-` scheme is IPRoyal's documented format.
 ```
 # core-residential.evomi.com:1000 (HTTP) — username carries geo + session
 curl -x core-residential.evomi.com:1000 \
-  -U "USERNAME_country-ES_session-cardex01_lifetime-30:PASSWORD" \
+  -U "USERNAME_country-ES_session-<SESSION_ID>_lifetime-30:PASSWORD" \
   "https://ip.evomi.com/json"
 ```
 (`_lifetime-1440` for 24h sessions. **[ASSUMED]** exact host/port — confirm in
