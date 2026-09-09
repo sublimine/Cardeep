@@ -17,7 +17,7 @@ Before running any command, this executor checked for already-running processes 
 
 - Port 8090 (the API) was already `LISTENING` (PID 20584). `_api_serve.out.log` had just been written at 16:26, minutes before this check.
 - Port 5433 (`cardeep-pg`) was already `LISTENING` with active `ESTABLISHED` connections from PID 20584.
-- `docker ps` showed `cardeep-pg` (postgres:16) up for about 1 hour, and a second unrelated container `cardex-pg` (postgres:16-bookworm) also up — a different project's database, not touched.
+- `docker ps` showed `cardeep-pg` (postgres:16) up for about 1 hour, alongside an unrelated container that was not touched.
 
 Given this, this executor did **not** attempt `docker compose up -d cardeep-pg` (already up — running it would at best be a no-op, at worst risk interacting with a live concurrent process) and did **not** attempt to start `uvicorn services.api.main:app` on the same port (already bound — would simply fail, and attempting it is pointless risk for no gain). Instead, the already-live API was queried read-only, which yields stronger evidence (real live state) than a fresh instance would.
 
