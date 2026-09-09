@@ -4,7 +4,7 @@
 
 ## Current state (verified)
 
-All figures verified by reading source in `C:\Users\elias\projects\cardeep` (live repo, remote `github.com/sublimine/Cardeep.git`, HEAD `81de58e` 2026-06-23) and the RECON DB snapshot.
+All figures verified by reading source in `<repo-root>` (live repo, remote `github.com/sublimine/Cardeep.git`, HEAD `81de58e` 2026-06-23) and the RECON DB snapshot.
 
 **Application shape**
 - FastAPI `0.2.0`, asyncpg, uvicorn single-worker, port 8090. Entry: `services/api/main.py`. [VERIFIED]

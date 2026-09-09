@@ -104,7 +104,7 @@ La query de atribución usa `entity_ulid`; si AS24 y `family_generic_custom` scr
 ### Arquitectura actual
 
 Existe **una función central de delta completo** en `pipeline/ingest.py`:
-- Ruta: `C:/Users/elias/projects/cardeep/pipeline/ingest.py`
+- Ruta: `<repo-root>/pipeline/ingest.py`
 - Función: `ingest_dealer()` (líneas 40–159)
 - Implementa: NEW + PRICE_CHANGE + PHOTO_CHANGE + KM_CHANGE + GONE (con GONE guard B2.3)
 - Llamada por: `pipeline/harvest_dealer.py` (AS24 per-dealer) con `source_key="as24"`

@@ -79,7 +79,7 @@ la que lo generó.
 ## 4. Stack / verdad de infraestructura
 
 - Repo `~/projects/cardeep`, `main == origin`, GitHub `sublimine/Cardeep` (PÚBLICO), email git
-  local `elias@cardex.dev` (NO cambiar a srkarrouch — esa regla es de Habana/Vercel, no de aquí).
+  local no verificable (NO sustituirlo por la identidad de otro proyecto).
 - DB viva: Docker `cardeep-pg` PostgreSQL 16 en `127.0.0.1:5433` (`cardeep:cardeep_dev_only`,
   db `cardeep`). API FastAPI `services/api/main.py` :8090. Redis solo si se levanta para Streams.
 - Extensiones PG: `pg_trgm` instalada; `fuzzystrmatch` y `unaccent` **disponibles** (instalar en su

@@ -411,7 +411,7 @@ python -m pipeline.platform.faciliteacoches_racc_wholesale --members faciliteaco
 
 # b2b LocalizaVO
 set CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep
-set PYTHONPATH=C:\Users\elias\projects\cardeep
+set PYTHONPATH=<repo-root>
 python -m pipeline.platform.localizavo_wholesale
 
 # renting_vo Athlon

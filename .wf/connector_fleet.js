@@ -10,17 +10,17 @@ export const meta = {
 
 const TEMPLATE = [
   'Build a CARDEEP platform connector that wires ONE verified-free Tier-1 giant into the LIVE pipeline, EXACTLY mirroring',
-  'the proven template C:\\Users\\elias\\projects\\cardeep\\pipeline\\platform\\coches_net_wholesale.py (read it first — copy its',
+  'the proven template pipeline/platform/coches_net_wholesale.py (read it first — copy its',
   'structure: ensure the platform entity kind=plataforma with defense_tier/source_group/role=platform + platform_meta;',
   'per-car cage = upsert SELLING DEALER entity (kind=compraventa, kind_source=platform_label, sells_cars=TRUE, geo-resolved)',
   '+ upsert vehicle OWNED BY dealer (vehicle.entity_ulid=dealer) + INSERT platform_listing edge + emit delta NEW events',
   '+ capture price-drop history if present + save versioned recipe + record a VAM verification_verdict; idempotent ON CONFLICT;',
   'every fetch through governor().wrap_fetch_text for its host; is_open breaker gate + record_run + auto_repair on failure).',
-  'Work ONLY in C:\\Users\\elias\\projects\\cardeep — NEVER write to any cardex/CARDEX path. Use absolute paths.',
+  'Work ONLY in the current CARDEEP repository — NEVER write to any cardex/CARDEX path. Use repository-relative paths.',
   'READ: the connector template (coches_net_wholesale.py), your platform recipe (docs/architecture/tier1_recipes/<p>.md),',
   'pipeline/engine/{fetch,governor}.py, pipeline/ops/health.py, pipeline/geo.py, pipeline/geocode.py, services/api/codes.py,',
   'pipeline/ids.py, migrations/0006+0009+0016 (the live schema: entity_kind enum, platform_listing, defense_tier/source_group/role).',
-  'ENV: python C:/Users/elias/AppData/Local/Programs/Python/Python311/python ; curl_cffi installed ; DB cardeep-pg :5433',
+  'ENV: python from the active project environment; curl_cffi installed; DB cardeep-pg :5433',
   'postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep. Preserve live data (only ADD). Build pipeline/platform/<p>_wholesale.py',
   'with a --pages/--limit CLI; harvest a BOUNDED but substantial chunk (~3000-5000 real cars) for this run (the full run is the',
   'same command with more pages); inspect the REAL response for field names, do not assume. VERIFY E2E by querying the DB yourself:',
@@ -66,7 +66,7 @@ const conns = await parallel(TARGETS.map(t => () =>
     '\n\nYOUR GIANT: ' + t.key + ' · recipe docs/architecture/tier1_recipes/' + t.recipe + ' · host ' + t.host +
     ' · classify the platform entity defense_tier=' + t.tier + ', source_group=' + t.group + ', role=platform.' +
     '\nRECIPE NOTE: ' + t.note +
-    '\nBuild C:\\Users\\elias\\projects\\cardeep\\pipeline\\platform\\' + t.key + '_wholesale.py.',
+    '\nBuild pipeline/platform/' + t.key + '_wholesale.py.',
     { label: 'wire:' + t.key, phase: 'Wire', schema: CONN_SCHEMA, agentType: 'general-purpose' })))
 const ok = conns.filter(Boolean)
 const wired = ok.filter(c => c.built && c.cars_caged > 0)
@@ -76,7 +76,7 @@ phase('Synthesis')
 const rows = ok.map(c => c.platform + ': ' + (c.built ? c.cars_caged + ' cars, ' + c.dealers_discovered + ' dealers, VAM ' + c.vam : 'FAILED: ' + (c.issue || '?'))).join('\n')
 const syn = await agent(
   'Summarize the CARDEEP connector-fleet result. Per-connector:\n' + rows +
-  '\n\nQuery the live DB yourself for the grand totals (SELECT count from entity, vehicle, platform_listing, distinct plataforma entities) and write a short rollup to C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\tier1_recipes\\CONNECTORS_STATUS.md (which giants are wired, cars each, what remains). Return {totals, summary}.',
+  '\n\nQuery the live DB yourself for the grand totals (SELECT count from entity, vehicle, platform_listing, distinct plataforma entities) and write a short rollup to docs/architecture/tier1_recipes/CONNECTORS_STATUS.md (which giants are wired, cars each, what remains). Return {totals, summary}.',
   { label: 'synthesis:connectors', phase: 'Synthesis', agentType: 'general-purpose', schema: SYN_SCHEMA })
 
 return { connectors: ok, wired_count: wired.length, synthesis: syn }

@@ -353,8 +353,8 @@ ssh -i ~/.cardeep-ops-secrets/oci/cardeep_vm_key ubuntu@<IP-VPS> 'bash -s' \
 
 # 3. Fase 2 (SESIÓN SSH NUEVA, después del reinicio): Openship + admin + edge TLS.
 ssh -i ~/.cardeep-ops-secrets/oci/cardeep_vm_key ubuntu@<IP-VPS> 'bash -s' -- \
-  deepcar.duckdns.org eliaskarrouch10@gmail.com \
-  "Elias" eliaskarrouch10@gmail.com "<OPENSHIP_ADMIN_PASSWORD de production.env>" \
+  deepcar.duckdns.org YOUR_EMAIL@example.com \
+  "<OPENSHIP_ADMIN_NAME>" YOUR_EMAIL@example.com "<OPENSHIP_ADMIN_PASSWORD de production.env>" \
   < ops/openship/vm_bootstrap_phase2.sh
 
 # 4. Fijar secretos reales de Cardeep — OBLIGATORIO antes del primer deploy (§2). Postgres

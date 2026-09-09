@@ -59,7 +59,7 @@ plus the **450-model new catalog** if the configurator is wanted.
 `pipeline/platform/motor_es_wholesale.py` now takes `--segment {all|vo|km0|vn|catalog|renting}`:
 
 ```bash
-PY=C:/Users/elias/AppData/Local/Programs/Python/Python311/python
+PY=python
 # Full additive union (vo used census + vn new offers + renting) — ONE command:
 $PY -m pipeline.platform.motor_es_wholesale --segment all --full
 # Single segments:

@@ -278,7 +278,7 @@ Cuenca, Huelva, Badajoz y Cáceres son provincias con poca presencia en platafor
 
 **Interpretación honesta:** CARDEEP tiene cobertura superior al registro formal (DIRCE) en 21 provincias — lo esperado para un sistema que captura el mercado informal y multiactividad, no solo el registrado. En 28 provincias la cobertura vs estimado es 75%-150%. Las 2 provincias canarias y Melilla tienen gap real de entre 24% y 74% atribuible a baja penetración de plataformas nacionales en mercados insulares y ciudad autónoma.
 
-**Decisión:** Pendiente validación del Director (Elias). El sello B6.2 VENTA puede declararse con veredictos:
+**Decisión:** Pendiente validación del Director. El sello B6.2 VENTA puede declararse con veredictos:
 - 28/52 provincias: **SELLADO**
 - 21/52 provincias: **SATURADO VS REGISTRO FORMAL** (no un gap — un exceso de cobertura)
 - 2/52 provincias: **GAP CANARIAS** (acción recomendada: fuentes locales canarias)

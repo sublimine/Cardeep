@@ -4,7 +4,7 @@
 
 ## Current state (verified)
 
-All figures below were verified by reading the live source under `C:\Users\elias\projects\cardeep` on 2026-06-23, not assumed.
+All figures below were verified by reading the live source under `<repo-root>` on 2026-06-23, not assumed.
 
 **Registral seal (`v_province_seal`, `migrations/0042_province_seal_view.sql` + `0043_province_seal_desguace.sql`, served live at `/geo/seal`):**
 - VENTA segment: **14/52 provinces SEALED (>=85%), 32 PARCIAL (50-85%), 6 GAP (<50%)** — GAP codes 05, 16, 21, 35, 51, 52. Source: `SELECT verdict, count(*) FROM v_province_seal WHERE segment='venta' GROUP BY verdict`.

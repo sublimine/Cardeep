@@ -63,11 +63,11 @@ builds por push fallan en silencio**:
 ## 3. ⚠️ Trampa del email de git — bloquea el deploy sin construir nada
 
 El plan Hobby de Vercel verifica que el email del **committer** esté asociado a una cuenta de
-GitHub. Este repo tenía `user.email = elias@cardeep.local` (dominio inventado, no verificable)
+GitHub. Este repo tenía un correo local inventado y no verificable en `user.email`
 — con eso Vercel **bloquea el deploy y ni siquiera arranca el build**, con un error genérico
 sobre colaboración de proyecto (`Builds: . [0ms]`).
 
-Ya fijado en el repo local: `git config --local user.email srkarrouch@gmail.com`.
+Ya fijado en el repo local: `git config --local user.email YOUR_EMAIL@example.com`.
 
 **Si un deploy aparece en ERROR sin logs de build, esto es lo primero que hay que mirar** —
 no la config de build. Es un fallo de atribución del committer, no del código.

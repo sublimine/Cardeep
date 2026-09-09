@@ -4,7 +4,7 @@
 
 ## Current state (verified)
 
-All figures below were read from real code/tests in `C:/Users/elias/projects/cardeep` on 2026-06-23, not assumed.
+All figures below were read from real code/tests in `<repo-root>` on 2026-06-23, not assumed.
 
 **Served chain (authoritative).** `migrations/0028_dealer_resolved.sql` defines `v_dealer_resolved` as a two-layer COALESCE composition: Layer 1 = B1 (`v_canonical`, run `dealer-identity-det-v1`), Layer 2 = `canonical_dedup` from the single most-recent `vam_verified=TRUE` run (`ORDER BY run_id DESC LIMIT 1`). [VERIFIED — read the SQL]. `docs/architecture/11-IDENTITY-RESOLUTION-AUTHORITY.md` (ADR 11, 2026-06-15) declares this the authoritative resolver and `v_resolved_dealer` (beta) as BETA DEFERRED with 0 consumers. [VERIFIED]
 

@@ -97,7 +97,7 @@ Concretely measurable exit:
 
 ## Execution phases
 
-> Each phase ≈ one PR. Cold-start context is self-contained. Commands assume repo root `C:\Users\elias\projects\cardeep`, `CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`. A dry-run clone is brought up on `:5434` for any served-data step.
+> Each phase ≈ one PR. Cold-start context is self-contained. Commands assume repo root `<repo-root>`, `CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`. A dry-run clone is brought up on `:5434` for any served-data step.
 
 ### Phase 0 — Dry-run harness + pHash equivalence oracle (no data change)
 

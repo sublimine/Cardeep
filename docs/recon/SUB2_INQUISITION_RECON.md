@@ -24,7 +24,7 @@
 
 ### 1.1 Función nuclear: `record_count_verdict`
 
-**Ruta**: `C:\Users\elias\projects\cardeep\pipeline\verify.py` (57 líneas totales)
+**Ruta**: `<repo-root>\pipeline\verify.py` (57 líneas totales)
 
 La función es síncrona-sobre-asyncpg. Recibe:
 - `subject_type`, `subject_key`, `claim` — coordenadas del claim
@@ -73,7 +73,7 @@ Las columnas `expires_at` y `superseded_by` existen en el schema pero **ninguna 
 
 ## 2. Los documentos V1-V6 — qué existe y qué define cada uno
 
-**Ruta base**: `C:\Users\elias\projects\cardeep\docs\architecture\verification\`
+**Ruta base**: `<repo-root>\docs\architecture\verification\`
 
 | Archivo | Líneas | Qué define | Estado de implementación |
 |---|---|---|---|

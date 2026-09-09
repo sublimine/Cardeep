@@ -31,13 +31,13 @@ Verify that the docs/ai governance structure exists and is internally consistent
 - docs/ai/MANIFEST.md
 - docs/ai/README.md
 - docs/ai/tasks/TASK_QUEUE.yml
-- Source package: C:\Users\elias\Documents\cardeep-governance\ (zip + patch + checksums.json)
+- Source package: <user-home>/Documents\cardeep-governance\ (zip + patch + checksums.json)
 
 ## Evidence
 
 ### 1. Install commit exists and is on `main`
 - Commit: `29de0ae0a907ec822f1c0a8db3311dc83c443a19`
-- Author: `Elias <elias@cardeep.local>`
+- Author: repository owner (use a verified GitHub noreply address)
 - Date: 2026-07-06 00:24:08 +0200
 - Message: `docs(ai): add governed development blueprint`
 - `git merge-base --is-ancestor 29de0ae HEAD` → exit 0. The install is already on `main`, not sitting on an unmerged branch.

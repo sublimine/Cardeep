@@ -152,6 +152,19 @@ def test_coverage_lower_uses_upper_bound():
 # ---------------------------------------------------------------------------
 # R bridge (advanced MSE) — skipped if R is not installed
 # ---------------------------------------------------------------------------
+def test_r_bridge_accepts_portable_executable_override(tmp_path, monkeypatch):
+    from pipeline.exhaustiveness import estimators_r as R
+
+    executable = tmp_path / "Rscript"
+    executable.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CARDEEP_RSCRIPT", str(executable))
+    R.r_executable.cache_clear()
+    try:
+        assert R.r_executable() == str(executable)
+    finally:
+        R.r_executable.cache_clear()
+
+
 def test_r_bridge_recovers_known_n():
     from pipeline.exhaustiveness import estimators_r as R
 

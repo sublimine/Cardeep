@@ -249,7 +249,7 @@ criterion for your source:
 ### 3.3 Run and verify (TDD order)
 
 ```bash
-cd /c/Users/elias/projects/cardeep
+cd <repo-root>
 
 # 1) Unit test first (RED). Mirror tests/test_autoscout24_census.py shape.
 python -m pytest tests/test_your_source.py -q
@@ -603,7 +603,7 @@ block is at `0052_country.sql:83-91`, but you do not touch it to add a source.)
 ## 9. Live verification queries (asyncpg heredoc — `psql` not on PATH)
 
 ```bash
-cd /c/Users/elias/projects/cardeep && python - <<'PY'
+cd <repo-root> && python - <<'PY'
 import asyncio, asyncpg
 DSN = "postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep"
 async def main():

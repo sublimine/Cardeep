@@ -30,7 +30,7 @@ Given this, this executor did **not** attempt `docker compose up -d cardeep-pg` 
 $ python --version
 Python 3.11.9
 $ pip --version
-pip 24.0 from C:\Users\elias\AppData\Local\Programs\Python\Python311\Lib\site-packages\pip (python 3.11)
+pip 24.0 from <user-home>\AppData\Local\Programs\Python\Python311\Lib\site-packages\pip (python 3.11)
 ```
 Confidence: VERIFIED_RUNTIME.
 

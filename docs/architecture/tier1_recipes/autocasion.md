@@ -8,7 +8,7 @@
 > challenge to a Chrome TLS fingerprint).
 >
 > Every claim below is `[VERIFIED]` — fetched live with the project python
-> (`C:/Users/elias/AppData/Local/Programs/Python/Python311/python`) + `curl_cffi 0.15.0`,
+> (`python`) + `curl_cffi 0.15.0`,
 > 2026-06-12. No `[ASSUMED]` in the working recipe.
 
 ---

@@ -8,7 +8,7 @@ DONE
 ## Mode
 AUDIT_ONLY
 
-**Scope:** README.md, PLAN.md, PROGRESO.md, RUNBOOK.md, docs/ (top-level structure), cross-checked against pipeline/, services/, migrations/, tests/ in `C:/Users/elias/projects/cardeep` (branch main).
+**Scope:** README.md, PLAN.md, PROGRESO.md, RUNBOOK.md, docs/ (top-level structure), cross-checked against pipeline/, services/, migrations/, tests/ in `<repo-root>` (branch main).
 
 **Method:** Read-only. No server, container, DB connection, or test run was started. All claims that would require executing code or querying the live database are marked GATED rather than VERIFIED_RUNTIME — nothing in this audit is VERIFIED_RUNTIME. README/PLAN/RUNBOOK were read in full; PROGRESO.md (394 KB, 3,694 lines) was sampled by header structure plus a direct read of its most recent ~150 lines.
 

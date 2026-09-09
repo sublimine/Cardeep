@@ -61,7 +61,7 @@ capture the 117,745 real distinct listings and DECLARE 230.000 as the site peg i
 ## Full CLI (documented; full drain NOT run here — operator drain already in flight on host)
 ```
 ENV: CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep
-PY = C:/Users/elias/AppData/Local/Programs/Python/Python311/python.exe
+PY = python
 
 # Drain EVERY segment to completion, reconciled to the site-displayed total:
 $PY -m pipeline.platform.coches_com_wholesale --segment all --all

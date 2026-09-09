@@ -4,7 +4,7 @@
 
 ## Current state (verified)
 
-All figures below were re-verified against code in `C:\Users\elias\projects\cardeep` on 2026-06-23 and against the live DB on `cardeep-pg` (:5433) per the recon brief.
+All figures below were re-verified against code in `<repo-root>` on 2026-06-23 and against the live DB on `cardeep-pg` (:5433) per the recon brief.
 
 **Backbone (authoritative, complete):**
 - `geo_province` = 52, `geo_comarca` = 323, `geo_municipality` = 8132 — `SELECT count(*)`.

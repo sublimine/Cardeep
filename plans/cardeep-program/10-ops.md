@@ -4,7 +4,7 @@
 
 ## Current state (verified)
 
-All figures below were read directly from source in `C:\Users\elias\projects\cardeep` (branch `main`) on 2026-06-23. Where the recon brief asserted a value I confirmed it against the file; I do not restate DB-row counts I could not re-query here, and I flag them as recon-sourced.
+All figures below were read directly from source in `<repo-root>` (branch `main`) on 2026-06-23. Where the recon brief asserted a value I confirmed it against the file; I do not restate DB-row counts I could not re-query here, and I flag them as recon-sourced.
 
 **Schedulers (verified by reading source):**
 - `pipeline/ops/scheduler.py` — harvest `BlockingScheduler` (APScheduler 3.x, `SQLAlchemyJobStore` on `cardeep-pg`). Host-singleton advisory lock `_SCHEDULER_SINGLETON_LOCK = 0x43415244` (= 1128354372, ASCII `CARD`) at line 913. Jobs registered via `scheduler.add_job`: `heartbeat_tick` (15 min), `silence_watchdog` (1 h), plus inquisition cadence/prosecute, gestionador, canonical-key backfill, product-stats refresh, and `lease_heartbeat` (2 min). `REGISTRY` built at line 330. Modes: `--dry-run` (print DUE sources), `--check-silence` (read-only). [VERIFIED]

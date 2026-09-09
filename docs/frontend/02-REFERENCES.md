@@ -1,7 +1,7 @@
 # CARDEEP — Auditoría COMPLETA del tablero de referencias del owner
 
-> Tablero: `es.pinterest.com/ekarrouch0089/cardex/` · **107 pines** (105 únicos auditados;
-> 28 "Más ideas" recomendados por Pinterest excluidos por no ser curación del owner).
+> Tablero privado de referencia · **107 pines** (105 únicos auditados;
+> 28 "Más ideas" recomendados por Pinterest excluidos por no ser curación del propietario).
 > **Auditado foto-a-foto 2026-06-23 con navegador REAL** (Playwright, hoja de contacto local).
 > Supersede la pasada de 2026-06-16 (que solo extrajo 66/107 — incompleta; de ahí el "audita
 > CADA foto" del owner). Hoja de contacto reproducible: `scratchpad/contact_sheet.html`.

@@ -1462,7 +1462,7 @@ Migracion unica additive + backfill: `ALTER TABLE discovery_capture ADD COLUMN c
 
 > **Ficha 360**
 >
-> **Costura** — La matematica del canal R ya es pais-agnostica (consume freqs, cero literales ES); la costura es el ENTORNO. _R_CANDIDATES (estimators_r.py:29-33), _RHOME_CANDIDATES (:36-39) y _RTOOLS_BIN (:40) hardcodean rutas de la maquina del owner (C:\Users\elias\R-portable, C:\Program Files\R\R-4.6.0, C:\rtools45) [VERIFIED]; en CI o cualquier otro host resuelven a nada => r_available()=False => la 2a via se evapora en silencio para TODO pais, ES incluido. Ademas crosscheck es advisory (seal.py:78-81 solo escribe diagnostics), nunca vincula el sello.
+> **Costura** — La matematica del canal R ya es pais-agnostica (consume freqs, cero literales ES); la costura es el ENTORNO. _R_CANDIDATES (estimators_r.py:29-33), _RHOME_CANDIDATES (:36-39) y _RTOOLS_BIN (:40) hardcodean rutas de la maquina del owner (<user-home>/R-portable, C:\Program Files\R\R-4.6.0, C:\rtools45) [VERIFIED]; en CI o cualquier otro host resuelven a nada => r_available()=False => la 2a via se evapora en silencio para TODO pais, ES incluido. Ademas crosscheck es advisory (seal.py:78-81 solo escribe diagnostics), nunca vincula el sello.
 >
 > **Fix** — Leer entorno ANTES de los candidatos hardcodeados: os.environ.get('CARDEEP_RSCRIPT')/R_HOME/RTOOLS_BIN como primer candidato en r_executable() y _configure_r_env(), espejando discover.py/harvest_dealer.py que ya usan os.environ.get('CARDEEP_DSN'). Instalar R en CI (imagen rocker o setup-r action) para que el puente este VIVO. Pinear Rcapture/LCMCR/SparseMSE en un lockfile renv. Hacer el crosscheck VINCULANTE al menos como downgrade: agree=False debe degradar confidence y aflorar en el veredicto nacional, no quedar en el jsonb diagnostics.
 >
@@ -1474,8 +1474,8 @@ Migracion unica additive + backfill: `ALTER TABLE discovery_capture ADD COLUMN c
 
 #### (a) Verificacion de code_hints [VERIFIED]
 - `pipeline/exhaustiveness/estimators_r.py:26` `_MSE_R = pathlib.Path(__file__).resolve().parent / "r" / "mse.R"` [VERIFIED].
-- `:29-33` `_R_CANDIDATES` HARDCODEA la maquina del owner: `C:\Users\elias\R-portable\bin\x64\Rscript.exe`, `...\bin\Rscript.exe`, `C:\Program Files\R\R-4.6.0\bin\x64\Rscript.exe` [VERIFIED].
-- `:36-40` `_RHOME_CANDIDATES` (`C:\Users\elias\R-portable`, `C:\Program Files\R\R-4.6.0`) + `_RTOOLS_BIN = r"C:\rtools45\usr\bin"` [VERIFIED].
+- `:29-33` `_R_CANDIDATES` HARDCODEA la maquina del owner: `<user-home>/R-portable\bin\x64\Rscript.exe`, `...\bin\Rscript.exe`, `C:\Program Files\R\R-4.6.0\bin\x64\Rscript.exe` [VERIFIED].
+- `:36-40` `_RHOME_CANDIDATES` (`<user-home>/R-portable`, `C:\Program Files\R\R-4.6.0`) + `_RTOOLS_BIN = r"C:\rtools45\usr\bin"` [VERIFIED].
 - `:43-61` `_configure_r_env()` setea `R_HOME` + antepone R/Rtools al PATH (idempotente) para que rpy2 importe [VERIFIED].
 - `:64-73` `rpy2_available()` (lru_cache) intenta `import rpy2.robjects`, False ante cualquier excepcion [VERIFIED].
 - `:76-83` `r_executable()` (lru_cache) recorre candidatos y cae a `shutil.which("Rscript")` [VERIFIED].

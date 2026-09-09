@@ -1,7 +1,7 @@
 # CARDEEP — Re-arquitectura de descubrimiento · Resolución de entidad como columna vertebral
 
 > **Estado:** especificación canónica (base del proyecto). Reemplaza el sello B6 monolítico y
-> el modelo de particulares-como-entidad. Autoría de la tesis: el Owner (Elias). Auditoría de
+> el modelo de particulares-como-entidad. Autoría de la tesis: el Owner. Auditoría de
 > viabilidad y aterrizaje en código: el Director (esta sección + §A).
 
 ## Tesis

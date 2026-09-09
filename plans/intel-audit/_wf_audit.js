@@ -9,7 +9,7 @@ export const meta = {
     { title: 'Auditoria', detail: '1 agente/empresa, investigacion web profunda multi-fuente, escribe .md' },
   ],
 }
-const REPO = 'C:/Users/elias/projects/cardeep/plans/intel-audit'
+const REPO = process.env.CARDEEP_INTEL_AUDIT_DIR || 'plans/intel-audit'
 const LIST_SCHEMA = {
   type: 'object', additionalProperties: false, required: ['companies'],
   properties: { companies: { type: 'array', items: {

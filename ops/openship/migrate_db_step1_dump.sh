@@ -7,7 +7,7 @@
 set -euo pipefail
 
 VM_IP="${1:?uso: migrate_db_step1_dump.sh <PUBLIC_IP>}"
-SSH_KEY="/c/Users/elias/.cardeep-ops-secrets/oci/cardeep_vm_key"
+SSH_KEY="${CARDEEP_SSH_KEY:-$HOME/.cardeep-ops-secrets/oci/cardeep_vm_key}"
 DUMP_FILE="/tmp/cardeep_migration.dump"
 
 echo "=== Dump local (custom format, comprimido) ==="

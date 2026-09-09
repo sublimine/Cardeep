@@ -42,11 +42,11 @@ Expected: a row showing `Obsidian.Obsidian` with a version (e.g. `1.12.7`).
 ### Task 2: Create vault skeleton with exclusions
 
 **Files:**
-- Create: `C:\Users\elias\projects\cardeep\.obsidian\app.json`
+- Create: `<repo-root>\.obsidian\app.json`
 
 - [ ] **Step 1: Create `.obsidian/` directory**
 
-Run: `mkdir -p "/c/Users/elias/projects/cardeep/.obsidian"`
+Run: `mkdir -p "<repo-root>/.obsidian"`
 
 - [ ] **Step 2: Write `app.json` with `userIgnoreFilters`**
 
@@ -85,7 +85,7 @@ Run: `mkdir -p "/c/Users/elias/projects/cardeep/.obsidian"`
 
 - [ ] **Step 3: Verify valid JSON**
 
-Run: `python -c "import json; json.load(open(r'C:\Users\elias\projects\cardeep\.obsidian\app.json'))" && echo VALID`
+Run: `python -c "import json; json.load(open(r'<repo-root>\.obsidian\app.json'))" && echo VALID`
 Expected: `VALID`
 
 ---
@@ -99,12 +99,12 @@ Expected: `VALID`
 
 - [ ] **Step 1: Create plugin folder**
 
-Run: `mkdir -p "/c/Users/elias/projects/cardeep/.obsidian/plugins/dataview"`
+Run: `mkdir -p "<repo-root>/.obsidian/plugins/dataview"`
 
 - [ ] **Step 2: Download the three real release assets (tag 0.5.70)**
 
 ```bash
-cd "/c/Users/elias/projects/cardeep/.obsidian/plugins/dataview"
+cd "<repo-root>/.obsidian/plugins/dataview"
 curl -L -o main.js https://github.com/blacksmithgu/obsidian-dataview/releases/download/0.5.70/main.js
 curl -L -o manifest.json https://github.com/blacksmithgu/obsidian-dataview/releases/download/0.5.70/manifest.json
 curl -L -o styles.css https://github.com/blacksmithgu/obsidian-dataview/releases/download/0.5.70/styles.css
@@ -112,7 +112,7 @@ curl -L -o styles.css https://github.com/blacksmithgu/obsidian-dataview/releases
 
 - [ ] **Step 3: Verify non-zero file sizes**
 
-Run: `ls -la "/c/Users/elias/projects/cardeep/.obsidian/plugins/dataview"`
+Run: `ls -la "<repo-root>/.obsidian/plugins/dataview"`
 Expected: `main.js` ~2.3MB, `manifest.json` and `styles.css` non-zero.
 
 ---
@@ -126,7 +126,7 @@ Expected: `main.js` ~2.3MB, `manifest.json` and `styles.css` non-zero.
 
 - [ ] **Step 1: Create plugin folder**
 
-Run: `mkdir -p "/c/Users/elias/projects/cardeep/.obsidian/plugins/templater-obsidian"`
+Run: `mkdir -p "<repo-root>/.obsidian/plugins/templater-obsidian"`
 
 - [ ] **Step 2: Download the three real release assets**
 
@@ -138,7 +138,7 @@ declares `minAppVersion: 1.13.0`; Obsidian stable is `1.12.7`, so it crashes wit
 newest one with `minAppVersion: 1.12.2` (compatible).
 
 ```bash
-cd "/c/Users/elias/projects/cardeep/.obsidian/plugins/templater-obsidian"
+cd "<repo-root>/.obsidian/plugins/templater-obsidian"
 curl -L -o main.js https://github.com/SilentVoid13/Templater/releases/download/2.20.6/main.js
 curl -L -o manifest.json https://github.com/SilentVoid13/Templater/releases/download/2.20.6/manifest.json
 curl -L -o styles.css https://github.com/SilentVoid13/Templater/releases/download/2.20.6/styles.css
@@ -146,7 +146,7 @@ curl -L -o styles.css https://github.com/SilentVoid13/Templater/releases/downloa
 
 - [ ] **Step 3: Verify non-zero file sizes**
 
-Run: `ls -la "/c/Users/elias/projects/cardeep/.obsidian/plugins/templater-obsidian"`
+Run: `ls -la "<repo-root>/.obsidian/plugins/templater-obsidian"`
 Expected: all three files present, non-zero size.
 
 ---
@@ -160,12 +160,12 @@ Expected: all three files present, non-zero size.
 
 - [ ] **Step 1: Create plugin folder**
 
-Run: `mkdir -p "/c/Users/elias/projects/cardeep/.obsidian/plugins/obsidian-local-rest-api"`
+Run: `mkdir -p "<repo-root>/.obsidian/plugins/obsidian-local-rest-api"`
 
 - [ ] **Step 2: Resolve latest release tag, then download assets**
 
 ```bash
-cd "/c/Users/elias/projects/cardeep/.obsidian/plugins/obsidian-local-rest-api"
+cd "<repo-root>/.obsidian/plugins/obsidian-local-rest-api"
 curl -s https://api.github.com/repos/coddingtonbear/obsidian-local-rest-api/releases/latest > /tmp/rest-api-release.json
 python -c "import json; r=json.load(open('/tmp/rest-api-release.json')); print(r['tag_name']); [print(a['browser_download_url']) for a in r['assets']]"
 ```
@@ -176,7 +176,7 @@ Expected: prints a tag `>= 4.1.7` and asset URLs for `main.js`/`manifest.json`
 
 - [ ] **Step 4: Verify non-zero file sizes**
 
-Run: `ls -la "/c/Users/elias/projects/cardeep/.obsidian/plugins/obsidian-local-rest-api"`
+Run: `ls -la "<repo-root>/.obsidian/plugins/obsidian-local-rest-api"`
 
 ---
 
@@ -193,7 +193,7 @@ Run: `ls -la "/c/Users/elias/projects/cardeep/.obsidian/plugins/obsidian-local-r
 
 - [ ] **Step 2: Verify valid JSON with exactly these 3 entries**
 
-Run: `python -c "import json; d=json.load(open(r'C:\Users\elias\projects\cardeep\.obsidian\community-plugins.json')); assert d==['dataview','templater-obsidian','obsidian-local-rest-api']; print('OK')"`
+Run: `python -c "import json; d=json.load(open(r'<repo-root>\.obsidian\community-plugins.json')); assert d==['dataview','templater-obsidian','obsidian-local-rest-api']; print('OK')"`
 Expected: `OK`
 
 ---
@@ -288,7 +288,7 @@ SORT date DESC
 
 - [ ] **Step 4: Verify files exist**
 
-Run: `ls "/c/Users/elias/projects/cardeep/docs/second-brain/dashboards/"`
+Run: `ls "<repo-root>/docs/second-brain/dashboards/"`
 Expected: the 3 files listed above.
 
 ---
@@ -359,7 +359,7 @@ tags: [plan]
 
 - [ ] **Step 4: Verify files exist**
 
-Run: `ls "/c/Users/elias/projects/cardeep/docs/second-brain/templates/"`
+Run: `ls "<repo-root>/docs/second-brain/templates/"`
 
 ---
 
@@ -400,7 +400,7 @@ Run: `ls "/c/Users/elias/projects/cardeep/docs/second-brain/templates/"`
 
 - [ ] **Step 2: Verify valid JSON**
 
-Run: `python -c "import json; json.load(open(r'C:\Users\elias\projects\cardeep\docs\second-brain\canvas\system-map.canvas'))" && echo VALID`
+Run: `python -c "import json; json.load(open(r'<repo-root>\docs\second-brain\canvas\system-map.canvas'))" && echo VALID`
 
 ---
 
@@ -410,12 +410,12 @@ Run: `python -c "import json; json.load(open(r'C:\Users\elias\projects\cardeep\d
 
 - [ ] **Step 1: Review what will be committed**
 
-Run: `cd "/c/Users/elias/projects/cardeep" && git status --short`
+Run: `cd "<repo-root>" && git status --short`
 
 - [ ] **Step 2: Stage and commit**
 
 ```bash
-cd "/c/Users/elias/projects/cardeep"
+cd "<repo-root>"
 git add docs/superpowers/ docs/second-brain/ .obsidian/app.json .obsidian/community-plugins.json .gitignore
 git commit -m "feat: add Obsidian second-brain vault (Dataview, Templater, MCP bridge)"
 ```
@@ -438,7 +438,7 @@ Run: `git log --oneline -1`
 
 - [ ] **Step 1: Launch Obsidian pointed at the vault**
 
-Run (Windows): `start obsidian "obsidian://open?path=C%3A%5CUsers%5Celias%5Cprojects%5Ccardeep"` — if the URI handler isn't registered yet on first install, instead launch the app directly and use "Open folder as vault" pointed at `C:\Users\elias\projects\cardeep`.
+Run (Windows): `start obsidian "obsidian://open?vault=Cardeep"` — if the URI handler isn't registered yet on first install, instead launch the app directly and use "Open folder as vault" pointed at `<repo-root>`.
 
 - [ ] **Step 2: Declare the one real manual step to the owner**
 
@@ -449,7 +449,7 @@ entire plan.
 
 - [ ] **Step 3: After the owner unlocks plugins, retrieve the generated API key**
 
-Run: `python -c "import json; print(json.load(open(r'C:\Users\elias\projects\cardeep\.obsidian\plugins\obsidian-local-rest-api\data.json'))['apiKey'])"`
+Run: `python -c "import json; print(json.load(open(r'<repo-root>\.obsidian\plugins\obsidian-local-rest-api\data.json'))['apiKey'])"`
 Expected: a long hex/base64 string (only exists after the plugin has loaded once).
 
 - [ ] **Step 4: Register the MCP server with Claude Code (user scope, no literal token on the command line)**

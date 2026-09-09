@@ -41,13 +41,13 @@ phase('Hunt')
 log('Data-layer hunt B: ' + TARGETS.length + ' remaining giants (parallel)')
 const hunts = await parallel(TARGETS.map(t => () =>
   agent(CREED + '\n\n' + VECTORS + '\n\nYOUR GIANT: ' + t.key + ' (declared ' + t.total + ').\nINTEL: ' + t.intel +
-    '\n\nWork ONLY in C:\\Users\\elias\\projects\\cardeep — NEVER write to any cardex/CARDEX path. FIRST load web tools via ToolSearch select:WebSearch,WebFetch. Probe LIVE (project python C:/Users/elias/AppData/Local/Programs/Python/Python311/python; curl_cffi + camoufox installable). Write to ABSOLUTE path C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\tier1_recipes\\' + t.key + '_datalayer.md. RUN the probes in your turn, do not defer. Return the structured result.',
+    '\n\nWork ONLY in the current CARDEEP repository — NEVER write to any cardex/CARDEX path. FIRST load web tools via ToolSearch select:WebSearch,WebFetch. Probe LIVE using python from the active project environment; curl_cffi + camoufox are installable. Write to the repository-relative path docs/architecture/tier1_recipes/' + t.key + '_datalayer.md. RUN the probes in your turn, do not defer. Return the structured result.',
     { label: 'hunt:' + t.key, phase: 'Hunt', schema: HUNT_SCHEMA, agentType: 'general-purpose' })))
 const ok = hunts.filter(Boolean)
 log('Uncapped found: ' + ok.filter(h => h.uncapped_surface_found).map(h => h.platform).join(', '))
 
 phase('Synthesis')
 const rows = ok.map(h => h.platform + ': ' + (h.uncapped_surface_found ? 'UNCAPPED ' + (h.method || '').slice(0, 80) : 'capped -> ' + (h.fallback_if_none || '').slice(0, 50))).join('\n')
-const syn = await agent('Append the CARDEEP remaining-Tier-1 data-layer results to C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\tier1_recipes\\DATALAYER_STATUS.md. Results:\n' + rows + '\nReturn {uncapped, still_capped, summary}.',
+const syn = await agent('Append the CARDEEP remaining-Tier-1 data-layer results to docs/architecture/tier1_recipes/DATALAYER_STATUS.md. Results:\n' + rows + '\nReturn {uncapped, still_capped, summary}.',
   { label: 'synthesis:datalayer_b', phase: 'Synthesis', agentType: 'general-purpose', schema: SYN_SCHEMA })
 return { hunts: ok, synthesis: syn }

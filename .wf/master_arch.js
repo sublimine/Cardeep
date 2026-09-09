@@ -24,7 +24,7 @@ const MISSION = [
 ].join(' ')
 
 const CONTEXT = [
-  'EXISTING REALITY (read these in repo C:/Users/elias/projects/cardeep before designing; build on what exists):',
+  'EXISTING REALITY (read these in the current CARDEEP repository before designing; build on what exists):',
   'docs/research/SOURCES_ES.md + SOURCES_ES_raw.json = a 56-agent live census of 181 Spanish sources',
   '(official registries, associations, OEM APIs, platforms, directories, scrapyards, OSS arsenal) = ground truth.',
   'docs/ARCHITECTURE.md, docs/ORQUESTACION.md, docs/workflows/README.md = current first-pass (to be SUPERSEDED).',

@@ -4,7 +4,7 @@
 
 ## Current state (verified)
 
-All paths verified at `C:\Users\elias\projects\cardeep\web` on 2026-06-23.
+All paths verified at `<repo-root>\web` on 2026-06-23.
 
 **Stack (verified `web/src/main.tsx`, `web/src/api/client.ts`):** Vite + React + React Router v6 (`createBrowserRouter`) + TanStack Query (`staleTime` 60s). Typed HTTP client over `Envelope<T>`, `X-API-Key` header, `BASE` defaults to `http://127.0.0.1:8090` via `VITE_API_BASE`.
 
