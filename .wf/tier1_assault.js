@@ -29,7 +29,7 @@ const ARSENAL = [
   '   (this is FREE rotating IPs — NOT paid residential).',
   '8) Header/cookie/referer warm-up sequences; vary TLS fingerprint; retry windows.',
   'You MAY pip install any free OSS tool. You MUST actually RUN the probes (project python',
-  'C:/Users/elias/AppData/Local/Programs/Python/Python311/python; curl_cffi installed). Pull at least ONE real car via a',
+  'python from the active project environment; curl_cffi installed). Pull at least ONE real car via a',
   'free path, or document each of the 8 vectors tried with the exact response/error.',
 ].join('\n')
 
@@ -76,7 +76,7 @@ log('Tier-1 free assault: ' + TARGETS.length + ' hunters, full free arsenal, par
 const hunts = await parallel(TARGETS.map(t => () =>
   agent(CREED + '\n\n' + ARSENAL +
     '\n\nYOUR TARGET: ' + t.key + ' (declared inventory ' + t.inv + ').\nINTEL: ' + t.intel +
-    '\n\nWork ONLY in C:\\Users\\elias\\projects\\cardeep — NEVER write to any cardex/CARDEX path. Write your recipe/dossier (the working request, headers, params, tool, field map — or the per-vector dead-log) to the ABSOLUTE path C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\tier1_recipes\\' + t.key + '.md (create the dir). Pull at least one real car via a free path if any vector works. Return the structured result with vectors_tried listing all 8 vectors and their exact outcome.',
+    '\n\nWork ONLY in the current CARDEEP repository — NEVER write to any cardex/CARDEX path. Write your recipe/dossier (the working request, headers, params, tool, field map — or the per-vector dead-log) to the repository-relative path docs/architecture/tier1_recipes/' + t.key + '.md (create the dir). Pull at least one real car via a free path if any vector works. Return the structured result with vectors_tried listing all 8 vectors and their exact outcome.',
     { label: 'hunt:' + t.key, phase: 'Assault', schema: HUNT_SCHEMA, agentType: 'general-purpose' })))
 const ok = hunts.filter(Boolean)
 const free = ok.filter(h => h.harvestable_free)
@@ -85,7 +85,7 @@ log('Assault done. FREE-harvestable now: ' + (free.map(h => h.platform).join(', 
 phase('Synthesis')
 const rows = ok.map(h => h.platform + ': ' + (h.harvestable_free ? 'FREE via ' + (h.method || '').slice(0, 80) : 'walled: ' + (h.blocker_if_any || '').slice(0, 80))).join('\n')
 const synth = await agent(
-  'Synthesize the CARDEEP Tier-1 free-assault results into docs/architecture/tier1_recipes/README.md (absolute path C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\tier1_recipes\\README.md): a ranked table of each giant platform -> free-harvestable now? -> the working recipe (endpoint/params/tool) -> sample car -> or the exhausted-vector evidence if genuinely walled. Per-platform results:\n' + rows +
+  'Synthesize the CARDEEP Tier-1 free-assault results into docs/architecture/tier1_recipes/README.md: a ranked table of each giant platform -> free-harvestable now? -> the working recipe (endpoint/params/tool) -> sample car -> or the exhausted-vector evidence if genuinely walled. Per-platform results:\n' + rows +
   '\n\nBe brutally honest: only list a platform as "needs spend" if its dossier shows all free vectors tried with evidence. Return {free_now, recipes, genuinely_walled, summary}.',
   { label: 'synthesis:tier1', phase: 'Synthesis', agentType: 'general-purpose', schema: SYNTH_SCHEMA })
 

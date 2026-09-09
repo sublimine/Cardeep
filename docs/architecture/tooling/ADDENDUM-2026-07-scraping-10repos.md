@@ -163,7 +163,7 @@ No other repo among the ten produces an AGPL or network-service candidate; the n
 - `docs/architecture/02-SCRAPING-ENGINE.md` — Tier-1 design doc, including its own GAP-20 adversarial reconciliation note.
 - `plans/cardeep-program/02-extraction.md` — 2026-06-23 EUR0 SOTA review and chosen-technology table.
 
-**Cross-checked directly against the live repo (Read/Grep/Bash, `C:\Users\elias\projects\cardeep`):**
+**Cross-checked directly against the live repo (Read/Grep/Bash, `<repo-root>`):**
 - `pipeline/engine/tier1/browser.py` (full ENGINES docstring; engine dispatch)
 - `requirements.txt` (full file)
 - `pipeline/recipe_extract_css.py` (docstring)

@@ -10,7 +10,7 @@
 Causa raíz (systematic-debugging): rpy2 fallaba en Windows por faltar **`make`**
 (de Rtools), no porque R no fuera librería. Vías agotadas y resueltas:
 
-- R 4.6.0 instalado **sin admin** (`C:\Users\elias\R-portable`) — paquetes `Rcapture`,
+- R 4.6.0 instalado **sin admin** (`<user-home>/R-portable`) — paquetes `Rcapture`,
   `dga`, `LCMCR`, `jsonlite` instalados y cargando.
 - **Rtools45 instalado con elevación** (`Start-Process -Verb RunAs`, UAC) → `make`
   disponible en `C:\rtools45\usr\bin`.

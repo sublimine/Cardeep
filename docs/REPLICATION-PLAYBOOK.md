@@ -73,7 +73,7 @@ on PATH on this host — query via a Python + asyncpg heredoc (every verificatio
 query in this doc uses that form).
 
 ```bash
-cd /c/Users/elias/projects/cardeep
+cd <repo-root>
 docker compose up -d                 # brings up cardeep-pg on :5433 (docker-compose.yml)
 python -m scripts.migrate up         # apply all pending migrations (idempotent)
 python -m scripts.migrate status     # ledger; last applied today = 0052_country

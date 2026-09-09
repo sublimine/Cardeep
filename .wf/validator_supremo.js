@@ -23,7 +23,7 @@ const CREED = [
 const CONTEXT = [
   'CARDEEP = a live, verified DB of 100% of Spain car points-of-sale (dealers, compraventas, garages, desguaces,',
   'rent-a-car, auctions, importers) AND the giant marketplaces, each with full inventory + delta + recipe, served by an API.',
-  'Repo C:/Users/elias/projects/cardeep. Existing: pipeline/verify.py (a first-pass VAM count-quorum), migrations',
+  'Current CARDEEP repository. Existing: pipeline/verify.py (a first-pass VAM count-quorum), migrations',
   '(verification_verdict, source_health, alert tables), docs/research/SOURCES_ES.md (181-source census incl. INE DIRCE',
   'company counts by CNAE, DGT CAT registry, Paginas Amarillas rubric counts, OSM/FSQ/Overture). A master-architecture',
   'workflow is concurrently writing docs/architecture/00..08 incl. a light 05-VERIFICATION-VAM; YOUR work is the DEEP,',

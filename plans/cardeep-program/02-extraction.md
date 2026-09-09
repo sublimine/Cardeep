@@ -4,7 +4,7 @@
 
 ## Current state (verified)
 
-All figures below were verified by reading the repo at `C:\Users\elias\projects\cardeep` on 2026-06-23 unless marked [RECON-DB] (from the supplied DB recon, not re-queried here).
+All figures below were verified by reading the repo at `<repo-root>` on 2026-06-23 unless marked [RECON-DB] (from the supplied DB recon, not re-queried here).
 
 - **Engine present and complete** [VERIFIED]: `pipeline/engine/` contains `fetch.py` (tiered, `_TIER1_ENGINE = "camoufox"` default at line 57, `fetch_text(url, *, tier=0, ...)` at line 399), `ban_detector.py`, `fingerprints.py`, `governor.py`, `proxies.py`, `free_proxies.py` (`fetch_candidates`, `health_check`, `harvest_alive`, `refresh_pool_urls`), `clearance_cache.py`, `source_fallback.py`, `ratelimit_pg.py`, and `tier1/`.
 - **Connector count** [VERIFIED]: exactly **38** `*_wholesale.py` + **4** `*_facet.py` in `pipeline/platform/`.
@@ -89,7 +89,7 @@ Each phase is ~1 PR, additive, reversible. **Data-touching verification runs aga
 
 ### Phase 0 — Dry-run harness + baseline (no production writes)
 
-**Cold-start context:** Repo root `C:\Users\elias\projects\cardeep`. `docker-compose.yml` maps `:5433` to a prod-faithful PG; you must stand up a *separate* ephemeral PG on `:5434` for all delta experiments. The delta helper (`pipeline/delta.py:290`) is correct but unused by wholesale connectors (grep returns 0).
+**Cold-start context:** Repo root `<repo-root>`. `docker-compose.yml` maps `:5433` to a prod-faithful PG; you must stand up a *separate* ephemeral PG on `:5434` for all delta experiments. The delta helper (`pipeline/delta.py:290`) is correct but unused by wholesale connectors (grep returns 0).
 
 **Tasks:**
 1. Add `docker-compose.dryrun.yml` defining a `cardeep-pg-dryrun` service on host `127.0.0.1:5434:5432`, seeded from the census fixture (reuse `scripts/seed_ci_fixture.py` if present; else snapshot a 10k-vehicle subset).
@@ -98,7 +98,7 @@ Each phase is ~1 PR, additive, reversible. **Data-touching verification runs aga
 
 **Verification:**
 ```bash
-cd /c/Users/elias/projects/cardeep
+cd <repo-root>
 docker compose -f docker-compose.dryrun.yml up -d        # :5434 only
 python -m pytest tests/test_delta_wiring.py -q            # expect RED (fail)
 grep -rl "diff_vehicle" pipeline/platform/                # expect: (empty)

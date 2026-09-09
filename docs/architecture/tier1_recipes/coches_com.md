@@ -16,7 +16,7 @@
 
 ### Engine
 - Tool: `curl_cffi` (v0.15.0), `impersonate="chrome131"`.
-- Python: `C:/Users/elias/AppData/Local/Programs/Python/Python311/python`.
+- Python: `python`.
 - **No proxy. No cookies needed** (Imperva mints `incap_ses_*`/`visid_incap_*` on the fly;
   not required to be replayed for read access today).
 

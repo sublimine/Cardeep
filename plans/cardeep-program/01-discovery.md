@@ -6,7 +6,7 @@
 
 ## Current state (verified)
 
-All figures below were read directly from the repo at `C:\Users\elias\projects\cardeep` (branch `main`) and from the recon DB snapshot. Source path or query is given for each. Items I could not re-run against the live DB in this session are marked `[RECON]` (taken from the orchestrator-supplied recon, which queried the live `:5433` DB).
+All figures below were read directly from the repo at `<repo-root>` (branch `main`) and from the recon DB snapshot. Source path or query is given for each. Items I could not re-run against the live DB in this session are marked `[RECON]` (taken from the orchestrator-supplied recon, which queried the live `:5433` DB).
 
 ### Ingestion surface (verified by reading source)
 - **25 adapters** registered in `ADAPTERS` dict — `pipeline/discover.py` lines 48–74. Verified the full key list: `dgt_cat, oem_kia, oem_mg, oem_byd, oem_skoda, oem_dacia, oem_hyundai, oem_mercedes, oem_seat, osm, aedra, acevas, aecs, autocasion_census, motor_es_census, ocasionplus_census, flexicar_census, overture, dork_municipal, borme_cnae, axesor_cnae, graph_recursive, paginas_amarillas, autoscout24_census, collapse_invisible`.

@@ -11,7 +11,7 @@
 > < 10k, each fully drainable by SSR `?page=N`, Σ slices ≈ 100% of N.
 >
 > Every claim is `[VERIFIED]` — fetched live 2026-06-12 with the project python
-> (`C:/Users/elias/AppData/Local/Programs/Python/Python311/python`) + `curl_cffi 0.15.0`,
+> (`python`) + `curl_cffi 0.15.0`,
 > `impersonate="chrome131"`, €0 (no proxy, no auth, no browser for the harvest path).
 
 ---

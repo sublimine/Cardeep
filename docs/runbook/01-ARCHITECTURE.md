@@ -4,7 +4,7 @@
 > VAM · S-HEALTH · API · dedup watermark**. Recontado vivo esta sesión contra
 > `postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`.
 >
-> **ENV verificado:** Python `C:/Users/elias/AppData/Local/Programs/Python/Python311/python` ·
+> **ENV verificado:** Python `python` ·
 > API deps `fastapi 0.135.3`, `uvicorn 0.44.0`, `asyncpg`, `curl_cffi` (importan OK).
 >
 > **Aviso de deriva (cero maquillaje):** la DB está en ingesta viva. Donde un veredicto va por

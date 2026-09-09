@@ -9,7 +9,7 @@ Classifies each owner sampled from milanuncios + wallapop into exactly one bucke
   NO_GEO           — nothing resolves
 
 Run:
-    cd C:\\Users\\elias\\projects\\cardeep
+    cd <cardeep-repository>
     python -m scripts.recon.b4_geo_probe        (or python scripts/recon/b4_geo_probe.py)
 
 Requires: rapidfuzz (pip install rapidfuzz) — MIT, €0.

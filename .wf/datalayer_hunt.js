@@ -62,7 +62,7 @@ log('Data-layer hunt: ' + TARGETS.length + ' giants, exhaust uncapped surfaces (
 const hunts = await parallel(TARGETS.map(t => () =>
   agent(CREED + '\n\n' + VECTORS +
     '\n\nYOUR GIANT: ' + t.key + ' (declared ' + t.total + ' cars).\nINTEL: ' + t.intel +
-    '\n\nWork ONLY in C:\\Users\\elias\\projects\\cardeep — NEVER write to any cardex/CARDEX path. FIRST load web tools via ToolSearch select:WebSearch,WebFetch. Probe LIVE with curl_cffi (project python C:/Users/elias/AppData/Local/Programs/Python/Python311/python). Write the uncapped-surface recipe (or the per-vector dead-log) to the ABSOLUTE path C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\tier1_recipes\\' + t.key + '_datalayer.md. Do the work in your turn — RUN the probes, do not defer. Return the structured result.',
+    '\n\nWork ONLY in the current CARDEEP repository — NEVER write to any cardex/CARDEX path. FIRST load web tools via ToolSearch select:WebSearch,WebFetch. Probe LIVE with curl_cffi using python from the active project environment. Write the uncapped-surface recipe (or the per-vector dead-log) to the repository-relative path docs/architecture/tier1_recipes/' + t.key + '_datalayer.md. Do the work in your turn — RUN the probes, do not defer. Return the structured result.',
     { label: 'hunt:' + t.key, phase: 'Hunt', schema: HUNT_SCHEMA, agentType: 'general-purpose' })))
 const ok = hunts.filter(Boolean)
 const found = ok.filter(h => h.uncapped_surface_found)
@@ -71,7 +71,7 @@ log('Uncapped surface FOUND: ' + (found.map(h => h.platform).join(', ') || 'none
 phase('Synthesis')
 const rows = ok.map(h => h.platform + ': ' + (h.uncapped_surface_found ? 'UNCAPPED via ' + (h.method || '').slice(0, 90) : 'still capped -> ' + (h.fallback_if_none || '').slice(0, 60))).join('\n')
 const syn = await agent(
-  'Synthesize the CARDEEP data-layer hunt into C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\tier1_recipes\\DATALAYER_STATUS.md: per giant, the uncapped surface that enumerates 100% (or the honest residual). Results:\n' + rows +
+  'Synthesize the CARDEEP data-layer hunt into docs/architecture/tier1_recipes/DATALAYER_STATUS.md: per giant, the uncapped surface that enumerates 100% (or the honest residual). Results:\n' + rows +
   '\n\nReturn {uncapped, still_capped, summary}.',
   { label: 'synthesis:datalayer', phase: 'Synthesis', agentType: 'general-purpose', schema: SYN_SCHEMA })
 

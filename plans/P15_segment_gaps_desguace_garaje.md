@@ -4,7 +4,7 @@
 > All counts below are **[VERIFIED]** against live DB `cardeep-pg` (`:5433`, db `cardeep`)
 > on 2026-06-22 via small aggregated queries, or read from repo source this session.
 > Env: `CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep` ·
-> `python = C:/Users/elias/AppData/Local/Programs/Python/Python311/python`.
+> `python = python`.
 >
 > Ground truth read this session:
 > - `docs/architecture/01-ENTITY-ONTOLOGY.md` §2.4 (garaje + `sells_cars` gate D-4),

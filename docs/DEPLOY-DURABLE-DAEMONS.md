@@ -214,9 +214,9 @@ NSSM convierte cada daemon en un servicio Windows con reinicio automático. Desc
 
 ```powershell
 # Rutas (ajusta a tu máquina)
-$PY   = "C:\Users\elias\projects\cardeep\.venv\Scripts\python.exe"
-$UVI  = "C:\Users\elias\projects\cardeep\.venv\Scripts\uvicorn.exe"
-$ROOT = "C:\Users\elias\projects\cardeep"
+$PY   = "<repo-root>\.venv\Scripts\python.exe"
+$UVI  = "<repo-root>\.venv\Scripts\uvicorn.exe"
+$ROOT = "<repo-root>"
 
 # --- API ---
 nssm install cardeep-api $UVI "services.api.main:app --host 127.0.0.1 --port 8090"
@@ -261,7 +261,7 @@ Una tarea por daemon, arranque en boot como SYSTEM, con reinicio ante fallo. El 
 inyecta envolviendo el comando en un `cmd /c set …`:
 
 ```powershell
-$ROOT = "C:\Users\elias\projects\cardeep"
+$ROOT = "<repo-root>"
 $PY   = "$ROOT\.venv\Scripts\python.exe"
 
 # HARVEST como ejemplo (replica para api y discovery cambiando el ExecStart y las env)

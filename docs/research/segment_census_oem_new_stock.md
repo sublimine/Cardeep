@@ -108,6 +108,6 @@ on `carid`. This is a completeness ceiling of the surface's pagination, declared
 
 ## Files
 
-- Connector: `C:\Users\elias\projects\cardeep\pipeline\platform\oem_seat_cupra_new_stock.py`
-- Recipe: `C:\Users\elias\projects\cardeep\countries\ES\recipes\CDP-ES-00-5R30HVA7.yaml`
-- This census: `C:\Users\elias\projects\cardeep\docs\research\segment_census_oem_new_stock.md`
+- Connector: `<repo-root>\pipeline\platform\oem_seat_cupra_new_stock.py`
+- Recipe: `<repo-root>\countries\ES\recipes\CDP-ES-00-5R30HVA7.yaml`
+- This census: `<repo-root>\docs\research\segment_census_oem_new_stock.md`

@@ -22,7 +22,7 @@
 > vendor-stated, not re-derived).
 >
 > **Env (per-platform CLI):** `CARDEEP_DSN=postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`
-> · `python = C:/Users/elias/AppData/Local/Programs/Python/Python311/python`.
+> · `python = python`.
 
 ---
 

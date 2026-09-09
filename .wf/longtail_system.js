@@ -17,8 +17,8 @@ const BRIEF = [
   'The live DB has ~14k+ entities, many concesionario_oficial/compraventa with a website column populated.',
   'Mirror the proven connector pattern: pipeline/platform/coches_net_wholesale.py (platform-as-entity + dual-membership +',
   'batch ingest + governor + VAM) for the OEM portals; for long-tail use the per-dealer recipe model (pipeline/discover +',
-  'pipeline/recipe + pipeline/ingest). Work ONLY in C:\\Users\\elias\\projects\\cardeep — NEVER write to any cardex/CARDEX path.',
-  'project python C:/Users/elias/AppData/Local/Programs/Python/Python311/python; curl_cffi installed; DB cardeep-pg :5433.',
+  'pipeline/recipe + pipeline/ingest). Work ONLY in the current CARDEEP repository — NEVER write to any cardex/CARDEX path.',
+  'Use python from the active project environment; curl_cffi installed; DB cardeep-pg :5433.',
   'FIRST load web tools via ToolSearch select:WebSearch,WebFetch. RUN your probes/builds in your turn — do not defer.',
 ].join(' ')
 
@@ -48,6 +48,6 @@ log('Fronts progressed: ' + ok.filter(r => r.built).map(r => r.group).join(', ')
 
 phase('Synthesis')
 const rows = ok.map(r => r.group + ': ' + (r.built ? (r.entities_or_cars || '?') + ' — ' + (r.method || '').slice(0, 70) : 'partial: ' + (r.issue || '?'))).join('\n')
-const syn = await agent('Write the CARDEEP demás-grupos rollup to C:\\Users\\elias\\projects\\cardeep\\docs\\architecture\\GROUPS_STATUS.md. Results:\n' + rows + '\nReturn {progressed, summary}.',
+const syn = await agent('Write the CARDEEP demás-grupos rollup to docs/architecture/GROUPS_STATUS.md. Results:\n' + rows + '\nReturn {progressed, summary}.',
   { label: 'synthesis:groups', phase: 'Synthesis', agentType: 'general-purpose', schema: SYN_SCHEMA })
 return { fronts: ok, synthesis: syn }

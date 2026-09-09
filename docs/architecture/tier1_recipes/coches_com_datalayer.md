@@ -70,7 +70,7 @@ they reconcile to the total to the unit.
 ### Engine (identical to the existing coches.com PDP recipe)
 - Tool: `curl_cffi` (0.15.0), `impersonate="chrome131"`. No proxy. No cookie warm-up
   required for read (Imperva mints `incap_ses_*` on the fly; not replayed).
-- Python: `C:/Users/elias/AppData/Local/Programs/Python/Python311/python`.
+- Python: `python`.
 - Headers (sufficient set — verified):
   ```
   Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8

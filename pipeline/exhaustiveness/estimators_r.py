@@ -24,17 +24,18 @@ import tempfile
 from functools import lru_cache
 
 _MSE_R = pathlib.Path(__file__).resolve().parent / "r" / "mse.R"
+_USER_HOME = pathlib.Path.home()
 
 # Candidate Rscript locations (no-admin user install first, then PATH).
 _R_CANDIDATES = [
-    r"C:\Users\elias\R-portable\bin\x64\Rscript.exe",
-    r"C:\Users\elias\R-portable\bin\Rscript.exe",
+    str(_USER_HOME / "R-portable" / "bin" / "x64" / "Rscript.exe"),
+    str(_USER_HOME / "R-portable" / "bin" / "Rscript.exe"),
     r"C:\Program Files\R\R-4.6.0\bin\x64\Rscript.exe",
 ]
 
 # R_HOME candidates and the Rtools make dir (rpy2's config probe needs make).
 _RHOME_CANDIDATES = [
-    r"C:\Users\elias\R-portable",
+    str(_USER_HOME / "R-portable"),
     r"C:\Program Files\R\R-4.6.0",
 ]
 _RTOOLS_BIN = r"C:\rtools45\usr\bin"
@@ -75,6 +76,9 @@ def rpy2_available() -> bool:
 
 @lru_cache(maxsize=1)
 def r_executable() -> str | None:
+    override = os.environ.get("CARDEEP_RSCRIPT", "").strip()
+    if override and os.path.isfile(override):
+        return override
     for c in _R_CANDIDATES:
         if os.path.exists(c):
             return c

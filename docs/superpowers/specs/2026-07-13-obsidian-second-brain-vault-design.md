@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-13
 **Status:** APPROVED (owner, chat approval "Si joder!")
-**Scope:** Cardeep project only (`C:\Users\elias\projects\cardeep`). Not CARDEX, not a multi-project vault (may be extended later).
+**Scope:** Cardeep project only (`<repo-root>`). Not CARDEX, not a multi-project vault (may be extended later).
 
 ## Problem
 
@@ -16,7 +16,7 @@ plus anything else that raises the ceiling further.
 
 ## Decisions (owner-confirmed via AskUserQuestion + design approval)
 
-1. **Vault location = repo root.** `C:\Users\elias\projects\cardeep` becomes the
+1. **Vault location = repo root.** `<repo-root>` becomes the
    Obsidian vault directly (new `.obsidian/` created there). No duplication, no
    symlink games, single source of truth, versioned in the same git history as the
    code.

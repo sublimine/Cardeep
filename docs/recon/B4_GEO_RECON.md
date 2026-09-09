@@ -2,7 +2,7 @@
 **Fecha:** 2026-06-14  
 **Auditor:** Agente de reconocimiento (solo-lectura)  
 **DB:** cardeep @ docker:cardeep-pg:5432  
-**Repo:** C:\Users\elias\projects\cardeep  
+**Repo:** <repo-root>
 
 ---
 

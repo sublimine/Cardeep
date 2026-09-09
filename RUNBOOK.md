@@ -13,9 +13,9 @@
 > **2026-06-13**. `[VERIFICADO]` = leí la fuente real (código / DB / verdict); `[ASUMIDO]` se
 > etiqueta siempre.
 >
-> **ENV de ejecución:** `python = C:/Users/elias/AppData/Local/Programs/Python/Python311/python`
+> **ENV de ejecución:** `python = python`
 > (`$PY` en los CLI) · DB arriba · conectores invocados como
-> `python -m pipeline.platform.<module>` desde `C:\Users\elias\projects\cardeep`.
+> `python -m pipeline.platform.<module>` desde `<repo-root>`.
 >
 > **Idioma:** prosa en español, código y comandos en inglés.
 
@@ -417,7 +417,7 @@ open · `source_health` 33 healthy / 2 degraded / 0 down · `harvest_run` 170 ok
 ## 8. VALIDATION INDEX — el ledger (unidad → verdict id → count → CLI)
 
 > Cada fila es una unidad validada: su `verification_verdict` TRUSTWORTHY (id), su count, y el
-> CLI exacto que la reproduce. `$PY = C:/Users/elias/AppData/Local/Programs/Python/Python311/python`
+> CLI exacto que la reproduce. `$PY = python`
 > · `DSN = postgres://cardeep:cardeep_dev_only@localhost:5433/cardeep`. **45 unidades validadas.**
 > **Ledger extendido (con fecha + motor):** [`docs/runbook/VALIDATION-INDEX.md`](docs/runbook/VALIDATION-INDEX.md).
 > Las **55 verdict ids** de este índice se confirmaron una a una en la DB viva esta sesión (55/55
