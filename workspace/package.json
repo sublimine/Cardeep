@@ -8,6 +8,7 @@
     "build": "npm run landing:css && tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "catalog:verify": "node src/data/collapse-submodels.mjs",
     "landing:css": "node tools/build-logo-manifest.mjs && node tools/build-landing-css.mjs"
   },
   "dependencies": {

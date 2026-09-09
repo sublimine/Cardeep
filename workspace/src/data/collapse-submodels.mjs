@@ -1,37 +1,33 @@
-// Recovers raw submodels from git (commit 8d850b2) and collapses them to the
-// PRINCIPAL designation for the landing picker's 3rd step:
+// Verifies that Cardeep's versioned raw catalog fragments collapse to the
+// PRINCIPAL designations stored in submodels.gen.json. All inputs are local on
+// purpose: this repository must not depend on another project's checkout or
+// Git history.
 //   'C 220 d 4MATIC 194cv' -> 'C 220'   |  '320d 163cv' -> '320'
 //   'C 63 AMG S 510cv' -> 'C 63 AMG'     |  '40 TDI quattro 190cv' -> '40 TDI'
 //   '2.0 TDI 150cv' -> '2.0 TDI'         |  'Pro S 77 kWh 204cv' -> 'Pro S'
 // Body-style variants of a model (Clase C / C Cabrio / C Coupé / C Estate) are
 // UNIONED under the collapsed base nameplate, matching the curated catalog.
 // Fuel/power/drivetrain-specific variants stay for the marketplace advanced filter.
-// Output: submodels.gen.json  { "<normBrand>|<modelBaseKey>": ["C 160","C 180",...] }
-import { execSync } from 'child_process'
-import { writeFileSync } from 'fs'
+// Canonical map: submodels.gen.json  { "<normBrand>|<modelBaseKey>": ["C 160","C 180",...] }
+import { readdirSync, readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OUT = join(HERE, 'submodels.gen.json')
+const SOURCE_DIR = join(HERE, '.gen')
+const canonical = JSON.parse(readFileSync(OUT, 'utf8'))
 
-const rawTs = execSync(
-  'git -C C:/Users/elias/CARDEX show 8d850b2:workspace/web/src/data/catalog.ts',
-  { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }
-)
-
-// ── parse: brand lines + model lines with submodel arrays ────────────────────
-const lines = rawTs.split('\n')
-let curBrand = null
+// ── load local raw fragments ────────────────────────────────────────────────────────
 const data = {} // brand -> { model -> [rawSubs] }
-for (const line of lines) {
-  const b = line.match(/^    name: '(.+?)',\s*$/)
-  if (b) { curBrand = b[1]; data[curBrand] = data[curBrand] || {}; continue }
-  const m = line.match(/^\s*\{ name: '(.+?)', submodels: \[(.*)\] \},?\s*$/)
-  if (m && curBrand) {
-    const model = m[1]
-    const subs = [...m[2].matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(x => x[1].replace(/\\'/g, "'"))
-    data[curBrand][model] = subs
+for (const file of readdirSync(SOURCE_DIR).filter((name) => name.endsWith('.json')).sort()) {
+  const document = JSON.parse(readFileSync(join(SOURCE_DIR, file), 'utf8'))
+  for (const brand of document.brands || []) {
+    data[brand.name] = data[brand.name] || {}
+    for (const model of brand.models || []) {
+      data[brand.name][model.name] = data[brand.name][model.name] || []
+      data[brand.name][model.name].push(...(model.submodels || []))
+    }
   }
 }
 
@@ -147,11 +143,41 @@ for (const [brand, models] of Object.entries(data)) {
   }
 }
 
-const out = {}
+// These keys are intentionally curated in the canonical map because duplicate
+// raw fragments disagree. Keep the list explicit so new drift still fails.
+const CURATED_OVERRIDE_KEYS = new Set([
+  'abarth|124spider', 'abarth|500', 'abarth|500c', 'abarth|595', 'abarth|595c',
+  'cadillac|ats', 'cadillac|cts', 'cadillac|escalade', 'cadillac|xt4', 'cadillac|xt5',
+  'cadillac|xt6', 'chevrolet|aveo', 'chevrolet|camaro', 'chevrolet|captiva',
+  'chevrolet|corvette', 'chevrolet|cruze', 'chevrolet|orlando', 'chevrolet|trax',
+  'cupra|terramar', 'seat|mii', 'volkswagen|up',
+])
+const EXPECTED_OMITTED_RAW_KEYS = new Set(['seat|miielectric'])
+const mismatches = []
+const missing = []
 let n = 0
-for (const [k, v] of Object.entries(acc)) { out[k] = v.list; n += v.list.length }
-writeFileSync(OUT, JSON.stringify(out), 'utf8')
-console.log(`submodels.gen.json — ${Object.keys(out).length} model keys, ${n} collapsed submodels`)
+for (const [key, value] of Object.entries(acc)) {
+  n += value.list.length
+  if (!(key in canonical)) missing.push(key)
+  else if (JSON.stringify(canonical[key]) !== JSON.stringify(value.list)) mismatches.push(key)
+}
+const unexpectedMissing = missing.filter((key) => !EXPECTED_OMITTED_RAW_KEYS.has(key))
+const absentMissing = [...EXPECTED_OMITTED_RAW_KEYS].filter((key) => !missing.includes(key))
+const unexpectedOverrides = mismatches.filter((key) => !CURATED_OVERRIDE_KEYS.has(key))
+const absentOverrides = [...CURATED_OVERRIDE_KEYS].filter((key) => !mismatches.includes(key))
+if (unexpectedMissing.length || absentMissing.length || unexpectedOverrides.length || absentOverrides.length) {
+  throw new Error(
+    `Catalog reconciliation drifted; unexpected-missing=[${unexpectedMissing.join(', ')}] ` +
+    `absent-missing=[${absentMissing.join(', ')}] ` +
+    `unexpected-overrides=[${unexpectedOverrides.join(', ')}] ` +
+    `absent-overrides=[${absentOverrides.join(', ')}]`
+  )
+}
+console.log(
+  `verified ${Object.keys(acc).length} locally sourced model keys / ${n} collapsed submodels; ` +
+  `${mismatches.length} explicit curated overrides; ${missing.length} intentional omission; ` +
+  `${Object.keys(canonical).length} canonical keys`
+)
 
 const checks = [
   ['Mercedes', 'Clase C'], ['Mercedes', 'Clase E'], ['Mercedes', 'GLC'],
@@ -159,5 +185,5 @@ const checks = [
 ]
 for (const [b, m] of checks) {
   const k = `${normBrand(b)}|${modelBaseKey(m)}`
-  console.log(`\n${b} ${m} -> ${out[k]?.length ?? 0}:\n  ${out[k]?.join(' · ') ?? '(none)'}`)
+  console.log(`\n${b} ${m} -> ${canonical[k]?.length ?? 0}:\n  ${canonical[k]?.join(' · ') ?? '(none)'}`)
 }
