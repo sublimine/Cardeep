@@ -12,8 +12,11 @@ query against `postgres://cardeep@localhost:5433/cardeep`.
 | **ACEVAS** | concesionarios VW/Audi/Skoda | https://www.acevas.com/concesionarios/ | 99 | Super Store Finder WP XML feed (`ssf-wp-xml.php`) |
 | **AECS** | concesionarios Stellantis (Opel/Peugeot/Citroën/Fiat/Leapmotor) | https://asociacionstellantis.com/directorio-asociados/ | 74 | static Elementor HTML (name→province→website triples) |
 
-Raw harvests persisted: `aedra_members.json`, `acevas_members.json`,
-`aecs_members.json`, `acevas_raw.xml`, `aecs_raw.html`.
+Structured harvests persisted: `aedra_members.json`, `acevas_members.json`,
+`aecs_members.json`. The ACEVAS XML capture remains as a reviewed source artifact.
+The AECS HTML capture is intentionally excluded from Git and must be supplied at
+`data/raw/associations/aecs.html` (or via `parse_aecs.py --input`) because third-party
+pages can embed credentials and personal data that do not belong in this repository.
 
 ## Sources confirmed WALLED / not enumerable (no fabrication)
 

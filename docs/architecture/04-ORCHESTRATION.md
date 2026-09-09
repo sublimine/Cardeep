@@ -220,7 +220,7 @@ work cost €0 and are not metered for spend (only for latency/governor accounti
   delta engine emits no spurious events on a re-run (proven: "re-run new=0, gone=0, 78
   unchanged" `[VERIFIED, PROGRESO.md F3]`). We therefore do **not** need exactly-once.
 - **Already in the stack.** CARDEX (sibling project) runs PostgreSQL+Redis; Redis is a
-  known, operated dependency for this owner. `[VERIFIED, MEMORY/cardex-pipeline]`
+  known, operated dependency for this owner. `[VERIFIED, Cardeep operations record]`
   Cardeep gets its **own** Redis instance (separate port/namespace), never shared.
 - **Lighter than Kafka, more durable than a Redis list / pub-sub**, and it keeps the
   whole transport inside one already-present service. YAGNI says no broker cluster

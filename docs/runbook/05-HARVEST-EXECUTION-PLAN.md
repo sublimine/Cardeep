@@ -64,11 +64,11 @@ R1 desguace-inventario · R2 concesionario-harvest · R3 sells_cars-labels   ←
 
 | # | Micro-tarea | Comando / módulo real | Arsenal | Gate de verificación | Presupuesto |
 |---|---|---|---|---|---|
-| A3.1 | Anti-detección spike (C1) ANTES de cualquier Tier-1 | `pipeline/engine/fetch.py` + Camoufox; re-probar 5 OPEN + 2 walled | cardex-scraper agent · curl_cffi/Camoufox | `state/tier1-blocked.json` escrito; ClientHello byte-diff vs Chrome OK | red, 1 sesión |
-| A3.2 | Drain 1 fuente top-volumen (coches_net 274k) baja-concurrencia | `python -m pipeline.platform.coches_net_wholesale` | cardex-scraper · governor | `record_run` dispara `verify_coverage`; `v_province_seal` numerador↑; sin ban | RAM<2GB, paced |
+| A3.1 | Anti-detección spike (C1) ANTES de cualquier Tier-1 | `pipeline/engine/fetch.py` + Camoufox; re-probar 5 OPEN + 2 walled | cardeep-scraper agent · curl_cffi/Camoufox | `state/tier1-blocked.json` escrito; ClientHello byte-diff vs Chrome OK | red, 1 sesión |
+| A3.2 | Drain 1 fuente top-volumen (coches_net 274k) baja-concurrencia | `python -m pipeline.platform.coches_net_wholesale` | cardeep-scraper · governor | `record_run` dispara `verify_coverage`; `v_province_seal` numerador↑; sin ban | RAM<2GB, paced |
 | A3.3 | `reconcile_gone` confirma bajas en esa fuente | central en `record_run` (coverage→boundary→reconcile) | — (automático) | `source_coverage.verdict` ≠ REFUTED ∧ bajas emitidas en `vehicle_event` | €0 tras drain |
 | A3.4 | **Evict del raw de la fuente** | `python -m pipeline.evict --cdp … --apply` | refactor-cleaner · evict.py | `capacity_ledger` fila + disco recuperado; tombstone no DELETE | €0 |
-| A3.5 | Repetir A3.2-A3.4 por las 34 fuentes instrumentadas | idem, 1 a 1 | cardex-scraper | las 34 con `source_coverage` no-NULL + verdict sano | semanas, paced |
+| A3.5 | Repetir A3.2-A3.4 por las 34 fuentes instrumentadas | idem, 1 a 1 | cardeep-scraper | las 34 con `source_coverage` no-NULL + verdict sano | semanas, paced |
 
 **Éxito A3**: B9 corrido en 34/34 fuentes con `Σleaf==declared` o causa declarada; AS24/milanuncios
 full-index re-probados. (dasweltauto ya instrumentado 06-16; 8 family_* = N/A-declarado correcto.)
@@ -77,7 +77,7 @@ full-index re-probados. (dasweltauto ya instrumentado 06-16; 8 family_* = N/A-de
 
 | # | Micro-tarea | Módulo | Arsenal | Gate |
 |---|---|---|---|---|
-| A4.1 | 2ª corrida de cada fuente top-5 | conectores | cardex-scraper | `emit_change_deltas` emite PRICE/KM/PHOTO en re-vistos (ya cableado en 26) |
+| A4.1 | 2ª corrida de cada fuente top-5 | conectores | cardeep-scraper | `emit_change_deltas` emite PRICE/KM/PHOTO en re-vistos (ya cableado en 26) |
 | A4.2 | Confirmar GONE en vivo | `reconcile_gone` boundary-fallback | — | un vehículo retirado real → `vehicle_event` GONE (probado end-to-end 06-16) |
 
 ### A5 — Recipe-hunt de los 23.894 sin inventario
@@ -85,8 +85,8 @@ full-index re-probados. (dasweltauto ya instrumentado 06-16; 8 family_* = N/A-de
 | # | Micro-tarea | Módulo | Arsenal | Gate |
 |---|---|---|---|---|
 | A5.1 | Clasificar los 23.894 por plataforma vs own-site | `v_dealer_recipe` (recipe_kind) | python-reviewer · SQL | lista own-site aislada |
-| A5.2 | Cazar receta own-site (JSON-LD/sitemap) por dealer | `pipeline/discover.py` + `recipe.py` | cardex-scraper · Context7 (schema.org) | `recipe.yaml` per-dealer commiteado en árbol geo |
-| A5.3 | Stamp receta + 1er scrape | `harvest_dealer.py run(slug)` | cardex-scraper | inventario>0 servido + VAM |
+| A5.2 | Cazar receta own-site (JSON-LD/sitemap) por dealer | `pipeline/discover.py` + `recipe.py` | cardeep-scraper · Context7 (schema.org) | `recipe.yaml` per-dealer commiteado en árbol geo |
+| A5.3 | Stamp receta + 1er scrape | `harvest_dealer.py run(slug)` | cardeep-scraper | inventario>0 servido + VAM |
 
 ### A2 — Denominador Chao2 (DATA externa)
 

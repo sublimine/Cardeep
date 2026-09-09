@@ -216,7 +216,7 @@ En este hardware débil, la concurrencia es de **razonamiento de agentes**, no d
 |---|---|---|---|
 | Migración/schema | database-reviewer, go/py builders | postgres-patterns, database-migrations | psql, migrate.py |
 | Identidad/dedup | python-reviewer, code builders | regex-vs-llm-structured-text | union-find determinista, RapidFuzz, Ollama (slice) |
-| Scraping/Tier-1 | cardex-scraper | python-scraper, search-first | curl_cffi, camoufox, browserforge, selectolax |
+| Scraping/Tier-1 | cardeep-scraper | data-scraper-agent, search-first | curl_cffi, camoufox, browserforge, selectolax |
 | Verificación | code-reviewer, silent-failure-hunter, adversarial | systematic-debugging, verification-loop | VAM, pytest |
 | Geo | database-reviewer | postgres-patterns | Nominatim, Shapely, H3, cube+earthdistance |
 | Orquestación/OPS | architect | autonomous-loops | APScheduler, Redis Streams |
